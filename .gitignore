@@ -1,0 +1,64 @@
+################################################################################
+# BG_LANG legacy + BgLang.API workspace
+################################################################################
+
+# IDE state
+/.vs/
+*.suo
+*.user
+
+# Legacy build outputs
+/bg/bin/
+/bg/obj/
+/BG_LANG/bin/
+/BG_LANG/obj/
+/BG_FORM/bin/
+/BG_FORM/obj/
+
+# New BgLang.API build outputs
+/src/**/bin/
+/src/**/obj/
+/tests/**/bin/
+/tests/**/obj/
+/benchmarks/**/bin/
+/benchmarks/**/obj/
+/tools/**/bin/
+/tools/**/obj/
+
+# Generated artifacts
+/artifacts/
+/.tmp/
+/local-qa/
+/local-packages/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+/local-qa/antigravity
+
+# Benchmark outputs
+# Commit compact decision summaries under benchmarks/results. Keep raw dumps,
+# local reruns and per-BLW catalog sync snapshots out of git unless explicitly
+# requested for binding evidence.
+/benchmarks/results/raw/
+/benchmarks/results/local/
+/benchmarks/results/tmp/
+/benchmarks/results/*-raw.json
+/benchmarks/results/*-raw.md
+/benchmarks/results/*.raw.json
+/benchmarks/results/*.raw.md
+/benchmarks/results/*benchmark-catalog*sync*.json
+/benchmarks/results/*benchmark-catalog*sync*.md
+
+# Agent-local mailbox and harness state
+/.codex/config.toml
+/docs/communication/
+/.claude/
+/scripts
+
+# Temporary agent data
+/scratch/
+/sandbox-work/
+/data/
+/data/corpus
+/.draft-script

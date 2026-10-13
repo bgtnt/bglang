@@ -1,0 +1,42 @@
+name: Windows public package
+on:
+  workflow_dispatch:
+    inputs:
+      input_base_url:
+        description: HTTPS directory containing the three files in public-input-lock.v1.json
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 10.0.401
+      - name: Locked inputs, independent package builds, public tests and example
+        shell: pwsh
+        env:
+          INPUT_BASE_URL: ${{ inputs.input_base_url }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $env:DOTNET_CLI_HOME = Join-Path $env:RUNNER_TEMP 'dotnet-home'
+          $env:NUGET_PACKAGES = Join-Path $env:RUNNER_TEMP 'nuget-packages'
+          $env:NUGET_HTTP_CACHE_PATH = Join-Path $env:RUNNER_TEMP 'nuget-http-cache'
+          $env:NUGET_PLUGINS_CACHE_PATH = Join-Path $env:RUNNER_TEMP 'nuget-plugins-cache'
+          $base = [Uri]$env:INPUT_BASE_URL
+          if (!$base.IsAbsoluteUri -or $base.Scheme -ne 'https') { throw 'HTTPS input directory required.' }
+          $lock = Get-Content data/dictionary/public-input-lock.v1.json -Raw | ConvertFrom-Json
+          $inputs = Join-Path $env:RUNNER_TEMP 'corrected151-stored-v1'
+          New-Item -ItemType Directory -Path $inputs | Out-Null
+          foreach ($file in $lock.storedInput.files) {
+            Invoke-WebRequest -Uri ($base.AbsoluteUri.TrimEnd('/') + '/' + $file.name) -OutFile (Join-Path $inputs $file.name)
+          }
+          $a = Join-Path $env:RUNNER_TEMP 'native-a'
+          $b = Join-Path $env:RUNNER_TEMP 'native-b'
+          ./packaging/Build-PublicPackage.ps1 -InputDirectory $inputs -OutputDirectory $a -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-a')
+          ./packaging/Build-PublicPackage.ps1 -InputDirectory $inputs -OutputDirectory $b -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-b') -CompareWith $a

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "phase7-closure-threshold-policy.v1",
+  "policyId": "phase7-closure-threshold-policy-candidate.v0",
+  "version": 0,
+  "status": "approved",
+  "ratificationStatus": "user_approved",
+  "minimumClosedReadinessItems": 7,
+  "maximumOpenReadinessItemsForClosure": 0,
+  "requireNoMissingEvidenceFiles": true,
+  "requireLanguageRuleValidationBoundaryClosed": true,
+  "requireLinguisticDepthCorpusGroundingBoundaryClosed": true,
+  "requirePhase7ReadinessBoundaryClosed": true,
+  "requireProductionDefaultPolicy": true,
+  "minimumGuardedCoverageScorecards": 3,
+  "minimumGuardedCoverageSuccessfulScorecards": 3,
+  "minimumGuardedCoverageUniqueDocuments": 15,
+  "minimumGuardedCoverageEvaluatedHumanLabels": 59,
+  "minimumGuardedCoveragePrecision": 1.0,
+  "minimumGuardedCoverageRecall": 0.96,
+  "minimumGuardedCoverageTokenRecall": 0.96,
+  "decision": "User-approved Phase 7 bounded analyzer-baseline evidence threshold artifact. Current BLW-1019 guarded coverage evidence satisfies the bounded morphology/POS coverage floors, but this approval does not approve production default analyzer/rule policy, full language-rule validation closure, or production-complete morphology/syntax corpus grounding. Language-rule validation, broader linguistic-depth grounding, Phase 7 readiness, and production-default policy blockers must still close before roadmap closure."
+}

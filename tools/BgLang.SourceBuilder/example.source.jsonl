@@ -1,0 +1,3 @@
+{"schemaVersion":"bglang-neutral-authoring.v1","kind":"productive","lemma":"абдикация","productiveRuleId":"productive.noun.feminine_type47.v0","baseFullTag":"Съществително:47,Женски","score":1}
+{"schemaVersion":"bglang-neutral-authoring.v1","kind":"stored","lemma":"мост","productiveRuleId":null,"readings":[{"form":"мост","lemma":"мост","fullTag":"Съществително:7,Мъжки","score":1}]}
+{"schemaVersion":"bglang-neutral-authoring.v1","kind":"routed","lemma":"ѝ","productiveRuleId":null,"readings":[{"form":"ѝ","lemma":"ѝ","fullTag":null,"score":1}],"route":"exact_prefix_only"}

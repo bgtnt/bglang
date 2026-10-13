@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BgLang.Api/BgLang.Api.csproj" />
+    <Project Path="src/BgLang.Contracts/BgLang.Contracts.csproj" />
+    <Project Path="src/BgLang.Core/BgLang.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj" />
+  </Folder>
+</Solution>

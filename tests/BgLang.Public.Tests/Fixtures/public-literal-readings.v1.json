@@ -1,0 +1,261 @@
+{
+  "schema": "bglang.public-independent-literal-readings.proposal.v1",
+  "sourceAuthority": {
+    "artifactSha256": "bf646357f00b80edfb19abb0e706978a98ceee81a6dfaf5a54f896718cd28ee4",
+    "artifactBytes": 102868,
+    "acceptedSourceCommit": "9664869255352925b20639ff785d54f5afdf8628",
+    "meaning": "Independently stored complete TYPE69 literal fixture, copied as eight literal records; no form generator used"
+  },
+  "cases": [
+    {
+      "id": 5433856,
+      "lemma": "знаме",
+      "tag": "Съществително:69,Среден",
+      "count": 4,
+      "rawReadings": [
+        {
+          "form": "знамена",
+          "lemma": "знаме",
+          "fullTag": "Съществително:69,Среден,мн.ч.",
+          "score": 1
+        },
+        {
+          "form": "знамената",
+          "lemma": "знаме",
+          "fullTag": "Съществително:69,Среден,мн.ч.,Членуван",
+          "score": 1
+        },
+        {
+          "form": "знамето",
+          "lemma": "знаме",
+          "fullTag": "Съществително:69,Среден,Членуван",
+          "score": 1
+        },
+        {
+          "form": "знаме",
+          "lemma": "знаме",
+          "fullTag": "Съществително:69,Среден",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "id": 5433920,
+      "lemma": "име",
+      "tag": "Съществително:69,Среден",
+      "count": 4,
+      "rawReadings": [
+        {
+          "form": "името",
+          "lemma": "име",
+          "fullTag": "Съществително:69,Среден,Членуван",
+          "score": 1
+        },
+        {
+          "form": "имената",
+          "lemma": "име",
+          "fullTag": "Съществително:69,Среден,мн.ч.,Членуван",
+          "score": 1
+        },
+        {
+          "form": "имена",
+          "lemma": "име",
+          "fullTag": "Съществително:69,Среден,мн.ч.",
+          "score": 1
+        },
+        {
+          "form": "име",
+          "lemma": "име",
+          "fullTag": "Съществително:69,Среден",
+          "score": 1
+        }
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "index": 0,
+      "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се",
+      "features": {
+        "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се",
+        "partOfSpeech": "Verb",
+        "paradigmId": "174ii",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": "Past",
+        "verbForm": "Participle",
+        "article": null,
+        "hasUnrecognizedFeatures": true,
+        "hasConflictingFeatures": false
+      }
+    },
+    {
+      "index": 1,
+      "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се,Членуван",
+      "features": {
+        "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се,Членуван",
+        "partOfSpeech": "Verb",
+        "paradigmId": "174ii",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": "Past",
+        "verbForm": "Participle",
+        "article": null,
+        "hasUnrecognizedFeatures": true,
+        "hasConflictingFeatures": false
+      }
+    },
+    {
+      "index": 2,
+      "rawTag": "Съществително:69,Среден",
+      "features": {
+        "rawTag": "Съществително:69,Среден",
+        "partOfSpeech": "Noun",
+        "paradigmId": "69",
+        "person": null,
+        "number": "Singular",
+        "gender": "Neuter",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false
+      }
+    },
+    {
+      "index": 3,
+      "rawTag": "Съществително:69,Среден,Членуван",
+      "features": {
+        "rawTag": "Съществително:69,Среден,Членуван",
+        "partOfSpeech": "Noun",
+        "paradigmId": "69",
+        "person": null,
+        "number": "Singular",
+        "gender": "Neuter",
+        "tense": null,
+        "verbForm": null,
+        "article": "Definite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false
+      }
+    },
+    {
+      "index": 4,
+      "rawTag": "Съществително:69,Среден,мн.ч.",
+      "features": {
+        "rawTag": "Съществително:69,Среден,мн.ч.",
+        "partOfSpeech": "Noun",
+        "paradigmId": "69",
+        "person": null,
+        "number": "Plural",
+        "gender": "Neuter",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false
+      }
+    },
+    {
+      "index": 5,
+      "rawTag": "Съществително:69,Среден,мн.ч.,Членуван",
+      "features": {
+        "rawTag": "Съществително:69,Среден,мн.ч.,Членуван",
+        "partOfSpeech": "Noun",
+        "paradigmId": "69",
+        "person": null,
+        "number": "Plural",
+        "gender": "Neuter",
+        "tense": null,
+        "verbForm": null,
+        "article": "Definite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false
+      }
+    }
+  ],
+  "frozenTypedTagAssertions": [
+    {
+      "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се",
+      "partOfSpeech": "Verb",
+      "paradigmId": "174ii",
+      "person": null,
+      "number": "Singular",
+      "gender": "Feminine",
+      "tense": "Past",
+      "verbForm": "Participle",
+      "article": null,
+      "hasUnrecognizedFeatures": true,
+      "hasConflictingFeatures": false
+    },
+    {
+      "rawTag": "Глагол:174ii,Минало_страдателно,Женски,1л.,Сегашно,+се,Членуван",
+      "partOfSpeech": "Verb",
+      "paradigmId": "174ii",
+      "person": null,
+      "number": "Singular",
+      "gender": "Feminine",
+      "tense": "Past",
+      "verbForm": "Participle",
+      "article": null,
+      "hasUnrecognizedFeatures": true,
+      "hasConflictingFeatures": false
+    },
+    {
+      "rawTag": "Съществително:69,Среден",
+      "partOfSpeech": "Noun",
+      "paradigmId": "69",
+      "person": null,
+      "number": "Singular",
+      "gender": "Neuter",
+      "tense": null,
+      "verbForm": null,
+      "article": "Indefinite",
+      "hasUnrecognizedFeatures": false,
+      "hasConflictingFeatures": false
+    },
+    {
+      "rawTag": "Съществително:69,Среден,Членуван",
+      "partOfSpeech": "Noun",
+      "paradigmId": "69",
+      "person": null,
+      "number": "Singular",
+      "gender": "Neuter",
+      "tense": null,
+      "verbForm": null,
+      "article": "Definite",
+      "hasUnrecognizedFeatures": false,
+      "hasConflictingFeatures": false
+    },
+    {
+      "rawTag": "Съществително:69,Среден,мн.ч.",
+      "partOfSpeech": "Noun",
+      "paradigmId": "69",
+      "person": null,
+      "number": "Plural",
+      "gender": "Neuter",
+      "tense": null,
+      "verbForm": null,
+      "article": "Indefinite",
+      "hasUnrecognizedFeatures": false,
+      "hasConflictingFeatures": false
+    },
+    {
+      "rawTag": "Съществително:69,Среден,мн.ч.,Членуван",
+      "partOfSpeech": "Noun",
+      "paradigmId": "69",
+      "person": null,
+      "number": "Plural",
+      "gender": "Neuter",
+      "tense": null,
+      "verbForm": null,
+      "article": "Definite",
+      "hasUnrecognizedFeatures": false,
+      "hasConflictingFeatures": false
+    }
+  ],
+  "selection": "Two actual already admitted type69 roots; no spell generator, no new lexical credit",
+  "limitations": "This initial public sample proves these literal records only. Complete parity/precision/resource assertions remain in the unchanged historical matrix."
+}

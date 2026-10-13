@@ -1,0 +1,76 @@
+tests/fixtures/morphology-relation-evaluation*.json text eol=lf
+tests/fixtures/morphology-relation-review*.json text eol=lf
+tests/fixtures/document-evidence-scorecard-m3-document-heldout-v1.json text eol=lf
+tests/fixtures/document-evidence-m3-residual-decisions-v1.json text eol=lf
+tests/fixtures/verb-clitic-residue-observations-frozen-m1-v1.jsonl text eol=lf
+tests/fixtures/reviewed-verb-clitic-predicate-group.v1.json text eol=lf
+data/accepted-surfaces.v1.jsonl text eol=lf
+data/morphology/*.jsonl text eol=lf
+# Frozen graph acceptance fixtures use byte-exact SHA-256 checks on Windows too.
+tests/BgLang.Tests/Kernel/Fixtures/compositional-morphology-envelope.v1.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/generic-transition-acceptance.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/unknown-morphology-program-oracle.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/root-absent-authority.v1/*.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective78-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb186-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb186-clitic-disposition.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/neuter-vowel-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb173174-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/noun14-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/noun8a-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/noun11-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adverb188-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb152tt-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective85-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective86-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective87-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective88-89a-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective77-84a-parity.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective81-84b-source-derived-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/noun15a-39-source-derived-oracle.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/invariants297-source-derived-oracle.v1.tsv text eol=lf
+tools/BgLang.ApiConsumer/invariants297-witnesses.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adjective79d82a-source-derived-oracle.v1.tsv text eol=lf
+tools/BgLang.ApiConsumer/adjective79d82a-witnesses.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/reverse-ranking-probes.v1.txt text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/forward-ranking-path-inventories.v1.tsv text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/verb838-source-derived-oracle.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb838-literal-slots.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb556-source-derived-oracle.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb556-literal-slots.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb556-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb14598-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/reuse347-* text eol=lf
+tools/BgLang.ApiConsumer/verb838-witnesses.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb187-source-derived-oracle.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/verb187-literal-slots.v1.tsv text eol=lf
+tools/BgLang.ApiConsumer/verb187-witnesses.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic78-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic368-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic85-* text eol=lf
+data/morphology/reviewed-stored-lemma-selection.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/reviewed-stored-lemma-oracle.v1.json text eol=lf
+
+tests/BgLang.Tests/Kernel/Fixtures/reviewed-stored-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/current-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic143-* text eol=lf
+tools/BgLang.ApiConsumer/clitic143-witnesses.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/state-pos138-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/noun14a937-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal573-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/tail538-literal-oracle.v1.json -text
+tests/BgLang.Tests/Kernel/Fixtures/nominal645-literal-oracle.v1.json -text
+tests/BgLang.Tests/Kernel/Fixtures/nominal645-original-bindings.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/same-lemma345-literal-oracle.v1.json -text
+tests/BgLang.Tests/Kernel/Fixtures/same-lemma345-original-bindings.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/type9-family260-literal-oracle.v1.json -text
+tests/BgLang.Tests/Kernel/Fixtures/type9-family260-original-bindings.v1.tsv text eol=lf
+
+tests/BgLang.Tests/Kernel/Fixtures/cell193-* text eol=lf
+
+tests/BgLang.Tests/Kernel/Fixtures/finite237-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/type151-correction-metadata.v1.tsv text eol=lf
+
+# Public recipe binds the reviewed Windows RAW graph and independent literal fixture.
+data/word-formation/word-formation-source.v0.json text eol=crlf
+tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json text eol=lf
