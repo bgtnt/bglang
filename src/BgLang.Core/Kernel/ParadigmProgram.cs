@@ -23,7 +23,7 @@ internal sealed class ParadigmProgram(string stateId, ParadigmProgram.Cell[] cel
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        HashSet<(string Form, string Tag)> seen = [(lemma, baseFullTag)];
+        HashSet<(string Form, string Tag)> seen = kind == Kind.Lexical ? [] : [(lemma, baseFullTag)];
         Dictionary<int, (bool Matches, string[]? Stem)> applicable = [];
         List<GenerationObservation>? observations = observe is null || kind == Kind.Invariant ? null : [];
         bool invariantBaseEmitted = false;

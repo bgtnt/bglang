@@ -49,6 +49,16 @@ internal static class NativeSourcePromotion
             .Select(row => (Tag: row.GetProperty("baseFullTag").GetString()!, Rule: row.GetProperty("ruleId").GetString()!))
             .Distinct().GroupBy(binding => binding.Tag, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.OrderBy(binding => binding.Rule, StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
+        var exactInputs = graphDocument.RootElement.GetProperty("morphophonologicalTransforms").EnumerateArray()
+            .Where(row => row.GetProperty("kind").GetString() == "identity" &&
+                row.TryGetProperty("exactInput", out JsonElement input) && input.ValueKind == JsonValueKind.String)
+            .ToDictionary(row => row.GetProperty("id").GetString()!, row => row.GetProperty("exactInput").GetString()!, StringComparer.Ordinal);
+        var literalBindings = graphDocument.RootElement.GetProperty("paradigmEdges").EnumerateArray()
+            .Where(row => row.TryGetProperty("executionKind", out JsonElement kind) && kind.GetString() == "lexical" &&
+                exactInputs.ContainsKey(row.GetProperty("stemTransformId").GetString()!))
+            .GroupBy(row => exactInputs[row.GetProperty("stemTransformId").GetString()!], StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Select(row =>
+                (Tag: row.GetProperty("baseFullTag").GetString()!, Rule: row.GetProperty("ruleId").GetString()!)).Distinct().ToArray(), StringComparer.Ordinal);
         HashSet<string> displayGroups = FindDisplayCollisions(lexiconLock);
         SortedDictionary<string, int> retained = new(StringComparer.Ordinal);
         int promoted = 0, equivalentAlternatives = 0;
@@ -70,6 +80,8 @@ internal static class NativeSourcePromotion
                     WordReading[] expected = row.Readings.Select(reading => reading.ToWordReading()).ToArray();
                     var candidates = row.Readings.Where(reading => reading.Form == row.Lemma && reading.Lemma == row.Lemma && reading.FullTag is not null)
                         .SelectMany(reading => bindings.GetValueOrDefault(reading.FullTag!) ?? [])
+                        .Concat(row.Readings.Any(reading => reading.Form == row.Lemma && reading.Lemma == row.Lemma && reading.FullTag is not null)
+                            ? [] : literalBindings.GetValueOrDefault(row.Lemma) ?? [])
                         .Where(binding => row.ProductiveRuleId is null || binding.Rule == row.ProductiveRuleId)
                         .Distinct().OrderBy(binding => binding.Rule, StringComparer.Ordinal).ThenBy(binding => binding.Tag, StringComparer.Ordinal);
                     foreach (var binding in candidates)

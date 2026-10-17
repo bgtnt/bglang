@@ -113,7 +113,7 @@ internal static class NeutralSourceBuilder
         return new(Path.Combine(target, "manifest.json"), sourceId, packageId, rows.Length, rows.Sum(row => (long)row.Readings), annotations?.Entries.Length);
     }
 
-    private static (string Key, string Line, int Readings) Materialize(AuthoringLexeme row, WordFormationAnalyzer graph, int number)
+    internal static (string Key, string Line, int Readings) Materialize(AuthoringLexeme row, WordFormationAnalyzer graph, int number)
     {
         if (row.Kind == "productive")
         {

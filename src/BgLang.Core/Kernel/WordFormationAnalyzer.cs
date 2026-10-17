@@ -280,7 +280,7 @@ internal sealed class WordFormationAnalyzer
                 "paradigmEdges",
                 ["id", "stateId", "ruleId", "baseFullTag", "fullTagPrefix", "stemTransformId", "reviewState", "evidenceIds"],
                 ValidateParadigmEdgeJson,
-                ["forms", "formsFrom"]);
+                ["forms", "formsFrom", "executionKind"]);
         }
         if (root.TryGetProperty("lexicalCliticProjections", out _))
             ValidateObjectArray(root, "lexicalCliticProjections",
@@ -509,6 +509,8 @@ internal sealed class WordFormationAnalyzer
         StrictJson.RequireString(item, "stemTransformId", label);
         StrictJson.RequireString(item, "reviewState", label);
         StrictJson.RequireStringArray(item, "evidenceIds", label);
+        if (item.TryGetProperty("executionKind", out _))
+            _ = StrictJson.RequireString(item, "executionKind", label);
         if (item.TryGetProperty("formsFrom", out _))
         {
             StrictJson.RequireString(item, "formsFrom", label);
@@ -854,6 +856,9 @@ internal sealed class WordFormationAnalyzer
             RequireKnown(edge.EvidenceIds, evidenceIds, $"Paradigm edge '{edge.Id}' evidence");
             bool invariant = IsInvariantProgram(edge) && programSizes[(edge.BaseFullTag, edge.RuleId)] == 1;
             bool lexical = IsLexicalParadigm(edge);
+            if (edge.ExecutionKind is not null &&
+                (edge.ExecutionKind != "lexical" || edgeTransform.ExactInput is null))
+                throw new InvalidDataException($"Paradigm edge '{edge.Id}' explicit lexical execution requires an exact-input guard.");
             if (invariant && edgeTransform.Kind != "identity")
                 throw new InvalidDataException($"Invariant program '{edge.Id}' requires an identity guard.");
             if (!invariant && edgeTransform.ExactInput is not null &&
@@ -866,7 +871,7 @@ internal sealed class WordFormationAnalyzer
                 string normalizedEnding = BulgarianTextNormalizer.NormalizeKey(form.Ending);
                 bool hasEmptyEnding = form.Ending.Length == 0;
                 if (form.Source == "literal" && (!lexical || hasEmptyEnding))
-                    throw new InvalidDataException($"Paradigm edge '{edge.Id}' literal form requires a lexical state and a non-empty literal.");
+                    throw new InvalidDataException($"Paradigm edge '{edge.Id}' literal form requires a lexical program and a non-empty literal.");
                 if (!hasEmptyEnding &&
                     (normalizedEnding.Length == 0 ||
                      !string.Equals(normalizedEnding, form.Ending, StringComparison.Ordinal)))
@@ -923,15 +928,16 @@ internal sealed class WordFormationAnalyzer
         {
             ParadigmEdgeNode[] parents = paradigmEdges.Where(edge => edge.RuleId == projection.ParentRuleId &&
                 edge.BaseFullTag == projection.ParentBaseFullTag).ToArray();
-            if (projection.CliticTagPart != "+се" || projection.ReviewState != "accepted" ||
+            string? suffix = projection.CliticTagPart switch { "+се" => "se", "+си" => "si", _ => null };
+            if (suffix is null || projection.ReviewState != "accepted" ||
                 !projection.ParentBaseFullTag.StartsWith("Глагол:", StringComparison.Ordinal) ||
                 projection.ParentBaseFullTag.Contains('+') || projection.BaseFullTag != projection.ProjectTag(projection.ParentBaseFullTag) ||
-                projection.RuleId != projection.ParentRuleId + ".legacy_clitic_projection_se" ||
+                projection.RuleId != projection.ParentRuleId + ".legacy_clitic_projection_" + suffix ||
                 !projectionBindings.Add((projection.BaseFullTag, projection.RuleId)) || parents.Length == 0 ||
                 parents.Any(edge => IsInvariantProgram(edge) || edge.Forms.Any(form => form.FullTags.Any(tag => tag.Contains('+'))) || edge.ReviewState != "accepted" ||
                     transformIds[edge.StemTransformId].ReviewState != "accepted") ||
                 paradigmEdges.Any(edge => edge.RuleId == projection.RuleId && edge.BaseFullTag == projection.BaseFullTag))
-                throw new InvalidDataException("Lexical clitic projection requires an exact approved ordinary verb parent and +се binding.");
+                throw new InvalidDataException("Lexical clitic projection requires an exact approved ordinary verb parent and +се/+си binding.");
             RequireKnown(projection.EvidenceIds, evidenceIds, $"Lexical clitic projection '{projection.Id}' evidence");
         }
         OrdinaryParadigmAlias[] aliases = source.OrdinaryParadigmAliases ?? [];
@@ -1187,7 +1193,7 @@ internal sealed class WordFormationAnalyzer
             if (!ids.Add(frame.Id) || !decisions.Add(item.DecisionId) || !groups.Add(group))
                 throw new InvalidDataException("Reviewed verb-clitic relations contain duplicate or ambiguous bindings.");
             string[] acceptedRules = paradigmEdges
-                .Where(edge => edge.ReviewState == "accepted" && edge.StateId == frame.VerbTypeStateId)
+                .Where(edge => edge.ReviewState == "accepted" && !IsLexicalParadigm(edge) && edge.StateId == frame.VerbTypeStateId)
                 .Select(edge => edge.RuleId).Distinct(StringComparer.Ordinal).ToArray();
             if (acceptedRules.Length != 1 || acceptedRules[0] != frame.ProductiveParadigmRuleId)
                 throw new InvalidDataException("Reviewed verb-clitic relation lacks one accepted state-to-rule binding.");
@@ -1342,6 +1348,7 @@ internal sealed class WordFormationAnalyzer
             : tags.Length > 1 && tags.Contains(edge.BaseFullTag, StringComparer.Ordinal));
 
     internal static bool IsLexicalParadigm(ParadigmEdgeNode edge) =>
+        edge.ExecutionKind == "lexical" ||
         WordFormationGraph.StatePartOfSpeech(edge.StateId) is "numeral" or "personal_pronoun" or "pronoun";
 
     internal static bool IsSupplementaryLemmaForm(ParadigmEdgeNode edge, ParadigmFormNode form) =>
@@ -1540,7 +1547,8 @@ internal sealed class WordFormationAnalyzer
         string ReviewState,
         string[] EvidenceIds,
         ParadigmFormNode[] Forms,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FormsFrom = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FormsFrom = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ExecutionKind = null);
 
     internal sealed record ParadigmFormNode(
         string Source,

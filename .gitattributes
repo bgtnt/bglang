@@ -72,5 +72,58 @@ tests/BgLang.Tests/Kernel/Fixtures/finite237-* text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/type151-correction-metadata.v1.tsv text eol=lf
 
 # Public recipe binds the reviewed Windows RAW graph and independent literal fixture.
-data/word-formation/word-formation-source.v0.json text eol=crlf
+data/word-formation/word-formation-source.v0.json -text
 tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-identity83-*.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-finite-tail-*.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/finite66-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/finite68-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/lexical9-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-ya103-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-ya97-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-type69-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/type69-* text eol=lf
+tools/VerifyShaBoundFixtureEol.ps1 text eol=lf
+
+# Explicit fixture checkout policies preserve each current RAW payload.
+tests/BgLang.Tests/Kernel/Fixtures/annotated-source-workflow.v1.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/legacy-projection.v1.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/neutral-lexemes-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/neutral-lexemes-projection-closure.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-r-yer-exact3-native-consumer-pins.v1.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-r-yer-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-r-yer-native-owner-rows.v1.jsonl text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/productive-neutral-generation-oracle.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/reusable-compound-oracle.v2.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/stress-workflow.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun1-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun31a-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun47-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun49-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun65-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun71-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-noun7b-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-type76-golden-mini.v1.jsonl text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/wordforms-type79-golden-mini.v1.jsonl text eol=crlf
+
+tests/BgLang.Tests/Kernel/Fixtures/nominal-feminine51-reduced-yer2-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic132-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic18-si-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-feminine-stem7-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-feminine-stem7-literal-oracle.v1.json text eol=crlf
+tests/BgLang.Tests/Kernel/Fixtures/source-corrected27-* text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-direct61-* text eol=lf
+
+# Source-bound parent/owner literal cohort
+tests/BgLang.Tests/Kernel/Fixtures/clitic-parent36-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-parent36-owner-unions.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-parent36-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-residual25-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-residual25-owner-unions.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/clitic-residual25-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-residual7-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-residual7-owner-unions.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/nominal-residual7-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/residual10-literal-oracle.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/residual10-owner-unions.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/residual10-native-consumer-pins.v1.json text eol=lf

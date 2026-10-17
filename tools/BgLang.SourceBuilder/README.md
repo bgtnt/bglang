@@ -235,7 +235,7 @@ surviving stress или противоречиви пътища. Source файл
 
 ## Публикуване и проверки
 
-Всички build/export/remove/carry-stress команди изискват нов target със съществуващ родител.
+Всички build/export/remove/carry-stress/retain-lemmas/promote-native/correct-stored команди изискват нов target със съществуващ родител.
 Source, предишният пакет и вече отворените сесии остават неизменни.
 
 Публикуването използва изключително придобита sibling staging директория,
@@ -258,3 +258,32 @@ dotnet tools/BgLang.SourceBuilder.Checks/bin/Release/net10.0/BgLang.SourceBuilde
 Проверките използват замразения независим oracle 31 roots/1215 readings и
 собствени временни директории под `.tmp`, включително ACL и symlink случаи.
 Те не строят външни пакети и не изпълняват broad corpus.
+
+## Точни корекции на complete stored source
+
+`correct-stored <manifest.json> <source-bound-replacements.json> <new-package-directory>`
+прилага предварително обосновани пълни корекции на избрани v1 stored owners.
+Входът е точният unannotated пакет с три файла и само explicit stored/routed
+редове. Generated/native вход се отказва. Лингвистичната обосновка и независимо
+проверените следващи публични очаквания остават задължение на автора на selection.
+
+Selection има `schemaVersion: "bglang-correct-stored.v1"`, `manifestSha256`,
+`lexiconSourceId`, `lexiconSha256` и непразен `targets`. Всеки target съдържа
+`lexemeKey`, `rowSha256` на целия оригинален RAW ред **включително LF**,
+`readingCount` и `replacement`: пълна `bglang-neutral-authoring.v1` декларация
+с `kind: "stored"`, същите `lemma`/`productiveRuleId` и всички коригирани
+`readings`. Частични patches и повторени/липсващи owners не се приемат.
+
+Само избраните редове минават през съществуващия Materialize. Publish запазва
+оригиналния текст на останалите редове, graph bytes/sourceId, strict identities,
+public Open и атомарния fresh-target протокол. Новите keys се сортират ordinal:
+абсолютните позиции може да се сменят, но RAW редовете и относителният ред на
+неизбраните owners остават точни. Owner count е постоянен; reading count може
+да се промени. Резултатът съдържа `package`, `correctedOwners`, `beforeReadings`
+и `afterReadings`. Следващото `promote-native` получава този пълен stored
+successor и отделно текущия graph.
+
+Фокусираните CLI controls се изпълняват с `--stored-correction-only` към
+`BgLang.SourceBuilder.Checks`. Те проверяват точни preimages, пълна корекция,
+foreign-owner unions/route, RAW/order preservation, reproducible twins,
+отказ на грешни maps/generated вход и create-only publication.

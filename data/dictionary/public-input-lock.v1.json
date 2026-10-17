@@ -1,32 +1,32 @@
 {
   "schema": "bglang.public-input-lock.v1",
-  "status": "LOCKED_LOCAL_DISTRIBUTION",
+  "status": "LOCKED_LOCAL_RELEASE_CANDIDATE",
   "contractComplete": true,
   "source": {
-    "baseCommit": "8e58171736d74cba5cd94b64d6e493dcf936bdb9",
+    "baseCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
     "exportManifest": "public-source-manifest.json",
-    "authority": "Exact authored RAW files are bound by each distribution export manifest; package inputs below are independently immutable."
+    "authority": "Accepted runtime/offline producer commit anchor; exact current recipe/docs RAW files are independently bound by public-source-manifest.json."
   },
   "sdk": {
-    "requestedVersion": "10.0.300",
-    "rollForward": "latestFeature",
-    "effectiveVersion": "10.0.401"
+    "requestedVersion": "10.0.402",
+    "rollForward": "disable",
+    "effectiveVersion": "10.0.402"
   },
   "storedInput": {
-    "profile": "finite237-corrected151-stored.v1",
-    "packageId": "bglang-neutral:5a9a669c309b6f5d",
-    "sourceId": "neutral-source-v3:c9448b7badfb5c1503d4cd8e40ec36fec499be6ff5fad65bb467fa61b43365ca",
+    "profile": "residual10-corrected-stored.v1",
+    "packageId": "bglang-neutral:ef0b0091489cd411",
+    "sourceId": "neutral-source-v3:5a7b8c887e787bc5301099ca26cda97e4385021e5c88980e5f03601a527960eb",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "manifest.json",
         "bytes": 550,
-        "sha256": "b14a81172af9277fcd6df656e2d1da243e84077867519bd49b092c59cec0caed"
+        "sha256": "9da5382d8143ef2bb2001f35a87de176438250c923f58065d5979c2aef7e124b"
       },
       {
         "name": "lexicon.v3.jsonl",
-        "bytes": 269342762,
-        "sha256": "2df0202bca3f87546bf863c0da7b133a26b3fccb78b12bdf5ee94af9059958fd"
+        "bytes": 268576391,
+        "sha256": "06e2b6484691a5c38044b6e5baa432314e7d6dfddb7ab86b672091ededfded56"
       },
       {
         "name": "word-formation.v0.json",
@@ -34,9 +34,9 @@
         "sha256": "c86db9a91e612464fdf76348be77356463816b1a5e09b8713fb0f4077630c44d"
       }
     ],
-    "releaseRelativeDirectory": "public-inputs/corrected151-stored-v1",
+    "releaseRelativeDirectory": "public-inputs/residual10-corrected-stored-v1",
     "distribution": {
-      "location": "public-inputs/corrected151-stored-v1",
+      "location": "public-inputs/residual10-corrected-stored-v1",
       "url": null
     },
     "deliveryStaged": true,
@@ -45,45 +45,45 @@
   },
   "graph": {
     "releaseRelativePath": "data/word-formation/word-formation-source.v0.json",
-    "bytes": 1245561,
-    "sha256": "cea910d9c0ec742c895e6a77b0801c01d3bb5707278fbc029d6eb678336ce6a9",
+    "bytes": 2102275,
+    "sha256": "ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025",
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
-    "profile": "nominal-type69-native.v1",
-    "packageId": "bglang-neutral:9b1115996e1790af",
-    "sourceId": "neutral-source-v3:ec1ee0175653f177243d2667fa9d1b542df17b28e557bfb99e549f8021de59ce",
+    "profile": "residual10-native.v1",
+    "packageId": "bglang-neutral:fa4b0d8a76e8b7a2",
+    "sourceId": "neutral-source-v3:85bcb55c05b1b4b0405bb9c77769c04366764ee3c9cb708dde4ef846e3551a64",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "manifest.json",
         "bytes": 550,
-        "sha256": "a09d8b19087137be393d1befffd0baa7879738bb5b62e67a20d9f1c1e6c007c3"
+        "sha256": "5c74175150ec2c6b862dc3d8e496feb09d106d03e3ec994acc97e6a426c6c3e0"
       },
       {
         "name": "lexicon.v3.jsonl",
-        "bytes": 49837346,
-        "sha256": "bd5243d5f937794ccb5bac8fc90cba566bdb174f622b43bfb5cfea4c424959a3"
+        "bytes": 47330210,
+        "sha256": "67092b96359e25598e71e615dd2c1863be839679d9daa67f2774bbf687ade1ec"
       },
       {
         "name": "word-formation.v0.json",
-        "bytes": 1245561,
-        "sha256": "cea910d9c0ec742c895e6a77b0801c01d3bb5707278fbc029d6eb678336ce6a9"
+        "bytes": 2102275,
+        "sha256": "ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025"
       }
     ],
     "releaseRelativeDirectory": "artifacts/public-package",
     "selectors": {
       "publicTarget": "BGLANG_PUBLIC_PACKAGE_MANIFEST",
-      "historicalCurrentCandidate": "BGLANG_NOMINAL_TYPE69_NATIVE_MANIFEST",
-      "historicalStrictType69": "BGLANG_NOMINAL_TYPE69_REQUIRE_NATIVE_MANIFEST=1"
+      "currentCandidate": "BGLANG_RESIDUAL10_NATIVE_MANIFEST",
+      "strictCurrent": "BGLANG_RESIDUAL10_REQUIRE_NATIVE_MANIFEST=1"
     },
-    "readingCount": 1553662,
-    "distinctForms": 1268766,
+    "readingCount": 1549261,
+    "distinctForms": 1266120,
     "lexemes": 119290,
-    "nativeLexemes": 106056,
-    "nativeReadings": 1522024,
-    "storedLexemes": 13234,
-    "storedReadings": 31638
+    "nativeLexemes": 106552,
+    "nativeReadings": 1533593,
+    "storedLexemes": 12738,
+    "storedReadings": 15668
   },
   "independentLiteralFixture": {
     "releaseRelativePath": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
@@ -101,9 +101,17 @@
     "publicMembers": 378,
     "facadeMethods": 12,
     "inwardDependencyEdges": 4,
-    "basis": "Exact accepted TEXTHTTP complete compiled/evaluated arrays; no runtime API change proposed by packaging."
+    "basis": "Accepted RESIDUAL10 evaluated/compiled complete arrays; packaging changes no runtime/API/dependency."
   },
   "ownerRightsBasis": "Owner-authored code/data; owner states MIT release intent. Third-party test dependencies retain their licenses.",
   "releaseApproval": false,
-  "publicationPerformed": false
+  "publicationPerformed": false,
+  "releaseCandidate": {
+    "label": "residual10-71e504e",
+    "runtimeCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
+    "publicVersion": null,
+    "publicDestination": null,
+    "inputBaseUrl": null,
+    "status": "LOCAL_CANDIDATE_PUBLICATION_NOT_AUTHORIZED"
+  }
 }

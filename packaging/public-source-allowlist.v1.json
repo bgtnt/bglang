@@ -1,6 +1,6 @@
 {
   "schema": "bglang.public-source-allowlist.v1",
-  "sourceBaseCommit": "8e58171736d74cba5cd94b64d6e493dcf936bdb9",
+  "sourceBaseCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
   "projects": [
     "src/BgLang.Api/BgLang.Api.csproj",
     "src/BgLang.Contracts/BgLang.Contracts.csproj",
@@ -25,6 +25,8 @@
     "examples/BgLang.PublicExample/Program.cs",
     "global.json",
     "packaging/Build-PublicPackage.ps1",
+    "packaging/Export-PublicSource.ps1",
+    "packaging/RELEASE-CANDIDATE.md",
     "packaging/public-source-allowlist.v1.json",
     "src/BgLang.Api/BgLang.Api.csproj",
     "src/BgLang.Api/Kernel/BulgarianLanguageSession.cs",
@@ -132,10 +134,11 @@
     "tools/BgLang.SourceBuilder/Program.cs",
     "tools/BgLang.SourceBuilder/README.md",
     "tools/BgLang.SourceBuilder/StoredLemmaMigration.cs",
+    "tools/BgLang.SourceBuilder/StoredSourceCorrection.cs",
     "tools/BgLang.SourceBuilder/derive_native_pins.py",
     "tools/BgLang.SourceBuilder/example.source.jsonl"
   ],
-  "inputDirectory": "public-inputs/corrected151-stored-v1",
+  "inputDirectory": "public-inputs/residual10-corrected-stored-v1",
   "inputFiles": [
     "manifest.json",
     "lexicon.v3.jsonl",
