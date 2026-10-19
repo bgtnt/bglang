@@ -1,10 +1,15 @@
-# Candidate v0.1.0-preview.4
+# Публикуван v0.1.0-preview.4
 
-`v0.1.0-preview.4` е планираният следващ candidate label. Приетият local
-implementation base е `6d3672173cae1688dc36612d1dffc2a49366c7f0`, native output
-`bglang-neutral:de06b9b2e254e61a`. Metadata commit, immutable RAW source export,
-distribution validation, CI и publication за кандидата предстоят; техни hashes,
-source/Compile counts или PASS резултати не са обявени тук.
+**[Изтегли preview 4](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.4)**
+
+Публичният prerelease е публикуван в `2026-10-19T16:54:23Z`; неговият
+public source/tag snapshot е `06d2a2d8461aed0131edceff71ac7fce6e236b63`.
+Приетият local implementation base `6d3672173cae1688dc36612d1dffc2a49366c7f0`
+и local documentation metadata commit `41c88c16fe84e6434f6ffdf343e49f16d113922e`
+имат отделни роли. Runtime output е `bglang-neutral:de06b9b2e254e61a`.
+Exported distribution и CI резултатите по-долу са за immutable release snapshot-а.
+Последващи docs commits в `main` не променят tag/source ZIP/RAW manifest
+или validation на тези artifacts.
 
 Публикуваният [`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3)
 остава отделен release с public source/tag
@@ -18,17 +23,16 @@ Publication snapshot anchor `ae247f60da2122a2d7a8f925058949dda744a95c` е ист
 Input lock запазва producer `source.baseCommit=399c166d9aa82355a8599f64a7457348789bb395`.
 Това е различен anchor от publication snapshot-а и приетия base `6d367217`.
 Allowlist `sourceBaseCommit=308b5a46ac1539ca98498d291ccf94d04543baf1` също е
-запазен historical runtime/producer anchor, не бъдещият metadata/export commit.
+запазен historical runtime/producer anchor, различен от local metadata и public source/tag commit.
 Historical contract/status,
 allowlist anchor и pending/publication=false snapshots остават история и не
 се използват сами по себе си като доказателство за текуща публикация.
 
 ## Първо използвайте runtime ZIP
 
-За незабавно използване вземете runtime ZIP, `SHA256SUMS` и source bundle от
-публикувания preview.3. За preview.4 download указанията ще са приложими след
-неговата публикация. Проверете hash и разархивирайте трите data файла в
-`./runtime`. Със source checkout/bundle от същия preview, Windows, PowerShell 7
+Вземете runtime ZIP, `SHA256SUMS` и source bundle от свързания по-горе
+preview.4. Проверете hash и разархивирайте трите data файла в `./runtime`.
+Със source checkout/bundle от същия preview, Windows, PowerShell 7
 и .NET SDK **10.0.402**:
 
 ```powershell
@@ -124,9 +128,9 @@ owner numeric cap или общ speedup claim. Bounded heavy fixture е 64
 
 ## Възпроизвеждане на native data
 
-Това е отделен offline workflow със source/recipe от съответния immutable
-export и complete corrected STORED inputs. Следващите identities са приетият
-local target за preview.4; нов export/distribution run още не е изпълнен.
+Това е отделен offline workflow със source/recipe от immutable preview.4
+export и complete corrected STORED inputs. Следващите identities са на
+публикувания preview.4 и приетата exported distribution.
 Готовият runtime е достатъчен за API.
 [Input lock](../data/dictionary/public-input-lock.v1.json) фиксира component hashes:
 
@@ -168,17 +172,18 @@ dotnet test tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj -c Release --no
 if ($LASTEXITCODE -ne 0) { throw 'Public package tests failed.' }
 ```
 
-За новия distribution run Public37 е очакване, не вече получен резултат.
+Приетата exported distribution за preview.4 има **Public37P/0F/0skip**,
+**23 mandatory gates, от които7 complete-package**, **три Release builds
+с0 warnings/0 errors** и exact RAW съвпадение на трите native файла с `de06`.
 Приетите Release2/Focus48P/Public37P/Regressions265P/Full3314P с0F,
-13 historical NotExecuted и42 package gates са implementation evidence за
-`6d367217`/`de06`, отделно от предстоящата проверка на exported source.
-Настоящата metadata подготовка променя само README и този guide; това не е
-твърдение за нулев Product delta спрямо preview.3.
+13 historical NotExecuted и42 package gates остават отделно implementation evidence
+за `6d367217`/`de06`; distribution резултатът не се извежда от тях.
 
 [Source allowlist](public-source-allowlist.v1.json)/RAW manifest определят
-конкретния export. Source/Compile counts се установяват от текущия allowlist
-и evaluated project closure, а actual export се приема по новия RAW manifest.
-Не пренасяйте старите preview.3 counts/резултати върху кандидата.
+immutable export-а. Public source/tag `06d2a2d8461aed0131edceff71ac7fce6e236b63`
+и неговият source ZIP/manifest запазват собствените си identities и validation
+при последващи docs commits в `main`. Тази поправка е само на README и guide;
+не пренася preview.3 counts/резултати и не променя Product/API/dependencies.
 Ползвайте source/recipe и locked inputs от същия preview;
 preview.2 STORED assets не съвпадат с текущия lock. Missing component, hash
 mismatch или непълен export не се заместват с private/стар input.
@@ -187,20 +192,22 @@ mismatch или непълен export не се заместват с private/с
 
 [Windows workflow](../.github/workflows/windows-public.yml) приема explicit
 `input_base_url`/`BGLANG_INPUT_BASE_URL` за трите raw STORED assets.
-Публикуваният raw input base за preview.3 е
-`https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.3`;
-добавя се името на locked STORED asset. За preview.4 се изисква отделно
-обвързване на input delivery/base URL с exact lock/asset hashes; нов URL не е
-предварително удостоверен. Това не е runtime ZIP URL;
-missing URL/hash mismatch е FAIL без preview.1 fallback.
-CI evidence се отнася до exact public SHA/run, отделно от local checks и
-release assets. Publication сама по себе си не доказва green CI/corpus result.
-Проверявайте actual public SHA/run и asset hashes в release metadata;
-публикационният snapshot anchor не е автоматично public repository commit.
+Публикуваният raw input base за preview.4 е
+`https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.4`;
+добавя се exact locked STORED asset име. Recipe, lock и трите raw STORED assets
+трябва да са от същия preview. Това не е runtime ZIP URL;
+missing URL/hash mismatch е FAIL без private/preview.1 fallback или mixing.
+[CI run39289839846](https://github.com/bgtnt/bglang/actions/runs/39289839846)
+е completed **SUCCESS**, head `06d2a2d8461aed0131edceff71ac7fce6e236b63`,
+attempt1, приключил в `2026-10-19T17:00:30Z`.
+Това е exact public SHA/run evidence, отделно от local checks и release assets.
+Publication и green CI не установяват corpus acceptance или обща accuracy.
+Asset hashes се проверяват спрямо release metadata; historical producer/snapshot
+anchors не се подменят с public repository commit.
 
 ## Езикови промени и граници
 
-Приетото допълнение за планирания preview.4 допуска exact adverb `късно`
+Допълнението в публикувания preview.4 допуска exact adverb `късно`
 в съществуващия typed degree механизъм за `по-късно` и `най-късно`.
 Лексикалните readings и adjective homograph се запазват; изборът на
 `BaseEvidence` за `по-късно` може да стане `късно` по съществуващия rank.
