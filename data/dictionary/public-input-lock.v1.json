@@ -3,7 +3,7 @@
   "status": "LOCKED_LOCAL_RELEASE_CANDIDATE",
   "contractComplete": true,
   "source": {
-    "baseCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
+    "baseCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "exportManifest": "public-source-manifest.json",
     "authority": "Accepted runtime/offline producer commit anchor; exact current recipe/docs RAW files are independently bound by public-source-manifest.json."
   },
@@ -13,20 +13,20 @@
     "effectiveVersion": "10.0.402"
   },
   "storedInput": {
-    "profile": "residual10-corrected-stored.v1",
-    "packageId": "bglang-neutral:ef0b0091489cd411",
-    "sourceId": "neutral-source-v3:5a7b8c887e787bc5301099ca26cda97e4385021e5c88980e5f03601a527960eb",
+    "profile": "ela-imperative-corrected-stored.v1",
+    "packageId": "bglang-neutral:6de86ba569c1001a",
+    "sourceId": "neutral-source-v3:4e6b294e97c5585d4af44ae0c71b5baab338a0cc32c83ad0dd83019482cd18ff",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "manifest.json",
         "bytes": 550,
-        "sha256": "9da5382d8143ef2bb2001f35a87de176438250c923f58065d5979c2aef7e124b"
+        "sha256": "9622c2362d32895468bb766f8d135f832faa0590278fa38c6da033bb6b62caf2"
       },
       {
         "name": "lexicon.v3.jsonl",
-        "bytes": 268576391,
-        "sha256": "06e2b6484691a5c38044b6e5baa432314e7d6dfddb7ab86b672091ededfded56"
+        "bytes": 268576648,
+        "sha256": "a594daaf7a5336f3e27fe313defb0b81689012209afc7b19dd9acf956ad022ff"
       },
       {
         "name": "word-formation.v0.json",
@@ -34,12 +34,12 @@
         "sha256": "c86db9a91e612464fdf76348be77356463816b1a5e09b8713fb0f4077630c44d"
       }
     ],
-    "releaseRelativeDirectory": "public-inputs/residual10-corrected-stored-v1",
+    "releaseRelativeDirectory": "public-inputs/ela-imperative-corrected-stored-v1",
     "distribution": {
-      "location": "public-inputs/residual10-corrected-stored-v1",
+      "location": "public-inputs/ela-imperative-corrected-stored-v1",
       "url": null
     },
-    "deliveryStaged": true,
+    "deliveryStaged": false,
     "hiddenPrivateFallbackAllowed": false,
     "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit"
   },
@@ -50,20 +50,20 @@
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
-    "profile": "residual10-native.v1",
-    "packageId": "bglang-neutral:fa4b0d8a76e8b7a2",
-    "sourceId": "neutral-source-v3:85bcb55c05b1b4b0405bb9c77769c04366764ee3c9cb708dde4ef846e3551a64",
+    "profile": "ela-imperative-native.v1",
+    "packageId": "bglang-neutral:1835c7e51b034b3f",
+    "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "manifest.json",
         "bytes": 550,
-        "sha256": "5c74175150ec2c6b862dc3d8e496feb09d106d03e3ec994acc97e6a426c6c3e0"
+        "sha256": "db6646e6d703d2545ba0796f1897c789e9ecab209ff37815fc1c5000117ef394"
       },
       {
         "name": "lexicon.v3.jsonl",
-        "bytes": 47330210,
-        "sha256": "67092b96359e25598e71e615dd2c1863be839679d9daa67f2774bbf687ade1ec"
+        "bytes": 47335883,
+        "sha256": "e76c91b4ddd90f9ce87bf86b3cd57482aafeb04f198fc91982f31d721d96922a"
       },
       {
         "name": "word-formation.v0.json",
@@ -74,16 +74,16 @@
     "releaseRelativeDirectory": "artifacts/public-package",
     "selectors": {
       "publicTarget": "BGLANG_PUBLIC_PACKAGE_MANIFEST",
-      "currentCandidate": "BGLANG_RESIDUAL10_NATIVE_MANIFEST",
-      "strictCurrent": "BGLANG_RESIDUAL10_REQUIRE_NATIVE_MANIFEST=1"
+      "currentCandidate": "BGLANG_ELA_IMPERATIVE_NATIVE_MANIFEST",
+      "strictCurrent": "BGLANG_ELA_IMPERATIVE_REQUIRE_NATIVE_MANIFEST=1"
     },
-    "readingCount": 1549261,
-    "distinctForms": 1266120,
+    "readingCount": 1549263,
+    "distinctForms": 1266121,
     "lexemes": 119290,
-    "nativeLexemes": 106552,
-    "nativeReadings": 1533593,
-    "storedLexemes": 12738,
-    "storedReadings": 15668
+    "nativeLexemes": 106551,
+    "nativeReadings": 1533555,
+    "storedLexemes": 12739,
+    "storedReadings": 15708
   },
   "independentLiteralFixture": {
     "releaseRelativePath": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
@@ -107,11 +107,11 @@
   "releaseApproval": false,
   "publicationPerformed": false,
   "releaseCandidate": {
-    "label": "residual10-71e504e",
-    "runtimeCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
+    "label": "ela-imperative-local-successor",
+    "runtimeCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "publicVersion": null,
     "publicDestination": null,
     "inputBaseUrl": null,
-    "status": "LOCAL_CANDIDATE_PUBLICATION_NOT_AUTHORIZED"
+    "status": "LOCAL_SUCCESSOR_REVIEW_PENDING_PUBLICATION_NOT_AUTHORIZED"
   }
 }

@@ -36,7 +36,9 @@ var options = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRela
 options.Converters.Add(new JsonStringEnumConverter());
 using Process process = Process.GetCurrentProcess();
 var observations = new List<object>();
+var outputLines = new List<string>();
 double? entryToOpenMilliseconds = null;
+double? entryToOpenStartMilliseconds = null;
 using var language = Query("Open", new { manifest = Path.GetFullPath(args[0]) },
     () => BulgarianLanguageSession.Open(args[0]), value => value.Provenance,
     value => $"Package: {value.Provenance.PackageId}");
@@ -56,8 +58,7 @@ foreach (var input in new[] { (Word: "трактор", Limit: 16), (Word: "жъ�
     Query("DeriveWords", new { word = input.Word, limit = input.Limit },
         () => language.DeriveWords(input.Word, input.Limit),
         values => values.Select(PathValue).ToArray(),
-        values => $"{input.Word}: returned {values.Count}; displayed {Math.Min(3, values.Count)}: " +
-            JsonSerializer.Serialize(values.Take(3).Select(PathSummary), options));
+        values => $"{input.Word}: " + JsonSerializer.Serialize(Preview(values, PathSummary), options));
 foreach (string input in new[] { "писател", "трактористка", "жълто-зелен", "жълто-зеления", "жълто--зелен", "жълто-книга" })
     Query("DecomposeWord", new { word = input }, () => language.DecomposeWord(input), value => value,
         value => JsonSerializer.Serialize(value, options));
@@ -88,15 +89,41 @@ var environment = new { runtime = Environment.Version.ToString(), RuntimeInforma
     GCSettings.IsServerGC, tempPath = Path.GetTempPath() };
 var startup = measure ? new { entryUtc, processStartUtc = process.StartTime.ToUniversalTime(),
     approximateProcessAgeAtManagedEntryMilliseconds = (entryUtc - process.StartTime.ToUniversalTime()).TotalMilliseconds,
-    managedEntryToOpenCompleteMilliseconds = entryToOpenMilliseconds } : null;
+    managedEntryToOpenCompleteMilliseconds = entryToOpenMilliseconds,
+    managedEntryToOpenStartMilliseconds = entryToOpenStartMilliseconds } : null;
 const string measurementNote = "One session; API timers exclude projection, output and memory snapshots. Fresh process does not clear OS cache. PeakWorkingSetBytes is lifetime peak; managed bytes are not process RAM; allocation deltas are process-wide. No resource acceptance threshold.";
+object? document = null;
 if (json)
-    Console.WriteLine(JsonSerializer.Serialize(new {
+    document = new {
         schema = "bglang-public-example.v1", language.Provenance,
         environment, startup, measurementNote = measure ? measurementNote : null,
-        observations }, new JsonSerializerOptions(options) { WriteIndented = true }));
+        observations };
 else if (measure)
-    Console.WriteLine(JsonSerializer.Serialize(new { environment, startup, measurementNote }, options));
+    outputLines.Add(JsonSerializer.Serialize(new { environment, startup, measurementNote }, options));
+var outputOptions = new JsonSerializerOptions(options) { WriteIndented = true };
+byte[] newline = Encoding.UTF8.GetBytes(Environment.NewLine);
+var beforeSerialization = measure ? Snapshot() : null;
+long serializationStarted = Stopwatch.GetTimestamp();
+byte[] payload = json ? JsonSerializer.SerializeToUtf8Bytes(document, outputOptions) :
+    Encoding.UTF8.GetBytes(string.Join(Environment.NewLine, outputLines));
+long serializationFinished = Stopwatch.GetTimestamp();
+var afterSerialization = measure ? Snapshot() : null;
+using (Stream output = Console.OpenStandardOutput())
+{
+    output.Write(payload);
+    output.Write(newline);
+}
+if (measure)
+    Console.Error.WriteLine(JsonSerializer.Serialize(new {
+        schema = "bglang-public-example.measurement.v1",
+        format = json ? "json" : "console", payloadBytes = payload.LongLength,
+        trailingNewlineBytes = newline.LongLength, outputBytes = payload.LongLength + newline.LongLength,
+        payloadDefinition = "All stdout UTF8 bytes except the separately counted final newline; this stderr record is excluded.",
+        serialization = PhaseValue(json ? "json-serialization-and-utf8" : "console-join-and-utf8",
+            serializationStarted, serializationFinished, beforeSerialization!, afterSerialization!),
+        outputIoMeasured = false, inputIoMeasured = false,
+        phaseDefinition = "Preparation calls project or summary exactly once; console summary includes nested JSON formatting. API/preparation timers exclude snapshots and measurement-metadata construction/formatting. JSON final serialization includes every prepared envelope field, including measurement metadata. Console final serialization joins already formatted summary/measurement lines and encodes UTF8. Serialization timers exclude snapshots, measurement object construction, newline encoding and output IO. Allocation deltas can include snapshot overhead and other process allocations."
+    }, options));
 
 T Query<T>(string method, object input, Func<T> call, Func<T, object> project, Func<T, string> summary)
 {
@@ -105,22 +132,42 @@ T Query<T>(string method, object input, Func<T> call, Func<T, object> project, F
     T result = call();
     long finished = Stopwatch.GetTimestamp();
     double elapsed = Stopwatch.GetElapsedTime(started, finished).TotalMilliseconds;
-    if (method == "Open") entryToOpenMilliseconds = Stopwatch.GetElapsedTime(entryTick, finished).TotalMilliseconds;
+    if (method == "Open")
+    {
+        entryToOpenMilliseconds = Stopwatch.GetElapsedTime(entryTick, finished).TotalMilliseconds;
+        entryToOpenStartMilliseconds = Stopwatch.GetElapsedTime(entryTick, started).TotalMilliseconds;
+    }
     var after = measure ? Snapshot() : null;
+    var beforePreparation = measure ? Snapshot() : null;
+    long preparationStarted = Stopwatch.GetTimestamp();
+    object? projected = json ? project(result) : null;
+    string? summarized = json ? null : summary(result);
+    long preparationFinished = Stopwatch.GetTimestamp();
+    var afterPreparation = measure ? Snapshot() : null;
     var measurement = measure ? new { milliseconds = elapsed, before, after,
         workingSetDeltaBytes = after!.WorkingSetBytes - before!.WorkingSetBytes,
         privateDeltaBytes = after.PrivateBytes - before.PrivateBytes,
         lifetimePeakIncreaseBytes = after.PeakWorkingSetBytes - before.PeakWorkingSetBytes,
         managedDeltaBytes = after.ManagedBytes - before.ManagedBytes,
-        allocatedDeltaBytes = after.AllocatedBytes - before.AllocatedBytes } : null;
-    if (json) observations.Add(new { method, input, result = project(result), measurement });
+        allocatedDeltaBytes = after.AllocatedBytes - before.AllocatedBytes,
+        preparation = PhaseValue(json ? "json-projection" : "console-summary",
+            preparationStarted, preparationFinished, beforePreparation!, afterPreparation!) } : null;
+    if (json) observations.Add(new { method, input, result = projected, measurement });
     if (!json)
     {
-        Console.WriteLine($"{method}: {summary(result)}");
-        if (measure) Console.WriteLine(JsonSerializer.Serialize(measurement, options));
+        outputLines.Add($"{method}: {summarized}");
+        if (measure) outputLines.Add(JsonSerializer.Serialize(measurement, options));
     }
     return result;
 }
+
+object PhaseValue(string phase, long started, long finished, MemorySnapshot before, MemorySnapshot after) => new {
+    phase, milliseconds = Stopwatch.GetElapsedTime(started, finished).TotalMilliseconds, before, after,
+    workingSetDeltaBytes = after.WorkingSetBytes - before.WorkingSetBytes,
+    privateDeltaBytes = after.PrivateBytes - before.PrivateBytes,
+    lifetimePeakIncreaseBytes = after.PeakWorkingSetBytes - before.PeakWorkingSetBytes,
+    managedDeltaBytes = after.ManagedBytes - before.ManagedBytes,
+    allocatedDeltaBytes = after.AllocatedBytes - before.AllocatedBytes };
 
 MemorySnapshot Snapshot()
 {
@@ -133,13 +180,29 @@ void AnalyzeText(string input, object? file)
 {
     Query("AnalyzeText", new { text = input, utf16Length = input.Length, file },
         () => language.AnalyzeText(input, CancellationToken.None),
-        value => new { value.Text, value.Sentences, value.Phonetics, value.Diagnostics,
+        value => new { value.Text, value.Sentences, value.Phonetics,
+            Diagnostics = value.Diagnostics.Select(DiagnosticValue).ToArray(),
             Tokens = value.Tokens.Select(token => new { token.Text, token.Kind, token.Start, token.Length,
                 Analysis = token.Analysis is { } word ? WordValue(word) : null }).ToArray() },
-        value => $"{value.Tokens.Count} tokens; diagnostics={JsonSerializer.Serialize(value.Diagnostics, options)}\n" +
+        value => $"{value.Tokens.Count} tokens; diagnostics={JsonSerializer.Serialize(value.Diagnostics.Select(DiagnosticValue), options)}\n" +
             string.Join("\n", value.Tokens.Where(token => token.Analysis is not null).Select(token =>
                 $"  [{token.Start},{token.Length}] {WordSummary(token.Analysis!)}")));
 }
+
+// Consumer guidance only: a candidate warning asks for review; it is not an automatic correction.
+// Unknown codes retain their identity as information and do not establish check coverage.
+object DiagnosticValue(TextDiagnostic value) => new {
+    value.Code, value.Start, value.Length, value.RuleId, value.ProjectedText,
+    Classification = value.Code switch {
+        "full_short_article_check_not_ready" => "unsupported-check",
+        "missing_terminal_punctuation" or "sentence_initial_lowercase" or
+        "mixed_script_ocr_known_candidate" or "digit_shape_ocr_known_candidate" or
+        "accent_sensitive_i_grave" or "spelling_unknown_word_unique_distance_one_candidate" or
+        "pronoun_verb_agreement_mismatch" or "preposition_missing_complement" or
+        "full_article_expected_for_subject_candidate" => "warning",
+        _ => "information"
+    }
+};
 
 object ReadingValue(WordReading value) => new { reading = value, value.Features };
 object PathValue(WordDerivation value) => new {
@@ -150,8 +213,8 @@ object PathValue(WordDerivation value) => new {
 object PathSummary(WordDerivation value) => new {
     value.Word, value.Base, value.FromState, value.ToState, value.DerivedLemma, value.FullTags, value.RuleIds,
     value.IsConditional, value.ConditionalRootProgramId, value.ConditionalRootBaseFullTag, value.ConditionalRootSupportCount,
-    supportingLemmas = value.ConditionalSupportingLemmas is { } donors ? new { returned = donors.Count,
-        displayed = donors.Take(3).ToArray() } : null, value.UnmetExactSelfReadingRequirements };
+    supportingLemmas = value.ConditionalSupportingLemmas is { } donors ? Preview(donors, donor => donor) : null,
+    value.UnmetExactSelfReadingRequirements, rootAuthority = value.IsConditional ? "conditional" : "exact-self-reading" };
 object SegmentValue(WordSegmentationCandidate value, Func<WordDerivation, object> pathValue) => new {
     value.OriginalText, value.NormalizedText, value.SegmentedText, value.Rank, value.IsSyntaxRanked, value.Source,
     Segments = value.Segments.Select(segment => new { segment.Text, Readings = segment.Readings.Select(ReadingValue).ToArray(),
@@ -160,6 +223,13 @@ object CandidateValue(MorphologyCandidate value) => new {
     value.Word, value.Lemma, value.BaseFullTag, value.FullTag, value.ProductiveRuleId, value.MatchedEndingLength,
     value.SupportingLemmas, value.Source, value.Features, value.BaseFeatures,
     ShorterEndingCandidates = value.ShorterEndingCandidates.Select(CandidateValue).ToArray() };
+object CandidateSummary(MorphologyCandidate value) => new {
+    value.Word, value.Lemma, value.BaseFullTag, value.FullTag, value.ProductiveRuleId, value.MatchedEndingLength,
+    supportingLemmas = Preview(value.SupportingLemmas, donor => donor), value.Source, value.Features, value.BaseFeatures,
+    ShorterEndingCandidates = Preview(value.ShorterEndingCandidates, CandidateSummary), authority = "hypothesis" };
+// Display only; the API result and full JSON retain every item and its original order.
+object Preview<T>(IReadOnlyList<T> values, Func<T, object> project) => new {
+    total = values.Count, displayed = Math.Min(3, values.Count), items = values.Take(3).Select(project).ToArray() };
 object Flags(WordAnalysis value) => new { value.GraphSearchIncomplete, value.GraphCandidatesTruncated,
     value.CandidateSearchLimited, value.CandidateEvidenceLimited, value.KnownBaseSearchLimited,
     value.BaseTypeSearchLimited, value.BaseTypeEvidenceLimited };
@@ -171,9 +241,10 @@ object WordValue(WordAnalysis value) => new { value.Word, value.NormalizedWord, 
     Candidates = value.Candidates.Select(CandidateValue).ToArray(),
     KnownBaseCandidates = value.KnownBaseCandidates.Select(CandidateValue).ToArray(),
     BaseTypeCandidates = value.BaseTypeCandidates.Select(CandidateValue).ToArray() };
-string WordSummary(WordAnalysis value) => $"{value.Word}: known={value.IsKnown}; readings={value.Readings.Count}; " +
-    $"graph={value.GraphCandidates.Count}; candidates/known-base/base-type={value.Candidates.Count}/{value.KnownBaseCandidates.Count}/{value.BaseTypeCandidates.Count}; " +
-    $"flags={JsonSerializer.Serialize(Flags(value), options)}; graph displayed {Math.Min(3, value.GraphCandidates.Count)}: " +
-    JsonSerializer.Serialize(value.GraphCandidates.Take(3).Select(PathSummary), options);
+string WordSummary(WordAnalysis value) => $"{value.Word}: known={value.IsKnown}; " +
+    JsonSerializer.Serialize(new { value.NormalizedWord, Readings = Preview(value.Readings, ReadingValue), value.BaseEvidence,
+        GraphCandidates = Preview(value.GraphCandidates, PathSummary), Candidates = Preview(value.Candidates, CandidateSummary),
+        KnownBaseCandidates = Preview(value.KnownBaseCandidates, CandidateSummary),
+        BaseTypeCandidates = Preview(value.BaseTypeCandidates, CandidateSummary), flags = Flags(value) }, options);
 
 sealed record MemorySnapshot(long WorkingSetBytes, long PrivateBytes, long PeakWorkingSetBytes, long ManagedBytes, long AllocatedBytes);

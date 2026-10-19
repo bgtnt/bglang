@@ -16,6 +16,167 @@ public sealed class PublicPackageTests
     private static JsonElement[] cases = [];
     private static JsonElement[] typedTags = [];
 
+    [TestMethod]
+    public void Complete_package_conditional_roots_refuse_empty_hyphen_components()
+    {
+        foreach (string input in new[] { "-наносензор", "наносензор-", "нано--сензор", "ултра--лек",
+            "свръх---проводник", "-хиперчетлив", "хиперчетлив-" })
+        {
+            Assert.IsEmpty(session.Lookup(input, LookupMode.Exact, 256), "The frozen negative must remain unseen: " + input);
+            WordAnalysis word = session.AnalyzeWord(input, 256);
+            Assert.IsFalse(word.IsKnown);
+            Assert.IsFalse(word.GraphCandidates.Any(path => path.IsConditional &&
+                (path.Base.StartsWith('-') || path.Base.EndsWith('-') || path.Base.Contains("--", StringComparison.Ordinal))), input);
+        }
+        foreach ((string input, int count) in new[] { ("бяло-зелено-червен", 54), ("бяло-зелено-червените", 173) })
+        {
+            Assert.IsEmpty(session.Lookup(input, LookupMode.Exact, 256), "A lexical hit cannot prove this unseen-form control: " + input);
+            WordAnalysis word = session.AnalyzeWord(input, 256);
+            Assert.IsFalse(word.IsKnown);
+            Assert.AreEqual(count, word.GraphCandidates.Count, input);
+            Assert.IsTrue(word.GraphCandidates.All(path => path.IsConditional &&
+                path.UnmetExactSelfReadingRequirements is { Count: > 0 }), input);
+            AssertSearchFlags(word, false, false, false, false, false, false, false);
+        }
+    }
+
+    [TestMethod]
+    public void Complete_successor_adds_imperative_alternatives_without_losing_noun_or_finite_readings()
+    {
+        Assert.AreEqual("bglang-neutral:1835c7e51b034b3f", session.Provenance.PackageId);
+        AssertLanguage(session, candidate.GetProperty("sourceId").GetString()!);
+    }
+
+    // Frozen independent literal oracle: 6a59de97076cc6c8207d7d0d9e91e8b1da4d24290188cfd821fb8711b726ad55.
+    private static readonly string[] Doyda40 =
+    [
+        "дойдем|дойда|Глагол:146a,1л.,Сегашно,мн.ч.",
+        "дошло|дойда|Глагол:146a,Минало_свършено_деятелно,Среден,1л.,Сегашно",
+        "дойде|дойда|Глагол:146a,2л.,Минало_свършено",
+        "дойдеха|дойда|Глагол:146a,3л.,Минало_несвършено,мн.ч.",
+        "дошлите|дойда|Глагол:146a,Минало_свършено_деятелно,1л.,Сегашно,мн.ч.,Членуван",
+        "дойдеше|дойда|Глагол:146a,3л.,Минало_несвършено",
+        "дошла|дойда|Глагол:146a,Минало_свършено_деятелно,Женски,1л.,Сегашно",
+        "дойдеш|дойда|Глагол:146a,2л.,Сегашно",
+        "дойдела|дойда|Глагол:146a,Минало_несвършено_деятелно,Женски,1л.,Сегашно",
+        "дойделите|дойда|Глагол:146a,Минало_несвършено_деятелно,1л.,Сегашно,мн.ч.,Членуван",
+        "дойделата|дойда|Глагол:146a,Минало_несвършено_деятелно,Женски,1л.,Сегашно,Членуван",
+        "дойде|дойда|Глагол:146a,3л.,Сегашно",
+        "дойдехме|дойда|Глагол:146a,1л.,Минало_несвършено,мн.ч.",
+        "дошлият|дойда|Глагол:146a,Минало_свършено_деятелно,Мъжки,1л.,Сегашно,Пълен",
+        "дойделото|дойда|Глагол:146a,Минало_несвършено_деятелно,Среден,1л.,Сегашно,Членуван",
+        "дойде|дойда|Глагол:146a,3л.,Минало_свършено",
+        "дошли|дойда|Глагол:146a,Минало_свършено_деятелно,1л.,Сегашно,мн.ч.",
+        "дойдоха|дойда|Глагол:146a,3л.,Минало_свършено,мн.ч.",
+        "дошъл|дойда|Глагол:146a,Минало_свършено_деятелно,Мъжки,1л.,Сегашно",
+        "дойда|дойда|Глагол:146a,1л.,Сегашно",
+        "дошлия|дойда|Глагол:146a,Минало_свършено_деятелно,Мъжки,1л.,Сегашно,Членуван",
+        "дошлата|дойда|Глагол:146a,Минало_свършено_деятелно,Женски,1л.,Сегашно,Членуван",
+        "дойдете|дойда|Глагол:146a,2л.,Сегашно,мн.ч.",
+        "дойделия|дойда|Глагол:146a,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно,Членуван",
+        "дойдохме|дойда|Глагол:146a,1л.,Минало_свършено,мн.ч.",
+        "дойдеше|дойда|Глагол:146a,2л.,Минало_несвършено",
+        "дойдехте|дойда|Глагол:146a,2л.,Минало_несвършено,мн.ч.",
+        "дойдете|дойда|Глагол:146a,1л.,Сегашно,Повелително,мн.ч.",
+        "дойдело|дойда|Глагол:146a,Минало_несвършено_деятелно,Среден,1л.,Сегашно",
+        "дойдели|дойда|Глагол:146a,Минало_несвършено_деятелно,1л.,Сегашно,мн.ч.",
+        "дойдох|дойда|Глагол:146a,1л.,Минало_свършено",
+        "дойди|дойда|Глагол:146a,1л.,Сегашно,Повелително",
+        "дойдех|дойда|Глагол:146a,1л.,Минало_несвършено",
+        "дойдел|дойда|Глагол:146a,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно",
+        "дойдат|дойда|Глагол:146a,3л.,Сегашно,мн.ч.",
+        "дойдохте|дойда|Глагол:146a,2л.,Минало_свършено,мн.ч.",
+        "дойделият|дойда|Глагол:146a,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно,Пълен",
+        "дошлото|дойда|Глагол:146a,Минало_свършено_деятелно,Среден,1л.,Сегашно,Членуван",
+        "ела|дойда|Глагол:146a,1л.,Сегашно,Повелително",
+        "елате|дойда|Глагол:146a,1л.,Сегашно,Повелително,мн.ч.",
+    ];
+    private static readonly string[] NounEla4 =
+    [
+        "елата|ела|Съществително:41,Женски,Членуван",
+        "ела|ела|Съществително:41,Женски",
+        "ели|ела|Съществително:41,Женски,мн.ч.",
+        "елите|ела|Съществително:41,Женски,мн.ч.,Членуван",
+    ];
+    private static void AssertLanguage(BulgarianLanguageSession language, string source)
+    {
+        static string ReadingKey(WordReading r) => r.Form + "|" + r.Lemma + "|" + r.PartOfSpeech;
+        static string FormKey(WordForm r) => r.Form + "|" + r.Lemma + "|" + r.Tag;
+        foreach ((string lemma, string[] expected) in new[] { ("дойда", Doyda40), ("ела", NounEla4) })
+        {
+            WordForm[] forms = language.GenerateForms(lemma, 256).ToArray();
+            CollectionAssert.AreEqual(expected.Order(StringComparer.Ordinal).ToArray(), forms.Select(FormKey).ToArray());
+            Assert.IsTrue(forms.All(r => r.Source == source && r.LegacyBaseId is null));
+            foreach (WordForm form in forms)
+                Assert.IsTrue(language.Lookup(form.Form, LookupMode.Exact, 256).Any(r => ReadingKey(r) == FormKey(form)));
+        }
+        foreach (string query in new[] { "ела", "елате", "дойди", "дойдете", "Ела", "ЕЛАТЕ", "ДОЙДЕТЕ" })
+        {
+            string normalized = query.ToLowerInvariant();
+            string[] expected = Doyda40.Concat(NounEla4).Where(r => r.Split('|')[0] == normalized)
+                .Order(StringComparer.Ordinal).ToArray();
+            WordReading[] lookup = language.Lookup(query, LookupMode.Exact, 256).ToArray();
+            CollectionAssert.AreEqual(expected, lookup.Select(ReadingKey).ToArray(), query);
+            WordAnalysis word = language.AnalyzeWord(query, 256);
+            Assert.AreEqual(query, word.Word); Assert.AreEqual(normalized, word.NormalizedWord); Assert.IsTrue(word.IsKnown);
+            CollectionAssert.AreEqual(expected, word.Readings.Select(ReadingKey).ToArray());
+            Assert.IsNull(word.BaseEvidence); Assert.IsEmpty(word.GraphCandidates); Assert.IsEmpty(word.Candidates);
+            Assert.IsEmpty(word.KnownBaseCandidates); Assert.IsEmpty(word.BaseTypeCandidates);
+            CollectionAssert.AreEqual(new bool[7], new[] { word.GraphSearchIncomplete, word.GraphCandidatesTruncated,
+                word.CandidateSearchLimited, word.CandidateEvidenceLimited, word.KnownBaseSearchLimited,
+                word.BaseTypeSearchLimited, word.BaseTypeEvidenceLimited });
+            foreach (WordReading r in lookup)
+            {
+                Assert.AreEqual(source, r.Source); Assert.AreEqual(1d, r.Score);
+                Assert.IsNull(r.LegacyTypeId); Assert.IsNull(r.LegacyBaseId); Assert.IsNull(r.LegacyWordId);
+                if (r.Lemma == "дойда" && r.PartOfSpeech!.Contains("Повелително", StringComparison.Ordinal))
+                {
+                    MorphologicalFeatures f = r.Features;
+                    Assert.AreEqual(MorphologicalPartOfSpeech.Verb, f.PartOfSpeech);
+                    Assert.AreEqual("146a", f.ParadigmId); Assert.AreEqual(MorphologicalPerson.Second, f.Person);
+                    Assert.AreEqual(normalized is "елате" or "дойдете" ? MorphologicalNumber.Plural : MorphologicalNumber.Singular, f.Number);
+                    Assert.AreEqual(MorphologicalVerbForm.Imperative, f.VerbForm); Assert.IsNull(f.Tense); Assert.IsNull(f.Gender); Assert.IsNull(f.Article);
+                    Assert.IsFalse(f.HasUnrecognizedFeatures); Assert.IsFalse(f.HasConflictingFeatures);
+                }
+            }
+        }
+        WordReading finite = language.Lookup("дойдете", LookupMode.Exact, 256).Single(r => r.PartOfSpeech == "Глагол:146a,2л.,Сегашно,мн.ч.");
+        Assert.AreEqual(MorphologicalPerson.Second, finite.Features.Person);
+        Assert.AreEqual(MorphologicalNumber.Plural, finite.Features.Number);
+        Assert.AreEqual(MorphologicalTense.Present, finite.Features.Tense);
+        Assert.AreEqual(MorphologicalVerbForm.Finite, finite.Features.VerbForm);
+        WordReading baseVerb = language.Lookup("дойда", LookupMode.Exact, 256).Single(r => r.PartOfSpeech == "Глагол:146a,1л.,Сегашно");
+        Assert.AreEqual(MorphologicalPerson.First, baseVerb.Features.Person);
+        Assert.AreEqual(MorphologicalNumber.Singular, baseVerb.Features.Number);
+        Assert.AreEqual(MorphologicalTense.Present, baseVerb.Features.Tense);
+        Assert.AreEqual(MorphologicalVerbForm.Finite, baseVerb.Features.VerbForm);
+        WordReading tree = language.Lookup("ела", LookupMode.Exact, 256).Single(r => r.Lemma == "ела");
+        Assert.AreEqual(MorphologicalPartOfSpeech.Noun, tree.Features.PartOfSpeech);
+        Assert.AreEqual(MorphologicalGender.Feminine, tree.Features.Gender);
+        Assert.AreEqual(MorphologicalNumber.Singular, tree.Features.Number);
+        Assert.AreEqual(MorphologicalArticle.Indefinite, tree.Features.Article);
+        Assert.IsNull(tree.Features.Person); Assert.IsNull(tree.Features.VerbForm); Assert.IsNull(tree.Features.Tense);
+        Assert.IsFalse(language.GenerateForms("ела", 256).Any(r => r.Lemma == "дойда"));
+        const string text = "😀 Ела, ЕЛАТЕ! Дойдете.";
+        TextAnalysis analysis = language.AnalyzeText(text);
+        Assert.AreEqual(text, analysis.Text);
+        CollectionAssert.AreEqual(new[] { "Symbol@0:2:😀", "Word@3:3:Ела", "Punctuation@6:1:,", "Word@8:5:ЕЛАТЕ",
+            "Punctuation@13:1:!", "Word@15:7:Дойдете", "Punctuation@22:1:." },
+            analysis.Tokens.Select(t => $"{t.Kind}@{t.Start}:{t.Length}:{t.Text}").ToArray());
+        foreach (var token in analysis.Tokens)
+        {
+            Assert.AreEqual(token.Text, text.Substring(token.Start, token.Length));
+            if (token.Kind == TokenKind.Word)
+            {
+                Assert.IsTrue(token.Analysis!.IsKnown);
+                Assert.AreEqual(JsonSerializer.Serialize(language.AnalyzeWord(token.Text)), JsonSerializer.Serialize(token.Analysis), "Exact-known text must preserve the complete context-free word result.");
+                CollectionAssert.AreEqual(language.Lookup(token.Text, LookupMode.Exact, 256).Select(ReadingKey).ToArray(),
+                    token.Analysis.Readings.Select(ReadingKey).ToArray());
+            }
+        }
+        Console.WriteLine("ELA exact-known text diagnostics: " + JsonSerializer.Serialize(analysis.Diagnostics));
+    }
+
     [ClassInitialize]
     public static void OpenExactCompletePackage(TestContext _)
     {
@@ -235,6 +396,70 @@ public sealed class PublicPackageTests
     }
 
     [TestMethod]
+    public void Agreement_does_not_claim_the_unsupported_SVO_pattern()
+    {
+        Assert.IsFalse(session.AnalyzeText("Аз четем книга.").Diagnostics.Any(value =>
+            value.Code == "pronoun_verb_agreement_mismatch"));
+    }
+
+    [TestMethod]
+    [DataRow("той", "той")]
+    [DataRow("тои\u0306", "той")]
+    [DataRow("ТОИ\u0306", "той")]
+    [DataRow("и", "и")]
+    [DataRow("ѝ", "ѝ")]
+    [DataRow("и\u0300", "ѝ")]
+    public void Canonical_Bulgarian_keys_preserve_the_raw_word(string raw, string key)
+    {
+        WordAnalysis value = session.AnalyzeWord(raw);
+        Assert.AreEqual(raw, value.Word);
+        Assert.AreEqual(key, value.NormalizedWord);
+    }
+
+    [TestMethod]
+    public void Canonical_grave_spellings_share_the_actual_lookup_owner_and_keep_raw_words()
+    {
+        WordAnalysis composed = session.AnalyzeWord("кафѐ");
+        WordAnalysis decomposed = session.AnalyzeWord("кафе\u0300");
+        Assert.AreEqual("кафѐ", composed.Word);
+        Assert.AreEqual("кафе\u0300", decomposed.Word);
+        Assert.AreEqual(composed.NormalizedWord, decomposed.NormalizedWord);
+        Assert.AreEqual(composed.IsKnown, decomposed.IsKnown);
+        CollectionAssert.AreEqual(composed.Readings.Select(row => JsonSerializer.Serialize(row)).ToArray(),
+            decomposed.Readings.Select(row => JsonSerializer.Serialize(row)).ToArray());
+        Assert.IsTrue(composed.NormalizedWord is "кафѐ" or "кафе");
+        if (composed.NormalizedWord == "кафе")
+        {
+            Assert.IsTrue(composed.IsKnown);
+            Assert.IsTrue(composed.Readings.Count > 0);
+        }
+    }
+
+    [TestMethod]
+    public void Canonical_letters_keep_raw_text_tokens_and_phonetic_UTF16_offsets()
+    {
+        const string raw = "😀 Тои\u0306 кафе\u0300.";
+        TextAnalysis value = session.AnalyzeText(raw);
+        Assert.AreEqual(raw, value.Text);
+        CollectionAssert.AreEqual(new[] { "Symbol@0:2:😀", "Word@3:4:Тои\u0306", "Word@8:5:кафе\u0300", "Punctuation@13:1:." },
+            value.Tokens.Select(token => $"{token.Kind}@{token.Start}:{token.Length}:{token.Text}").ToArray());
+        WordAnalysis[] words = value.Tokens.Where(token => token.Kind == TokenKind.Word)
+            .Select(token => token.Analysis!).ToArray();
+        Assert.AreEqual("той", words[0].NormalizedWord);
+        WordAnalysis composed = session.AnalyzeWord("кафѐ");
+        Assert.AreEqual(composed.NormalizedWord, words[1].NormalizedWord);
+        Assert.AreEqual(composed.IsKnown, words[1].IsKnown);
+        Assert.AreEqual("кафе\u0300", words[1].Word);
+        Assert.IsTrue(words[1].NormalizedWord is "кафѐ" or "кафе");
+        if (words[1].NormalizedWord == "кафе")
+            Assert.IsTrue(words[1].IsKnown && words[1].Readings.Count > 0);
+        CollectionAssert.AreEqual(new[] { 11 }, value.Phonetics.ExplicitStressPositions.ToArray());
+        CollectionAssert.AreEqual(new[] { 4 }, value.Phonetics.InferredSingleVowelStressPositions.ToArray());
+        CollectionAssert.AreEqual(new[] { "е" }, value.Phonetics.ExplicitRhymeTailCandidates.ToArray());
+        CollectionAssert.AreEqual(new[] { "ой" }, value.Phonetics.InferredSingleVowelRhymeTailCandidates.ToArray());
+    }
+
+    [TestMethod]
     public void Article_diagnostics_preserve_candidate_suggestions_and_coverage_gaps()
     {
         const string text = "Големия човек е лекар. Писателя е човек. " +
@@ -286,7 +511,7 @@ public sealed class PublicPackageTests
     }
 
     [TestMethod]
-    [DataRow("жълто--зелен", false, 50)]
+    [DataRow("жълто--зелен", false, 0)]
     [DataRow("жълто-книга", true, 0)]
     public void Unsupported_color_relation_keeps_conditional_or_incomplete_evidence(string query, bool incomplete, int graphCount)
     {
@@ -296,18 +521,29 @@ public sealed class PublicPackageTests
         Assert.IsNull(word.BaseEvidence);
         Assert.AreEqual(graphCount, word.GraphCandidates.Count);
         Assert.IsTrue(word.GraphCandidates.All(value => value.IsConditional && !value.RuleIds.Contains("productive.adjective.coordinate_color.v1")));
-        if (graphCount > 0)
-        {
-            WordDerivation added = word.GraphCandidates.Single(value => value.Base == query &&
-                value.ConditionalRootProgramId == "productive.noun.feminine_type50_en.v0");
-            Assert.AreEqual("Съществително:50,Женски", added.ConditionalRootBaseFullTag);
-            Assert.AreEqual(2, added.ConditionalRootSupportCount);
-            CollectionAssert.AreEqual(new[] { "песен", "суперпесен" }, added.ConditionalSupportingLemmas!.ToArray());
-        }
+
         AssertSearchFlags(word, incomplete, false, false, false, false, false, false);
         Assert.IsFalse(session.DecomposeWord(query).HasEvidence);
     }
 
+    [TestMethod]
+    public void Complete_package_preserves_conditional_donor_authority_for_a_well_formed_root()
+    {
+        const string query = "бяло-зелено-червен";
+        Assert.IsEmpty(session.Lookup(query, LookupMode.Exact, 256));
+        WordAnalysis word = session.AnalyzeWord(query, 256);
+        Assert.IsFalse(word.IsKnown);
+        // Preserve the conditional noun-model proof, without claiming a grammatical color-adjective reading.
+        WordDerivation added = word.GraphCandidates.Single(value => value.Base == query &&
+            value.ConditionalRootProgramId == "productive.noun.feminine_type50_en.v0");
+        Assert.IsTrue(added.IsConditional);
+        Assert.AreEqual("Съществително:50,Женски", added.ConditionalRootBaseFullTag);
+        Assert.AreEqual(2, added.ConditionalRootSupportCount);
+        CollectionAssert.AreEqual(new[] { "песен", "суперпесен" }, added.ConditionalSupportingLemmas!.ToArray());
+        Assert.IsTrue(added.UnmetExactSelfReadingRequirements!.Any(value => value.InputSurface == query &&
+            value.FullTag == "Съществително:50,Женски" && value.EdgeId == "program|productive.noun.feminine_type50_en.v0|base"));
+        AssertSearchFlags(word, false, false, false, false, false, false, false);
+    }
     private static void AssertSearchFlags(WordAnalysis word, params bool[] expected)
     {
         CollectionAssert.AreEqual(expected, new[] { word.GraphSearchIncomplete, word.GraphCandidatesTruncated,

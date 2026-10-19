@@ -4,17 +4,15 @@ namespace BgLang.Core;
 
 internal static class BulgarianPhoneticAnalyzer
 {
-    private static readonly HashSet<char> BulgarianVowels = new(
-        ['а', 'ъ', 'о', 'у', 'е', 'и', 'ю', 'я', 'ѐ', 'ѝ'],
-        EqualityComparer<char>.Default);
-
     internal static PhoneticEvidence Analyze(
         string text,
         IReadOnlyList<TokenAnalysis> tokens,
         IRuntimeLexicon? lexicon = null,
         WordFormationAnalyzer? wordFormation = null,
-        IReadOnlyDictionary<string, int[]>? lexicalStress = null)
+        IReadOnlyDictionary<string, int[]>? lexicalStress = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<string> syllables = [];
         List<int> explicitStressPositions = [];
         List<int> inferredStressPositions = [];
@@ -27,6 +25,7 @@ internal static class BulgarianPhoneticAnalyzer
 
         foreach (TokenAnalysis token in tokens)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (token.Kind != TokenKind.Word)
                 continue;
 
@@ -44,11 +43,17 @@ internal static class BulgarianPhoneticAnalyzer
                 }
             }
 
+            string? selectedKey = null;
+            IReadOnlyList<WordReading>? exactReadings = null;
             if (lexicon is not null && wordFormation?.HasReviewedExactStress == true && TryGetVowelOffset(sourceText, 1, out _))
             {
-                string normalized = BulgarianTextNormalizer.NormalizeKey(sourceText);
-                IReadOnlyList<WordReading> completeReadings = lexicon.LookupExactNormalized(normalized, int.MaxValue);
-                if (wordFormation.ResolveReviewedExactStressVowelOrdinal(normalized, completeReadings) is { } ordinal &&
+                exactReadings = BulgarianStressLookup.LookupExact(lexicon, sourceText, int.MaxValue,
+                    out string normalized, cancellationToken);
+                selectedKey = normalized;
+                cancellationToken.ThrowIfCancellationRequested();
+                int? reviewedOrdinal = wordFormation.ResolveReviewedExactStressVowelOrdinal(normalized, exactReadings);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (reviewedOrdinal is { } ordinal &&
                     TryGetVowelOffset(sourceText, ordinal, out int offset) &&
                     !explicitOffsets.Contains(offset) &&
                     TryCreateRhymeTail(sourceText, offset, out string rhymeTail))
@@ -58,16 +63,37 @@ internal static class BulgarianPhoneticAnalyzer
                 }
             }
 
-            if (lexicalStress is not null &&
-                lexicalStress.TryGetValue(BulgarianTextNormalizer.NormalizeKey(sourceText), out int[]? ordinals))
+            if (lexicalStress is not null)
             {
-                foreach (int ordinal in ordinals)
-                    if (TryGetVowelOffset(sourceText, ordinal, out int offset, minimumVowels: 1) &&
-                        TryCreateRhymeTail(sourceText, offset, out string tail))
+                selectedKey ??= BulgarianTextNormalizer.NormalizeKey(sourceText);
+                cancellationToken.ThrowIfCancellationRequested();
+                bool found = lexicalStress.TryGetValue(selectedKey, out int[]? ordinals);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!found && exactReadings is null && lexicon is not null &&
+                    BulgarianStressLookup.TryGetSupportKey(sourceText, selectedKey, out string support))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    bool supportFound = lexicalStress.TryGetValue(support, out int[]? supportOrdinals);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (supportFound)
                     {
-                        (lexicalStressPositions ??= []).Add(token.Start + offset);
-                        (lexicalRhymeTails ??= []).Add(tail);
+                        IReadOnlyList<WordReading> supported = BulgarianStressLookup.LookupExact(lexicon, sourceText,
+                            int.MaxValue, out string actualKey, cancellationToken);
+                        if (actualKey == support && supported.Count > 0)
+                        {
+                            found = true;
+                            ordinals = supportOrdinals;
+                        }
                     }
+                }
+                if (found)
+                    foreach (int ordinal in ordinals!)
+                        if (TryGetVowelOffset(sourceText, ordinal, out int offset, minimumVowels: 1) &&
+                            TryCreateRhymeTail(sourceText, offset, out string tail))
+                        {
+                            (lexicalStressPositions ??= []).Add(token.Start + offset);
+                            (lexicalRhymeTails ??= []).Add(tail);
+                        }
             }
 
             if (explicitOffsets.Count > 0)
@@ -81,6 +107,7 @@ internal static class BulgarianPhoneticAnalyzer
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new PhoneticEvidence(
             syllables,
             explicitStressPositions,
@@ -99,12 +126,12 @@ internal static class BulgarianPhoneticAnalyzer
     {
         offset = -1;
         int current = 0;
-        for (int index = 0; index < word.Length; index++)
+        for (int index = 0; index < word.Length;)
         {
-            if (!IsBulgarianVowel(word[index]))
-                continue;
-            if (current++ == ordinal)
+            char value = BulgarianOrthography.ReadLetter(word, index, out int length);
+            if (BulgarianOrthography.IsVowel(value) && current++ == ordinal)
                 offset = index;
+            index += length;
         }
         return offset >= 0 && current >= minimumVowels;
     }
@@ -115,14 +142,17 @@ internal static class BulgarianPhoneticAnalyzer
         int start = 0;
         int lastVowel = -1;
 
-        for (int index = 0; index < word.Length; index++)
+        for (int index = 0; index < word.Length;)
         {
-            if (!IsBulgarianVowel(word[index]))
+            char value = BulgarianOrthography.ReadLetter(word, index, out int length);
+            int vowelOffset = index;
+            index += length;
+            if (!BulgarianOrthography.IsVowel(value))
                 continue;
 
             if (lastVowel >= 0)
             {
-                int boundary = ChooseBoundary(word, lastVowel, index);
+                int boundary = ChooseBoundary(word, lastVowel, vowelOffset);
                 if (boundary > start)
                 {
                     syllables.Add(word[start..boundary]);
@@ -130,7 +160,7 @@ internal static class BulgarianPhoneticAnalyzer
                 }
             }
 
-            lastVowel = index;
+            lastVowel = vowelOffset;
         }
 
         if (start < word.Length)
@@ -142,39 +172,38 @@ internal static class BulgarianPhoneticAnalyzer
     private static int ChooseBoundary(string word, int previousVowel, int currentVowel)
     {
         List<int> soundOffsets = [];
-        for (int offset = previousVowel + 1; offset < currentVowel; offset++)
+        BulgarianOrthography.ReadLetter(word, previousVowel, out int previousLength);
+        for (int offset = previousVowel + previousLength; offset < currentVowel;)
         {
-            if (!IsCombiningStress(word[offset]))
+            char value = BulgarianOrthography.ReadLetter(word, offset, out int length);
+            if (!IsCombiningStress(value))
                 soundOffsets.Add(offset);
+            offset += length;
         }
 
         if (soundOffsets.Count == 0)
             return currentVowel;
         if (soundOffsets.Count == 1)
             return soundOffsets[0];
-        if (char.ToLowerInvariant(word[soundOffsets[0]]) == 'й')
-            return soundOffsets[0] + 1;
+        char first = BulgarianOrthography.ReadLetter(word, soundOffsets[0], out int firstLength);
+        if (char.ToLowerInvariant(first) == 'й')
+            return soundOffsets[0] + firstLength;
         return soundOffsets[^2];
     }
 
     private static IReadOnlyList<int> FindExplicitStressOffsets(string word)
     {
         List<int> offsets = [];
-        for (int index = 0; index < word.Length; index++)
+        int previousVowel = -1;
+        for (int index = 0; index < word.Length;)
         {
-            char value = char.ToLowerInvariant(word[index]);
+            char value = char.ToLowerInvariant(BulgarianOrthography.ReadLetter(word, index, out int length));
             if (value is 'ѐ' or 'ѝ')
-            {
                 offsets.Add(index);
-                continue;
-            }
-
-            if (IsCombiningStress(word[index]) &&
-                index > 0 &&
-                IsBulgarianVowel(word[index - 1]))
-            {
-                offsets.Add(index - 1);
-            }
+            else if (IsCombiningStress(value) && previousVowel >= 0)
+                offsets.Add(previousVowel);
+            previousVowel = BulgarianOrthography.IsVowel(value) ? index : -1;
+            index += length;
         }
 
         return offsets.Distinct().Order().ToArray();
@@ -183,14 +212,16 @@ internal static class BulgarianPhoneticAnalyzer
     private static int? FindSingleVowelOffset(string word)
     {
         int? offset = null;
-        for (int index = 0; index < word.Length; index++)
+        for (int index = 0; index < word.Length;)
         {
-            if (!IsBulgarianVowel(word[index]))
-                continue;
-
-            if (offset is not null)
-                return null;
-            offset = index;
+            char value = BulgarianOrthography.ReadLetter(word, index, out int length);
+            if (BulgarianOrthography.IsVowel(value))
+            {
+                if (offset is not null)
+                    return null;
+                offset = index;
+            }
+            index += length;
         }
 
         return offset;
@@ -202,33 +233,23 @@ internal static class BulgarianPhoneticAnalyzer
         out string rhymeTail)
     {
         rhymeTail = string.Empty;
-        if ((uint)stressOffset >= (uint)word.Length || !IsBulgarianVowel(word[stressOffset]))
+        if ((uint)stressOffset >= (uint)word.Length ||
+            !BulgarianOrthography.IsVowel(BulgarianOrthography.ReadLetter(word, stressOffset, out _)))
             return false;
 
-        for (int index = 0; index < word.Length; index++)
-        {
-            char value = word[index];
-            if (IsCombiningStress(value))
-            {
-                char previous = index == 0 ? '\0' : char.ToLowerInvariant(word[index - 1]);
-                if (!IsBulgarianVowel(previous) || previous is 'ѐ' or 'ѝ')
-                    return false;
-                continue;
-            }
-
-            char normalized = char.ToLowerInvariant(value);
-            if (!BulgarianOrthography.IsLowercaseLetterOrStressedVowel(normalized))
-                return false;
-        }
+        if (!BulgarianOrthography.IsWellFormedWord(word))
+            return false;
 
         char[] buffer = new char[word.Length - stressOffset];
         int length = 0;
-        for (int index = stressOffset; index < word.Length; index++)
+        for (int index = stressOffset; index < word.Length;)
         {
-            if (IsCombiningStress(word[index]))
+            char letter = BulgarianOrthography.ReadLetter(word, index, out int rawLength);
+            index += rawLength;
+            if (IsCombiningStress(letter))
                 continue;
 
-            char value = char.ToLowerInvariant(word[index]) switch
+            char value = char.ToLowerInvariant(letter) switch
             {
                 'ѐ' => 'е',
                 'ѝ' => 'и',
@@ -240,9 +261,6 @@ internal static class BulgarianPhoneticAnalyzer
         rhymeTail = new string(buffer, 0, length);
         return rhymeTail.Length > 0;
     }
-
-    private static bool IsBulgarianVowel(char character) =>
-        BulgarianVowels.Contains(char.ToLowerInvariant(character));
 
     private static bool IsCombiningStress(char character) =>
         character is '\u0300' or '\u0301';

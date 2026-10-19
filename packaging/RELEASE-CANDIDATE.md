@@ -1,100 +1,231 @@
-# Локален release candidate: residual10-71e504e
+# Public v0.1.0-preview.3
 
-Статус: подготвя се за независим review. Публична версия/tag, destination и
-input URL още не са одобрени; няма публикация или hosted CI claim.
+Този guide е подготвен за [`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3).
+Ако release още не е публикуван, URL адресите са планирани.
+Използвайте download указанията само след публикацията.
 
-## Точен source и package contract
+Publication snapshot-ът стъпва върху accepted source anchor
+`ae247f60da2122a2d7a8f925058949dda744a95c`. След публикацията exact public commit
+и asset hashes са достъпни в release `publication.json`/`SHA256SUMS` и source
+bundle `public-source-manifest.json`.
 
-Runtime и offline producer source са приетият commit
-`71e504e56bb3be98647ccc3a40cb90cf48079630`. Текущите recipe/docs промени са
-отделен authoring snapshot; exact RAW файловете се фиксират в
-`public-source-manifest.json`, а не се приписват обратно на този commit.
-[Input lock](../data/dictionary/public-input-lock.v1.json) фиксира всички component
-hashes. [Source allowlist](public-source-allowlist.v1.json) определя export-а.
+Input lock запазва producer `source.baseCommit=399c166d9aa82355a8599f64a7457348789bb395`.
+Това е различен anchor от publication snapshot-а. Historical contract/status,
+allowlist anchor и pending/publication=false snapshots остават история и не
+се използват сами по себе си като доказателство за текуща публикация.
 
-| Роля | Package ID | Source ID | Пълни bytes |
-|---|---|---|---:|
-| Build input: corrected STORED | `bglang-neutral:ef0b0091489cd411` | `neutral-source-v3:5a7b8c887e787bc5301099ca26cda97e4385021e5c88980e5f03601a527960eb` | 269108737 |
-| Runtime output: native | `bglang-neutral:fa4b0d8a76e8b7a2` | `neutral-source-v3:85bcb55c05b1b4b0405bb9c77769c04366764ee3c9cb708dde4ef846e3551a64` | 49433035 |
+## Първо използвайте runtime ZIP
 
-Всеки пакет има точно `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json`.
-Current source graph е 2102275 bytes / SHA-256
-`ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025`.
-Native пакетът е 119290 owners / 1549261 readings: 106552 native owners и
-1533593 generated readings, плюс 12738 retained owners / 15668 stored readings.
-Това са finite dictionary inventories, не enumeration на всички productive paths.
-
-## Предложени локални assets
-
-- `bglang-source-residual10-71e504e.zip`: exact allowlisted source, трите build
-  inputs под `public-inputs/residual10-corrected-stored-v1` и RAW manifest.
-- `bglang-native-fa4b0d8a76e8b7a2.zip`: трите готови runtime файла.
-- `bglang-inputs-ef0b0091489cd411.zip`: същите три corrected STORED build inputs.
-- `candidate.json` и `SHA256SUMS`: exact identities, asset bytes/hashes и изрично
-  непопълнените publication решения. За CI могат да се доставят трите raw input
-  assets в една одобрена HTTPS директория.
-
-ZIP bytes и SHA се определят от готовите assets; не се ползват старите preview
-hashes. Build input не се заменя с native output. Няма private path fallback.
-
-## Възпроизвеждане
-
-Windows, PowerShell 7, .NET SDK10.0.402. Task TEMP/TMP се задават към избраното
-локално scratch място; workstation drive letters не са product/CI изискване.
-Публичният workflow използва `RUNNER_TEMP`.
-
-От source bundle:
+Изтеглете runtime ZIP и `SHA256SUMS` от release, проверете hash и разархивирайте
+трите data файла в `./runtime`. С source checkout/bundle, Windows, PowerShell 7
+и .NET SDK **10.0.402**:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
+$manifest = (Resolve-Path './runtime/manifest.json').Path
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- $manifest
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+```
+
+`--json` пази всички резултатни DTO arrays/evidence, original property order,
+explicit false/null и diagnostic полета. `--text-file <utf8.txt>` добавя един
+`AnalyzeText` след демонстрациите. Strict UTF-8 отказва malformed bytes;
+начален BOM се премахва от текста, но file bytes/hash са на оригиналния файл.
+
+## Прочит на console и JSON
+
+`IsKnown` идва от exact readings. `BaseEvidence` е reviewed graph decomposition
+evidence. Nonconditional graph paths имат exact-self-reading root; conditional
+paths пазят program/base tag, supporting lemmas и unmet requirements.
+`Candidates`, `KnownBaseCandidates`, `BaseTypeCandidates` са hypotheses lanes,
+не accepted readings. Exact-base authority не прави липсващата форма известна.
+
+Всяка съкратена колекция има `total`, `displayed`, ordered `items`. Display3
+е console presentation. Следващите counts/flags са запазен consumer пример
+върху предходния native `fa4b0d8a76e8b7a2`, не ново измерване на preview.3.
+В този пример `суперработник` е `known=False`:
+
+| Lane | total | displayed |
+| --- | ---: | ---: |
+| Readings | 0 | 0 |
+| GraphCandidates | 17 | 3 |
+| Candidates | 5 | 3 |
+| KnownBaseCandidates | 0 | 0 |
+| BaseTypeCandidates | 2 | 2 |
+
+Първият path има exact root `работник`; вторият е conditional self-root с
+`productive.noun.masculine_type14.v0`. Има 1042 donors; displayed са
+`авджилък`, `авиомозък`, `авиотрафик`. Unmet requirement е exact self reading
+`суперработник` / `Съществително:14,Мъжки`. Нито 1042 donors, нито наблюдаваните
+50 paths при друг input са engine caps. KnownBaseCandidates е празен във
+валидирания пример; не се измисля положително покритие за този lane.
+
+Всичките седем flags се показват. За същия input:
+
+```json
+{"GraphSearchIncomplete":false,"GraphCandidatesTruncated":false,"CandidateSearchLimited":false,"CandidateEvidenceLimited":true,"KnownBaseSearchLimited":false,"BaseTypeSearchLimited":true,"BaseTypeEvidenceLimited":true}
+```
+
+Incomplete/limited не установява изчерпателност, truncated различава output
+omission, evidence-limited — ограничено donor evidence. Четете flag-а на
+съответния lane и при total0; първите три paths не представят всички paths.
+
+Diagnostic projection пази `Code`, `Start`, `Length`, `RuleId`, `ProjectedText`
+и example-only `Classification`. Warning е предложение за проверка,
+unsupported-check е непокрита проверка, information е сведение/непознат код.
+„Аз го четем.“ има agreement warning на `[6,5]`; SVO „Аз четем книга.“ остава
+извън текущото покритие. Празен diagnostic списък не удостоверява правилност.
+
+## Граници на измерването
+
+Consumer-ът отделя phase measurements чрез `--measure`; без него няма stderr
+measurement footer. За командата подгответе свой strict UTF-8 `sample.utf8.txt`.
+
+```powershell
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- $manifest --json --measure `
+    --text-file ./sample.utf8.txt 1>analysis.json 2>measurements.json
+if ($LASTEXITCODE -ne 0) { throw 'Measured example failed.' }
+```
+
+| Поле/фаза | Точен измерен обхват |
+| --- | --- |
+| Startup | Approximate process age при managed entry; cumulative managed entry→Open start/complete. Не е чист JIT/OS startup benchmark. |
+| API `measurement` | Едно `call()`; `Open` включва strict package load и DAWG construction. Existing snapshot/delta значения са запазени. |
+| `measurement.preparation` | Едно JSON `project(result)` или console `summary(result)`, включително вложеното summary JSON formatting. |
+| Footer `serialization` | JSON: едно `SerializeToUtf8Bytes` на целия prepared envelope, включително measurement fields. Console: join на вече форматирани редове и UTF-8 encoding. Няма втори API call. |
+| `payloadBytes` | Реално произведеният stdout UTF-8 payload, без отделния последен newline. |
+| `trailingNewlineBytes` / `outputBytes` | Последният newline и exact сборът за stdout. Stderr footer-ът е изключен, без self-reference. |
+| Изключени дейности | Input read/decode, output IO, snapshots, създаване на measurement objects. Console measurement-line formatting е преди финалния join; JSON metadata formatting е вътре във финалната serialization. |
+
+За byte проверка пазете raw stdout; външен shell/logger може да промени
+encoding/newlines. Process wall time включва и изключените от фазите дейности.
+Allocation deltas са process-wide и могат да включат snapshot overhead/други
+allocations. Managed bytes не са RAM; PeakWorkingSet е lifetime high-water,
+не самостоятелен phase peak. Console buffering задържа допълнителни данни.
+Една session загрява следващите заявки; fresh process не чисти OS cache.
+Shared commit/paging/IO влияят на наблюденията. Няма resource threshold,
+owner numeric cap или общ speedup claim. Bounded heavy fixture е 64
+повторения, 2112 UTF-16 code units /3712 UTF-8 bytes, не `--text-file` лимит.
+
+## Възпроизвеждане на native data
+
+Това е отделен offline workflow със съответния published source/recipe и
+corrected STORED inputs. Готовият runtime е достатъчен за API.
+[Input lock](../data/dictionary/public-input-lock.v1.json) фиксира component hashes:
+
+| Роля | Package ID | Source ID | Пълни data bytes |
+| --- | --- | --- | ---: |
+| Corrected STORED build input | `bglang-neutral:6de86ba569c1001a` | `neutral-source-v3:4e6b294e97c5585d4af44ae0c71b5baab338a0cc32c83ad0dd83019482cd18ff` | 269108994 |
+| Native runtime output | `bglang-neutral:1835c7e51b034b3f` | `neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9` | 49438708 |
+
+Точно трите компонента са `manifest.json`, `lexicon.v3.jsonl`,
+`word-formation.v0.json`. Native има 119290 owners /1549263 readings /
+1266121 distinct forms: 106551 native owners с1533555 generated readings и
+12739 stored owners с15708 stored readings. ZIP bytes, .NET binaries и RAM
+са други обхвати. Native никога не е build input. STORED graph е531796 bytes;
+recipe използва отделния locked current graph от2102275 bytes.
+За source ZIP с включени locked STORED inputs и RAW source manifest:
+
+```powershell
 $work = Join-Path $env:TEMP ('bglang-' + [Guid]::NewGuid().ToString('N'))
 ./packaging/Build-PublicPackage.ps1 -OutputDirectory (Join-Path $work 'native') `
     -Test -ResultsDirectory (Join-Path $work 'results')
+if ($LASTEXITCODE -ne 0) { throw 'Package recipe failed.' }
 ```
 
-За сравнение с разархивиран exact runtime задайте `-CompareWith` към неговата
-нова директория. Рецептата сравнява всичките RAW bytes на трите файла.
-`OutputDirectory` трябва да е нова; липсващ input, SHA/file-set mismatch и
-непълен пакет са FAIL. Locked NuGet restore ползва съществуващите версии от
-`tests/BgLang.Public.Tests/packages.lock.json`.
+При checkout подайте `-InputDirectory` към exact STORED component директория.
+`-CompareWith` сравнява всички RAW output bytes с exact runtime. Нов output
+directory е задължителен; missing input/hash/file-set/incomplete package е
+FAIL без SKIP/private fallback. CI използва `RUNNER_TEMP`; workstation drive
+letters не са product изискване. Locked restore ползва existing test lockfile.
 
-За API-only tests върху готовия runtime:
+API-only tests върху готов runtime:
 
 ```powershell
 $env:BGLANG_PUBLIC_PACKAGE_MANIFEST = (Resolve-Path './runtime/manifest.json').Path
 dotnet restore BgLang.Public.slnx --locked-mode
+if ($LASTEXITCODE -ne 0) { throw 'Public restore failed.' }
 dotnet build BgLang.Public.slnx -c Release --no-restore
-dotnet test tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj -c Release `
-    --no-build --no-restore
+if ($LASTEXITCODE -ne 0) { throw 'Public build failed.' }
+dotnet test tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj -c Release --no-build --no-restore
+if ($LASTEXITCODE -ne 0) { throw 'Public package tests failed.' }
 ```
 
-За реалния example след build:
+[Source allowlist](public-source-allowlist.v1.json)/RAW manifest определят
+конкретния export. Ползвайте source/recipe и locked inputs от същия preview;
+preview.2 STORED assets не съвпадат с текущия lock. Missing component, hash
+mismatch или непълен export не се заместват с private/стар input.
 
-```powershell
-dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
-dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
-    -c Release --no-build --no-restore -- $env:BGLANG_PUBLIC_PACKAGE_MANIFEST --json
-```
+## CI и публикация
 
-Всеки direct `dotnet` command се проверява чрез `$LASTEXITCODE`; build recipe
-прави това fail-fast. Примерът приема още `--measure` и `--text-file <utf8.txt>`.
+[Windows workflow](../.github/workflows/windows-public.yml) приема explicit
+`input_base_url`/`BGLANG_INPUT_BASE_URL` за трите raw STORED assets.
+Raw input base за preview.3 е
+`https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.3`;
+добавя се името на locked STORED asset. Това не е runtime ZIP URL;
+missing URL/hash mismatch е FAIL без preview.1 fallback.
+CI evidence се отнася до exact public SHA/run, отделно от local checks и
+release assets. Publication сама по себе си не доказва green CI/corpus result.
+Проверявайте actual public SHA/run и asset hashes в release metadata;
+публикационният snapshot anchor не е автоматично public repository commit.
 
-## Решения преди публикация
+## Езикови промени и граници
 
-Готовият candidate трябва да се свърже с одобрени public destination и version/tag,
-както и доставка на current inputs. Съществуващото repository `bgtnt/bglang` е
-наличен вариант, не разрешение за нов push/release. `input_base_url` или repository
-variable `BGLANG_INPUT_BASE_URL` трябва да сочат exact current input assets;
-липсваща настройка е явен FAIL, без fallback към `v0.1.0-preview.1`.
-Локална validation и source export не са hosted CI или publication evidence.
+В preview.3 са включени четири приети езикови партиди:
 
-## Ограничения
+| Партида | Конкретен ефект | Произход и граница |
+| --- | --- | --- |
+| Imperative typed projection | Simple imperative: `Person=Second`, запазено число, `Tense=null`; RAW tags/readings и допустимите омографи остават. | Пряко corpus-origin; обща projection поправка, не contextual disambiguation. |
+| `ела`/`елате` | Две imperative алтернативи на `дойда`; един lexical owner38→40, запазени old38, noun `ела`4, `дойди` и двете `дойдете` readings. | Пряко corpus-origin; един lexical owner, без промяна на shared146a graph. |
+| Unicode/diagnostics R1–R4 | Canonical equivalence и RAW spans; exact-owner stress lookup, request-local fuzzy reuse; example classification и изрична граница на agreement coverage. | Отделен review/analysis; няма автоматична source correction или общ resource-neutral claim. |
+| Productive root shape | Conditional proof отказва unattested inferred Base с празна U+002D част: начален/краен `-` или `--`. | Отделен review/analysis; exact SELF authority и валидни multiple-hyphen roots остават; не е input-wide spelling veto. |
 
-Current finite residual0 е приет в ограничен dictionary/register scope. Original
-RAW225unfinished+13reviewed, broader productive precision, graph corpus tests и
-останалите analyzers са отделни. Няма нов overall language/M2/analyzer/corpus или
-release acceptance credit. API exposes limit/incompleteness flags и conditional
-requirements; examples не ги превръщат в сигурни граматични заключения.
+Corpus наблюденията `22538` affected returned-response usages /`2591` exact
+surfaces са само inventory в27 discovery документа, включително омографски
+контексти; не са gold imperative errors или глобално качество. `й` е анализиран
+без нов lexical/normalization patch. Техническите repairs и невалидните FB2
+не са допълнителни езикови поправки.
 
-MIT scope и [third-party notices](../THIRD-PARTY-NOTICES.md) са запазени от
-приетия packaging contract; не се vendor-ват SDK или NuGet binaries.
+M1–M4 и общото corpus acceptance остават незатворени. Приетите full-suite
+партиди пазят13 historical NotExecuted:12 M4 opt-in audits без
+`BGLANG_M4_PACKAGE_DIR` и1 G5 isolation audit без `BGLANG_G5_ISOLATION_ROOT`.
+Тези scopes не получават completion credit; запазените failures и snapshots
+не се пренаписват. Publication и finite census не доказват full Legacy language,
+всички productive комбинации, semantic precision или analyzer completeness.
+Ресурсните observations са за точните workloads/host, без общо твърдение за
+непроменен RAM, allocations или latency.
+
+## Какво означават residual10 корекциите
+
+Десетте избрани owners имат **449→218 readings**, запазени public lemmas и
+четири base-tag корекции. Това не е брой surface corrections, уникални грешки
+или общ reason breakdown за целия пакет. Основанията се припокриват:
+
+- Exact current BERON inventories ограничават `бъда`/`мра`, без да обявяват
+  всяка omitted historical/copula форма за неграматична.
+- Impersonal/reflexive/third-person рамките на `потръсва`, `премрежва`,
+  `умъдря`, `заболи` пазят конкретния source/register sense; част от finite
+  клетките са named-class inference, не отделно direct attestation.
+- Historical owner `пряспичка` пази identity, но singular outputs са
+  `преспичка/преспичката`; plural/articles имат class квалификация.
+  `нуминозно` има коригиран neuter base и отделен regular-class inference.
+- `пребъда` пази девет `пребил…` readings, пряко изброени под exact head в
+  pre-2002 Grammar source, с historical/register квалификация. Не са blind
+  prefixing на `съм`, не са certified preferred-modern и не премахват
+  foreign `пребия` readings. `зра` има отделни poetic/register/class основания.
+
+Не сумирайте тези категории като независими reason counts. Source absence
+не е negative proof. Corrected finite residual0 не е full Legacy language,
+all-variant morphology, productive/analyzer/corpus acceptance. Original RAW
+225unfinished+13reviewed, fixed71139zero и historical failures/skips са отделни.
+
+Unicode проверките пазят RAW UTF-16 slices, canonical `й/и\u0306`,
+`ѐ/е\u0300`, `ѝ/и\u0300`, при `и≠ѝ`. Stress proof изисква exact owner/reading
+authority; няма универсално stress coverage. Cancellation е на операция/текст
+граници; една започнала DAWG операция не се прекъсва отвътре.
+MIT scope и [third-party notices](../THIRD-PARTY-NOTICES.md) са запазени;
+SDK/NuGet binaries не се vendor-ват.

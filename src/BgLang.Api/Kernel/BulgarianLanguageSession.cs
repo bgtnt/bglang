@@ -32,7 +32,7 @@ public sealed class BulgarianLanguageSession : IDisposable
         IRuntimeLexicon index = GetPackage().Lexicon;
         return mode switch
         {
-            LookupMode.Exact => index.LookupExactNormalized(BulgarianTextNormalizer.NormalizeKey(text), limit),
+            LookupMode.Exact => BulgarianStressLookup.LookupExact(index, text, limit, out _),
             LookupMode.Prefix => index.FindByPrefix(text, limit),
             LookupMode.Suffix => index.FindBySuffix(text, limit),
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported lookup mode.")
@@ -78,8 +78,8 @@ public sealed class BulgarianLanguageSession : IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         RuntimePackageState package = GetPackage();
         graphBudget ??= new GraphSearchBudget(262_144, cancellationToken);
-        string normalized = BulgarianTextNormalizer.NormalizeKey(word);
-        IReadOnlyList<WordReading> readings = package.Lexicon.LookupExactNormalized(normalized, maxReadings);
+        IReadOnlyList<WordReading> readings = BulgarianStressLookup.LookupExact(package.Lexicon, word,
+            maxReadings, out string normalized, cancellationToken);
         WordDecomposition? baseEvidence = null;
         WordFormationAnalyzer.MorphologySearch? graphSearch = null;
         if (readings.Count == 0)
@@ -206,17 +206,25 @@ public sealed class BulgarianLanguageSession : IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<SentenceSpan> sentences = SentenceBoundaryDetector.Split(text, tokens);
         cancellationToken.ThrowIfCancellationRequested();
-        TextDiagnostic[] diagnostics = BasicSentenceShapeAnalyzer.Analyze(text, sentences)
-            .Concat(SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon))
-            .Concat(WordFormationEvidenceAnalyzer.Analyze(tokens))
-            .Concat(PronounVerbAgreementAnalyzer.Analyze(tokens, sentences, package.Lexicon))
-            .Concat(PrepositionComplementAnalyzer.Analyze(tokens, sentences, package.Lexicon))
-            .Concat(ArticleCoverageEvidenceAnalyzer.Analyze(text, tokens, sentences, package.Lexicon))
-            .Concat(HyphenatedDegreeEvidenceAnalyzer.Analyze(tokens, package.Lexicon))
-            .Concat(ProperNameEvidenceAnalyzer.Analyze(text, tokens, package.Lexicon))
-            .Concat(ReviewedVerbCliticPredicateGroupAnalyzer.Analyze(
-                tokens, sentences, package.Lexicon, package.WordFormation))
-            .Concat(StyleRepetitionAnalyzer.Analyze(text, tokens))
+        List<TextDiagnostic> collectedDiagnostics = [];
+        void AddDiagnostics(Func<IEnumerable<TextDiagnostic>> analyze)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            collectedDiagnostics.AddRange(analyze());
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        AddDiagnostics(() => BasicSentenceShapeAnalyzer.Analyze(text, sentences));
+        AddDiagnostics(() => SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon, cancellationToken));
+        AddDiagnostics(() => WordFormationEvidenceAnalyzer.Analyze(tokens));
+        AddDiagnostics(() => PronounVerbAgreementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
+        AddDiagnostics(() => PrepositionComplementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
+        AddDiagnostics(() => ArticleCoverageEvidenceAnalyzer.Analyze(text, tokens, sentences, package.Lexicon));
+        AddDiagnostics(() => HyphenatedDegreeEvidenceAnalyzer.Analyze(tokens, package.Lexicon));
+        AddDiagnostics(() => ProperNameEvidenceAnalyzer.Analyze(text, tokens, package.Lexicon));
+        AddDiagnostics(() => ReviewedVerbCliticPredicateGroupAnalyzer.Analyze(
+            tokens, sentences, package.Lexicon, package.WordFormation));
+        AddDiagnostics(() => StyleRepetitionAnalyzer.Analyze(text, tokens));
+        TextDiagnostic[] diagnostics = collectedDiagnostics
             .OrderBy(diagnostic => diagnostic.Start)
             .ThenBy(diagnostic => diagnostic.Length)
             .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
@@ -226,7 +234,7 @@ public sealed class BulgarianLanguageSession : IDisposable
         {
             Sentences = sentences,
             Phonetics = BulgarianPhoneticAnalyzer.Analyze(
-                text, tokens, package.Lexicon, package.WordFormation, package.LexicalStress),
+                text, tokens, package.Lexicon, package.WordFormation, package.LexicalStress, cancellationToken),
             Diagnostics = diagnostics
         };
         cancellationToken.ThrowIfCancellationRequested();

@@ -21,6 +21,8 @@ public readonly record struct MorphologicalFeatures(
     /// Projects Bulgarian compatibility tags without inspecting a word's spelling.
     /// Unmarked Legacy noun/adjective/verb number is singular; unmarked noun/adjective
     /// article is indefinite. Personal-pronoun types 90/91/95/96 license person and number.
+    /// Simple imperatives license second person and no finite tense; Legacy First/Present
+    /// boilerplate is projected without changing RawTag or hiding contradictory markers.
     /// </summary>
     public static MorphologicalFeatures FromTag(string? fullTag)
     {
@@ -104,6 +106,16 @@ public readonly record struct MorphologicalFeatures(
         if (pos == MorphologicalPartOfSpeech.Verb)
         {
             if (nonFinite) person = null;
+            else if (form == MorphologicalVerbForm.Imperative)
+            {
+                // Legacy ConvertType inherits First/Present from the lexical base into imperative slots.
+                if (personAtoms <= 1 && (person is null or MorphologicalPerson.Second ||
+                    person == MorphologicalPerson.First && tense == MorphologicalTense.Present && !tenseConflict))
+                    person = MorphologicalPerson.Second;
+                else { person = null; conflict = true; }
+                if (tense is not null and not MorphologicalTense.Present) conflict = true;
+                tense = null;
+            }
             else if (form is null && !formConflict && person is not null) form = MorphologicalVerbForm.Finite;
         }
         if (number is null && !numberConflict && (nominal || pos == MorphologicalPartOfSpeech.Verb))

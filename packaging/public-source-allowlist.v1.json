@@ -1,6 +1,6 @@
 {
   "schema": "bglang.public-source-allowlist.v1",
-  "sourceBaseCommit": "71e504e56bb3be98647ccc3a40cb90cf48079630",
+  "sourceBaseCommit": "308b5a46ac1539ca98498d291ccf94d04543baf1",
   "projects": [
     "src/BgLang.Api/BgLang.Api.csproj",
     "src/BgLang.Contracts/BgLang.Contracts.csproj",
@@ -70,6 +70,7 @@
     "src/BgLang.Core/Kernel/BulgarianAbbreviationLexicon.cs",
     "src/BgLang.Core/Kernel/BulgarianOrthography.cs",
     "src/BgLang.Core/Kernel/BulgarianPhoneticAnalyzer.cs",
+    "src/BgLang.Core/Kernel/BulgarianStressLookup.cs",
     "src/BgLang.Core/Kernel/BulgarianTextNormalizer.cs",
     "src/BgLang.Core/Kernel/BulgarianTokenizer.cs",
     "src/BgLang.Core/Kernel/ConditionalRootProof.cs",
@@ -138,7 +139,7 @@
     "tools/BgLang.SourceBuilder/derive_native_pins.py",
     "tools/BgLang.SourceBuilder/example.source.jsonl"
   ],
-  "inputDirectory": "public-inputs/residual10-corrected-stored-v1",
+  "inputDirectory": "public-inputs/ela-imperative-corrected-stored-v1",
   "inputFiles": [
     "manifest.json",
     "lexicon.v3.jsonl",

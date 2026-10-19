@@ -17,12 +17,18 @@ internal static class SpellingProjectionAnalyzer
 
     internal static IReadOnlyList<TextDiagnostic> Analyze(
         IReadOnlyList<TokenAnalysis> tokens,
-        IRuntimeLexicon lexicon)
+        IRuntimeLexicon lexicon,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<TextDiagnostic> diagnostics = [];
+        // This call fixes the lexicon, distance and result limit; null caches both kinds of refusal.
+        Dictionary<string, string?> spellingCandidates = new(StringComparer.Ordinal);
         for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             TokenAnalysis token = tokens[tokenIndex];
+            cancellationToken.ThrowIfCancellationRequested();
             if (token.Kind == TokenKind.Number &&
                 token.Text.Length == 1 &&
                 tokenIndex + 1 < tokens.Count)
@@ -51,8 +57,10 @@ internal static class SpellingProjectionAnalyzer
                         char.ToLowerInvariant(character))))
                 {
                     string normalized = BulgarianTextNormalizer.NormalizeKey(mappedDigit + suffix.Text);
-                    if (normalized.Length > 0 &&
-                        lexicon.LookupExactNormalized(normalized, int.MaxValue).Count > 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    bool known = normalized.Length > 0 && lexicon.LookupExactNormalized(normalized, int.MaxValue).Count > 0;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (known)
                     {
                         diagnostics.Add(new TextDiagnostic(
                             DigitOcrDiagnosticCode,
@@ -70,7 +78,7 @@ internal static class SpellingProjectionAnalyzer
 
             if (token.Kind != TokenKind.Word || token.Analysis is not { IsKnown: false })
                 continue;
-            if (string.Equals(token.Text, "й", StringComparison.Ordinal) &&
+            if (token.Text is "й" or "и\u0306" &&
                 token.Analysis.BaseEvidence is null)
             {
                 diagnostics.Add(new TextDiagnostic(
@@ -86,8 +94,10 @@ internal static class SpellingProjectionAnalyzer
             if (TryProjectLatinHomoglyphs(token.Text, out string projection))
             {
                 string normalized = BulgarianTextNormalizer.NormalizeKey(projection);
-                if (normalized.Length > 0 &&
-                    lexicon.LookupExactNormalized(normalized, 1).Count > 0)
+                cancellationToken.ThrowIfCancellationRequested();
+                bool known = normalized.Length > 0 && lexicon.LookupExactNormalized(normalized, 1).Count > 0;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (known)
                 {
                     diagnostics.Add(new TextDiagnostic(
                         OcrDiagnosticCode,
@@ -101,7 +111,7 @@ internal static class SpellingProjectionAnalyzer
                 continue;
             }
 
-            if (!TryFindUniqueSpellingCandidate(token, lexicon, out string suggestion))
+            if (!TryFindUniqueSpellingCandidate(token, lexicon, spellingCandidates, cancellationToken, out string suggestion))
                 continue;
 
             diagnostics.Add(new TextDiagnostic(
@@ -114,12 +124,15 @@ internal static class SpellingProjectionAnalyzer
             });
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return diagnostics;
     }
 
     private static bool TryFindUniqueSpellingCandidate(
         TokenAnalysis token,
         IRuntimeLexicon lexicon,
+        Dictionary<string, string?> cache,
+        CancellationToken cancellationToken,
         out string suggestion)
     {
         suggestion = string.Empty;
@@ -130,15 +143,18 @@ internal static class SpellingProjectionAnalyzer
             return false;
         }
 
-        IReadOnlyList<FuzzyMatch> matches = lexicon.FindSimilarNormalized(
-            BulgarianTextNormalizer.NormalizeKey(token.Text),
-            maxDistance: 1,
-            limit: 2);
-        if (matches.Count != 1 || matches[0].Distance != 1)
-            return false;
-
-        suggestion = matches[0].Form;
-        return true;
+        string query = BulgarianTextNormalizer.NormalizeKey(token.Text);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!cache.TryGetValue(query, out string? candidate))
+        {
+            IReadOnlyList<FuzzyMatch> matches = lexicon.FindSimilarNormalized(query, maxDistance: 1, limit: 2);
+            cancellationToken.ThrowIfCancellationRequested();
+            candidate = matches.Count == 1 && matches[0].Distance == 1 ? matches[0].Form : null;
+            cache.Add(query, candidate);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        suggestion = candidate ?? string.Empty;
+        return candidate is not null;
     }
 
     private static bool TryProjectLatinHomoglyphs(string source, out string projection)

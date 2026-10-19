@@ -90,7 +90,8 @@ internal sealed class BulgarianTokenizer
     }
 
     internal static bool IsWordContinuation(ReadOnlySpan<char> span, int index) =>
-        char.IsLetter(span[index]) || IsAttachedStressMark(span, index) || IsInternalWordHyphen(span, index);
+        char.IsLetter(span[index]) || IsAttachedBreve(span, index) ||
+        IsAttachedStressMark(span, index) || IsInternalWordHyphen(span, index);
 
     private static int ReadWord(ReadOnlySpan<char> span, int index)
     {
@@ -112,13 +113,19 @@ internal sealed class BulgarianTokenizer
         span[index] == '-' &&
         index > 0 &&
         index + 1 < span.Length &&
-        char.IsLetter(span[index - 1]) &&
+        (char.IsLetter(span[index - 1]) || EndsCanonicalPair(span, index)) &&
         char.IsLetter(span[index + 1]);
+
+    private static bool EndsCanonicalPair(ReadOnlySpan<char> span, int end) =>
+        end >= 2 && BulgarianOrthography.ReadLetter(span, end - 2, out int length) != span[end - 2] && length == 2;
+
+    private static bool IsAttachedBreve(ReadOnlySpan<char> span, int index) =>
+        span[index] == '\u0306' && index > 0 && span[index - 1] is 'и' or 'И';
 
     private static bool IsAttachedStressMark(ReadOnlySpan<char> span, int index) =>
         span[index] is '\u0300' or '\u0301' &&
         index > 0 &&
-        (char.IsLetter(span[index - 1]) || span[index - 1] is '\u0300' or '\u0301');
+        (char.IsLetter(span[index - 1]) || span[index - 1] is '\u0300' or '\u0301' || IsAttachedBreve(span, index - 1));
 
     private static int ReadDigits(ReadOnlySpan<char> span, int index)
     {

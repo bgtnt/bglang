@@ -67,6 +67,9 @@ internal sealed class ConditionalRootProof(Edge[] _edges, Transform[] _transform
         if (ConflictsWithBaseTag(rootExact, baseTag))
             return false;
         bool rootMissing = rootExact.Length == 0;
+        if (rootMissing && (current.StartsWith('-') || current.EndsWith('-') ||
+            current.Contains("--", StringComparison.Ordinal)))
+            return false;
         for (int index = 0; index < candidate.EdgePath.Length; index++)
         {
             Edge edge = _edges[candidate.EdgePath[index]];
