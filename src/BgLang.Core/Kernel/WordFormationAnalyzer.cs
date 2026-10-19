@@ -734,10 +734,10 @@ internal sealed class WordFormationAnalyzer
             }
             if (transition.PrefixClass == "degree" &&
                 (transition.StateBinding?.Kind != "preserve_matching_state" ||
-                 transition.StateBinding.PartOfSpeech != "adjective"))
+                 transition.StateBinding.PartOfSpeech is not ("adjective" or "adverb")))
             {
                 throw new InvalidDataException(
-                    $"Typed degree transition '{transition.Id}' requires a preserve-matching adjective state binding.");
+                    $"Typed degree transition '{transition.Id}' requires a preserve-matching adjective or adverb state binding.");
             }
             if (transition.SupportCount < 0)
                 throw new InvalidDataException($"Typed transition '{transition.Id}' supportCount must be non-negative.");
@@ -747,6 +747,16 @@ internal sealed class WordFormationAnalyzer
                 !transformIds.TryGetValue(transition.StemTransformId, out TransformNode? transitionTransform))
             {
                 throw new InvalidDataException($"Typed transition '{transition.Id}' has an unknown rule, morph, or transform.");
+            }
+            if (transition.PrefixClass == "degree" && transition.StateBinding?.PartOfSpeech == "adverb" &&
+                (transitionTransform.Kind != "identity" ||
+                 transitionTransform.ExactInput is not { Length: > 0 } exactInput ||
+                 exactInput != BulgarianTextNormalizer.NormalizeKey(exactInput) ||
+                 transitionTransform.Id != "stem-transform:identity:exact:" + exactInput ||
+                 transition.Id != $"transition|prefix|{transition.MorphId}|preserve:adverb|{transitionTransform.Id}|{transition.RuleId}"))
+            {
+                throw new InvalidDataException(
+                    $"Typed adverb degree transition '{transition.Id}' requires a canonical exact-base identity admission.");
             }
             string expectedRuleKind = transition.Kind == "compound" ? "compounding" : transition.Kind == "prefix" ? "prefix_derivation" : "suffix_derivation";
             if (!string.Equals(transitionRule.Kind, expectedRuleKind, StringComparison.Ordinal))

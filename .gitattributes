@@ -127,3 +127,6 @@ tests/BgLang.Tests/Kernel/Fixtures/nominal-residual7-native-consumer-pins.v1.jso
 tests/BgLang.Tests/Kernel/Fixtures/residual10-literal-oracle.v1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/residual10-owner-unions.v1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/residual10-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adverb-degree-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/adverb-provenance-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/ela-imperative-native-consumer-pins.v1.json text eol=lf

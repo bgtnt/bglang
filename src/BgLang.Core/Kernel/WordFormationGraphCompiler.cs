@@ -141,7 +141,9 @@ internal static class WordFormationGraphCompiler
                 null,
                 null,
                 trust,
-                row.MayGenerateCandidates && rule.MayGenerateCandidates,
+                row.MayGenerateCandidates && rule.MayGenerateCandidates &&
+                (prefixClass != PrefixClass.Degree || row.StateBinding?.PartOfSpeech != "adverb" ||
+                 structuralDecision is not null),
                 row.SupportCount,
                 row.ApplicationIds,
                 blocked,
@@ -333,6 +335,19 @@ internal static class WordFormationGraphCompiler
     {
         StructuralDecisionSpec? spec = StructuralDecisionSpecs.FirstOrDefault(item =>
             string.Equals(item.TransitionId, row.Id, StringComparison.Ordinal));
+        if (spec is null && sourceTransform.ExactInput is { Length: > 0 } exactInput)
+        {
+            string? morphId = row.RuleId switch
+            {
+                "productive.adverb.degree_comparative_po.v1" => "m:prefix:по-degree",
+                "productive.adverb.degree_superlative_nai.v1" => "m:prefix:най-degree",
+                _ => null
+            };
+            if (morphId is not null)
+                spec = PrefixSpec(morphId, morphId == "m:prefix:по-degree" ? "по-" : "най-",
+                    "degree", row.RuleId!, "adverb",
+                    ["ev:beron:adverb-degree-prefixes", "ev:beron:adverb-degree:" + exactInput], exactInput);
+        }
         if (spec is null)
             return null;
 
@@ -352,6 +367,7 @@ internal static class WordFormationGraphCompiler
             sourceTransform.ToTail != spec.TransformTo || sourceTransform.VariantSetId is not null ||
             sourceTransform.MinimumInputLength != 0 || sourceTransform.InputFinalCharacterClass is not null ||
             sourceTransform.InputPreTailCharacterClass is not null || sourceTransform.ExcludedInputTail is not null ||
+            sourceTransform.ExactInput != spec.TransformExactInput || transform.ExactInput != spec.TransformExactInput ||
             transform.Kind != spec.RuntimeTransformKind || transform.From != spec.TransformFrom ||
             transform.To != spec.TransformTo || row.RuleId != spec.RuleId || rule.Kind != spec.RuleKind ||
             rule.OutputPos != spec.OutputPos || !rule.Pattern.SequenceEqual(spec.Pattern, StringComparer.Ordinal) ||
@@ -405,12 +421,13 @@ internal static class WordFormationGraphCompiler
 
     private static StructuralDecisionSpec PrefixSpec(
         string morphId, string canonicalText, string prefixClass, string ruleId, string outputPos,
-        string[] evidenceIds) => new(
-        $"transition|prefix|{morphId}|preserve:{outputPos}|stem-transform:identity|{ruleId}",
-        "prefix", prefixClass, morphId, "prefix", canonicalText, "stem-transform:identity",
+        string[] evidenceIds, string? exactInput = null) => new(
+        $"transition|prefix|{morphId}|preserve:{outputPos}|stem-transform:identity{(exactInput is null ? "" : ":exact:" + exactInput)}|{ruleId}",
+        "prefix", prefixClass, morphId, "prefix", canonicalText,
+        "stem-transform:identity" + (exactInput is null ? "" : ":exact:" + exactInput),
         "identity", "", "", TransformKind.Identity, ruleId, "prefix_derivation", outputPos,
         [morphId, "exact_" + outputPos + "_lemma"], null, null, "preserve_matching_state", outputPos,
-        evidenceIds);
+        evidenceIds, exactInput);
 
     private sealed record StructuralDecisionSpec(
         string TransitionId,
@@ -432,7 +449,8 @@ internal static class WordFormationGraphCompiler
         string? ToStateId,
         string? StateBindingKind,
         string? StateBindingPartOfSpeech,
-        string[] EvidenceIds);
+        string[] EvidenceIds,
+        string? TransformExactInput = null);
 
     private static Morph CompileMorph(WordFormationAnalyzer.MorphNode source)
     {

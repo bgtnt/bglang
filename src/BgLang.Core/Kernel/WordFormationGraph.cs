@@ -49,6 +49,7 @@ internal sealed class WordFormationGraph
     private readonly IReadOnlyDictionary<string, int[]> _paradigmEdgesByPartOfSpeech;
     private readonly (string Tag, string Rule)[] _productiveBaseModels;
     private readonly IReadOnlyDictionary<string, int[]> _preservingEdgesByPartOfSpeech;
+    private readonly IReadOnlyDictionary<string, MorphPolicy.Program[]> _invariantMorphologyPrograms;
     private readonly IReadOnlyDictionary<string, int[]> _applicationEdgesByLemma;
     private readonly IReadOnlyDictionary<string, int[]> _applicationEdgesBySurface;
     private readonly ConditionalProgram[] _conditionalPrograms;
@@ -125,6 +126,12 @@ internal sealed class WordFormationGraph
                     edge.Trust >= ReviewTrust.Reviewed, edge.AllowedFullTags!);
                 return (edge.StateBinding.FromStateId!, edge.RequiredBaseFullTag!, edge.RuleId!, cell);
             }), _surfaceOperations, additionalPrograms, lexicalProjections, ordinaryAliases);
+        _invariantMorphologyPrograms = (additionalPrograms ?? [])
+            .Where(program => program.Kind == ParadigmProgram.Kind.Invariant)
+            .GroupBy(program => program.StateId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.SelectMany(program => program.Cells.Select(cell =>
+                new MorphPolicy.Program(program.BaseFullTag, cell.Approved, cell.GuardTransformIndex))).ToArray(),
+                StringComparer.Ordinal);
         _paradigmEdgesByPartOfSpeech = edges
             .Select((edge, index) => (edge, index))
             .Where(item => item.edge.Origin == EdgeOrigin.Paradigm && item.edge.StateBinding.FromStateId is not null)
@@ -1579,7 +1586,7 @@ internal sealed class WordFormationGraph
         {
             Edge edge = _edges[index];
             return new MorphPolicy.Program(edge.RequiredBaseFullTag, Approved(edge), edge.ParadigmStemTransform);
-        }).ToArray();
+        }).Concat(_invariantMorphologyPrograms.GetValueOrDefault(candidate.ToStateId) ?? []).ToArray();
         return MorphPolicy.Evaluate(new(lemma, candidate.EdgePath.All(index => Approved(_edges[index])),
             terminal, preservesRootFeatures, rootTags, last.RequiredBaseFullTag,
             terminal ? last.ParadigmStemTransform : null, terminalTags, programs),

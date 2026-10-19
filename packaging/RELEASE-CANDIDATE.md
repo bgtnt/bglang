@@ -1,23 +1,34 @@
-# Public v0.1.0-preview.3
+# Candidate v0.1.0-preview.4
 
-Този guide е подготвен за [`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3).
-Ако release още не е публикуван, URL адресите са планирани.
-Използвайте download указанията само след публикацията.
+`v0.1.0-preview.4` е планираният следващ candidate label. Приетият local
+implementation base е `6d3672173cae1688dc36612d1dffc2a49366c7f0`, native output
+`bglang-neutral:de06b9b2e254e61a`. Metadata commit, immutable RAW source export,
+distribution validation, CI и publication за кандидата предстоят; техни hashes,
+source/Compile counts или PASS резултати не са обявени тук.
 
-Publication snapshot-ът стъпва върху accepted source anchor
-`ae247f60da2122a2d7a8f925058949dda744a95c`. След публикацията exact public commit
-и asset hashes са достъпни в release `publication.json`/`SHA256SUMS` и source
-bundle `public-source-manifest.json`.
+Публикуваният [`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3)
+остава отделен release с public source/tag
+`2b7c30266641302d9168ec3fa80915753b974dd9` и
+[преминалия негов Windows CI run](https://github.com/bgtnt/bglang/actions/runs/39209750145).
+Неговите source bundle/runtime assets и резултати не приемат автоматично preview.4.
+Publication snapshot anchor `ae247f60da2122a2d7a8f925058949dda744a95c` е история
+на preview.3. Точните identities са в съответните `publication.json`,
+`SHA256SUMS` и `public-source-manifest.json`, а не в бъдещи предполагаеми hashes.
 
 Input lock запазва producer `source.baseCommit=399c166d9aa82355a8599f64a7457348789bb395`.
-Това е различен anchor от publication snapshot-а. Historical contract/status,
+Това е различен anchor от publication snapshot-а и приетия base `6d367217`.
+Allowlist `sourceBaseCommit=308b5a46ac1539ca98498d291ccf94d04543baf1` също е
+запазен historical runtime/producer anchor, не бъдещият metadata/export commit.
+Historical contract/status,
 allowlist anchor и pending/publication=false snapshots остават история и не
 се използват сами по себе си като доказателство за текуща публикация.
 
 ## Първо използвайте runtime ZIP
 
-Изтеглете runtime ZIP и `SHA256SUMS` от release, проверете hash и разархивирайте
-трите data файла в `./runtime`. С source checkout/bundle, Windows, PowerShell 7
+За незабавно използване вземете runtime ZIP, `SHA256SUMS` и source bundle от
+публикувания preview.3. За preview.4 download указанията ще са приложими след
+неговата публикация. Проверете hash и разархивирайте трите data файла в
+`./runtime`. Със source checkout/bundle от същия preview, Windows, PowerShell 7
 и .NET SDK **10.0.402**:
 
 ```powershell
@@ -45,7 +56,7 @@ paths пазят program/base tag, supporting lemmas и unmet requirements.
 
 Всяка съкратена колекция има `total`, `displayed`, ordered `items`. Display3
 е console presentation. Следващите counts/flags са запазен consumer пример
-върху предходния native `fa4b0d8a76e8b7a2`, не ново измерване на preview.3.
+върху предходния native `fa4b0d8a76e8b7a2`, не ново измерване на preview.3 или preview.4.
 В този пример `суперработник` е `known=False`:
 
 | Lane | total | displayed |
@@ -113,21 +124,23 @@ owner numeric cap или общ speedup claim. Bounded heavy fixture е 64
 
 ## Възпроизвеждане на native data
 
-Това е отделен offline workflow със съответния published source/recipe и
-corrected STORED inputs. Готовият runtime е достатъчен за API.
+Това е отделен offline workflow със source/recipe от съответния immutable
+export и complete corrected STORED inputs. Следващите identities са приетият
+local target за preview.4; нов export/distribution run още не е изпълнен.
+Готовият runtime е достатъчен за API.
 [Input lock](../data/dictionary/public-input-lock.v1.json) фиксира component hashes:
 
 | Роля | Package ID | Source ID | Пълни data bytes |
 | --- | --- | --- | ---: |
 | Corrected STORED build input | `bglang-neutral:6de86ba569c1001a` | `neutral-source-v3:4e6b294e97c5585d4af44ae0c71b5baab338a0cc32c83ad0dd83019482cd18ff` | 269108994 |
-| Native runtime output | `bglang-neutral:1835c7e51b034b3f` | `neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9` | 49438708 |
+| Native runtime output/comparison | `bglang-neutral:de06b9b2e254e61a` | `neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9` | 49443153 |
 
 Точно трите компонента са `manifest.json`, `lexicon.v3.jsonl`,
 `word-formation.v0.json`. Native има 119290 owners /1549263 readings /
 1266121 distinct forms: 106551 native owners с1533555 generated readings и
 12739 stored owners с15708 stored readings. ZIP bytes, .NET binaries и RAM
 са други обхвати. Native никога не е build input. STORED graph е531796 bytes;
-recipe използва отделния locked current graph от2102275 bytes.
+recipe използва отделния locked current graph от2106720 bytes.
 За source ZIP с включени locked STORED inputs и RAW source manifest:
 
 ```powershell
@@ -155,8 +168,18 @@ dotnet test tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj -c Release --no
 if ($LASTEXITCODE -ne 0) { throw 'Public package tests failed.' }
 ```
 
+За новия distribution run Public37 е очакване, не вече получен резултат.
+Приетите Release2/Focus48P/Public37P/Regressions265P/Full3314P с0F,
+13 historical NotExecuted и42 package gates са implementation evidence за
+`6d367217`/`de06`, отделно от предстоящата проверка на exported source.
+Настоящата metadata подготовка променя само README и този guide; това не е
+твърдение за нулев Product delta спрямо preview.3.
+
 [Source allowlist](public-source-allowlist.v1.json)/RAW manifest определят
-конкретния export. Ползвайте source/recipe и locked inputs от същия preview;
+конкретния export. Source/Compile counts се установяват от текущия allowlist
+и evaluated project closure, а actual export се приема по новия RAW manifest.
+Не пренасяйте старите preview.3 counts/резултати върху кандидата.
+Ползвайте source/recipe и locked inputs от същия preview;
 preview.2 STORED assets не съвпадат с текущия lock. Missing component, hash
 mismatch или непълен export не се заместват с private/стар input.
 
@@ -164,9 +187,11 @@ mismatch или непълен export не се заместват с private/с
 
 [Windows workflow](../.github/workflows/windows-public.yml) приема explicit
 `input_base_url`/`BGLANG_INPUT_BASE_URL` за трите raw STORED assets.
-Raw input base за preview.3 е
+Публикуваният raw input base за preview.3 е
 `https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.3`;
-добавя се името на locked STORED asset. Това не е runtime ZIP URL;
+добавя се името на locked STORED asset. За preview.4 се изисква отделно
+обвързване на input delivery/base URL с exact lock/asset hashes; нов URL не е
+предварително удостоверен. Това не е runtime ZIP URL;
 missing URL/hash mismatch е FAIL без preview.1 fallback.
 CI evidence се отнася до exact public SHA/run, отделно от local checks и
 release assets. Publication сама по себе си не доказва green CI/corpus result.
@@ -175,7 +200,16 @@ release assets. Publication сама по себе си не доказва gree
 
 ## Езикови промени и граници
 
-В preview.3 са включени четири приети езикови партиди:
+Приетото допълнение за планирания preview.4 допуска exact adverb `късно`
+в съществуващия typed degree механизъм за `по-късно` и `най-късно`.
+Лексикалните readings и adjective homograph се запазват; изборът на
+`BaseEvidence` за `по-късно` може да стане `късно` по съществуващия rank.
+Това не е общо разрешение за degree върху всеки adverb или премахване на
+ambiguity. BERON пряко класифицира `късно` като наречие; и двете степени са
+rule-based inferences по58/114.1, не преки речникови цитати. Коригираното
+provenance wording има нова graph/package identity, без нова lexical admission.
+
+От публикувания preview.3 се запазват следните четири приети партиди:
 
 | Партида | Конкретен ефект | Произход и граница |
 | --- | --- | --- |

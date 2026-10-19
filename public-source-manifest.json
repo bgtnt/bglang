@@ -874,8 +874,8 @@
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 9393,
-      "sha256": "3eabc18e9269051420d3a72ca6e841c54e5cd297e7c45f775ec811860ca946d0"
+      "bytes": 9671,
+      "sha256": "eb1f7d3492c35d631e18230bd62a9e9404fc00a837e1f51dbeea80bda790502f"
     },
     {
       "path": ".github/workflows/windows-public.yml",
@@ -904,8 +904,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 11585,
-      "sha256": "b06baae3aa9170f65e0109d1d0f41dac2c507ca0bd9c21725a54d6b1d98ed134"
+      "bytes": 14113,
+      "sha256": "f4705f965a1111556c527c6714cc438ad0cab7afbee88b32441f8e5fb2c41bb3"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -914,13 +914,13 @@
     },
     {
       "path": "data/dictionary/public-input-lock.v1.json",
-      "bytes": 4491,
-      "sha256": "be988e9856ddcce8291e0f71f4f38b68b9777bfbad637eb61276b57748193eed"
+      "bytes": 4487,
+      "sha256": "b134d9b363fa61a98797a2645dbff84b4a14a6589e1f1c000422520753bdc874"
     },
     {
       "path": "data/word-formation/word-formation-source.v0.json",
-      "bytes": 2102275,
-      "sha256": "ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025"
+      "bytes": 2106720,
+      "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e"
     },
     {
       "path": "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
@@ -949,8 +949,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 16942,
-      "sha256": "c97701165ac9079a3f7a5ab53fba45be6c6ae37b4b5e927b37d5da4682f3192b"
+      "bytes": 20136,
+      "sha256": "891874c5831c6c033b4f1f3f917b3e12a43002d9105508de464acc8e0edbdf62"
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
@@ -1394,8 +1394,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationAnalyzer.cs",
-      "bytes": 97470,
-      "sha256": "42242e9de3e62a3f6b5607f36cae10b20672c4a81a7fa6d1d1cd09d0b63f58f9"
+      "bytes": 98265,
+      "sha256": "7d5af57ee1f2c627998fdbfafe02a4dfdd339a105a965cfacaec91bf35c8feb5"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationEvidenceAnalyzer.cs",
@@ -1404,13 +1404,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationGraph.cs",
-      "bytes": 135122,
-      "sha256": "b109270e0850d0870c1b4eaddb42969ebf43b01f59971a7caa26f87a6cbb4b41"
+      "bytes": 135798,
+      "sha256": "1c441b5c1656a190f14752ea32810bc02700dfa1eb038d8e19be882b98cee833"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationGraphCompiler.cs",
-      "bytes": 30340,
-      "sha256": "ec52251b31387438fbacd70175781fe428c26b52e5611ee451beb499f641f1e1"
+      "bytes": 31516,
+      "sha256": "7eca6e4e249e3ac58489c1ea0e277ef400c4cae4fbf5e7911f8cf4684473e1ac"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordReadingOrder.cs",
@@ -1429,8 +1429,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 36095,
-      "sha256": "1cb9761cd536106ffc15fed0b76e3a345974748f8d45805a8b5e1be9ae4621fc"
+      "bytes": 37270,
+      "sha256": "e6cf289aab85e318ceeca02c18b21f915b038b3d199604de847c365f692f053b"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",

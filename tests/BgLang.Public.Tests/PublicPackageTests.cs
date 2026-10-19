@@ -43,8 +43,30 @@ public sealed class PublicPackageTests
     [TestMethod]
     public void Complete_successor_adds_imperative_alternatives_without_losing_noun_or_finite_readings()
     {
-        Assert.AreEqual("bglang-neutral:1835c7e51b034b3f", session.Provenance.PackageId);
+        Assert.AreEqual("bglang-neutral:de06b9b2e254e61a", session.Provenance.PackageId);
         AssertLanguage(session, candidate.GetProperty("sourceId").GetString()!);
+    }
+
+    [TestMethod]
+    public void Complete_package_admits_exact_adverb_degree_with_independent_public_proof()
+    {
+        foreach ((string input, string rule) in new[]
+        {
+            ("по-късно", "productive.adverb.degree_comparative_po.v1"),
+            ("най-късно", "productive.adverb.degree_superlative_nai.v1")
+        })
+        {
+            WordAnalysis word = session.AnalyzeWord(input, 256);
+            Assert.IsFalse(word.IsKnown);
+            WordDerivation path = word.GraphCandidates.Single(row => row.RuleIds.Contains(rule));
+            Assert.AreEqual("късно", path.Base);
+            Assert.AreEqual("state:adverb:188", path.FromState); Assert.AreEqual(path.FromState, path.ToState);
+            CollectionAssert.AreEqual(new[] { "Наречие:188" }, path.FullTags!.ToArray());
+            Assert.IsFalse(path.IsConditional); Assert.IsEmpty(path.ApplicationIds);
+            Assert.AreEqual(MorphologicalPartOfSpeech.Adverb, path.Features.Single().PartOfSpeech);
+            Assert.AreEqual("transparent", word.BaseEvidence?.Transparency);
+            Assert.AreEqual("късно", word.BaseEvidence?.Base);
+        }
     }
 
     // Frozen independent literal oracle: 6a59de97076cc6c8207d7d0d9e91e8b1da4d24290188cfd821fb8711b726ad55.

@@ -45,20 +45,20 @@
   },
   "graph": {
     "releaseRelativePath": "data/word-formation/word-formation-source.v0.json",
-    "bytes": 2102275,
-    "sha256": "ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025",
+    "bytes": 2106720,
+    "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e",
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
-    "profile": "ela-imperative-native.v1",
-    "packageId": "bglang-neutral:1835c7e51b034b3f",
+    "profile": "adverb-degree-native.v1",
+    "packageId": "bglang-neutral:de06b9b2e254e61a",
     "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "manifest.json",
         "bytes": 550,
-        "sha256": "db6646e6d703d2545ba0796f1897c789e9ecab209ff37815fc1c5000117ef394"
+        "sha256": "c658e0b9e7c5cef43a56463b9534282b133c7b3683a866b72a6d532a5af8b3b7"
       },
       {
         "name": "lexicon.v3.jsonl",
@@ -67,15 +67,15 @@
       },
       {
         "name": "word-formation.v0.json",
-        "bytes": 2102275,
-        "sha256": "ceddc256958e300a523962b6bbf27ba0430354e3c8b1a949050503e459999025"
+        "bytes": 2106720,
+        "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e"
       }
     ],
     "releaseRelativeDirectory": "artifacts/public-package",
     "selectors": {
       "publicTarget": "BGLANG_PUBLIC_PACKAGE_MANIFEST",
-      "currentCandidate": "BGLANG_ELA_IMPERATIVE_NATIVE_MANIFEST",
-      "strictCurrent": "BGLANG_ELA_IMPERATIVE_REQUIRE_NATIVE_MANIFEST=1"
+      "currentCandidate": "BGLANG_ADVERB_DEGREE_NATIVE_MANIFEST",
+      "strictCurrent": "BGLANG_ADVERB_DEGREE_REQUIRE_NATIVE_MANIFEST=1"
     },
     "readingCount": 1549263,
     "distinctForms": 1266121,
@@ -107,7 +107,7 @@
   "releaseApproval": false,
   "publicationPerformed": false,
   "releaseCandidate": {
-    "label": "ela-imperative-local-successor",
+    "label": "adverb-degree-local-successor",
     "runtimeCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "publicVersion": null,
     "publicDestination": null,

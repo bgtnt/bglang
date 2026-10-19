@@ -5,12 +5,20 @@
 `BulgarianLanguageSession.Open(manifestPath)`. Пакетът се проверява по размер,
 SHA-256, структура и идентичност преди използване.
 
-## Бърз старт с готовия runtime
+## Публикуван preview.3 и планиран preview.4
 
-[`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3)
-Документът е подготвен за тази версия на runtime и source bundle.
-Ако release още не е публикуван, URL адресите са планирани.
-Използвайте download указанията само след публикацията.
+Публикуваният [`v0.1.0-preview.3`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.3)
+остава готовият download вариант. Неговият public source/tag е
+`2b7c30266641302d9168ec3fa80915753b974dd9`.
+`v0.1.0-preview.4` е планиран следващ кандидат върху приетия implementation
+base `6d3672173cae1688dc36612d1dffc2a49366c7f0`; това не удостоверява remote tag
+или публикуван release. Metadata commit, immutable source export и новата
+distribution validation предстоят и ще имат собствени identities/резултати.
+
+## Бърз старт с публикувания preview.3
+
+Следващите download указания и runtime identity са за preview.3.
+Използвайте runtime и source bundle от един и същи preview.
 
 Изтеглете runtime ZIP и `SHA256SUMS` от release, проверете SHA-256 и
 разархивирайте трите файла в `./runtime`. За API не са нужни STORED inputs
@@ -43,13 +51,33 @@ var word = language.AnalyzeWord("свръхсупертракторите", 256)
 var text = language.AnalyzeText("Аз го четем.");
 ```
 
-Publication snapshot-ът за този preview стъпва върху accepted source anchor
-`ae247f60da2122a2d7a8f925058949dda744a95c`. След публикацията точните public source и asset
-идентичности са достъпни в release `publication.json`/`SHA256SUMS` и source
-bundle `public-source-manifest.json`.
-Snapshot anchor-ът е отделен от запазения
-producer anchor `source.baseCommit` в input lock. Старите immutable
-contracts/status и pending/publication=false snapshots не се пренаписват.
+Publication snapshot-ът на preview.3 стъпва върху accepted source anchor
+`ae247f60da2122a2d7a8f925058949dda744a95c`. Точните public source и asset
+идентичности са в неговите `publication.json`/`SHA256SUMS` и source bundle
+`public-source-manifest.json`. Snapshot anchor, public commit и запазеният
+producer anchor `source.baseCommit` са различни роли. Старите immutable
+contracts/status и pending/publication=false snapshots остават история.
+
+## Прието за планирания preview.4
+
+Приетият local native output е `bglang-neutral:de06b9b2e254e61a`:
+**49 443 153 data bytes**, **119 290 lexemes /1 549 263 readings /
+1 266 121 distinct forms**. Той използва current graph от **2 106 720 bytes**
+и source `neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9`.
+Това са приети implementation identities, не нови distribution резултати.
+
+- Exact adverb admission за `късно` добавя сравнителен `по-късно` и
+  превъзходен `най-късно` path в съществуващия typed degree механизъм.
+  Лексикалните readings и отделният adjective homograph остават.
+- BERON пряко класифицира `късно` като наречие. И двете степени са изрично
+  rule-based inferences по правила 58/114.1, а не преки речникови цитати.
+  Промяната на provenance wording изисква нова graph/package identity.
+
+За този приет implementation са затворени Release2, Focus48P, Public37P,
+Regressions265P и Full3314P/0F/13 historical NotExecuted с42 package gates.
+Те не са validation на бъдещия source export. Public37 е очакване за новата
+distribution проверка, не неин вече получен резултат. Нулевият runtime/API/
+dependency delta на настоящите два документа е спрямо `6d367217`, не preview.3.
 
 ## Как се четат резултатите
 
@@ -78,7 +106,7 @@ clitic/finite-verb модели; SVO „Аз четем книга.“ е изв
 не се променя. Warning е предложение за проверка, не автоматична поправка;
 непознат код остава information.
 
-## Езикови промени в preview.3
+## Езикови промени в публикувания preview.3
 
 - Простото imperative има typed `Person=Second`, запазено число и `Tense=null`;
   RAW tags и допустимите омографски readings остават.
@@ -130,9 +158,10 @@ lifetime peak, задържаните console buffers и cache/shared-host еф�
 
 ## Възпроизвеждане, CI и езиков обхват
 
-Data reproduction е отделен offline workflow с corrected STORED inputs
-`bglang-neutral:6de86ba569c1001a` (**269 108 994 bytes**) и source/recipe
-от същия preview.
+Data reproduction за планирания preview.4 е отделен offline workflow с
+complete corrected STORED inputs `bglang-neutral:6de86ba569c1001a`
+(**269 108 994 bytes**) и source/recipe от съответния immutable export.
+Приетият comparison target е native `de06b9b2e254e61a`.
 Native output никога не е build input. [Portable guide](packaging/RELEASE-CANDIDATE.md#възпроизвеждане-на-native-data)
 и [input lock](data/dictionary/public-input-lock.v1.json) дават exact identities,
 hashes и fail-fast команди. [Allowlist](packaging/public-source-allowlist.v1.json)
@@ -141,9 +170,11 @@ STORED inputs и native output от различни previews.
 
 [Windows workflow](.github/workflows/windows-public.yml) приема explicit
 `input_base_url`/`BGLANG_INPUT_BASE_URL` за трите locked raw STORED assets.
-Raw input base за preview.3 е
+Публикуваният raw input base за preview.3 е
 `https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.3`;
-трите raw STORED assets са отделни от runtime ZIP. Няма private/preview.1 fallback. Hosted CI evidence
+трите raw STORED assets са отделни от runtime ZIP. За preview.4 input delivery
+и explicit base URL ще се обвържат с exact lock/asset hashes; не се предполага
+нов URL или автоматичен fallback. Няма private/preview.1 fallback. Hosted CI evidence
 се чете за точния public SHA/run; локален build или publication сами по себе си
 не установяват green CI. Release metadata трябва да свързва точния public SHA
 с действителните CI и publication резултати.
@@ -155,7 +186,7 @@ Corrected finite residual0 е приет в ограничен dictionary/regist
 разделя direct attestation и class/register inference, включително
 `пребъда`/`пребил`. Full Legacy language, all-variant morphology, productive
 precision, analyzers и corpus acceptance остават отделни; historical failures
-и original RAW census не се пренаписват. Preview.3 не затваря M1–M4 или corpus
+и original RAW census не се пренаписват. Preview.3 и планираният preview.4 не затварят M1–M4 или corpus
 acceptance. Запазените 13 historical skips са отделни opt-in scopes без нов
 acceptance credit. Няма общ claim за непроменен ресурсен разход.
 

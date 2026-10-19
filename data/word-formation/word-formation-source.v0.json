@@ -319,7 +319,43 @@
       "mayGenerateCandidates": false,
       "negativeControlIds": ["nc:престол", "nc:югозападен:not_replaceable"]
     },
-    {"id": "productive.adjective.coordinate_color.v1", "kind": "compounding", "pattern": ["left_adjective", "m:interfix:о-", "right_adjective"], "outputPos": "adjective", "supportCount": 1, "reviewState": "accepted", "mayGenerateCandidates": true, "negativeControlIds": []}
+    {"id": "productive.adjective.coordinate_color.v1", "kind": "compounding", "pattern": ["left_adjective", "m:interfix:о-", "right_adjective"], "outputPos": "adjective", "supportCount": 1, "reviewState": "accepted", "mayGenerateCandidates": true, "negativeControlIds": []},
+    {
+      "id": "productive.adverb.degree_comparative_po.v1",
+      "kind": "prefix_derivation",
+      "pattern": [
+        "m:prefix:по-degree",
+        "exact_adverb_lemma"
+      ],
+      "outputPos": "adverb",
+      "supportCount": 0,
+      "reviewState": "accepted",
+      "mayGenerateCandidates": true,
+      "negativeControlIds": [],
+      "evidenceCodes": [
+        "linguistic_class=adverb_comparative",
+        "requires_exact_self_reading=true",
+        "output_may_be_oov=true"
+      ]
+    },
+    {
+      "id": "productive.adverb.degree_superlative_nai.v1",
+      "kind": "prefix_derivation",
+      "pattern": [
+        "m:prefix:най-degree",
+        "exact_adverb_lemma"
+      ],
+      "outputPos": "adverb",
+      "supportCount": 0,
+      "reviewState": "accepted",
+      "mayGenerateCandidates": true,
+      "negativeControlIds": [],
+      "evidenceCodes": [
+        "linguistic_class=adverb_superlative",
+        "requires_exact_self_reading=true",
+        "output_may_be_oov=true"
+      ]
+    }
   ],
   "applications": [
     {
@@ -598,6 +634,18 @@
     }
   ],
   "evidence": [
+    {
+      "id": "ev:beron:adverb-degree-prefixes",
+      "kind": "normative_grammar",
+      "reference": "https://beron.mon.bg/rechnik/1661;https://beron.mon.bg/rechnik/2957",
+      "note": "BERON rules 58 and 114.1 license hyphenated по-/най- degree for gradable adverbs. This declaration requires an independently admitted exact adverb base; it does not admit every Adverb188 lexeme."
+    },
+    {
+      "id": "ev:beron:adverb-degree:късно",
+      "kind": "normative_dictionary",
+      "reference": "https://beron.mon.bg/leksema/a08b818587b161107487c2e2c774b3d1",
+      "note": "BERON identifies късно as an adverb. по-късно and най-късно are explicit rule-based degree inferences from rules 58 and 114.1, not direct dictionary quotations. The separate adjective homograph grants no adverb authority."
+    },
     {
       "id": "ev:legacy:verb173174-parity-v1",
       "kind": "reviewed_runtime_test",
@@ -2139,9 +2187,80 @@
         "application_independent=true"
       ]
     },
-    {"id": "transition|compound|coordinate-color|state:adjective:76|m:interfix:о-|productive.adjective.coordinate_color.v1", "kind": "compound", "morphId": "m:interfix:о-", "fromStateId": "state:adjective:76", "toStateId": "state:adjective:76", "stemTransformId": "stem-transform:identity", "ruleId": "productive.adjective.coordinate_color.v1", "supportCount": 1, "reviewState": "accepted", "mayGenerateCandidates": true, "applicationIds": [], "evidenceIds": ["ev:beron:coordinate-adjectives-54.6", "ev:ibl:coordinate-color-context-2607"], "evidenceCodes": ["compound_relation=coordinate_color", "requires_exact_ordinary_operands=true", "output_state=right", "output_is_candidate=true"], "compoundBinding": {"leftBaseFullTag": "Прилагателно:76,Мъжки", "rightBaseFullTag": "Прилагателно:76,Мъжки", "leftLemmas": ["жълт", "зелен", "червен"], "rightLemmas": ["жълт", "зелен", "червен"], "rightParadigmRuleId": "productive.adjective.type76.v0"}}
+    {"id": "transition|compound|coordinate-color|state:adjective:76|m:interfix:о-|productive.adjective.coordinate_color.v1", "kind": "compound", "morphId": "m:interfix:о-", "fromStateId": "state:adjective:76", "toStateId": "state:adjective:76", "stemTransformId": "stem-transform:identity", "ruleId": "productive.adjective.coordinate_color.v1", "supportCount": 1, "reviewState": "accepted", "mayGenerateCandidates": true, "applicationIds": [], "evidenceIds": ["ev:beron:coordinate-adjectives-54.6", "ev:ibl:coordinate-color-context-2607"], "evidenceCodes": ["compound_relation=coordinate_color", "requires_exact_ordinary_operands=true", "output_state=right", "output_is_candidate=true"], "compoundBinding": {"leftBaseFullTag": "Прилагателно:76,Мъжки", "rightBaseFullTag": "Прилагателно:76,Мъжки", "leftLemmas": ["жълт", "зелен", "червен"], "rightLemmas": ["жълт", "зелен", "червен"], "rightParadigmRuleId": "productive.adjective.type76.v0"}},
+    {
+      "id": "transition|prefix|m:prefix:по-degree|preserve:adverb|stem-transform:identity:exact:късно|productive.adverb.degree_comparative_po.v1",
+      "kind": "prefix",
+      "prefixClass": "degree",
+      "morphId": "m:prefix:по-degree",
+      "stateBinding": {
+        "kind": "preserve_matching_state",
+        "partOfSpeech": "adverb"
+      },
+      "stemTransformId": "stem-transform:identity:exact:късно",
+      "ruleId": "productive.adverb.degree_comparative_po.v1",
+      "supportCount": 0,
+      "reviewState": "accepted",
+      "mayGenerateCandidates": true,
+      "applicationIds": [],
+      "evidenceIds": [
+        "ev:beron:adverb-degree-prefixes",
+        "ev:beron:adverb-degree:късно"
+      ],
+      "evidenceCodes": [
+        "requires_exact_self_reading=true",
+        "input_pos=adverb",
+        "admitted_exact_base=късно",
+        "output_state=preserve_input",
+        "prefix_family=degree",
+        "exact_known_output_state_must_match=true",
+        "application_independent=true"
+      ]
+    },
+    {
+      "id": "transition|prefix|m:prefix:най-degree|preserve:adverb|stem-transform:identity:exact:късно|productive.adverb.degree_superlative_nai.v1",
+      "kind": "prefix",
+      "prefixClass": "degree",
+      "morphId": "m:prefix:най-degree",
+      "stateBinding": {
+        "kind": "preserve_matching_state",
+        "partOfSpeech": "adverb"
+      },
+      "stemTransformId": "stem-transform:identity:exact:късно",
+      "ruleId": "productive.adverb.degree_superlative_nai.v1",
+      "supportCount": 0,
+      "reviewState": "accepted",
+      "mayGenerateCandidates": true,
+      "applicationIds": [],
+      "evidenceIds": [
+        "ev:beron:adverb-degree-prefixes",
+        "ev:beron:adverb-degree:късно"
+      ],
+      "evidenceCodes": [
+        "requires_exact_self_reading=true",
+        "input_pos=adverb",
+        "admitted_exact_base=късно",
+        "output_state=preserve_input",
+        "prefix_family=degree",
+        "exact_known_output_state_must_match=true",
+        "application_independent=true"
+      ]
+    }
   ],
   "morphophonologicalTransforms": [
+    {
+      "id": "stem-transform:identity:exact:късно",
+      "kind": "identity",
+      "fromTail": "",
+      "toTail": "",
+      "variantSetId": null,
+      "reviewState": "accepted",
+      "evidenceIds": [
+        "ev:beron:adverb-degree-prefixes",
+        "ev:beron:adverb-degree:късно"
+      ],
+      "exactInput": "късно"
+    },
     {
       "id": "stem-transform:tail:и=>empty:min3",
       "kind": "tail_delete",
