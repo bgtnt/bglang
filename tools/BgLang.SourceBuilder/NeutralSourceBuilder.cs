@@ -50,7 +50,7 @@ internal static class NeutralSourceBuilder
         using JsonDocument first = JsonDocument.ParseValue(ref probe);
         bool annotated = first.RootElement.ValueKind == JsonValueKind.Object &&
             first.RootElement.TryGetProperty("schemaVersion", out JsonElement schema) &&
-            schema.ValueKind == JsonValueKind.String && schema.GetString() == AuthoringDocument.Schema;
+            schema.ValueKind == JsonValueKind.String && schema.GetString() is AuthoringDocument.Schema or AuthoringDocument.SourceEvidenceSchema;
         List<(string Key, string Line, int Readings)> rows = [];
         LexemeAnnotations? annotations = null;
         if (annotated)
@@ -70,7 +70,8 @@ internal static class NeutralSourceBuilder
                     throw new InvalidDataException("Shared owners require identical complete lexical declarations.");
                 return firstRow;
             }).ToList();
-            annotations = new LexemeAnnotations(LexemeAnnotations.Schema, owners.ToArray()).Canonicalize();
+            annotations = new LexemeAnnotations(document.SchemaVersion == AuthoringDocument.SourceEvidenceSchema
+                ? LexemeAnnotations.SourceEvidenceSchema : LexemeAnnotations.Schema, owners.ToArray()).Canonicalize();
             annotations = LexemeAnnotations.Read(StrictUtf8.GetString(annotations.Serialize()));
         }
         else

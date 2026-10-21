@@ -18,17 +18,20 @@ internal sealed class DawgIndex
     private readonly DawgNode[] _nodes;
     private readonly int _rootIndex;
     private readonly WordReading[] _payloads;
+    private readonly int[]? _lexemeOrdinals;
     private readonly int[] _payloadStarts;
     private readonly int[] _basePayloadPositions;
     private readonly Dictionary<string, int[]>? _suffixTagPositions;
     private readonly BlockRankedRangeSelector? _rangeSelector;
 
-    internal DawgIndex(IEnumerable<WordReading> readings, bool allowEmpty = false)
-        : this(readings, reverseKeys: false, allowEmpty)
+    internal DawgIndex(IEnumerable<WordReading> readings, bool allowEmpty = false,
+        IReadOnlyDictionary<WordReading, int>? lexemeOrdinals = null)
+        : this(readings, reverseKeys: false, allowEmpty, lexemeOrdinals)
     {
     }
 
-    private DawgIndex(IEnumerable<WordReading> readings, bool reverseKeys, bool allowEmpty)
+    private DawgIndex(IEnumerable<WordReading> readings, bool reverseKeys, bool allowEmpty,
+        IReadOnlyDictionary<WordReading, int>? lexemeOrdinals = null)
     {
         ArgumentNullException.ThrowIfNull(readings);
 
@@ -54,6 +57,7 @@ internal sealed class DawgIndex
         _payloads = new WordReading[_payloadStarts[^1]];
         for (int i = 0; i < groups.Length; i++)
             groups[i].Readings.CopyTo(_payloads, _payloadStarts[i]);
+        _lexemeOrdinals = lexemeOrdinals is null ? null : _payloads.Select(reading => lexemeOrdinals[reading]).ToArray();
         // Positions retain the existing payload order and point into the shared readings.
         _suffixTagPositions = reverseKeys ? Enumerable.Range(0, _payloads.Length)
             .Where(i => _payloads[i].PartOfSpeech is not null)
@@ -76,6 +80,27 @@ internal sealed class DawgIndex
         new(readings, reverseKeys: true, allowEmpty);
 
     internal IReadOnlyList<WordReading> AllReadings => _payloads;
+
+    // Complete only for already retained accepted rows; no generation or owner inference.
+    internal bool HasAcceptedOwnerPairing => _payloads.Length == 0 || _lexemeOrdinals is not null;
+
+    internal void AppendAcceptedOwnForms(
+        Dictionary<int, List<WordReading>> requestedOwners, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(requestedOwners);
+        if (requestedOwners.Count == 0) return;
+        if (!HasAcceptedOwnerPairing)
+            throw new InvalidOperationException("Accepted owner pairing is unavailable.");
+        for (int position = 0; position < _payloads.Length; position++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Pair from the SAME position; preserve reference, nullable tag and exact Score bits.
+            if (requestedOwners.TryGetValue(_lexemeOrdinals![position], out List<WordReading>? forms))
+                forms.Add(_payloads[position]);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
 
     internal int WordCount => _payloadStarts.Length - 1;
 
@@ -101,6 +126,30 @@ internal sealed class DawgIndex
         (int start, int end) = GetPayloadRange(result.Rank);
         int count = Math.Min(limit, end - start);
         return _payloads.AsSpan(start, count).ToArray();
+    }
+
+    internal ExactLookupResult LookupExactPairedNormalized(string normalizedForm, int limit,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (normalizedForm.Length == 0 || limit <= 0)
+            return new([], _lexemeOrdinals is null ? null : []);
+        TraversalResult result = Traverse(normalizedForm, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (result.NodeIndex < 0 || !_nodes[result.NodeIndex].IsTerminal)
+            return new([], _lexemeOrdinals is null ? null : []);
+        (int start, int end) = GetPayloadRange(result.Rank);
+        int count = Math.Min(limit, end - start);
+        WordReading[] readings = new WordReading[count];
+        int[]? owners = _lexemeOrdinals is null ? null : new int[count];
+        for (int index = 0; index < count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            readings[index] = _payloads[start + index];
+            if (owners is not null) owners[index] = _lexemeOrdinals![start + index];
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(Array.AsReadOnly(readings), owners is null ? null : Array.AsReadOnly(owners));
     }
 
     internal IReadOnlyList<WordReading> FindByPrefix(string prefix, int limit)
@@ -156,6 +205,15 @@ internal sealed class DawgIndex
             return new(Array.Empty<WordReading>());
         (int start, int end) = GetPayloadRange(result.Rank);
         return new(_payloads, start, end);
+    }
+
+    internal IReadOnlyList<int> FindExactLexemeOrdinals(string normalizedForm)
+    {
+        if (_lexemeOrdinals is null || normalizedForm.Length == 0) return [];
+        TraversalResult result = Traverse(normalizedForm);
+        if (result.NodeIndex < 0 || !_nodes[result.NodeIndex].IsTerminal) return [];
+        (int start, int end) = GetPayloadRange(result.Rank);
+        return _lexemeOrdinals.AsSpan(start, end - start).ToArray().Distinct().ToArray();
     }
 
     internal IReadOnlyList<WordReading> FindBaseBySuffix(string suffix, int limit) =>
@@ -362,12 +420,14 @@ internal sealed class DawgIndex
         return nodeIndexes[root];
     }
 
-    private TraversalResult Traverse(string normalized)
+    private TraversalResult Traverse(string normalized, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         int nodeIndex = _rootIndex;
         int rank = 0;
         foreach (char symbol in normalized)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DawgNode node = _nodes[nodeIndex];
             if (node.IsTerminal)
                 rank++;
@@ -377,10 +437,14 @@ internal sealed class DawgIndex
                 return new TraversalResult(-1, 0);
 
             for (int i = 0; i < edgeIndex; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
                 rank += _nodes[node.Edges[i].TargetIndex].TerminalCount;
+            }
             nodeIndex = node.Edges[edgeIndex].TargetIndex;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new TraversalResult(nodeIndex, rank);
     }
 

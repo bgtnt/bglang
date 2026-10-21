@@ -1,0 +1,375 @@
+{
+  "schema": "bglang-web-scope-metrics.v1",
+  "measuredAtUtc": "2026-10-09T14:24:43.9585177Z",
+  "status": "Source candidate; execution and evaluated dependency verification pending runner handoff.",
+  "baselineScopeMetricsPath": ".tmp/public-mit-release/web/scope-metrics-before-shared-donors.json",
+  "baselineScopeMetricsSha256": "100626a25f77290c173e034a9444e1fec9dad1442a52977a1f030586a45f9825",
+  "sourceBaseCommit": "81e11d2657173e2065ccec2fa2a906d5210fc257",
+  "measurementMethod": "File length in bytes; ReadAllLines physical LOC; anchored C# declaration regex (syntax count, not reflection/evaluated API). Each unchanged C# file must reproduce its previous metrics. Production host types are internal; test declarations counted separately.",
+  "declarationRegex": {
+    "types": "(?m)^\\s*(?:(?:public|internal|private|protected|sealed|static|abstract|partial|readonly|ref|file)\\s+)*(?:class|record|struct|enum|interface)\\s+[A-Za-z_]",
+    "publicMethods": "(?m)^\\s*public\\s+(?:(?:static|async|override|virtual|sealed|new|abstract)\\s+)*[\\w<>,?\\[\\].]+\\s+\\w+\\s*\\("
+  },
+  "verification": "Exact immutable baseline verified. Every unchanged source file reproduces prior hash/bytes/LOC and C# syntax counts. This is read-only source measurement, not a build, tests or evaluated assembly/reference acceptance.",
+  "productionConsumerVisibleTypesBefore": 0,
+  "productionConsumerVisibleTypesAfter": 0,
+  "productionConsumerVisibleMethodsBefore": 0,
+  "productionConsumerVisibleMethodsAfter": 0,
+  "existingPublicApiChange": {
+    "typesAdded": 0,
+    "methodsAdded": 0,
+    "methodsRemoved": 0
+  },
+  "projectReferenceEdgesBefore": [
+    "BgLang.Web -> BgLang.Api",
+    "BgLang.Web.Tests -> BgLang.Web"
+  ],
+  "projectReferenceEdgesAfter": [
+    "BgLang.Web -> BgLang.Api",
+    "BgLang.Web.Tests -> BgLang.Web"
+  ],
+  "sharedFrameworkReferences": [
+    "BgLang.Web: Microsoft.AspNetCore.App from Web SDK",
+    "BgLang.Web.Tests: Microsoft.AspNetCore.App"
+  ],
+  "sourceProjectFilesUnchanged": true,
+  "evaluatedCompileAndReferenceStatus": "Not run for this candidate; previous runtime verification remains in the immutable baseline.",
+  "newDependencies": [],
+  "defaultProductSolutionChanged": false,
+  "generatedBuildTestPackageBytes": 0,
+  "generatedStatus": "This source-only batch executed no build/restore/Open/host/tests and generated no bin/obj/package outputs.",
+  "totals": {
+    "web": {
+      "before": {
+        "files": 8,
+        "bytes": 31571,
+        "physicalLoc": 586,
+        "declaredTypes": 22,
+        "declaredPublicMethods": 4
+      },
+      "after": {
+        "files": 9,
+        "bytes": 37767.0,
+        "canonicalLfBytes": 37767.0,
+        "physicalLoc": 719.0,
+        "declaredTypes": 26.0,
+        "declaredPublicMethods": 10.0
+      },
+      "delta": {
+        "files": 1,
+        "bytes": 6196.0,
+        "physicalLoc": 133.0,
+        "declaredTypes": 4.0,
+        "declaredPublicMethods": 6.0
+      }
+    },
+    "web-tests": {
+      "before": {
+        "files": 4,
+        "bytes": 53808,
+        "physicalLoc": 867,
+        "declaredTypes": 5,
+        "declaredPublicMethods": 25
+      },
+      "after": {
+        "files": 5,
+        "bytes": 76716.0,
+        "canonicalLfBytes": 76716.0,
+        "physicalLoc": 1164.0,
+        "declaredTypes": 6.0,
+        "declaredPublicMethods": 29.0
+      },
+      "delta": {
+        "files": 1,
+        "bytes": 22908.0,
+        "physicalLoc": 297.0,
+        "declaredTypes": 1.0,
+        "declaredPublicMethods": 4.0
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "apps/BgLang.Web/ApiOperations.cs",
+      "bytes": 6373,
+      "canonicalLfBytes": 6373,
+      "physicalLoc": 95,
+      "sha256": "cab01ce4752175b787874fbf5e2eafb46914ed74f8a034df02273c9edfd3fcf7",
+      "scope": "web",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "apps/BgLang.Web/ClientRateLimit.cs",
+      "bytes": 1572,
+      "canonicalLfBytes": 1572,
+      "physicalLoc": 39,
+      "sha256": "b6c735d9c094776c99939bf578f31dc292ba1c7c898edd7bb95e6990924bca49",
+      "scope": "web",
+      "declaredTypes": 2,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "apps/BgLang.Web/HttpContract.cs",
+      "bytes": 2875,
+      "canonicalLfBytes": 2875,
+      "physicalLoc": 67,
+      "sha256": "f1b4890341617b956a797a773bdb7ee6ef81bd711984dd7e2ee890e71c2cec80",
+      "scope": "web",
+      "declaredTypes": 8,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "apps/BgLang.Web/Program.cs",
+      "bytes": 92,
+      "canonicalLfBytes": 92,
+      "physicalLoc": 4,
+      "sha256": "5cae96ea20fba79a4db0830e8514ac96c7a39a6575828a07b56ea1b0ea9bb288",
+      "scope": "web",
+      "declaredTypes": 0,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "apps/BgLang.Web/SerializedWorkQueue.cs",
+      "bytes": 4253,
+      "canonicalLfBytes": 4253,
+      "physicalLoc": 105,
+      "sha256": "a68c98c5aa53d20417136a3bd5dae54915c2aef0238f37bc47830a1b584b827b",
+      "scope": "web",
+      "declaredTypes": 3,
+      "declaredPublicMethods": 1
+    },
+    {
+      "path": "apps/BgLang.Web/SessionHost.cs",
+      "bytes": 2664,
+      "canonicalLfBytes": 2664,
+      "physicalLoc": 64,
+      "sha256": "7fedb17702382ab0bd15073f39e999f8c3d92746ba3527cf390da52dec8d7b23",
+      "scope": "web",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 3
+    },
+    {
+      "path": "apps/BgLang.Web/SharedDonorResponse.cs",
+      "bytes": 5392,
+      "canonicalLfBytes": 5392,
+      "physicalLoc": 118,
+      "sha256": "1c283ca983c37e6aa1f599b50fb94b8bb5951a7a34bf6a4e9c58033c2f3f482c",
+      "scope": "web",
+      "declaredTypes": 4,
+      "declaredPublicMethods": 6
+    },
+    {
+      "path": "apps/BgLang.Web/TextMatchProjection.cs",
+      "bytes": 5778,
+      "canonicalLfBytes": 5778,
+      "physicalLoc": 89,
+      "sha256": "4597dff09f3a4add7101707b9968914725d364e16bb3414f78e893d903994fb8",
+      "scope": "web",
+      "declaredTypes": 6,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "apps/BgLang.Web/WebHostFactory.cs",
+      "bytes": 8768,
+      "canonicalLfBytes": 8768,
+      "physicalLoc": 138,
+      "sha256": "ac78ea60ed1beb7e2142d626bc16cad8ecd60fd04e84f05262385948ed95d176",
+      "scope": "web",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 0
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/FullPackageHttpTests.cs",
+      "bytes": 19535,
+      "canonicalLfBytes": 19535,
+      "physicalLoc": 254,
+      "sha256": "62ad482e51433bb841a3a94986a8ba47465ea853841b0b71ea7bf5b29a656917",
+      "scope": "web-tests",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 1
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/HttpBoundaryTests.cs",
+      "bytes": 4137,
+      "canonicalLfBytes": 4137,
+      "physicalLoc": 80,
+      "sha256": "30cfe115e17b91782c94133f5a6f7d2074f1da580c4a3a1cd207dfb2b737db48",
+      "scope": "web-tests",
+      "declaredTypes": 2,
+      "declaredPublicMethods": 6
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
+      "bytes": 4805,
+      "canonicalLfBytes": 4805,
+      "physicalLoc": 102,
+      "sha256": "1a88e5a6bd55411cd40f1e2641f3903c57b01f6c7b934fe78a2cc80071e7f084",
+      "scope": "web-tests",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 3
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
+      "bytes": 22908,
+      "canonicalLfBytes": 22908,
+      "physicalLoc": 297,
+      "sha256": "3060dbc299d85be50d7723802fa4005d9dc4cbe628bdccd9a170a0267e6c28b8",
+      "scope": "web-tests",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 4
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextMatchProjectionTests.cs",
+      "bytes": 25331,
+      "canonicalLfBytes": 25331,
+      "physicalLoc": 431,
+      "sha256": "3eebd896b46070958101fd65f433ccf92f8546cb09d14f859d57132891ce53c5",
+      "scope": "web-tests",
+      "declaredTypes": 1,
+      "declaredPublicMethods": 15
+    }
+  ],
+  "authoredAssetInventory": [
+    {
+      "path": "apps/BgLang.Web/.gitignore",
+      "bytes": 10,
+      "canonicalLfBytes": 10,
+      "physicalLoc": 2,
+      "sha256": "6c5082c7e6de3e350189c67a1aacf757485ecc26e0a3cf96683528565f3e5f12"
+    },
+    {
+      "path": "apps/BgLang.Web/BgLang.Web.csproj",
+      "bytes": 443,
+      "canonicalLfBytes": 443,
+      "physicalLoc": 12,
+      "sha256": "074d7d502c69c9837f32318ccd4cef60cdb205312c45c999265b1c9d5f6976e7"
+    },
+    {
+      "path": "apps/BgLang.Web/README.md",
+      "bytes": 23237,
+      "canonicalLfBytes": 23237,
+      "physicalLoc": 275,
+      "sha256": "2ef5be6cd2a75634248508f42b641017a468ce5b775a9e466c5719d6b5b97286"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.html",
+      "bytes": 8335,
+      "canonicalLfBytes": 8335,
+      "physicalLoc": 83,
+      "sha256": "24c0f01305e5895c3fea13af29724eee27b329d708136cd153f8106b9e4db742"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.js",
+      "bytes": 25852,
+      "canonicalLfBytes": 25852,
+      "physicalLoc": 400,
+      "sha256": "d09106cdfc352607c95a36b2eb95d64db74d2e740f9ea36a9c5bf1ede6b305e0"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/docs.html",
+      "bytes": 11884,
+      "canonicalLfBytes": 11884,
+      "physicalLoc": 50,
+      "sha256": "3e8ddefdf526bbdd5397747c8b499b54ddac838df16fc5dfce4173d4a83c3c54"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/site.css",
+      "bytes": 3222,
+      "canonicalLfBytes": 3222,
+      "physicalLoc": 51,
+      "sha256": "27d1e5ffb67ba9cfa17ff3cc9ef69b95d3c56af4dcdaeaa729550920f943692f"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
+      "bytes": 663,
+      "canonicalLfBytes": 663,
+      "physicalLoc": 16,
+      "sha256": "46d71d159b1417435aafc15d98ebcd286b0c3725116b8c9fbf521100f077a3d6"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "apps/BgLang.Web/ApiOperations.cs",
+      "beforeSha256": "5a340981b083e3d07be3388a9484056d5244e3af8eb23f889a123189fbba6329",
+      "afterSha256": "cab01ce4752175b787874fbf5e2eafb46914ed74f8a034df02273c9edfd3fcf7",
+      "bytesBefore": 6150,
+      "bytesAfter": 6373,
+      "physicalLocBefore": 93,
+      "physicalLocAfter": 95
+    },
+    {
+      "path": "apps/BgLang.Web/HttpContract.cs",
+      "beforeSha256": "4ce0eae0c981748d9eb201e5c2b0a04133fc497b5fcfe76139ffce980d956769",
+      "afterSha256": "f1b4890341617b956a797a773bdb7ee6ef81bd711984dd7e2ee890e71c2cec80",
+      "bytesBefore": 2581,
+      "bytesAfter": 2875,
+      "physicalLocBefore": 59,
+      "physicalLocAfter": 67
+    },
+    {
+      "path": "apps/BgLang.Web/README.md",
+      "beforeSha256": "6c9e8df3f5e0cba2d96d7cdfaf6e276e20397315badb253f64e56de24ba9334a",
+      "afterSha256": "2ef5be6cd2a75634248508f42b641017a468ce5b775a9e466c5719d6b5b97286",
+      "bytesBefore": 20468,
+      "bytesAfter": 23237,
+      "physicalLocBefore": 244,
+      "physicalLocAfter": 275
+    },
+    {
+      "path": "apps/BgLang.Web/SharedDonorResponse.cs",
+      "beforeSha256": null,
+      "afterSha256": "1c283ca983c37e6aa1f599b50fb94b8bb5951a7a34bf6a4e9c58033c2f3f482c",
+      "bytesBefore": 0,
+      "bytesAfter": 5392,
+      "physicalLocBefore": 0,
+      "physicalLocAfter": 118
+    },
+    {
+      "path": "apps/BgLang.Web/WebHostFactory.cs",
+      "beforeSha256": "af4b38ae2b7c778b900b91f6f515435c4ab20c144e08c2f0110c1b3ddd7c1b81",
+      "afterSha256": "ac78ea60ed1beb7e2142d626bc16cad8ecd60fd04e84f05262385948ed95d176",
+      "bytesBefore": 8481,
+      "bytesAfter": 8768,
+      "physicalLocBefore": 133,
+      "physicalLocAfter": 138
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.html",
+      "beforeSha256": "117fbc0aa6fca138d1395d5b5f9aab7b4f19debedccaf221e46b9eaeaea03810",
+      "afterSha256": "24c0f01305e5895c3fea13af29724eee27b329d708136cd153f8106b9e4db742",
+      "bytesBefore": 7221,
+      "bytesAfter": 8335,
+      "physicalLocBefore": 75,
+      "physicalLocAfter": 83
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.js",
+      "beforeSha256": "6f4f9d7a01aa94866158a0e0caa3aecd3728b1c1603acffd210c17816ffb108b",
+      "afterSha256": "d09106cdfc352607c95a36b2eb95d64db74d2e740f9ea36a9c5bf1ede6b305e0",
+      "bytesBefore": 21294,
+      "bytesAfter": 25852,
+      "physicalLocBefore": 302,
+      "physicalLocAfter": 400
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/docs.html",
+      "beforeSha256": "a6b362b7905f2e7ee7d3e4494074c17c5b67a754ce5a8d9af7830d97fee52d7c",
+      "afterSha256": "3e8ddefdf526bbdd5397747c8b499b54ddac838df16fc5dfce4173d4a83c3c54",
+      "bytesBefore": 10328,
+      "bytesAfter": 11884,
+      "physicalLocBefore": 48,
+      "physicalLocAfter": 50
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
+      "beforeSha256": null,
+      "afterSha256": "3060dbc299d85be50d7723802fa4005d9dc4cbe628bdccd9a170a0267e6c28b8",
+      "bytesBefore": 0,
+      "bytesAfter": 22908,
+      "physicalLocBefore": 0,
+      "physicalLocAfter": 297
+    }
+  ],
+  "centralReceipt": ".tmp/public-mit-release/web/shared-donors-source-receipt.json"
+}

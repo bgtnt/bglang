@@ -150,12 +150,12 @@ internal static class ProperNameEvidenceAnalyzer
             _ => ExactMorphologyDiagnosticCode
         };
 
-    private static bool IsPersonTitle(TokenAnalysis token) =>
+    internal static bool IsPersonTitle(TokenAnalysis token) =>
         token.Kind == TokenKind.Word &&
         BulgarianAbbreviationLexicon.TryNormalizeExact(token.Text.AsSpan(), out string canonical) &&
         PersonTitles.Contains(canonical);
 
-    private static bool IsBulgarianTitleCase(string surface)
+    internal static bool IsBulgarianTitleCase(string surface)
     {
         if (surface.Length < 2 ||
             !char.IsUpper(surface[0]) ||
@@ -174,7 +174,7 @@ internal static class ProperNameEvidenceAnalyzer
         return true;
     }
 
-    private static bool HasOnlyWhitespaceBetween(
+    internal static bool HasOnlyWhitespaceBetween(
         string text,
         TokenAnalysis left,
         TokenAnalysis right)

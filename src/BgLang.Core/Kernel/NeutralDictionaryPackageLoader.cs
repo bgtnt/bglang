@@ -26,7 +26,7 @@ internal static class NeutralDictionaryPackageLoader
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     internal static (IRuntimeLexicon Lexicon, WordFormationAnalyzer WordFormation, PackageProvenance Provenance,
-        IReadOnlyDictionary<string, int[]>? LexicalStress)
+        IReadOnlyDictionary<string, int[]>? LexicalStress, PackageLexicalCatalog? LexicalCatalog)
         Load(string manifestPath, Action? lockedSnapshotProbe = null, Action<NeutralPackageSnapshot>? capture = null)
     {
         PackageLoadEvents.Log.Phase("read");
@@ -66,7 +66,7 @@ internal static class NeutralDictionaryPackageLoader
             ? LoadDeclarations(lexiconStream, routedSource: true, generatedSource: true, allowEmpty: annotated) : null;
         SourceMaterialization? source = generatedSource ? null : LoadSource(
             lexiconStream,
-            string.Equals(manifest.Lexicon.Path, RoutedLexiconFileName, StringComparison.Ordinal));
+            string.Equals(manifest.Lexicon.Path, RoutedLexiconFileName, StringComparison.Ordinal), captureOwners: true);
         string sourceId = source?.SourceId ?? CreateGeneratedSourceId(declarations!);
         if (!string.Equals(sourceId, manifest.Lexicon.SourceId, StringComparison.Ordinal))
             throw new InvalidDataException("Neutral lexicon semantic identity does not match the manifest.");
@@ -84,16 +84,18 @@ internal static class NeutralDictionaryPackageLoader
         PackageLoadEvents.Log.Phase("materialize");
         if (declarations is not null)
         {
-            source = MaterializeSource(declarations, sourceId);
+            source = MaterializeSource(declarations, sourceId, captureOwners: true);
         }
         PackageLoadEvents.Log.Phase("validate");
         IReadOnlyDictionary<string, int[]>? lexicalStress = null;
+        PackageLexicalCatalog? lexicalCatalog = null;
         if (annotationStream is not null)
         {
             LexemeAnnotations annotations = LexemeAnnotations.Read(ReadUtf8(annotationStream, "annotations"));
             if (annotations.SourceId != manifest.Annotations!.SourceId)
                 throw new InvalidDataException("Annotation semantic identity does not match the manifest.");
             lexicalStress = annotations.Bind(declarations!.ToDictionary(row => row.LexemeKey, row => row.Readings, StringComparer.Ordinal));
+            lexicalCatalog = new PackageLexicalCatalog(annotations, source!.LexemeKeys!);
         }
         ValidateExactFileSet(root, manifest.Lexicon.Path, annotated);
         PackageProvenance provenance = new(
@@ -110,14 +112,15 @@ internal static class NeutralDictionaryPackageLoader
         };
         PackageLoadEvents.Log.Phase("index");
         var lexicon = new InMemoryRuntimeLexicon(source!.Readings,
-            new NeutralSourceFormInventory(source.FormsByLemma), source.RoutedReadings, allowEmptyOrdinary: annotated);
+            new NeutralSourceFormInventory(source.FormsByLemma), source.RoutedReadings, allowEmptyOrdinary: annotated,
+            lexemeOrdinals: source.LexemeOrdinals, lexemeKeys: source.LexemeKeys);
         if (capture is not null)
         {
             try { capture(new(ReadBytes(lexiconStream), ReadBytes(wordFormationStream), ReadBytes(annotationStream!))); }
             catch { lexicon.Dispose(); throw; }
         }
         PackageLoadEvents.Log.Phase("complete");
-        return (lexicon, graph, provenance, lexicalStress);
+        return (lexicon, graph, provenance, lexicalStress, lexicalCatalog);
     }
 
     internal static string ComputeSourceId(string path, bool allowEmpty = false)
@@ -153,10 +156,10 @@ internal static class NeutralDictionaryPackageLoader
         return "bglang-neutral:" + LexicalIdentity.HashLengthPrefixed(Fields())[..16];
     }
 
-    private static SourceMaterialization LoadSource(FileStream stream, bool routedSource = false)
+    private static SourceMaterialization LoadSource(FileStream stream, bool routedSource = false, bool captureOwners = false)
     {
         IReadOnlyList<LexemeMaterialization> lexemes = LoadDeclarations(stream, routedSource, generatedSource: false);
-        return MaterializeSource(lexemes, CreateSourceId(lexemes, routedSource));
+        return MaterializeSource(lexemes, CreateSourceId(lexemes, routedSource), captureOwners);
     }
 
     private static IReadOnlyList<LexemeMaterialization> LoadDeclarations(
@@ -241,13 +244,26 @@ internal static class NeutralDictionaryPackageLoader
 
     }
 
-    private static SourceMaterialization MaterializeSource(IReadOnlyList<LexemeMaterialization> lexemes, string sourceId)
+    private static SourceMaterialization MaterializeSource(IReadOnlyList<LexemeMaterialization> lexemes, string sourceId,
+        bool captureOwners = false)
     {
         ValidateReadingSets(lexemes);
+        Dictionary<WordReading, int>? lexemeOrdinals = captureOwners
+            ? new(lexemes.Sum(lexeme => lexeme.Readings.Length), ReferenceEqualityComparer.Instance) : null;
+        Dictionary<string, int>? ordinalByKey = captureOwners ? lexemes.Select((row, ordinal) => (row.LexemeKey, ordinal))
+            .ToDictionary(item => item.LexemeKey, item => item.ordinal, StringComparer.Ordinal) : null;
+        IEnumerable<WordReading> Readings(LexemeMaterialization lexeme)
+        {
+            foreach (WordReading reading in lexeme.Readings)
+            {
+                WordReading retained = reading with { Source = sourceId };
+                lexemeOrdinals?.Add(retained, ordinalByKey![lexeme.LexemeKey]);
+                yield return retained;
+            }
+        }
         WordReading[] readings = lexemes
             .Where(lexeme => lexeme.Route is null)
-            .SelectMany(lexeme => lexeme.Readings)
-            .Select(reading => reading with { Source = sourceId })
+            .SelectMany(Readings)
             .OrderBy(reading => reading, WordReadingOrder.Comparer)
             .ToArray();
         Dictionary<string, WordForm[]> formsByLemma = lexemes
@@ -271,11 +287,11 @@ internal static class NeutralDictionaryPackageLoader
                 StringComparer.Ordinal);
         WordReading[] routedReadings = lexemes
             .Where(lexeme => lexeme.Route is not null)
-            .SelectMany(lexeme => lexeme.Readings)
-            .Select(reading => reading with { Source = sourceId })
+            .SelectMany(Readings)
             .OrderBy(reading => reading, WordReadingOrder.Comparer)
             .ToArray();
-        return new SourceMaterialization(sourceId, readings, routedReadings, formsByLemma);
+        return new SourceMaterialization(sourceId, readings, routedReadings, formsByLemma, lexemeOrdinals,
+            captureOwners ? lexemes.Select(row => row.LexemeKey).ToArray() : null);
     }
 
     private static LexemeMaterialization ValidateLexeme(
@@ -682,7 +698,9 @@ internal static class NeutralDictionaryPackageLoader
         string SourceId,
         WordReading[] Readings,
         WordReading[] RoutedReadings,
-        IReadOnlyDictionary<string, WordForm[]> FormsByLemma);
+        IReadOnlyDictionary<string, WordForm[]> FormsByLemma,
+        IReadOnlyDictionary<WordReading, int>? LexemeOrdinals,
+        IReadOnlyList<string>? LexemeKeys);
     private readonly record struct SemanticReading(
         string Form,
         string Lemma,

@@ -9,12 +9,14 @@ internal sealed class RuntimePackageState : IDisposable
         IRuntimeLexicon lexicon,
         WordFormationAnalyzer wordFormation,
         PackageProvenance provenance,
-        IReadOnlyDictionary<string, int[]>? lexicalStress = null)
+        IReadOnlyDictionary<string, int[]>? lexicalStress = null,
+        PackageLexicalCatalog? lexicalCatalog = null)
     {
         Lexicon = lexicon;
         WordFormation = wordFormation;
         Provenance = provenance;
         LexicalStress = lexicalStress;
+        LexicalCatalog = lexicalCatalog;
     }
 
     internal IRuntimeLexicon Lexicon { get; }
@@ -24,6 +26,8 @@ internal sealed class RuntimePackageState : IDisposable
     internal PackageProvenance Provenance { get; }
 
     internal IReadOnlyDictionary<string, int[]>? LexicalStress { get; }
+
+    internal PackageLexicalCatalog? LexicalCatalog { get; }
 
     internal static RuntimePackageState Open(string manifestPath)
     {
@@ -39,7 +43,8 @@ internal sealed class RuntimePackageState : IDisposable
             NeutralDictionaryPackageLoader.AnnotatedManifestSchemaVersion)
         {
             var loaded = NeutralDictionaryPackageLoader.Load(fullManifestPath);
-            return new RuntimePackageState(loaded.Lexicon, loaded.WordFormation, loaded.Provenance, loaded.LexicalStress);
+            return new RuntimePackageState(loaded.Lexicon, loaded.WordFormation, loaded.Provenance, loaded.LexicalStress,
+                loaded.LexicalCatalog);
         }
         throw new InvalidDataException($"Unsupported runtime package schema '{schemaVersion}'.");
     }

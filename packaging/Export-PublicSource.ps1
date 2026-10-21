@@ -24,14 +24,32 @@ $validationPrefix = $ValidationDirectory.TrimEnd([IO.Path]::DirectorySeparatorCh
 if ($OutputDirectory -ieq $ValidationDirectory -or $ValidationDirectory.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) -or
     $OutputDirectory.StartsWith($validationPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Source and validation directories must be separate.' }
 if (!$SourceOnly) {
-    if (!$InputDirectory) { $InputDirectory = Join-Path $root $lock.storedInput.releaseRelativeDirectory }
+    if (!$InputDirectory) { $InputDirectory = Join-Path $root $lock.authoringInput.releaseRelativeDirectory }
     $InputDirectory = [IO.Path]::GetFullPath($InputDirectory, $caller)
     $inputPrefix = $InputDirectory.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if ($OutputDirectory -ieq $InputDirectory -or $ValidationDirectory -ieq $InputDirectory -or
         $OutputDirectory.StartsWith($inputPrefix, [StringComparison]::OrdinalIgnoreCase) -or
         $ValidationDirectory.StartsWith($inputPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Outputs must be outside immutable inputs.' }
 }
-if ($allow.inputDirectory -cne $lock.storedInput.releaseRelativeDirectory) { throw 'Input directory contracts differ.' }
+if ($allow.inputDirectory -cne $lock.authoringInput.releaseRelativeDirectory -or
+    ((@($allow.inputFiles | Sort-Object) -join [char]10) -cne (@($lock.authoringInput.files.name | Sort-Object) -join [char]10))) { throw 'Authoring input contracts differ.' }
+
+
+function Assert-NoReparsePath([string] $path) {
+    $current = [IO.Path]::GetFullPath($path)
+    while ($current) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Reparse path is not allowed: $current" }
+        }
+        $parent = [IO.Path]::GetDirectoryName($current)
+        if ($parent -eq $current) { break }
+        $current = $parent
+    }
+}
+
+foreach ($directory in @($root, $OutputDirectory, $ValidationDirectory)) { Assert-NoReparsePath $directory }
+if (!$SourceOnly) { Assert-NoReparsePath $InputDirectory }
 
 function File-Pin([string] $path) {
     $item = Get-Item -LiteralPath $path -Force
@@ -44,11 +62,15 @@ $paths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ord
 $copies = [System.Collections.Generic.List[object]]::new()
 function Source-Path([string] $relative) {
     $full = [IO.Path]::GetFullPath($relative, $root)
-    if ([IO.Path]::IsPathFullyQualified($relative) -or !$full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Invalid source path: $relative"
-    }
-    return [IO.Path]::GetRelativePath($root, $full).Replace('\', '/')
+    if ([IO.Path]::IsPathFullyQualified($relative) -or !$full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw "Invalid source path: $relative" }
+    $canonical = [IO.Path]::GetRelativePath($root, $full).Replace('\', '/')
+    if ($canonical -cne $relative.Replace('\', '/') -or $canonical -match '(^|/)(\.git|bin|obj|\.tmp|\.vs)(/|$)' -or
+        $canonical.StartsWith('Docs/', [StringComparison]::OrdinalIgnoreCase)) { throw "Private, generated or noncanonical source path: $relative" }
+    Assert-NoReparsePath $full
+    return $canonical
 }
+$null = Source-Path $allow.inputDirectory
+if ($allow.files -ccontains 'public-source-manifest.json') { throw 'The generated manifest path is reserved.' }
 foreach ($declared in $allow.files) {
     $relative = Source-Path $declared
     if (!$paths.Add($relative)) { throw "Duplicate source path: $relative" }
@@ -99,6 +121,8 @@ function Require-Input([string] $full, [string] $kind) {
         $null = $sdkInputs.Add([IO.Path]::GetRelativePath($sdkPrefix, $full).Replace('\', '/'))
     }
     if (!(Test-Path -LiteralPath $full -PathType Leaf)) { throw "Unresolved evaluated $kind input: $full" }
+    Assert-NoReparsePath $full
+    $null = File-Pin $full
 }
 $projects = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($project in $allow.projects) {
@@ -138,6 +162,7 @@ foreach ($project in $projects) {
     }
     $packageLock = Join-Path (Split-Path (Join-Path $root $project) -Parent) 'packages.lock.json'
     if (Test-Path -LiteralPath $packageLock) { Require-Input $packageLock 'PackageLock' }
+    foreach ($import in ([string]$items.Properties.MSBuildAllProjects).Split([char]';', [StringSplitOptions]::RemoveEmptyEntries)) { Require-Input $import 'Import' }
     $preprocessed = Join-Path $ValidationDirectory (([IO.Path]::GetFileNameWithoutExtension($project)) + '.preprocessed.xml')
     $null = Evaluate-Project $project 'imports' @(('-preprocess:' + $preprocessed))
     [xml] $expanded = Get-Content -LiteralPath $preprocessed -Raw
@@ -160,8 +185,11 @@ $evaluations | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Va
 
 if (!$SourceOnly) {
   $inputNames = @(Get-ChildItem -LiteralPath $InputDirectory -Force | ForEach-Object { $_.Name } | Sort-Object)
-  if (($inputNames -join "`n") -cne (@($lock.storedInput.files.name | Sort-Object) -join "`n")) { throw 'Unexpected input file set.' }
-  foreach ($file in $lock.storedInput.files) {
+  if (($inputNames -join "`n") -cne (@($lock.authoringInput.files.name | Sort-Object) -join "`n")) { throw 'Unexpected input file set.' }
+  $inputFileNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+  foreach ($file in $lock.authoringInput.files) {
+    if ([string]::IsNullOrWhiteSpace($file.name) -or $file.name -cne [IO.Path]::GetFileName($file.name) -or
+        $file.name.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0 -or !$inputFileNames.Add($file.name)) { throw 'Invalid or duplicate authoring input file name.' }
     $source = Join-Path $InputDirectory $file.name
     $pin = File-Pin $source
     if ($pin.bytes -ne $file.bytes -or $pin.sha256 -cne $file.sha256) { throw "Input RAW bytes/SHA differ: $($file.name)" }
@@ -185,11 +213,18 @@ foreach ($copy in $copies) {
         $sourcePin.bytes -ne $copy.bytes -or $sourcePin.sha256 -cne $copy.sha256) { throw "RAW copy mismatch: $($copy.path)" }
     $rows.Add([ordered]@{ path = $copy.path; bytes = $copy.bytes; sha256 = $copy.sha256 })
 }
+$copiedPaths = @(Get-ChildItem -LiteralPath $OutputDirectory -Recurse -Force | ForEach-Object {
+    if ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Reparse path in exported tree: $($_.FullName)" }
+    if (!$_.PSIsContainer) { [IO.Path]::GetRelativePath($OutputDirectory, $_.FullName).Replace('\', '/') }
+})
+if ((@($copiedPaths | Sort-Object) -join [char]10) -cne (@($rows.path | Sort-Object) -join [char]10)) { throw 'Copied export file set differs from the exact declared source/input plan.' }
 $manifest = [ordered]@{
     schema = 'bglang.public-source-manifest.v1'
     sourceBaseCommit = $allow.sourceBaseCommit
-    authority = 'Accepted runtime/producer commit anchor; exact recipe/docs snapshot is the RAW file manifest.'
+    authority = 'Accepted implementation base anchor; exact recipe/docs/source snapshot is the RAW file manifest. This is not the public source commit or tag.'
     sourceOnly = [bool] $SourceOnly
+    authoringInputDelivered = !$SourceOnly
+    authoringInputProfile = $lock.authoringInput.profile
     releaseBuildClosure = $evaluations.ToArray()
     files = $rows.ToArray()
     publication = $false

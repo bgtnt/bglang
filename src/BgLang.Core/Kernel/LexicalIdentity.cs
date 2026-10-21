@@ -100,14 +100,23 @@ internal static class LexicalIdentity
                 hash.AppendData(prefix[..prefixLength]);
 
                 int byteCount = Encoding.UTF8.GetByteCount(value);
-                if (byteCount > utf8.Length)
+                if (byteCount <= utf8.Length)
                 {
-                    byte[] expanded = ArrayPool<byte>.Shared.Rent(byteCount);
-                    ArrayPool<byte>.Shared.Return(utf8);
-                    utf8 = expanded;
+                    int written = Encoding.UTF8.GetBytes(value.AsSpan(), utf8);
+                    hash.AppendData(utf8.AsSpan(0, written));
                 }
-                int written = Encoding.UTF8.GetBytes(value.AsSpan(), utf8);
-                hash.AppendData(utf8.AsSpan(0, written));
+                else
+                {
+                    Encoder encoder = Encoding.UTF8.GetEncoder();
+                    ReadOnlySpan<char> remaining = value.AsSpan();
+                    bool completed;
+                    do
+                    {
+                        encoder.Convert(remaining, utf8, flush: true, out int charsUsed, out int bytesUsed, out completed);
+                        hash.AppendData(utf8.AsSpan(0, bytesUsed));
+                        remaining = remaining[charsUsed..];
+                    } while (!completed);
+                }
                 hash.AppendData("\n"u8);
             }
 

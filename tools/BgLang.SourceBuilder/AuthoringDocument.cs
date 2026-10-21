@@ -7,19 +7,21 @@ namespace BgLang.SourceBuilder;
 internal sealed record AuthoringDocument(string SchemaVersion, AuthoringDocument.Entry[] Entries)
 {
     internal const string Schema = "bglang-neutral-authoring.v2";
+    internal const string SourceEvidenceSchema = "bglang-neutral-authoring.v3";
     internal const string FileName = "lexemes.source.json";
 
     internal static AuthoringDocument Read(string text) => StrictJson.ReadText<AuthoringDocument>(text, "Authoring document", root =>
     {
         StrictJson.RequireObject(root, "Authoring document", ["schemaVersion", "entries"]);
-        if (StrictJson.RequireString(root, "schemaVersion", "Authoring document") != Schema)
+        string schema = StrictJson.RequireString(root, "schemaVersion", "Authoring document");
+        if (schema is not (Schema or SourceEvidenceSchema))
             throw new InvalidDataException("Unsupported authoring document schema.");
         int number = 0;
         foreach (JsonElement entry in StrictJson.RequireArray(root, "entries", "Authoring document"))
         {
             StrictJson.RequireObject(entry, "Authoring entry", ["entryId", "lexeme", "meaning", "stress", "related"]);
             AuthoringLexeme.Read(StrictJson.RequireProperty(entry, "lexeme", JsonValueKind.Object, "Authoring entry").GetRawText(), ++number);
-            LexemeAnnotations.ValidateMetadataJson(entry);
+            LexemeAnnotations.ValidateMetadataJson(entry, allowUnresolved: schema == SourceEvidenceSchema);
         }
     });
 

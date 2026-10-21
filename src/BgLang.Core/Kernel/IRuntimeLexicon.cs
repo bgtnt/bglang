@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using BgLang.Contracts;
 
 namespace BgLang.Core;
@@ -6,7 +7,40 @@ namespace BgLang.Core;
 internal interface IRuntimeLexicon : IDisposable
 {
     IReadOnlyList<WordReading> LookupExactNormalized(string normalizedForm, int limit);
+    ExactLookupResult LookupExactPairedNormalized(string normalizedForm, int limit,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<WordReading> readings = LookupExactNormalized(normalizedForm, limit);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(readings, null);
+    }
     IReadOnlyList<WordReading> LookupOrdinaryExactNormalized(string normalizedForm, int limit);
+    IReadOnlyList<int> FindExactLexemeOrdinals(string normalizedForm) => [];
+    string? GetLexemeKey(int lexemeOrdinal, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (lexemeOrdinal < 0) throw new InvalidOperationException("Owner ordinal is invalid.");
+        return null;
+    }
+
+    // Unsupported implementations must not manufacture a complete empty accepted inventory.
+    IReadOnlyDictionary<int, IReadOnlyList<WordReading>?>? CollectAcceptedOwnForms(
+        IReadOnlyCollection<int> ownerOrdinals, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(ownerOrdinals);
+        bool any = false;
+        foreach (int owner in ownerOrdinals)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (owner < 0) throw new ArgumentOutOfRangeException(nameof(ownerOrdinals));
+            any = true;
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return any ? null : new ReadOnlyDictionary<int, IReadOnlyList<WordReading>?>(
+            new Dictionary<int, IReadOnlyList<WordReading>?>());
+    }
     IReadOnlyList<WordReading> FindByPrefix(string prefix, int limit);
     IReadOnlyList<WordReading> FindBySuffix(string suffix, int limit, IReadOnlySet<string>? tags = null);
     // A legacy implementation cannot promise a metered scan by materializing

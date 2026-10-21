@@ -183,7 +183,9 @@ void AnalyzeText(string input, object? file)
         value => new { value.Text, value.Sentences, value.Phonetics,
             Diagnostics = value.Diagnostics.Select(DiagnosticValue).ToArray(),
             Tokens = value.Tokens.Select(token => new { token.Text, token.Kind, token.Start, token.Length,
-                Analysis = token.Analysis is { } word ? WordValue(word) : null }).ToArray() },
+                Analysis = token.Analysis is { } word ? WordValue(word) : null }).ToArray(),
+            value.Lexical, value.ReadingInventory, value.Metrics, value.Spelling, value.Profile, value.ProperNames,
+            value.Context, value.Syntax, value.Validation, value.WordConstructions },
         value => $"{value.Tokens.Count} tokens; diagnostics={JsonSerializer.Serialize(value.Diagnostics.Select(DiagnosticValue), options)}\n" +
             string.Join("\n", value.Tokens.Where(token => token.Analysis is not null).Select(token =>
                 $"  [{token.Start},{token.Length}] {WordSummary(token.Analysis!)}")));

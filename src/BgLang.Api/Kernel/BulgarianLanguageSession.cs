@@ -21,6 +21,34 @@ public sealed class BulgarianLanguageSession : IDisposable
     /// <summary>Deterministic identity of the validated package and both runtime components.</summary>
     public PackageProvenance Provenance => GetPackage().Provenance;
 
+    /// <summary>Returns exact lexical owners, preserving homonyms and literal source metadata.</summary>
+    public LexicalEntryLookup LookupLexicalEntries(string text, int limit = 32, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(text);
+        ValidateBound(limit);
+        RuntimePackageState package = GetPackage();
+        return package.LexicalCatalog?.Lookup(package.Lexicon, text, limit, cancellationToken)
+            ?? new(text, BulgarianTextNormalizer.NormalizeKey(text), false, [], false);
+    }
+
+    /// <summary>Returns one exact opaque owner identity, with explicit annotation availability.</summary>
+    public LexicalEntryResult FindLexicalEntry(string entryId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(entryId);
+        return GetPackage().LexicalCatalog?.Find(entryId) ?? new(false, null);
+    }
+
+    /// <summary>Returns candidate constructions from one exact opaque owner's accepted own forms.</summary>
+    public WordConstructionResult GetWordConstructionCandidates(string entryId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(entryId);
+        RuntimePackageState package = GetPackage();
+        return WordConstructionAnalyzer.GetCandidates(package.Lexicon, package.LexicalCatalog, entryId, cancellationToken);
+    }
+
     /// <summary>Performs exact, bounded prefix, or bounded suffix lookup over immutable minimal DAWGs.</summary>
     public IReadOnlyList<WordReading> Lookup(
         string text,
@@ -66,20 +94,22 @@ public sealed class BulgarianLanguageSession : IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(word);
         ValidateBound(maxReadings);
-        return AnalyzeWordCore(word, maxReadings, null, null, null, null, null, cancellationToken);
+        return AnalyzeWordCore(word, maxReadings, null, null, null, null, null, cancellationToken, out _);
     }
 
     private WordAnalysis AnalyzeWordCore(string word, int maxReadings,
         UnknownMorphologyAnalyzer.ReplayBudget? textBudget, UnknownMorphologyAnalyzer.ReplayBudget? knownBaseBudget,
         UnknownMorphologyAnalyzer.ReplayBudget? baseTypeBudget, BinaryProofBudget? binaryBudget,
         GraphSearchBudget? graphBudget, CancellationToken cancellationToken,
-        UnknownMorphologyAnalyzer.DonorCache? donorCache = null)
+        out BulgarianStressLookup.ExactInventory? exactInventory,
+        UnknownMorphologyAnalyzer.DonorCache? donorCache = null, bool captureCompleteExact = false,
+        bool captureOwnerPairing = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         RuntimePackageState package = GetPackage();
         graphBudget ??= new GraphSearchBudget(262_144, cancellationToken);
         IReadOnlyList<WordReading> readings = BulgarianStressLookup.LookupExact(package.Lexicon, word,
-            maxReadings, out string normalized, cancellationToken);
+            maxReadings, captureCompleteExact, out string normalized, out exactInventory, cancellationToken, captureOwnerPairing);
         WordDecomposition? baseEvidence = null;
         WordFormationAnalyzer.MorphologySearch? graphSearch = null;
         if (readings.Count == 0)
@@ -170,12 +200,22 @@ public sealed class BulgarianLanguageSession : IDisposable
 
     /// <summary>Analyzes text with request-local ordinary donor reuse and cooperative cancellation.</summary>
     public TextAnalysis AnalyzeText(string text, CancellationToken cancellationToken)
+        => AnalyzeText(text, false, cancellationToken);
+
+    /// <summary>Optionally includes four advisory unknown-context proper-name lanes without selecting exact readings.</summary>
+    public TextAnalysis AnalyzeText(string text, bool includeUnknownContextProperNames, CancellationToken cancellationToken)
+        => AnalyzeText(text, includeUnknownContextProperNames, default, cancellationToken);
+
+    /// <summary>Analyzes complete readings with bounded context, syntax and individually requested diagnostic advice.</summary>
+    public TextAnalysis AnalyzeText(string text, bool includeUnknownContextProperNames,
+        TextContextOptions contextOptions, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(text);
         if (text.Length > MaximumTextLength)
             throw new ArgumentException($"Input must not exceed {MaximumTextLength} UTF-16 characters.", nameof(text));
-        Dictionary<string, WordAnalysis> memo = new(StringComparer.Ordinal);
+        Dictionary<string, (WordAnalysis Display, BulgarianStressLookup.ExactInventory Exact)> memo =
+            new(StringComparer.Ordinal);
         RuntimePackageState package = GetPackage();
         UnknownMorphologyAnalyzer.DonorCache donorCache = new(package.Lexicon, package.WordFormation);
         BinaryProofBudget binaryBudget = new(cancellationToken: cancellationToken);
@@ -192,20 +232,33 @@ public sealed class BulgarianLanguageSession : IDisposable
         WordAnalysis AnalyzeCached(string surface)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!memo.TryGetValue(surface, out WordAnalysis? analysis))
+            if (!memo.TryGetValue(surface, out var cached))
             {
-                analysis = AnalyzeWordCore(surface, 32, candidateBudget, knownBaseBudget, baseTypeBudget, binaryBudget, graphBudget,
-                    cancellationToken, donorCache);
-                memo.Add(surface, analysis);
+                WordAnalysis display = AnalyzeWordCore(surface, 32, candidateBudget, knownBaseBudget, baseTypeBudget, binaryBudget, graphBudget,
+                    cancellationToken, out var exact, donorCache, captureCompleteExact: true,
+                    captureOwnerPairing: contextOptions.IncludeWordConstructions);
+                cancellationToken.ThrowIfCancellationRequested();
+                cached = (display, exact!);
+                memo.Add(surface, cached);
             }
 
-            return analysis;
+            return cached.Display;
         }
 
-        IReadOnlyList<TokenAnalysis> tokens = _tokenizer.Tokenize(text, AnalyzeCached);
+        IReadOnlyList<TokenAnalysis> tokens = Array.AsReadOnly(_tokenizer.Tokenize(text, AnalyzeCached).ToArray());
+        TextReadingInventory readingInventory = TextReadingInventorySnapshot.Create(text, tokens, memo, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SentenceSpan> sentences = SentenceBoundaryDetector.Split(text, tokens);
+        IReadOnlyList<SentenceSpan> sentences = Array.AsReadOnly(SentenceBoundaryDetector.Split(text, tokens).ToArray());
         cancellationToken.ThrowIfCancellationRequested();
+        SpellingCandidateCache spellingCache = new(package.Lexicon);
+        ProperNameEvidence properNames = ProperNameAnalyzer.Analyze(text, tokens, sentences, readingInventory,
+            includeUnknownContextProperNames, cancellationToken);
+        foreach (ProperNameCandidate candidate in properNames.Candidates)
+            foreach (TextReadingReference support in candidate.ExactSupports.Concat(candidate.ContextSupports))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _ = TextReadingInventorySnapshot.RequireSupport(readingInventory, support.TokenIndex, support.CompleteReadingIndex);
+            }
         List<TextDiagnostic> collectedDiagnostics = [];
         void AddDiagnostics(Func<IEnumerable<TextDiagnostic>> analyze)
         {
@@ -214,7 +267,8 @@ public sealed class BulgarianLanguageSession : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
         }
         AddDiagnostics(() => BasicSentenceShapeAnalyzer.Analyze(text, sentences));
-        AddDiagnostics(() => SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon, cancellationToken));
+        TextSpellingEvidence spelling = TextSpellingAnalyzer.Analyze(tokens, spellingCache, cancellationToken);
+        AddDiagnostics(() => SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon, cancellationToken, spellingCache));
         AddDiagnostics(() => WordFormationEvidenceAnalyzer.Analyze(tokens));
         AddDiagnostics(() => PronounVerbAgreementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
         AddDiagnostics(() => PrepositionComplementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
@@ -233,12 +287,50 @@ public sealed class BulgarianLanguageSession : IDisposable
         TextAnalysis analysis = new(text, tokens)
         {
             Sentences = sentences,
+            ReadingInventory = readingInventory,
+            Metrics = TextMetricsAnalyzer.Analyze(tokens, sentences, cancellationToken),
+            Spelling = spelling,
+            Profile = DocumentReadingProfileAnalyzer.Calculate(tokens, readingInventory, cancellationToken),
+            ProperNames = properNames,
+            Lexical = package.LexicalCatalog?.Analyze(text, tokens, package.Lexicon, cancellationToken) ?? new(false, [], []),
             Phonetics = BulgarianPhoneticAnalyzer.Analyze(
                 text, tokens, package.Lexicon, package.WordFormation, package.LexicalStress, cancellationToken),
             Diagnostics = diagnostics
         };
+        (TextContextEvidence context, TextSyntaxEvidence syntax) =
+            TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken);
+        Dictionary<string, IReadOnlyList<TextReadingSnapshot>> counterpartMemo = new(StringComparer.Ordinal);
+        IReadOnlyList<TextReadingSnapshot> ExactCounterpart(string surface)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (counterpartMemo.TryGetValue(surface, out var captured)) return captured;
+            BulgarianStressLookup.ExactInventory exact;
+            if (memo.TryGetValue(surface, out var acquired)) exact = acquired.Exact;
+            else
+            {
+                _ = BulgarianStressLookup.LookupExact(package.Lexicon, surface, int.MaxValue, true,
+                    out _, out var complete, cancellationToken);
+                exact = complete!;
+            }
+            List<TextReadingSnapshot> rows = [];
+            foreach (WordReading reading in exact.ResolvedReadings)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                rows.Add(new(reading, reading.Features));
+            }
+            captured = rows.AsReadOnly();
+            counterpartMemo.Add(surface, captured);
+            return captured;
+        }
+        TextValidationEvidence validation = TextValidationAnalyzer.Analyze(analysis, context, syntax,
+            contextOptions, cancellationToken, ExactCounterpart);
+        TextWordConstructionEvidence? constructions = contextOptions.IncludeWordConstructions
+            ? WordConstructionAnalyzer.AnalyzeText(analysis, package.Lexicon, package.LexicalCatalog,
+                lookupText => memo.TryGetValue(lookupText, out var acquired) ? acquired.Exact :
+                    throw new InvalidOperationException("Construction acquisition is outside the actual text memo."), cancellationToken)
+            : null;
         cancellationToken.ThrowIfCancellationRequested();
-        return analysis;
+        return analysis with { Context = context, Syntax = syntax, Validation = validation, WordConstructions = constructions };
     }
 
     /// <summary>Returns reviewed typed graph segmentation evidence for a surface.</summary>

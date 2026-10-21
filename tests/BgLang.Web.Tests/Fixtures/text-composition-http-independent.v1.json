@@ -1,0 +1,1137 @@
+{
+  "schema": "bglang.text-composition.http-independent.v1",
+  "status": "PROSPECTIVE_INDEPENDENT_SYNTHETIC_INPUT_NOT_PACKAGE_OR_RUNTIME_OUTPUT",
+  "text": "😀 Светла Светла.",
+  "wordOccurrences": [
+    {
+      "tokenIndex": 1,
+      "text": "Светла",
+      "start": 3,
+      "length": 6,
+      "readingSetIndex": 0
+    },
+    {
+      "tokenIndex": 2,
+      "text": "Светла",
+      "start": 10,
+      "length": 6,
+      "readingSetIndex": 0
+    }
+  ],
+  "rows": [
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "светла",
+        "lemma": "светъл",
+        "partOfSpeech": "Прилагателно:76,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Прилагателно:76,Женски",
+        "partOfSpeech": "Adjective",
+        "paradigmId": "76",
+        "person": null,
+        "number": "Singular",
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": "Indefinite",
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": null
+      }
+    },
+    {
+      "raw": {
+        "form": "Светла",
+        "lemma": "Светла",
+        "partOfSpeech": "Име:1,Женски",
+        "score": 1,
+        "legacyTypeId": null,
+        "legacyBaseId": null,
+        "legacyWordId": null,
+        "source": "synthetic-wire-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "features": {
+        "rawTag": "Име:1,Женски",
+        "partOfSpeech": "ProperNoun",
+        "paradigmId": "1",
+        "person": null,
+        "number": null,
+        "gender": "Feminine",
+        "tense": null,
+        "verbForm": null,
+        "article": null,
+        "hasUnrecognizedFeatures": false,
+        "hasConflictingFeatures": false,
+        "nameKind": "GivenName"
+      }
+    }
+  ],
+  "displayedReadingCount": 32,
+  "metrics": {
+    "tokenCount": 4,
+    "wordCount": 2,
+    "sentenceCount": 1,
+    "averageWordsPerSentence": 2,
+    "averageWordLength": 6,
+    "typeTokenRatio": 0.5,
+    "punctuationCount": 1,
+    "normalizedRepetitionExtraCount": 1,
+    "unknownWordRatio": 0
+  },
+  "profile": {
+    "wordOccurrences": 2,
+    "knownWordOccurrences": 2,
+    "unknownWordOccurrences": 0,
+    "unmeasuredKnownnessWordOccurrences": 0,
+    "displayedReadingOccurrences": 64,
+    "fullReadingOccurrences": 72,
+    "completeExactInventoryWordOccurrences": 2,
+    "projectionAssessmentCompleteWordOccurrences": 2,
+    "observedProjectedAmbiguityWordOccurrences": 2,
+    "projectionIssueWordOccurrences": 0,
+    "displayTruncatedWordOccurrences": 2,
+    "displayedPosCounts": [
+      {
+        "key": "Adjective",
+        "value": 64
+      }
+    ],
+    "displayedLemmaCounts": [
+      {
+        "key": "светъл",
+        "value": 64
+      }
+    ],
+    "words": [
+      {
+        "tokenIndex": 1,
+        "start": 3,
+        "length": 6,
+        "displayedReadingCount": 32,
+        "fullReadingCount": 36,
+        "projectedGroupCount": 2,
+        "issues": "None",
+        "actualDisplayTruncated": true
+      },
+      {
+        "tokenIndex": 2,
+        "start": 10,
+        "length": 6,
+        "displayedReadingCount": 32,
+        "fullReadingCount": 36,
+        "projectedGroupCount": 2,
+        "issues": "None",
+        "actualDisplayTruncated": true
+      }
+    ]
+  },
+  "expected": {
+    "textFields": [
+      "text",
+      "tokens",
+      "sentences",
+      "phonetics",
+      "diagnostics",
+      "lexical",
+      "readingInventory",
+      "metrics",
+      "spelling",
+      "profile",
+      "properNames"
+    ],
+    "rawTupleFields": [
+      "form",
+      "lemma",
+      "partOfSpeech",
+      "score",
+      "legacyTypeId",
+      "legacyBaseId",
+      "legacyWordId",
+      "source"
+    ],
+    "featureFields": [
+      "rawTag",
+      "partOfSpeech",
+      "paradigmId",
+      "person",
+      "number",
+      "gender",
+      "tense",
+      "verbForm",
+      "article",
+      "hasUnrecognizedFeatures",
+      "hasConflictingFeatures",
+      "nameKind"
+    ],
+    "readingCount": 36,
+    "duplicateRawIndices": [
+      0,
+      1
+    ],
+    "exactReferenceIndex": 35,
+    "displayedReadingCount": 32,
+    "displayTruncated": true,
+    "exactSupportTokenIndices": [
+      1,
+      2
+    ],
+    "sharedAnalysisRefs": [
+      0,
+      0
+    ],
+    "sharedWordAnalyses": 1,
+    "disabledUnresolved": null,
+    "enabledUnresolved": [],
+    "wholeFieldReconstruction": "All fields compare recursively; no filtering of any new Text field."
+  },
+  "nonAnalyzeTextOperations": [
+    "lookup",
+    "lookup-lexical-entries",
+    "lexical-entry",
+    "analyze-word",
+    "generate-forms",
+    "derive-words",
+    "decompose-word",
+    "find-forms-in-text"
+  ],
+  "optInInputs": [
+    {
+      "id": "omitted",
+      "json": "{\"text\":\"книга\"}",
+      "enabled": false
+    },
+    {
+      "id": "null",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":null}",
+      "enabled": false
+    },
+    {
+      "id": "false",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":false}",
+      "enabled": false
+    },
+    {
+      "id": "true",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":true}",
+      "enabled": true
+    }
+  ],
+  "invalidInputs": [
+    {
+      "id": "string",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":\"true\"}",
+      "error": "invalid-json"
+    },
+    {
+      "id": "integer",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":1}",
+      "error": "invalid-json"
+    },
+    {
+      "id": "array",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":[]}",
+      "error": "invalid-json"
+    },
+    {
+      "id": "object",
+      "json": "{\"text\":\"книга\",\"includeUnknownContextProperNames\":{}}",
+      "error": "invalid-json"
+    },
+    {
+      "id": "unknown-field",
+      "json": "{\"text\":\"книга\",\"includeUnknownProperNames\":true}",
+      "error": "invalid-json"
+    }
+  ],
+  "qualification": "36 source rows and all expected values were authored from contract facts. No candidate parser, analyzer, API, serialization, package or benchmark ran to produce them. Equal rows are component input only; no native-package duplicate or ordering claim."
+}

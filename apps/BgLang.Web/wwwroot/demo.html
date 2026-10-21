@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Думи, форми и словообразуване · BgLang</title>
+  <link rel="stylesheet" href="/site.css">
+  <script src="/demo.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="/demo">BgLang</a><nav><a href="/docs">HTTP договор</a></nav></header>
+<main>
+  <h1>Думи, форми и словообразуване</h1>
+  <p class="intro">Сравни точното изписване с всички върнати леми в собствен текст. В explorer-а разгледай словоформите по лема или анализа на незаписана дума чрез граф: основа, приложени правила и evidence.</p>
+  <p class="notice">В explorer-а избираш лимит 1–256 за основните списъци с прочити/кандидати или върнатите форми/пътища. Текстовото сравнение използва 32 за query/word analysis и пази всички открити попадения. Вложеното evidence няма общ лимит 32. AnalyzeText пази всички токени и диагностики; DecomposeWord пази всички segments. Достигнат лимит или незавършено търсене не доказва пълнота; празен резултат не доказва липса.</p>
+  <h2>Текст и отделна заявка</h2>
+  <form id="text-search">
+    <label for="source-text">Твоят текст</label>
+    <textarea id="source-text" rows="5" maxlength="4096" required>Книга, книга, книгата и книгите са тук. 📚</textarea>
+    <label for="query">Отделна заявка — дума или лема</label>
+    <input id="query" maxlength="256" value="книга" required aria-describedby="match-rules">
+    <p id="match-rules" class="tag">Точното изписване сравнява цял токен, включително регистъра. По лема сравнява всички върнати прочити и хипотези, без контекстно разрешаване на многозначността.</p>
+    <button id="text-submit" type="submit">Сравни попаденията</button>
+  </form>
+  <p id="text-status" role="status" aria-live="polite">Въведи текст и заявка.</p>
+  <section id="text-comparison" hidden aria-label="Точни попадения и попадения по лема">
+    <div id="query-evidence"></div>
+    <p id="text-coverage" class="notice"></p>
+    <div class="comparison">
+      <section><h2 id="exact-count">Точно изписване</h2><div id="exact-text" class="marked-text"></div></section>
+      <section><h2 id="lemma-count">По лема</h2><p class="tag">Плътно маркиране: речникови прочити. Пунктир: графови/морфологични хипотези. Условното evidence е означено отделно при click.</p><div id="lemma-text" class="marked-text"></div></section>
+    </div>
+    <p class="tag">Двата панела показват същия оригинален текст. Щракни върху попадение за неговия AnalyzeText анализ и UTF-16 offsets.</p>
+    <details><summary>Целият HTTP отговор за сравнението и общите donorSets</summary><pre id="text-json"></pre></details>
+  </section>
+  <details id="explorer">
+  <summary>Допълнително: разгледай public API операциите</summary>
+  <p><code>GenerateForms(lemma)</code> връща краен набор словоформи по лема от пакета, до избрания лимит. За собствено новообразувание използвай <code>AnalyzeWord</code> и <code>DecomposeWord</code>: графът може да върне път за незаписана дума, ако правилата и evidence го допускат. <code>DeriveWords</code> показва ограничено търсене от основа. Нито една операция не обещава всички възможни новообразувания; условната основа и непълното търсене остават означени.</p>
+  <form id="search">
+    <label for="mode">Операция</label>
+    <select id="mode">
+      <option value="analyze-word">Анализ на дума: прочити и графови хипотези</option>
+      <option value="generate-forms">Словоформи по лема</option>
+      <option value="derive-words">Словообразуване от основа чрез граф</option>
+      <option value="decompose-word">Разлагане и графово evidence</option>
+      <option value="analyze-text">Анализ на текст</option>
+    </select>
+    <label for="input">Дума, лема или собствен текст</label>
+    <textarea id="input" rows="3" maxlength="4096" required>книга</textarea>
+    <div id="limit-controls">
+      <label for="limit">Лимит на резултатите (1–256)</label>
+      <input id="limit" type="number" min="1" max="256" step="1" value="32" required aria-describedby="limit-help">
+      <p id="limit-help" class="tag">Началният избор за словоформи е 256; за анализ и словообразуване — 32. Можеш да избереш по-малък лимит. По-голям лимит може да разшири самото търсене; не доказва пълнота.</p>
+    </div>
+    <button id="submit" type="submit">Разгледай</button>
+  </form>
+  <div class="examples" aria-label="Примерни входове">
+    <span>Примери:</span>
+    <button type="button" data-example="книга" data-mode="generate-forms">Форми: книга</button>
+    <button type="button" data-example="пила" data-mode="analyze-word">Прочити: пила</button>
+    <button type="button" data-example="супермравка" data-mode="analyze-word">Граф: супермравка</button>
+  </div>
+  <p id="status" role="status" aria-live="polite">Зареждане на идентичността на пакета…</p>
+  </details>
+  <section id="results" aria-label="Резултати"></section>
+  <section id="donor-viewer" hidden aria-label="Пълен списък с подкрепящи леми">
+    <h2 id="donor-title"></h2>
+    <p id="donor-context" class="tag"></p>
+    <p class="tag">Общият списък запазва всички върнати леми в оригиналния ред. Програмата, tags и неизпълнените изисквания принадлежат на избрания кандидат.</p>
+    <pre id="donor-list"></pre>
+  </section>
+  <section id="details" hidden>
+    <h2 id="detail-title">Действителният отговор</h2>
+    <p id="coverage"></p>
+    <p id="json-context" class="tag" hidden>Това е оригиналният токен от HTTP отговора. References са индекси от нула в donorSets на целия отговор; те не са donor IDs. Отвори целия HTTP отговор по-долу за таблицата и останалия текстов анализ.</p>
+    <details><summary>JSON от HTTP операцията или избрания токен</summary><pre id="json"></pre></details>
+    <details id="response-json-view" hidden><summary>Целият оригинален HTTP отговор и общите donorSets</summary><pre id="response-json"></pre></details>
+    <details><summary>Същото извикване в C#</summary><pre id="code"></pre></details>
+  </section>
+  <footer><p id="identity">Пакетът още не е идентифициран.</p><p>Текстът се изпраща към този host. Приложението не пази HTTP bodies или входен текст в логове.</p></footer>
+</main>
+</body>
+</html>

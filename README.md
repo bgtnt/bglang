@@ -1,5 +1,72 @@
 # BgLang
 
+## v0.1.0-preview.5 — подготовка на следващия prerelease
+
+**Текущият source checkout подготвя `v0.1.0-preview.5`. Новата версия, assets и нов CI резултат още не са публикувани или потвърдени.** Публикуваният preview.4 е отделната историческа версия по-долу; неговите source/runtime assets не съдържат автоматично следващите разширения.
+
+Локално са приети Lexical, Text, Context, Syntax, Validation и owner-bound constructions за 20 семейства. Това довежда плана до **10 от 11 квалифицирани области на интеграция**; stress/explicit-accent multigroup authority остава задържана. Броят описва проектния обхват, без обща езикова accuracy или завършен parser. Animacy/Transitivity, общ NER, semantic disambiguation и corpus accuracy не са обещани.
+
+Новият целеви runtime е пълният annotated `bglang-neutral:bec73e12c06e560f`, schema `bglang-neutral-runtime-package.v2`, с точно четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **103 374 440 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини. API използва готовия runtime; authoring input е нужен само за отделното offline възпроизвеждане.
+
+Използвайте source export и runtime от една и съща бъдеща проверена distribution. [Текущият guide](packaging/RELEASE-CANDIDATE.md) описва four-file package recipe, source-only режима, CLI и optional HTTP consumer. [Input lock](data/dictionary/public-input-lock.v1.json) фиксира authoring input, current graph и output hashes; липса или mismatch е FAIL без private fallback. Нови download links ще се добавят след действително publication readback.
+
+### C# API и optional анализи
+
+```csharp
+using BgLang.Api;
+using BgLang.Contracts;
+
+using var language = BulgarianLanguageSession.Open(manifestPath);
+CancellationToken token = CancellationToken.None;
+LexicalEntryLookup owners = language.LookupLexicalEntries("пиша", 32, token);
+if (owners.MetadataAvailable && owners.Entries.Count > 0)
+{
+    WordConstructionResult candidates = language.GetWordConstructionCandidates(
+        owners.Entries[0].EntryId, token);
+}
+TextAnalysis text = language.AnalyzeText("😀 писал съм.", false,
+    new TextContextOptions { IncludeWordConstructions = true }, token);
+```
+
+`AnalyzeText` запазва оригиналния текст/UTF-16 spans и връща Lexical, complete ReadingInventory, Metrics, advisory Spelling, Profile, ProperNames и bounded Context/Syntax/Validation. Основните Context/Syntax/Validation остават активни при default options, с изрична availability. Допълнителните role, subordinate-comma, fragment, spacing и constructions опции са пет независими strict booleans с default false; unknown-context ProperNames има отделен opt-in.
+
+`WordConstructions` е nullable петнадесето Text поле. Disabled е `null` и не придобива owner forms. Enabled представя candidate evidence от действителните complete exact readings; `Complete`, owner status и unavailable token/reading references показват ограниченията. Запазват се raw duplicates, aliases, families/targets и отделните occurrences. Text съвпаденията изискват поне две части, реално whitespace и едно sentence. Едночастните кандидати са query-only. `AcceptedWordForm=false`, `GrammarAuthority=false` и `ProductiveReplayAvailable=false` с `OriginalGenerationSeedNotRetained` не дават lexical compatibility или corpus attestation.
+
+### Console и HTTP
+
+Съществуващият CLI е само `<manifest.json> [--json] [--measure] [--text-file <utf8.txt>]`. Няма CLI Context/construction flags. Source projection добавя всички 15 Text fields към съществуващия JSON wrapper; result полетата са PascalCase, а outer `method/input/result` са lowercase. Default JSON не доказва opt-in изпълнение. Точният export/projection consumer run остава задължителен преди release.
+
+```powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+```
+
+HTTP host/tests са отделен, optional consumer, без промяна на default Product solution. [Web guide](apps/BgLang.Web/README.md) и `/docs` описват v1/v2 и трите response formats. `word-constructions` използва съществуващото JSON поле `text`, чиято стойност е точният opaque `EntryId`; поле `entryId` се отхвърля. Whitespace в ID не се trim-ва.
+
+```powershell
+$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = '7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651'
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+```
+
+Host default е `http://127.0.0.1:5070`. Примерен construction input е `{"text":"<точният EntryId от lookup-lexical-entries>"}`; за Text opt-in: `{"text":"😀 писал съм.","context":{"includeWordConstructions":true}}` към `/api/v2/analyze-text`.
+
+### Validation и release identity
+
+Локално приетият runtime batch има 3972 Passed / 0 Failed / 13 exact historical NotExecuted, с 43 mandatory package gate sets; historical skips не получават completion credit. Тези резултати не са нов exported-source consumer run или public CI. Преди preview.5 са нужни actual twin four-file reproduction, exact source export, Public/console/optional HTTP validation, release checksums и отделен publication readback. SourceOnly не включва authoring inputs или runtime и сам по себе си не възпроизвежда data package.
+
+Съществуващият Windows workflow е consumer validation с `contents: read`, не publication job. Той използва HTTPS URL за точно locked authoring asset, а не runtime ZIP или трите preview.4 STORED inputs. Новият public source commit/tag, RAW export manifest, runtime/archive hashes и public CI identity се записват отделно. Не се заменят historical producer anchors с public commit ID.
+
+---
+
+## Исторически публикуван preview.4
+
+Следващите инструкции, identities, source/lock/workflow references и validation са за immutable preview.4 checkout. Командите му се изпълняват само с неговия source/recipe/input набор. За текущия preview.5 source използвайте новите секции и текущия guide по-горе.
+
+
 **[Изтегли preview 4](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.4)** — публикуван prerelease.
 
 Български езиков API за речниково търсене, словоформи, анализ на думи и текст,

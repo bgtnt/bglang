@@ -5,9 +5,14 @@ on:
   workflow_dispatch:
     inputs:
       input_base_url:
-        description: HTTPS directory containing the three files in public-input-lock.v1.json
+        description: HTTPS directory containing the authoringInput files in public-input-lock.v1.json
         required: true
         type: string
+      test_web:
+        description: Also build and test the independent HTTP consumer against the full annotated package
+        required: true
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
@@ -18,10 +23,11 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.402
-      - name: Locked inputs, current package, public tests and example
+      - name: Locked authoring input, four-file package, Public/example and optional HTTP checks
         shell: pwsh
         env:
           INPUT_BASE_URL: ${{ inputs.input_base_url || vars.BGLANG_INPUT_BASE_URL }}
+          TEST_WEB: ${{ github.event_name != 'workflow_dispatch' || inputs.test_web }}
         run: |
           $ErrorActionPreference = 'Stop'
           $env:TEMP = $env:RUNNER_TEMP
@@ -30,18 +36,24 @@ jobs:
           $env:NUGET_PACKAGES = Join-Path $env:RUNNER_TEMP 'nuget-packages'
           $env:NUGET_HTTP_CACHE_PATH = Join-Path $env:RUNNER_TEMP 'nuget-http-cache'
           $env:NUGET_PLUGINS_CACHE_PATH = Join-Path $env:RUNNER_TEMP 'nuget-plugins-cache'
-          if ([string]::IsNullOrWhiteSpace($env:INPUT_BASE_URL)) { throw 'Set input_base_url or repository variable BGLANG_INPUT_BASE_URL to the current locked input assets.' }
+          if ([string]::IsNullOrWhiteSpace($env:INPUT_BASE_URL)) { throw 'Set input_base_url or BGLANG_INPUT_BASE_URL to the matching locked authoring assets.' }
           $base = [Uri]$env:INPUT_BASE_URL
           if (!$base.IsAbsoluteUri -or $base.Scheme -ne 'https') { throw 'HTTPS input directory required.' }
           $lock = Get-Content data/dictionary/public-input-lock.v1.json -Raw | ConvertFrom-Json
-          $inputs = Join-Path $env:RUNNER_TEMP 'residual10-corrected-stored-v1'
-          New-Item -ItemType Directory -Path $inputs | Out-Null
-          foreach ($file in $lock.storedInput.files) {
-            Invoke-WebRequest -Uri ($base.AbsoluteUri.TrimEnd('/') + '/' + $file.name) -OutFile (Join-Path $inputs $file.name)
+          if (!$lock.authoringInput -or !$lock.authoringInput.files) { throw 'The successor authoringInput lock is required.' }
+          $authoringDirectory = Join-Path $env:RUNNER_TEMP 'lexical-annotated-source-v1'
+          New-Item -ItemType Directory -Path $authoringDirectory | Out-Null
+          foreach ($file in $lock.authoringInput.files) {
+            $download = Join-Path $authoringDirectory $file.name
+            Invoke-WebRequest -Uri ($base.AbsoluteUri.TrimEnd('/') + '/' + $file.name) -OutFile $download
+            if ((Get-Item -LiteralPath $download).Length -ne $file.bytes -or (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.sha256) { throw "Locked authoring input mismatch: $($file.name)" }
           }
-          $a = Join-Path $env:RUNNER_TEMP 'native-a'
-          $b = Join-Path $env:RUNNER_TEMP 'native-b'
-          ./packaging/Build-PublicPackage.ps1 -InputDirectory $inputs -OutputDirectory $a -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-a')
+          $packageA = Join-Path $env:RUNNER_TEMP 'annotated-a'
+          $packageB = Join-Path $env:RUNNER_TEMP 'annotated-b'
+          $optionalChecks = @{}
+          if ($env:TEST_WEB -eq 'true') { $optionalChecks.TestWeb = $true }
+          else { Write-Host 'HTTP consumer checks were not requested; no HTTP validation is claimed for this run.' }
+          ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -OutputDirectory $packageA -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-a') @optionalChecks
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            ./packaging/Build-PublicPackage.ps1 -InputDirectory $inputs -OutputDirectory $b -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-b') -CompareWith $a
+            ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -OutputDirectory $packageB -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-b') -CompareWith $packageA @optionalChecks
           }

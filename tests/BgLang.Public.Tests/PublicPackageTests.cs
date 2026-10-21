@@ -17,6 +17,278 @@ public sealed class PublicPackageTests
     private static JsonElement[] typedTags = [];
 
     [TestMethod]
+    public void Construction_query_preserves_exact_owner_identity_and_ready_empty_state()
+    {
+        LexicalEntryLookup lookup = session.LookupLexicalEntries("знаме", 256);
+        Assert.IsTrue(lookup.MetadataAvailable, "The successor public profile requires the complete annotated package.");
+        Assert.IsNotEmpty(lookup.Entries);
+        LexicalEntry owner = lookup.Entries[0];
+        WordConstructionResult result = session.GetWordConstructionCandidates(owner.EntryId);
+        Assert.AreEqual(WordConstructionStatus.NoApplicable, result.Status);
+        Assert.IsNotNull(result.Owner); Assert.AreEqual(owner.EntryId, result.Owner.EntryId);
+        Assert.AreEqual(owner.LexemeKey, result.Owner.LexemeKey);
+        Assert.IsNotNull(result.OwnForms); Assert.IsNotEmpty(result.OwnForms);
+        Assert.IsEmpty(result.Candidates);
+        Assert.IsFalse(result.ProductiveReplayAvailable);
+        Assert.AreEqual("OriginalGenerationSeedNotRetained", result.ProductiveReplayUnavailableReason);
+        WordConstructionResult unknown = session.GetWordConstructionCandidates(" " + owner.EntryId + " ");
+        Assert.AreEqual(WordConstructionStatus.OwnerNotFound, unknown.Status);
+        Assert.IsNull(unknown.Owner); Assert.IsNull(unknown.OwnForms); Assert.IsEmpty(unknown.Candidates);
+        Assert.Throws<ArgumentNullException>(() => session.GetWordConstructionCandidates(null!));
+        var signature = typeof(BulgarianLanguageSession).GetMethod(nameof(BulgarianLanguageSession.GetWordConstructionCandidates),
+            new[] { typeof(string), typeof(CancellationToken) });
+        Assert.IsNotNull(signature); Assert.AreEqual(typeof(WordConstructionResult), signature.ReturnType);
+        Assert.IsFalse(signature.GetParameters()[0].IsOptional); Assert.IsTrue(signature.GetParameters()[1].IsOptional);
+    }
+
+    [TestMethod]
+    public void Construction_text_switch_distinguishes_not_run_from_complete_enabled_empty()
+    {
+        Assert.IsFalse(default(TextContextOptions).IncludeWordConstructions);
+        TextAnalysis disabled = session.AnalyzeText("", false, default, CancellationToken.None);
+        TextAnalysis enabled = session.AnalyzeText("", false,
+            new TextContextOptions { IncludeWordConstructions = true }, CancellationToken.None);
+        Assert.IsNull(disabled.WordConstructions);
+        Assert.IsNotNull(enabled.WordConstructions);
+        Assert.IsTrue(enabled.WordConstructions.Complete);
+        Assert.IsEmpty(enabled.WordConstructions.Owners); Assert.IsEmpty(enabled.WordConstructions.Candidates);
+        Assert.IsEmpty(enabled.WordConstructions.Matches); Assert.IsEmpty(enabled.WordConstructions.UnavailableReadings);
+        Assert.IsFalse(enabled.WordConstructions.ProductiveReplayAvailable);
+        Assert.AreEqual("OriginalGenerationSeedNotRetained", enabled.WordConstructions.ProductiveReplayUnavailableReason);
+        JsonElement before = JsonSerializer.SerializeToElement(disabled), after = JsonSerializer.SerializeToElement(enabled);
+        foreach (JsonProperty property in before.EnumerateObject().Where(value => value.Name != "WordConstructions"))
+            Assert.AreEqual(property.Value.GetRawText(), after.GetProperty(property.Name).GetRawText(), property.Name);
+    }
+
+    [TestMethod]
+    public void Construction_public_precancellation_preserves_token_and_session()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        OperationCanceledException query = Assert.Throws<OperationCanceledException>(() =>
+            session.GetWordConstructionCandidates("opaque-owner", cancellation.Token));
+        Assert.AreEqual(cancellation.Token, query.CancellationToken);
+        OperationCanceledException text = Assert.Throws<OperationCanceledException>(() => session.AnalyzeText("знаме.", false,
+            new TextContextOptions { IncludeWordConstructions = true }, cancellation.Token));
+        Assert.AreEqual(cancellation.Token, text.CancellationToken);
+        Assert.IsTrue(session.AnalyzeWord("знаме").IsKnown);
+    }
+
+    [TestMethod]
+    public void Context_four_argument_overload_keeps_default_literal_calls_and_all_parameters_required()
+    {
+        TextAnalysis manual = new("", []);
+        var (manualSource, manualTokens) = manual;
+        Assert.AreEqual("", manualSource); Assert.IsEmpty(manualTokens);
+        Assert.IsNull(manual.Context); Assert.IsNull(manual.Syntax); Assert.IsNull(manual.Validation);
+        Assert.IsNull(manual.WordConstructions);
+        const string source = "знаме.";
+        TextAnalysis ordinary = session.AnalyzeText(source);
+        TextAnalysis tokenDefault = session.AnalyzeText(source, default);
+        TextAnalysis nameDefault = session.AnalyzeText(source, default, CancellationToken.None);
+        TextAnalysis contextDefault = session.AnalyzeText(source, false, default, CancellationToken.None);
+        foreach (TextAnalysis actual in new[] { tokenDefault, nameDefault, contextDefault })
+            Assert.AreEqual(JsonSerializer.Serialize(ordinary), JsonSerializer.Serialize(actual));
+        Assert.AreEqual(new TextMetrics(2, 1, 1, 1, 5, 1, 1, 0, 0), contextDefault.Metrics);
+        Assert.AreEqual("Съществително:69,Среден", contextDefault.ReadingInventory!.Sets.Single().CanonicalReadings.Single().Raw.PartOfSpeech);
+        var signature = typeof(BulgarianLanguageSession).GetMethod(nameof(BulgarianLanguageSession.AnalyzeText),
+            new[] { typeof(string), typeof(bool), typeof(TextContextOptions), typeof(CancellationToken) });
+        Assert.IsNotNull(signature);
+        Assert.IsTrue(signature.GetParameters().All(parameter => !parameter.IsOptional));
+        Assert.IsNull(typeof(BulgarianLanguageSession).GetMethod(nameof(BulgarianLanguageSession.AnalyzeText),
+            new[] { typeof(string), typeof(TextContextOptions), typeof(CancellationToken) }));
+    }
+
+    [TestMethod]
+    public void Context_options_preserve_precancelled_token_without_success_or_session_damage()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        TextContextOptions[] options = [default, new()
+        {
+            IncludeAdditionalRoleHeuristics = true, IncludeSubordinateCommaDiagnostics = true,
+            IncludeFragmentDiagnostics = true, IncludeSpacingDiagnostics = true
+        }];
+        foreach (TextContextOptions context in options)
+        foreach (bool names in new[] { false, true })
+        {
+            OperationCanceledException error = Assert.Throws<OperationCanceledException>(() =>
+                session.AnalyzeText("знаме.", names, context, cancellation.Token));
+            Assert.AreEqual(cancellation.Token, error.CancellationToken);
+        }
+        Assert.IsTrue(session.AnalyzeWord("знаме").IsKnown);
+    }
+
+    [TestMethod]
+    public void Complete_text_composition_preserves_literal_inventory_metrics_and_profile()
+    {
+        const string source = "знаме знаме.";
+        TextAnalysis text = session.AnalyzeText(source, default);
+        Assert.AreEqual(source, text.Text);
+        CollectionAssert.AreEqual(new[] { "Text", "Tokens", "Sentences", "Phonetics", "Diagnostics", "Lexical",
+            "ReadingInventory", "Metrics", "Spelling", "Profile", "ProperNames", "Context", "Syntax", "Validation", "WordConstructions" },
+            JsonSerializer.SerializeToElement(text).EnumerateObject().Select(property => property.Name).ToArray());
+        Assert.AreEqual(new TextMetrics(3, 2, 1, 2, 5, .5, 1, 1, 0), text.Metrics);
+        TextReadingInventory inventory = text.ReadingInventory!;
+        Assert.HasCount(1, inventory.Sets);
+        CollectionAssert.AreEqual(new[] { new TextReadingOccurrence(0, "знаме", 0, 5, 0),
+            new TextReadingOccurrence(1, "знаме", 6, 5, 0) }, inventory.Occurrences.ToArray());
+        TextReadingSet set = inventory.Sets[0];
+        Assert.AreEqual("знаме", set.LookupText);
+        Assert.AreEqual("знаме", set.CanonicalKey);
+        Assert.IsNull(set.SupportKey);
+        Assert.IsNull(set.SupportReadings);
+        Assert.AreEqual(1, set.DisplayedReadingCount);
+        Assert.IsFalse(set.DisplayTruncated);
+        TextReadingSnapshot reading = set.CanonicalReadings.Single();
+        Assert.AreEqual("знаме", reading.Raw.Form);
+        Assert.AreEqual("знаме", reading.Raw.Lemma);
+        Assert.AreEqual("Съществително:69,Среден", reading.Raw.PartOfSpeech);
+        Assert.AreEqual(1d, reading.Raw.Score);
+        Assert.AreEqual(MorphologicalPartOfSpeech.Noun, reading.Features.PartOfSpeech);
+        Assert.AreEqual(MorphologicalGender.Neuter, reading.Features.Gender);
+        Assert.AreEqual(MorphologicalNumber.Singular, reading.Features.Number);
+        Assert.AreEqual(MorphologicalArticle.Indefinite, reading.Features.Article);
+        Assert.IsNull(reading.Features.NameKind);
+        DocumentReadingProfile profile = text.Profile!;
+        Assert.AreEqual("typed-reading-profile.v1", profile.ProjectionVersion);
+        Assert.AreEqual(2L, profile.WordOccurrences);
+        Assert.AreEqual(2L, profile.KnownWordOccurrences);
+        Assert.AreEqual(0L, profile.UnknownWordOccurrences);
+        Assert.AreEqual(0L, profile.UnmeasuredKnownnessWordOccurrences);
+        Assert.AreEqual(2L, profile.DisplayedReadingOccurrences);
+        Assert.AreEqual(2L, profile.FullReadingOccurrences);
+        Assert.AreEqual(2L, profile.CompleteExactInventoryWordOccurrences);
+        Assert.AreEqual(2L, profile.ProjectionAssessmentCompleteWordOccurrences);
+        Assert.AreEqual(0L, profile.ObservedProjectedAmbiguityWordOccurrences);
+        Assert.AreEqual(0L, profile.ProjectionIssueWordOccurrences);
+        Assert.AreEqual(0L, profile.DisplayTruncatedWordOccurrences);
+        Assert.AreEqual(1d, profile.KnownWordRatio);
+        Assert.IsTrue(profile.AllWordAssessmentsCompleteForProjection);
+        Assert.IsTrue(profile.ExactReadingEvidencePresent);
+        Assert.IsTrue(profile.Words.All(word => word.FullReadingCount == 1 && word.ProjectedGroupCount == 1 &&
+            word.ObservedProjectedAmbiguity == false && word.Issues == ReadingProjectionIssues.None && word.ActualDisplayTruncated == false));
+        CollectionAssert.AreEqual(new[] { new KeyValuePair<MorphologicalPartOfSpeech, long>(MorphologicalPartOfSpeech.Noun, 2) },
+            profile.DisplayedPosCounts.ToArray());
+        CollectionAssert.AreEqual(new[] { new KeyValuePair<string, long>("знаме", 2) }, profile.DisplayedLemmaCounts.ToArray());
+        Assert.AreEqual(2, text.Spelling!.ConfiguredMaxDistance);
+        Assert.AreEqual(10, text.Spelling.ConfiguredLimit);
+        Assert.IsTrue(text.Spelling.Words.All(word => word.Search == SpellingSearchDisposition.NotRequestedKnown &&
+            word.Reason == "exact-known" && word.Alternatives.Count == 0));
+        Assert.IsEmpty(text.ProperNames!.Candidates);
+        Assert.IsEmpty(text.ProperNames.Groups);
+        Assert.IsNull(text.ProperNames.UnresolvedContextTokens);
+        Assert.IsFalse(text.ProperNames.UnknownContextEvaluated);
+        Assert.IsTrue(text.ProperNames.CompleteForEnabledScope);
+    }
+
+    [TestMethod]
+    public void Complete_empty_text_distinguishes_optin_not_run_from_enabled_empty()
+    {
+        foreach (bool enabled in new[] { false, true })
+        {
+            TextAnalysis empty = session.AnalyzeText("", enabled, CancellationToken.None);
+            Assert.AreEqual(new TextMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0), empty.Metrics);
+            Assert.IsEmpty(empty.ReadingInventory!.Sets);
+            Assert.IsEmpty(empty.ReadingInventory.Occurrences);
+            Assert.IsNull(empty.Profile!.KnownWordRatio);
+            Assert.AreEqual(0L, empty.Profile.FullReadingOccurrences);
+            Assert.IsTrue(empty.Profile.AllWordAssessmentsCompleteForProjection);
+            Assert.IsFalse(empty.Profile.ExactReadingEvidencePresent);
+            Assert.AreEqual(enabled, empty.ProperNames!.UnknownContextEvaluated);
+            Assert.AreEqual(enabled, empty.ProperNames.UnresolvedContextTokens is not null);
+            Assert.IsEmpty(empty.ProperNames.Candidates);
+        }
+    }
+
+    [TestMethod]
+    public void Complete_new_text_overload_preserves_precancelled_token_and_session()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        foreach (bool enabled in new[] { false, true })
+        {
+            var error = Assert.Throws<OperationCanceledException>(() => session.AnalyzeText("знаме", enabled, cancellation.Token));
+            Assert.AreEqual(cancellation.Token, error.CancellationToken);
+        }
+        Assert.IsTrue(session.AnalyzeWord("знаме").IsKnown);
+    }
+
+    [TestMethod]
+    public void Complete_context_optin_defers_existing_graph_base_evidence_without_inventing_unknown_names()
+    {
+        const string source = "д-р Супертрактор.";
+        TextAnalysis disabled = session.AnalyzeText(source);
+        TextAnalysis enabled = session.AnalyzeText(source, true, CancellationToken.None);
+        TokenAnalysis token = enabled.Tokens[1];
+        Assert.AreEqual("Супертрактор", token.Text);
+        Assert.AreEqual(4, token.Start);
+        Assert.AreEqual(12, token.Length);
+        Assert.IsFalse(token.Analysis!.IsKnown);
+        Assert.IsNotNull(token.Analysis.BaseEvidence);
+        Assert.AreEqual("трактор", token.Analysis.BaseEvidence.Base);
+        TextReadingOccurrence occurrence = enabled.ReadingInventory!.Occurrences.Single(value => value.TokenIndex == 1);
+        Assert.IsEmpty(enabled.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings);
+        Assert.IsEmpty(enabled.ProperNames!.Candidates);
+        CollectionAssert.AreEqual(new[] { 1 }, enabled.ProperNames.DeferredTokenIndices.ToArray());
+        Assert.IsFalse(enabled.ProperNames.CompleteForEnabledScope);
+        Assert.IsNotNull(enabled.ProperNames.UnresolvedContextTokens);
+        Assert.IsNull(disabled.ProperNames!.UnresolvedContextTokens);
+        Assert.IsEmpty(disabled.ProperNames.DeferredTokenIndices);
+        CollectionAssert.AreEqual(disabled.Diagnostics.Select(value => JsonSerializer.Serialize(value)).ToArray(),
+            enabled.Diagnostics.Select(value => JsonSerializer.Serialize(value)).ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("д-р Жжжж.", ProperNameLane.Title, 1, 4)]
+    [DataRow("знаме Жжжж.", ProperNameLane.MidSentence, 1, 6)]
+    [DataRow("Жжжж Иванов.", ProperNameLane.Surname, 0, 0)]
+    [DataRow("Жжжж Жжжж писа.", ProperNameLane.ClosedClause, 0, 0)]
+    public void Complete_text_optin_runs_each_advisory_lane_without_changing_exact_evidence(
+        string source, ProperNameLane lane, int tokenIndex, int start)
+    {
+        TextAnalysis disabled = session.AnalyzeText(source);
+        TextAnalysis enabled = session.AnalyzeText(source, true, CancellationToken.None);
+        Assert.IsNull(disabled.ProperNames!.UnresolvedContextTokens);
+        Assert.IsNotNull(enabled.ProperNames!.UnresolvedContextTokens);
+        Assert.IsFalse(disabled.ProperNames.Candidates.Any(candidate => candidate.Lane != ProperNameLane.Exact));
+        CollectionAssert.AreEqual(disabled.Diagnostics.Select(value => JsonSerializer.Serialize(value)).ToArray(),
+            enabled.Diagnostics.Select(value => JsonSerializer.Serialize(value)).ToArray());
+        CollectionAssert.AreEqual(disabled.ReadingInventory!.Sets.Select(value => JsonSerializer.Serialize(value)).ToArray(),
+            enabled.ReadingInventory!.Sets.Select(value => JsonSerializer.Serialize(value)).ToArray());
+        ProperNameCandidate candidate = enabled.ProperNames.Candidates.Single(value => value.TokenIndex == tokenIndex);
+        Assert.AreEqual(lane, candidate.Lane);
+        Assert.AreEqual(start, candidate.Start);
+        Assert.AreEqual(4, candidate.Length);
+        Assert.AreEqual("Жжжж", source.Substring(candidate.Start, candidate.Length));
+        Assert.IsEmpty(candidate.ExactSupports);
+        Assert.IsTrue(candidate.GroupingKindKnown);
+        Assert.IsTrue(enabled.ProperNames.CompleteForEnabledScope);
+        foreach (TextReadingReference support in candidate.ContextSupports)
+        {
+            TextReadingOccurrence occurrence = enabled.ReadingInventory.Occurrences.Single(value => value.TokenIndex == support.TokenIndex);
+            TextReadingSnapshot reading = enabled.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings[support.CompleteReadingIndex];
+            if (lane == ProperNameLane.ClosedClause)
+            {
+                Assert.AreEqual(2, support.TokenIndex);
+                Assert.AreEqual(MorphologicalPerson.Third, reading.Features.Person);
+                Assert.AreEqual(MorphologicalVerbForm.Finite, reading.Features.VerbForm);
+            }
+            else
+                Assert.AreEqual(MorphologicalNameKind.FamilyName, reading.Features.NameKind);
+        }
+        if (lane is ProperNameLane.Surname or ProperNameLane.ClosedClause) Assert.IsNotEmpty(candidate.ContextSupports);
+        if (lane == ProperNameLane.ClosedClause)
+        {
+            ProperNameGroup group = enabled.ProperNames.Groups.Single();
+            Assert.AreEqual(2, group.CandidateCount);
+            Assert.AreEqual(0, group.Start);
+            Assert.AreEqual(9, group.Length);
+            Assert.AreEqual(ProperNameKinds.Unspecified, group.Kinds);
+            Assert.IsTrue(group.MaximalWithinCompleteEnabledScope);
+        }
+    }
+
+    [TestMethod]
     public void Complete_package_conditional_roots_refuse_empty_hyphen_components()
     {
         foreach (string input in new[] { "-наносензор", "наносензор-", "нано--сензор", "ултра--лек",
@@ -43,7 +315,7 @@ public sealed class PublicPackageTests
     [TestMethod]
     public void Complete_successor_adds_imperative_alternatives_without_losing_noun_or_finite_readings()
     {
-        Assert.AreEqual("bglang-neutral:de06b9b2e254e61a", session.Provenance.PackageId);
+        Assert.AreEqual(candidate.GetProperty("packageId").GetString(), session.Provenance.PackageId);
         AssertLanguage(session, candidate.GetProperty("sourceId").GetString()!);
     }
 
@@ -202,14 +474,22 @@ public sealed class PublicPackageTests
     [ClassInitialize]
     public static void OpenExactCompletePackage(TestContext _)
     {
-        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data/public-input-lock.v1.json")));
-        Assert.AreEqual("bglang.public-input-lock.v1", document.RootElement.GetProperty("schema").GetString());
+        string? lexicalManifest = Environment.GetEnvironmentVariable("BGLANG_LEXICAL_MANIFEST");
+        if (Environment.GetEnvironmentVariable("BGLANG_LEXICAL_REQUIRE_MANIFEST") == "1")
+            Assert.IsFalse(string.IsNullOrWhiteSpace(lexicalManifest), "The required annotated successor cannot fall back to the historical public lock.");
+        bool lexical = lexicalManifest is not null;
+        string fixtureName = lexical ? "lexical-annotated-package.v1.json" : "public-input-lock.v1.json";
+        byte[] identity = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data", fixtureName));
+        if (lexical) Assert.AreEqual("4a4da62b4e33643429bc4f7fea50a86e0e73ca6380ca55c6d2b7f972e130b3ba", Convert.ToHexStringLower(SHA256.HashData(identity)));
+        using var document = JsonDocument.Parse(identity);
+        Assert.AreEqual(lexical ? "bglang.lexical-public-package.v1" : "bglang.public-input-lock.v1", document.RootElement.GetProperty("schema").GetString());
         Assert.IsTrue(document.RootElement.GetProperty("contractComplete").GetBoolean(), "Complete public input contract is required; missing inputs never skip.");
         candidate = document.RootElement.GetProperty("expectedCandidate").Clone();
         string? supplied = Environment.GetEnvironmentVariable("BGLANG_PUBLIC_PACKAGE_MANIFEST");
         Assert.IsFalse(string.IsNullOrWhiteSpace(supplied), "Set the explicit complete candidate manifest.");
         Assert.IsTrue(Path.IsPathFullyQualified(supplied!));
         manifest = Path.GetFullPath(supplied!);
+        if (lexical) Assert.AreEqual(Path.GetFullPath(lexicalManifest!), manifest, true, "Public and generic controls must select the same exact annotated package.");
         Assert.AreEqual("manifest.json", Path.GetFileName(manifest));
         string directory = Path.GetDirectoryName(manifest)!;
         var files = candidate.GetProperty("files").EnumerateArray().ToArray();
@@ -241,7 +521,13 @@ public sealed class PublicPackageTests
     {
         Assert.AreEqual(candidate.GetProperty("packageId").GetString(), session.Provenance.PackageId);
         Assert.AreEqual(candidate.GetProperty("sourceId").GetString(), session.Provenance.LexiconSource);
-        Assert.IsNull(session.Provenance.AnnotationsSha256);
+        if (candidate.TryGetProperty("annotations", out JsonElement annotations))
+        {
+            Assert.AreEqual(candidate.GetProperty("manifestSchema").GetString(), session.Provenance.SchemaVersion);
+            Assert.AreEqual(annotations.GetProperty("sha256").GetString(), session.Provenance.AnnotationsSha256);
+            Assert.AreEqual(annotations.GetProperty("sourceId").GetString(), session.Provenance.AnnotationsSource);
+        }
+        else Assert.IsNull(session.Provenance.AnnotationsSha256);
     }
 
     [TestMethod]
@@ -574,4 +860,36 @@ public sealed class PublicPackageTests
     }
 
     private static string Key(string form, string lemma, string? tag) => JsonSerializer.Serialize(new[] { form, lemma, tag });
+
+    [TestMethod]
+    [DataRow("Италия", "Италия", "Държава:196", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Чикаго", "Чикаго", "Град:198", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Берлин", "Берлин", "Столица:197", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Тунджа", "Тунджа", "Място:195", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Тунджа", "Тунджа", "Наименование:194", MorphologicalPartOfSpeech.Unknown)]
+    [DataRow("Иван", "Иван", "Име:205,Мъжки", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Иван", "Иван", "Място:195", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("Иванов", "иванов", "Прилагателно:76,Мъжки", MorphologicalPartOfSpeech.Adjective)]
+    [DataRow("Иванов", "Иванов", "Фамилия:201,Мъжки", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("София", "София", "Място:195", MorphologicalPartOfSpeech.ProperNoun)]
+    [DataRow("маса", "маса", "Съществително:41,Женски", MorphologicalPartOfSpeech.Noun)]
+    public void Complete_package_projects_explicit_geographic_categories_and_preserves_controls(
+        string query, string lemma, string rawTag, MorphologicalPartOfSpeech expected)
+    {
+        Assert.AreEqual(candidate.GetProperty("packageId").GetString(), session.Provenance.PackageId);
+        WordReading reading = session.AnalyzeWord(query, 32).Readings.Single(r =>
+            r.Lemma == lemma && r.PartOfSpeech == rawTag);
+        Assert.AreEqual(expected, reading.Features.PartOfSpeech);
+        Assert.AreEqual(rawTag, reading.Features.RawTag);
+        Assert.AreEqual(expected == MorphologicalPartOfSpeech.Unknown, reading.Features.HasUnrecognizedFeatures);
+        Assert.IsFalse(reading.Features.HasConflictingFeatures);
+        if (expected is MorphologicalPartOfSpeech.ProperNoun or MorphologicalPartOfSpeech.Unknown)
+        {
+            Assert.IsNull(reading.Features.Number);
+            Assert.IsNull(reading.Features.Article);
+            Assert.IsNull(reading.Features.Person);
+            Assert.IsNull(reading.Features.Tense);
+            Assert.IsNull(reading.Features.VerbForm);
+        }
+    }
 }

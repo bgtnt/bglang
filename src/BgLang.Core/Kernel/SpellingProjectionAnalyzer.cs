@@ -18,12 +18,12 @@ internal static class SpellingProjectionAnalyzer
     internal static IReadOnlyList<TextDiagnostic> Analyze(
         IReadOnlyList<TokenAnalysis> tokens,
         IRuntimeLexicon lexicon,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        SpellingCandidateCache? spellingCandidates = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         List<TextDiagnostic> diagnostics = [];
-        // This call fixes the lexicon, distance and result limit; null caches both kinds of refusal.
-        Dictionary<string, string?> spellingCandidates = new(StringComparer.Ordinal);
+        spellingCandidates ??= new(lexicon);
         for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -111,7 +111,7 @@ internal static class SpellingProjectionAnalyzer
                 continue;
             }
 
-            if (!TryFindUniqueSpellingCandidate(token, lexicon, spellingCandidates, cancellationToken, out string suggestion))
+            if (!TryFindUniqueSpellingCandidate(token, spellingCandidates, cancellationToken, out string suggestion))
                 continue;
 
             diagnostics.Add(new TextDiagnostic(
@@ -130,8 +130,7 @@ internal static class SpellingProjectionAnalyzer
 
     private static bool TryFindUniqueSpellingCandidate(
         TokenAnalysis token,
-        IRuntimeLexicon lexicon,
-        Dictionary<string, string?> cache,
+        SpellingCandidateCache cache,
         CancellationToken cancellationToken,
         out string suggestion)
     {
@@ -145,13 +144,8 @@ internal static class SpellingProjectionAnalyzer
 
         string query = BulgarianTextNormalizer.NormalizeKey(token.Text);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!cache.TryGetValue(query, out string? candidate))
-        {
-            IReadOnlyList<FuzzyMatch> matches = lexicon.FindSimilarNormalized(query, maxDistance: 1, limit: 2);
-            cancellationToken.ThrowIfCancellationRequested();
-            candidate = matches.Count == 1 && matches[0].Distance == 1 ? matches[0].Form : null;
-            cache.Add(query, candidate);
-        }
+        IReadOnlyList<FuzzyMatch> matches = cache.FindSimilarNormalized(query, distance: 1, limit: 2, cancellationToken);
+        string? candidate = matches.Count == 1 && matches[0].Distance == 1 ? matches[0].Form : null;
         cancellationToken.ThrowIfCancellationRequested();
         suggestion = candidate ?? string.Empty;
         return candidate is not null;

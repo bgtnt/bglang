@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using BgLang.Contracts;
 
 namespace BgLang.Core;
@@ -9,20 +10,24 @@ internal sealed class InMemoryRuntimeLexicon : IRuntimeLexicon
     private readonly DawgIndex _suffix;
     private readonly DawgIndex? _routed;
     private readonly IFormInventory _forms;
+    private readonly string[]? _lexemeKeys;
 
     internal InMemoryRuntimeLexicon(
         IEnumerable<WordReading> readings,
         IFormInventory forms,
         IEnumerable<WordReading>? exactPrefixOnly = null,
-        bool allowEmptyOrdinary = false)
+        bool allowEmptyOrdinary = false,
+        IReadOnlyDictionary<WordReading, int>? lexemeOrdinals = null,
+        IReadOnlyList<string>? lexemeKeys = null)
     {
         ArgumentNullException.ThrowIfNull(forms);
         WordReading[] retained = readings.ToArray();
-        _forward = new DawgIndex(retained, allowEmptyOrdinary);
+        _forward = new DawgIndex(retained, allowEmptyOrdinary, lexemeOrdinals);
         _suffix = DawgIndex.CreateSuffixIndex(retained, allowEmptyOrdinary);
         WordReading[] routed = exactPrefixOnly?.ToArray() ?? [];
-        _routed = routed.Length == 0 ? null : new DawgIndex(routed);
+        _routed = routed.Length == 0 ? null : new DawgIndex(routed, lexemeOrdinals: lexemeOrdinals);
         _forms = forms;
+        _lexemeKeys = lexemeKeys?.ToArray();
     }
 
     public IReadOnlyList<WordReading> LookupExactNormalized(string normalizedForm, int limit)
@@ -33,8 +38,39 @@ internal sealed class InMemoryRuntimeLexicon : IRuntimeLexicon
             : _routed.LookupExactNormalized(normalizedForm, limit);
     }
 
+    public ExactLookupResult LookupExactPairedNormalized(string normalizedForm, int limit,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ExactLookupResult result = _forward.LookupExactPairedNormalized(normalizedForm, limit, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (result.Readings.Count == 0 && _routed is not null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            result = _routed.LookupExactPairedNormalized(normalizedForm, limit, cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
+    }
+
     public IReadOnlyList<WordReading> LookupOrdinaryExactNormalized(string normalizedForm, int limit) =>
         _forward.LookupExactNormalized(normalizedForm, limit);
+
+    public string? GetLexemeKey(int lexemeOrdinal, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (lexemeOrdinal < 0 || _lexemeKeys is not null && lexemeOrdinal >= _lexemeKeys.Length)
+            throw new InvalidOperationException("Owner ordinal is outside the retained lexeme keys.");
+        string? key = _lexemeKeys is null ? null : _lexemeKeys[lexemeOrdinal];
+        cancellationToken.ThrowIfCancellationRequested();
+        return key;
+    }
+
+    public IReadOnlyList<int> FindExactLexemeOrdinals(string normalizedForm)
+    {
+        IReadOnlyList<int> ordinary = _forward.FindExactLexemeOrdinals(normalizedForm);
+        return ordinary.Count > 0 || _routed is null ? ordinary : _routed.FindExactLexemeOrdinals(normalizedForm);
+    }
 
     public IReadOnlyList<WordReading> FindByPrefix(string prefix, int limit)
     {
@@ -75,6 +111,46 @@ internal sealed class InMemoryRuntimeLexicon : IRuntimeLexicon
     public IReadOnlyList<WordForm> GenerateForms(string lemma, int limit) =>
         _forms.GenerateForms(lemma, limit);
 
+
+    // Outer null means global pairing unavailable; a null value identifies one unavailable owner.
+    // Dictionary keys are internal addresses. Aliases remain distinct in the outer catalog binding.
+    public IReadOnlyDictionary<int, IReadOnlyList<WordReading>?>? CollectAcceptedOwnForms(
+        IReadOnlyCollection<int> ownerOrdinals, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(ownerOrdinals);
+        Dictionary<int, List<WordReading>> pending = [];
+        foreach (int owner in ownerOrdinals)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (owner < 0) throw new ArgumentOutOfRangeException(nameof(ownerOrdinals));
+            pending.TryAdd(owner, []); // Repeated tokens/aliases share one inventory acquisition.
+        }
+        Dictionary<int, IReadOnlyList<WordReading>?> result = new(pending.Count);
+        if (pending.Count == 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ReadOnlyDictionary<int, IReadOnlyList<WordReading>?>(result);
+        }
+        if (!_forward.HasAcceptedOwnerPairing || _routed is { HasAcceptedOwnerPairing: false })
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return null;
+        }
+        // Exactly one pass over each retained forward/routed payload array, never the reverse DAWG.
+        _forward.AppendAcceptedOwnForms(pending, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        _routed?.AppendAcceptedOwnForms(pending, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var item in pending)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Keep available owners; no retained rows means unavailable, never NoApplicable.
+            result.Add(item.Key, item.Value.Count == 0 ? null : Array.AsReadOnly(item.Value.ToArray()));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new ReadOnlyDictionary<int, IReadOnlyList<WordReading>?>(result);
+    }
     public void Dispose()
     {
     }

@@ -1,15 +1,339 @@
 {
   "schema": "bglang.public-source-manifest.v1",
-  "sourceBaseCommit": "308b5a46ac1539ca98498d291ccf94d04543baf1",
-  "authority": "Accepted runtime/producer commit anchor; exact recipe/docs snapshot is the RAW file manifest.",
-  "sourceOnly": false,
+  "sourceBaseCommit": "f5f71a52878ecce309cfeca2465e0862f303f6bb",
+  "authority": "Accepted implementation base anchor; exact recipe/docs/source snapshot is the RAW file manifest. This is not the public source commit or tag.",
+  "sourceOnly": true,
+  "authoringInputDelivered": false,
+  "authoringInputProfile": "lexical-annotated-source.v1",
   "releaseBuildClosure": [
+    {
+      "project": "apps/BgLang.Web/BgLang.Web.csproj",
+      "targetFramework": "net10.0",
+      "sdk": "10.0.402",
+      "requiredSourceInputs": [
+        "Compile|apps/BgLang.Web/ApiOperations.cs",
+        "Compile|apps/BgLang.Web/ClientRateLimit.cs",
+        "Compile|apps/BgLang.Web/HttpContract.cs",
+        "Compile|apps/BgLang.Web/Program.cs",
+        "Compile|apps/BgLang.Web/ResponseWriter.cs",
+        "Compile|apps/BgLang.Web/SerializedWorkQueue.cs",
+        "Compile|apps/BgLang.Web/SessionHost.cs",
+        "Compile|apps/BgLang.Web/SharedDonorResponse.cs",
+        "Compile|apps/BgLang.Web/TextMatchProjection.cs",
+        "Compile|apps/BgLang.Web/WebHostFactory.cs",
+        "Content|apps/BgLang.Web/scope-metrics.json",
+        "Content|apps/BgLang.Web/wwwroot/demo.html",
+        "Content|apps/BgLang.Web/wwwroot/demo.js",
+        "Content|apps/BgLang.Web/wwwroot/docs.html",
+        "Content|apps/BgLang.Web/wwwroot/site.css",
+        "Import|apps/BgLang.Web/BgLang.Web.csproj",
+        "Import|Directory.Build.props",
+        "Project|apps/BgLang.Web/BgLang.Web.csproj",
+        "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
+      ],
+      "externalSdkInputs": [
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.props",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
+        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.Common.targets",
+        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.CSharp.targets",
+        "sdk/10.0.402/Microsoft.Managed.After.targets",
+        "sdk/10.0.402/Microsoft.Managed.Before.targets",
+        "sdk/10.0.402/Microsoft.NET.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
+        "sdk/10.0.402/Microsoft.TestPlatform.targets",
+        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
+        "sdk/10.0.402/NuGet.props",
+        "sdk/10.0.402/NuGet.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/ComputeTargets/Microsoft.NET.Sdk.Publish.ComputeFiles.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/CopyTargets/Microsoft.NET.Sdk.Publish.CopyFiles.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/CopyTargets/Microsoft.NET.Sdk.Publish.FilterFiles.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/DotNetCLIToolTargets/Microsoft.NET.Sdk.DotNetCLITool.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/Microsoft.NET.Sdk.Publish.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/Microsoft.NET.Sdk.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/PublishProfiles/Default.pubxml",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/PublishTargets/Microsoft.NET.Sdk.Publish.FileSystem.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Publish/targets/TransformTargets/Microsoft.NET.Sdk.Publish.TransformFiles.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.CodeGeneration.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.Configuration.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.DesignTime.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.GenerateAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.MvcApplicationPartsDiscovery.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.SourceGenerators.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Sdk.Razor.CurrentVersion.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Razor/targets/Sdk.Razor.CurrentVersion.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/Sdk/Sdk.StaticWebAssets.StaticAssets.ProjectSystem.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.Compression.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.ContentTypeMappings.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.EmbeddedAssets.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.FingerprintingPatterns.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.JSModules.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.Pack.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.References.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.ScopedCss.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.SingleTargeting.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Microsoft.NET.Sdk.StaticWebAssets.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Sdk.StaticWebAssets.CurrentVersion.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.StaticWebAssets/targets/Sdk.StaticWebAssets.CurrentVersion.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/targets/Microsoft.NET.Sdk.Web.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/targets/Microsoft.NET.Sdk.Web.DefaultItems.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/targets/Microsoft.NET.Sdk.Web.ProjectSystem.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web.ProjectSystem/targets/Microsoft.NET.Sdk.Web.ProjectSystem.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/Microsoft.AspNetCore.Analyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/Microsoft.AspNetCore.Mvc.Analyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/Targets/Sdk.Server.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.Web/Targets/Sdk.Server.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
+      ],
+      "compileCount": 10,
+      "projectReferenceCount": 1
+    },
+    {
+      "project": "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
+      "targetFramework": "net10.0",
+      "sdk": "10.0.402",
+      "requiredSourceInputs": [
+        "Compile|examples/BgLang.PublicExample/Program.cs",
+        "Import|Directory.Build.props",
+        "Import|examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
+        "Project|examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
+        "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
+      ],
+      "externalSdkInputs": [
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.props",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
+        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.Common.targets",
+        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.CSharp.targets",
+        "sdk/10.0.402/Microsoft.Managed.After.targets",
+        "sdk/10.0.402/Microsoft.Managed.Before.targets",
+        "sdk/10.0.402/Microsoft.NET.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
+        "sdk/10.0.402/Microsoft.TestPlatform.targets",
+        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
+        "sdk/10.0.402/NuGet.props",
+        "sdk/10.0.402/NuGet.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
+      ],
+      "compileCount": 1,
+      "projectReferenceCount": 1
+    },
     {
       "project": "src/BgLang.Api/BgLang.Api.csproj",
       "targetFramework": "net10.0",
       "sdk": "10.0.402",
       "requiredSourceInputs": [
+        "Compile|src/BgLang.Api/Kernel/AssemblyInfo.cs",
         "Compile|src/BgLang.Api/Kernel/BulgarianLanguageSession.cs",
+        "Compile|src/BgLang.Api/Kernel/TextReadingInventorySnapshot.cs",
         "Import|Directory.Build.props",
         "Import|src/BgLang.Api/BgLang.Api.csproj",
         "Project|src/BgLang.Api/BgLang.Api.csproj",
@@ -130,7 +454,7 @@
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 1,
+      "compileCount": 3,
       "projectReferenceCount": 2
     },
     {
@@ -138,14 +462,21 @@
       "targetFramework": "net10.0",
       "sdk": "10.0.402",
       "requiredSourceInputs": [
+        "Compile|src/BgLang.Contracts/Kernel/DocumentReadingProfile.cs",
         "Compile|src/BgLang.Contracts/Kernel/ExactSelfReadingRequirement.cs",
         "Compile|src/BgLang.Contracts/Kernel/FuzzyMatch.cs",
+        "Compile|src/BgLang.Contracts/Kernel/LexicalEntry.cs",
+        "Compile|src/BgLang.Contracts/Kernel/LexicalEntryLookup.cs",
+        "Compile|src/BgLang.Contracts/Kernel/LexicalTextEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/LookupMode.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphKind.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalArticle.cs",
+        "Compile|src/BgLang.Contracts/Kernel/MorphologicalCase.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalFeatures.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalGender.cs",
+        "Compile|src/BgLang.Contracts/Kernel/MorphologicalNameKind.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalNumber.cs",
+        "Compile|src/BgLang.Contracts/Kernel/MorphologicalParticipleKind.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalPartOfSpeech.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalPerson.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalTense.cs",
@@ -154,12 +485,26 @@
         "Compile|src/BgLang.Contracts/Kernel/MorphSegment.cs",
         "Compile|src/BgLang.Contracts/Kernel/PackageProvenance.cs",
         "Compile|src/BgLang.Contracts/Kernel/PhoneticEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/ProperNameEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/SentenceSpan.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextAnalysis.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextContextEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextContextOptions.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextDiagnostic.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextMetrics.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextReadingInventory.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextSpellingEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextSyntaxEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextValidationEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextWordConstructionEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/TokenAnalysis.cs",
         "Compile|src/BgLang.Contracts/Kernel/TokenKind.cs",
         "Compile|src/BgLang.Contracts/Kernel/WordAnalysis.cs",
+        "Compile|src/BgLang.Contracts/Kernel/WordConstructionCandidate.cs",
+        "Compile|src/BgLang.Contracts/Kernel/WordConstructionMatch.cs",
+        "Compile|src/BgLang.Contracts/Kernel/WordConstructionOwnerEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/WordConstructionResult.cs",
+        "Compile|src/BgLang.Contracts/Kernel/WordConstructionStatus.cs",
         "Compile|src/BgLang.Contracts/Kernel/WordDecomposition.cs",
         "Compile|src/BgLang.Contracts/Kernel/WordDerivation.cs",
         "Compile|src/BgLang.Contracts/Kernel/WordForm.cs",
@@ -284,7 +629,7 @@
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 28,
+      "compileCount": 49,
       "projectReferenceCount": 0
     },
     {
@@ -292,6 +637,7 @@
       "targetFramework": "net10.0",
       "sdk": "10.0.402",
       "requiredSourceInputs": [
+        "Compile|src/BgLang.Core/Kernel/AnnotationPhrase.cs",
         "Compile|src/BgLang.Core/Kernel/ArticleCoverageEvidenceAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/AssemblyInfo.cs",
         "Compile|src/BgLang.Core/Kernel/BasicSentenceShapeAnalyzer.cs",
@@ -307,7 +653,15 @@
         "Compile|src/BgLang.Core/Kernel/ConditionalRootProof.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSeedIndex.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSupportInventory.cs",
+        "Compile|src/BgLang.Core/Kernel/ConstructionSpanMatcher.cs",
+        "Compile|src/BgLang.Core/Kernel/ConstructionTemplateComposer.cs",
+        "Compile|src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
+        "Compile|src/BgLang.Core/Kernel/ContextJointSelection.cs",
+        "Compile|src/BgLang.Core/Kernel/ContextLanes.cs",
+        "Compile|src/BgLang.Core/Kernel/ContextReadingProjection.cs",
         "Compile|src/BgLang.Core/Kernel/DawgIndex.cs",
+        "Compile|src/BgLang.Core/Kernel/DocumentReadingProfileAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/ExactLookupResult.cs",
         "Compile|src/BgLang.Core/Kernel/ExactWordSegmenter.cs",
         "Compile|src/BgLang.Core/Kernel/GeneratedLexemeSource.cs",
         "Compile|src/BgLang.Core/Kernel/GraphSearchBudget.cs",
@@ -329,6 +683,7 @@
         "Compile|src/BgLang.Core/Kernel/NeutralSourceFormInventory.cs",
         "Compile|src/BgLang.Core/Kernel/OrdinaryBaseProofCache.cs",
         "Compile|src/BgLang.Core/Kernel/OrdinaryParadigmAlias.cs",
+        "Compile|src/BgLang.Core/Kernel/PackageLexicalCatalog.cs",
         "Compile|src/BgLang.Core/Kernel/PackageLoadEvents.cs",
         "Compile|src/BgLang.Core/Kernel/ParadigmProgram.cs",
         "Compile|src/BgLang.Core/Kernel/ParadigmReverseIndex.cs",
@@ -336,16 +691,24 @@
         "Compile|src/BgLang.Core/Kernel/PathMorphologyProjectionPolicy.cs",
         "Compile|src/BgLang.Core/Kernel/PrepositionComplementAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/PronounVerbAgreementAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/ProperNameAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/ProperNameEvidenceAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/ReviewedCliticPolicy.cs",
         "Compile|src/BgLang.Core/Kernel/ReviewedVerbCliticPredicateGroupAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/RuntimePackageState.cs",
         "Compile|src/BgLang.Core/Kernel/SentenceBoundaryDetector.cs",
+        "Compile|src/BgLang.Core/Kernel/SpellingCandidateCache.cs",
         "Compile|src/BgLang.Core/Kernel/SpellingProjectionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/StrictJson.cs",
         "Compile|src/BgLang.Core/Kernel/StyleRepetitionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/SuffixReadingCursor.cs",
+        "Compile|src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
+        "Compile|src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/TextMetricsAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/TextSpellingAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/WordConstructionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/WordFormationAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/WordFormationEvidenceAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/WordFormationGraph.cs",
@@ -470,7 +833,283 @@
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 59,
+      "compileCount": 77,
+      "projectReferenceCount": 1
+    },
+    {
+      "project": "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
+      "targetFramework": "net10.0",
+      "sdk": "10.0.402",
+      "requiredSourceInputs": [
+        "Compile|tests/BgLang.Public.Tests/PublicPackageTests.cs",
+        "Content|data/dictionary/public-input-lock.v1.json",
+        "Content|tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json",
+        "Content|tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
+        "Import|Directory.Build.props",
+        "Import|tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
+        "PackageLock|tests/BgLang.Public.Tests/packages.lock.json",
+        "Project|tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
+        "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
+      ],
+      "externalSdkInputs": [
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.props",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
+        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.Common.targets",
+        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.CSharp.targets",
+        "sdk/10.0.402/Microsoft.Managed.After.targets",
+        "sdk/10.0.402/Microsoft.Managed.Before.targets",
+        "sdk/10.0.402/Microsoft.NET.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
+        "sdk/10.0.402/Microsoft.TestPlatform.targets",
+        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
+        "sdk/10.0.402/NuGet.props",
+        "sdk/10.0.402/NuGet.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
+      ],
+      "compileCount": 1,
+      "projectReferenceCount": 1
+    },
+    {
+      "project": "tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
+      "targetFramework": "net10.0",
+      "sdk": "10.0.402",
+      "requiredSourceInputs": [
+        "Compile|tests/BgLang.Web.Tests/ConstructionHttpTests.cs",
+        "Compile|tests/BgLang.Web.Tests/ConstructionResponseTests.cs",
+        "Compile|tests/BgLang.Web.Tests/ContextCompositionHttpTests.cs",
+        "Compile|tests/BgLang.Web.Tests/ContextCompositionResponseTests.cs",
+        "Compile|tests/BgLang.Web.Tests/DefaultResponseTests.cs",
+        "Compile|tests/BgLang.Web.Tests/FullPackageHttpTests.cs",
+        "Compile|tests/BgLang.Web.Tests/HttpBoundaryTests.cs",
+        "Compile|tests/BgLang.Web.Tests/LexicalHttpTests.cs",
+        "Compile|tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
+        "Compile|tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
+        "Compile|tests/BgLang.Web.Tests/TextAnalysisCancellationTests.cs",
+        "Compile|tests/BgLang.Web.Tests/TextCompositionHttpFixture.cs",
+        "Compile|tests/BgLang.Web.Tests/TextCompositionOptInHttpTests.cs",
+        "Compile|tests/BgLang.Web.Tests/TextCompositionResponseTests.cs",
+        "Compile|tests/BgLang.Web.Tests/TextMatchProjectionTests.cs",
+        "CopiedNone|tests/BgLang.Web.Tests/Fixtures/dense-unknown-text.v1.txt",
+        "CopiedNone|tests/BgLang.Web.Tests/Fixtures/text-composition-http-independent.v1.json",
+        "Import|Directory.Build.props",
+        "Import|tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
+        "Project|tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
+        "ProjectReference|apps/BgLang.Web/BgLang.Web.csproj"
+      ],
+      "externalSdkInputs": [
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
+        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.props",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
+        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.Common.targets",
+        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
+        "sdk/10.0.402/Microsoft.CSharp.targets",
+        "sdk/10.0.402/Microsoft.Managed.After.targets",
+        "sdk/10.0.402/Microsoft.Managed.Before.targets",
+        "sdk/10.0.402/Microsoft.NET.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
+        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
+        "sdk/10.0.402/Microsoft.TestPlatform.targets",
+        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
+        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
+        "sdk/10.0.402/NuGet.props",
+        "sdk/10.0.402/NuGet.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
+        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
+        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
+        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
+      ],
+      "compileCount": 15,
       "projectReferenceCount": 1
     },
     {
@@ -610,277 +1249,18 @@
       ],
       "compileCount": 10,
       "projectReferenceCount": 2
-    },
-    {
-      "project": "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-      "targetFramework": "net10.0",
-      "sdk": "10.0.402",
-      "requiredSourceInputs": [
-        "Compile|tests/BgLang.Public.Tests/PublicPackageTests.cs",
-        "Content|data/dictionary/public-input-lock.v1.json",
-        "Content|tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
-        "Import|Directory.Build.props",
-        "Import|tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-        "PackageLock|tests/BgLang.Public.Tests/packages.lock.json",
-        "Project|tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-        "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
-      ],
-      "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
-        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
-        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
-        "sdk/10.0.402/Current/Microsoft.Common.props",
-        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
-        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
-        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
-        "sdk/10.0.402/Microsoft.Common.targets",
-        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
-        "sdk/10.0.402/Microsoft.CSharp.targets",
-        "sdk/10.0.402/Microsoft.Managed.After.targets",
-        "sdk/10.0.402/Microsoft.Managed.Before.targets",
-        "sdk/10.0.402/Microsoft.NET.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
-        "sdk/10.0.402/Microsoft.TestPlatform.targets",
-        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
-        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
-        "sdk/10.0.402/NuGet.props",
-        "sdk/10.0.402/NuGet.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
-        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
-      ],
-      "compileCount": 1,
-      "projectReferenceCount": 1
-    },
-    {
-      "project": "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
-      "targetFramework": "net10.0",
-      "sdk": "10.0.402",
-      "requiredSourceInputs": [
-        "Compile|examples/BgLang.PublicExample/Program.cs",
-        "Import|Directory.Build.props",
-        "Import|examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
-        "Project|examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
-        "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
-      ],
-      "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net8/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net9/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net6/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net7/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net8/10.0.113/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.net9/10.0.113/WorkloadManifest.targets",
-        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.props",
-        "sdk/10.0.402/Containers/build/Microsoft.NET.Build.Containers.targets",
-        "sdk/10.0.402/Current/Microsoft.Common.props",
-        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.NET.Build.Extensions.targets",
-        "sdk/10.0.402/Current/Microsoft.Common.targets/ImportAfter/Microsoft.TestPlatform.ImportAfter.targets",
-        "sdk/10.0.402/Microsoft.Common.CurrentVersion.targets",
-        "sdk/10.0.402/Microsoft.Common.targets",
-        "sdk/10.0.402/Microsoft.CSharp.CurrentVersion.targets",
-        "sdk/10.0.402/Microsoft.CSharp.targets",
-        "sdk/10.0.402/Microsoft.Managed.After.targets",
-        "sdk/10.0.402/Microsoft.Managed.Before.targets",
-        "sdk/10.0.402/Microsoft.NET.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledCliTools.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledMSBuildInformation.props",
-        "sdk/10.0.402/Microsoft.NETCoreSdk.BundledVersions.props",
-        "sdk/10.0.402/Microsoft.TestPlatform.targets",
-        "sdk/10.0.402/Microsoft/Microsoft.NET.Build.Extensions/Microsoft.NET.Build.Extensions.targets",
-        "sdk/10.0.402/NuGet.Build.Tasks.Pack.targets",
-        "sdk/10.0.402/NuGet.props",
-        "sdk/10.0.402/NuGet.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.CSharp.Core.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.CurrentVersions.targets",
-        "sdk/10.0.402/Roslyn/Microsoft.Managed.Core.targets",
-        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.Build.Tasks.Git/build/Microsoft.Build.Tasks.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WindowsForms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/Microsoft.NET.Sdk.WindowsDesktop.WPF.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk.WindowsDesktop/targets/System.Windows.Forms.Analyzers.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/build/Microsoft.CodeAnalysis.NetAnalyzers.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/codestyle/cs/build/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/Sdk/UseArtifactsOutputPath.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ApiCompat.ValidatePackage.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.AspireWorkloadDeprecation.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ComposeStore.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ConflictResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.CrossGen.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultArtifactsPath.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultAssemblyInfo.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultPackageConflictOverrides.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DesignerSupport.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DisableStandardFrameworkResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.EolTargetFrameworks.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateGlobalUsings.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateSupportedRuntime.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetOfflineCache.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.ObsoleteReferences.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackProjectTool.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PackTool.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.PreserveCompilationContext.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Publish.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Analyzers.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportWorkloads.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Shared.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.SourceLink.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedPlatforms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.SupportedTargetFrameworks.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Windows.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.WindowsSdkSupportedTargetPlatforms.props",
-        "sdk/10.0.402/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/InitializeSourceControlInformation.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
-        "sdk/10.0.402/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
-      ],
-      "compileCount": 1,
-      "projectReferenceCount": 1
     }
   ],
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 9671,
-      "sha256": "eb1f7d3492c35d631e18230bd62a9e9404fc00a837e1f51dbeea80bda790502f"
+      "bytes": 11542,
+      "sha256": "ad6592c5a0b6f0bc187a372f7a3ebd7340ab85df3fee98e61422533edcf0325c"
     },
     {
       "path": ".github/workflows/windows-public.yml",
-      "bytes": 2472,
-      "sha256": "a8280e26be89bf179ed80d36722852c002c220daba560a24c147dff432f8f60d"
+      "bytes": 3520,
+      "sha256": "4539334bee785eeb1bd9df4eea9599b53501ec81b71564cfc595368d62189c25"
     },
     {
       "path": ".gitignore",
@@ -904,8 +1284,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 14113,
-      "sha256": "f4705f965a1111556c527c6714cc438ad0cab7afbee88b32441f8e5fb2c41bb3"
+      "bytes": 22056,
+      "sha256": "4e518117677e9bf877882cc51ce7adbb775738067b8166efe02b730563f80a96"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -913,9 +1293,94 @@
       "sha256": "41db46a80d99b8ba6ff6f50f24f392fc938ca0a80f8663145b21fdb2e45a0f8b"
     },
     {
+      "path": "apps/BgLang.Web/ApiOperations.cs",
+      "bytes": 8284,
+      "sha256": "1afb3c5d99519914416e455cba6e2bf246d61d33726a7c94594ef204cfe06923"
+    },
+    {
+      "path": "apps/BgLang.Web/BgLang.Web.csproj",
+      "bytes": 443,
+      "sha256": "074d7d502c69c9837f32318ccd4cef60cdb205312c45c999265b1c9d5f6976e7"
+    },
+    {
+      "path": "apps/BgLang.Web/ClientRateLimit.cs",
+      "bytes": 1572,
+      "sha256": "b6c735d9c094776c99939bf578f31dc292ba1c7c898edd7bb95e6990924bca49"
+    },
+    {
+      "path": "apps/BgLang.Web/HttpContract.cs",
+      "bytes": 3484,
+      "sha256": "ff503db89583935fa1a3450fab03eb251423b42a14b2e0fcefc93fede6e1f00a"
+    },
+    {
+      "path": "apps/BgLang.Web/Program.cs",
+      "bytes": 92,
+      "sha256": "5cae96ea20fba79a4db0830e8514ac96c7a39a6575828a07b56ea1b0ea9bb288"
+    },
+    {
+      "path": "apps/BgLang.Web/README.md",
+      "bytes": 53953,
+      "sha256": "0486fd31b3f376a6f654169ff0c8d5059990e795a821712343c36de81afd788b"
+    },
+    {
+      "path": "apps/BgLang.Web/ResponseWriter.cs",
+      "bytes": 4174,
+      "sha256": "10ee75d975a31b1ac711fbf844318edd01e5ec82125c85157ee7040e06cf4754"
+    },
+    {
+      "path": "apps/BgLang.Web/SerializedWorkQueue.cs",
+      "bytes": 5315,
+      "sha256": "59f8ccf522d8a11bbf9ab4ae03d1794d814c6e7d3402db4a15494a3c36deb1ac"
+    },
+    {
+      "path": "apps/BgLang.Web/SessionHost.cs",
+      "bytes": 3558,
+      "sha256": "664dc8a9b02f3237fb47c572fe0d4e22529388efc8ebe5d2050394bfbb43e3eb"
+    },
+    {
+      "path": "apps/BgLang.Web/SharedDonorResponse.cs",
+      "bytes": 8330,
+      "sha256": "874e34481c436d6c9ad00470feed6c41636a1d71246fb6193b7e2082285183e6"
+    },
+    {
+      "path": "apps/BgLang.Web/TextMatchProjection.cs",
+      "bytes": 6144,
+      "sha256": "e2c9d1d4d3f7a9b2bc1e4cfe4f8df0876613aaf64edceaa7913d9830d2d802f9"
+    },
+    {
+      "path": "apps/BgLang.Web/WebHostFactory.cs",
+      "bytes": 10035,
+      "sha256": "63d957cb95869c1c5e20c06d6a13de9c92e526cc0507f4b92164411acd5f815a"
+    },
+    {
+      "path": "apps/BgLang.Web/scope-metrics.json",
+      "bytes": 12995,
+      "sha256": "edbccafbe73d75406ea051d3fec4a9e71d2ed458921d1b1abf79363e78b2fa23"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.html",
+      "bytes": 8335,
+      "sha256": "24c0f01305e5895c3fea13af29724eee27b329d708136cd153f8106b9e4db742"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/demo.js",
+      "bytes": 30810,
+      "sha256": "ff60e19b0e42fc714f1481ae00eaece29d5c3cca0eda8d181fd79a9c6814a2d4"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/docs.html",
+      "bytes": 34816,
+      "sha256": "beffdfc0ce4db4e5dd1769da5d4dcdec41abb33b357a736315285e771d87ca28"
+    },
+    {
+      "path": "apps/BgLang.Web/wwwroot/site.css",
+      "bytes": 3222,
+      "sha256": "27d1e5ffb67ba9cfa17ff3cc9ef69b95d3c56af4dcdaeaa729550920f943692f"
+    },
+    {
       "path": "data/dictionary/public-input-lock.v1.json",
-      "bytes": 4487,
-      "sha256": "b134d9b363fa61a98797a2645dbff84b4a14a6589e1f1c000422520753bdc874"
+      "bytes": 8213,
+      "sha256": "e10799c3756b0a89f776efe8bc948500e81a6e49f80501f902fdedc3fcd77274"
     },
     {
       "path": "data/word-formation/word-formation-source.v0.json",
@@ -929,8 +1394,8 @@
     },
     {
       "path": "examples/BgLang.PublicExample/Program.cs",
-      "bytes": 17131,
-      "sha256": "1a01c5c7fc63a73f3f0f33ccbbb71b08a2ccc73423cf5afe42b00ebdb20ff1c8"
+      "bytes": 17331,
+      "sha256": "bf220c3af51cbbf51fdde6df63e0b86b518728ffd3ba515a42e48abcfcb57972"
     },
     {
       "path": "global.json",
@@ -939,23 +1404,28 @@
     },
     {
       "path": "packaging/Build-PublicPackage.ps1",
-      "bytes": 4781,
-      "sha256": "77de9bcac4869ebc68695cbaba05412169199c2ab2d6000453f607a47a669719"
+      "bytes": 20387,
+      "sha256": "4687a4f9ab899e903cb6c20ff02fb6f2180ef5dd822e7f2154ef9c0539942d19"
     },
     {
       "path": "packaging/Export-PublicSource.ps1",
-      "bytes": 13849,
-      "sha256": "2870df887cfd162385f467629c97b15119a0ffc92f3a0bc84ea3a5bab87eab17"
+      "bytes": 16389,
+      "sha256": "a0074053f4a5a338cd6e49a647532a4e9881e08cf0a550b59a6ec4c619969dda"
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 20136,
-      "sha256": "891874c5831c6c033b4f1f3f917b3e12a43002d9105508de464acc8e0edbdf62"
+      "bytes": 32920,
+      "sha256": "1149aa1070c4cb556f34b922b80047508f20a1e0319260275e7ff4d4d1cc8e8d"
+    },
+    {
+      "path": "packaging/Verify-PublicConsumerJson.ps1",
+      "bytes": 17717,
+      "sha256": "463056f49145c3ee5d38e9174399bdc1c4a0ebe62d86cdd4e1dffeea9b11d1f2"
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 7761,
-      "sha256": "bdcc09160b949b5d725bf3e1e88b200099635fa3029d79631f65671c44e8a5c6"
+      "bytes": 12124,
+      "sha256": "0d0d777829feaef5cadbc50c5d22c6328b8102096905e775de90babfab16570b"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -963,14 +1433,29 @@
       "sha256": "226954fa95084c328a39c9b387d9e842e46bc9c0b25783b8af45007a18b7bae5"
     },
     {
+      "path": "src/BgLang.Api/Kernel/AssemblyInfo.cs",
+      "bytes": 182,
+      "sha256": "9f3b345e14619c9df07fa162827ef4c621918cd6ebd9995ba1cef558f32054aa"
+    },
+    {
       "path": "src/BgLang.Api/Kernel/BulgarianLanguageSession.cs",
-      "bytes": 14399,
-      "sha256": "f6a3e9dfffb2de11add4b2351c8b6b32eca06ea70c2b4b28ec0e13010bc77899"
+      "bytes": 20613,
+      "sha256": "ad0516a6262b3b70189c8898ecc5095209a7d7d57d4c6568e0997d78ef319cfd"
+    },
+    {
+      "path": "src/BgLang.Api/Kernel/TextReadingInventorySnapshot.cs",
+      "bytes": 4862,
+      "sha256": "9056a25e3b52789525acd681ae28a3e521c8fac7e9d98c0319f3c5b043c4d4d3"
     },
     {
       "path": "src/BgLang.Contracts/BgLang.Contracts.csproj",
       "bytes": 360,
       "sha256": "3fbeb38265b5f91bfeebf181e54a0b5ad671998638707107c2d9f92167ff51be"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/DocumentReadingProfile.cs",
+      "bytes": 1971,
+      "sha256": "e31cce1d48966c7fed11c6628ca0aedc34e354b748757f989e40fab9a0022e25"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/ExactSelfReadingRequirement.cs",
@@ -981,6 +1466,21 @@
       "path": "src/BgLang.Contracts/Kernel/FuzzyMatch.cs",
       "bytes": 254,
       "sha256": "fcf660125765ab9accaf54124468f4e53dcf9be6a3c25226b50377182f7608f3"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/LexicalEntry.cs",
+      "bytes": 1626,
+      "sha256": "4692c2c0d9ea80fb5236d17511cfd2baed3c4e2409305dd9cb9bd87f3dacf9e3"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/LexicalEntryLookup.cs",
+      "bytes": 699,
+      "sha256": "e8cee27d376fdacece0e076c9d495babf078e136164995d05899814e2f7618ce"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/LexicalTextEvidence.cs",
+      "bytes": 921,
+      "sha256": "26e429dd6a496672aaa6122105de22f1fcb0946d6d328f0e40681294d083a790"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/LookupMode.cs",
@@ -1003,14 +1503,24 @@
       "sha256": "ebe7980eb8e17bfdfbf5fbf1f8c83f54023e74d39657887e5a8cb07f87124e98"
     },
     {
+      "path": "src/BgLang.Contracts/Kernel/MorphologicalCase.cs",
+      "bytes": 208,
+      "sha256": "d74480e5856714eec26fb76156e865bf918c04d70ec2480d44e0310651d87f09"
+    },
+    {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalFeatures.cs",
-      "bytes": 10951,
-      "sha256": "7e82364b4d161d88f2990e1352a3154c9b45082b30cca154f6e3c68c01ac97ba"
+      "bytes": 14829,
+      "sha256": "6f02406fe720a5aae1b999eb08d3b019ef9cc9856cf2e23718dd2a133e4c19a0"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalGender.cs",
       "bytes": 171,
       "sha256": "ac53d45594ca20ed7ef8985517183806363e483503b83c9b44bce14389d148ce"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/MorphologicalNameKind.cs",
+      "bytes": 205,
+      "sha256": "2d43ef72f6985518c593b3fada05c05ccfa6b3141e612720f79f10e95d598d76"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalNumber.cs",
@@ -1021,6 +1531,11 @@
       "path": "src/BgLang.Contracts/Kernel/MorphologicalPartOfSpeech.cs",
       "bytes": 308,
       "sha256": "16714dd30452bd23d4a407af41a277b1a606234bc51ace8a5846a18888d73ac6"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/MorphologicalParticipleKind.cs",
+      "bytes": 224,
+      "sha256": "b8605f5667fbca8d84246272a5a49bf3e79663fc8bfa6b0b93a3a4d6ecf0d7a2"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalPerson.cs",
@@ -1053,19 +1568,64 @@
       "sha256": "ab9e710d20e89e20e35b9d3d22f62a9220a895da7ffeddf03b8a71a9c249bde6"
     },
     {
+      "path": "src/BgLang.Contracts/Kernel/ProperNameEvidence.cs",
+      "bytes": 1653,
+      "sha256": "e5deb2cbd768dec94cfb35b7a17fb43af54c80ea6c829ea6d6426d6f784ef1a1"
+    },
+    {
       "path": "src/BgLang.Contracts/Kernel/SentenceSpan.cs",
       "bytes": 206,
       "sha256": "e48ca2a9ca05c6b5e7d9e54c40df3f6ce07560026611b2a9be06c56d2a6a024f"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextAnalysis.cs",
-      "bytes": 840,
-      "sha256": "c5a92e24be4f6168bea76b7cf58a3fb4cbccb814448a5d7f3ba4fdaba3c67c02"
+      "bytes": 2571,
+      "sha256": "8c0068bc050fc7365ab1f176009e898a957ed239912254b22e9bae7ac1105a5f"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextContextEvidence.cs",
+      "bytes": 1271,
+      "sha256": "495b2d60aa327f4db62f324240f2381c955b3ff909ed2db9d0b62f51ea91ba82"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextContextOptions.cs",
+      "bytes": 487,
+      "sha256": "511197d011eada68f95299b22c91e3360147032cc0a8498f81b860e391c5d9fa"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextDiagnostic.cs",
       "bytes": 733,
       "sha256": "90468c74618ec60cdbe073c4ce3c0c671339852e644d8a456ae443d2492a95c8"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextMetrics.cs",
+      "bytes": 998,
+      "sha256": "9f3e9ca0cfeafbb7a782e085fe38ca33562fbe01fbbdf742b9c6d3c72fa2b0a3"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextReadingInventory.cs",
+      "bytes": 5180,
+      "sha256": "f6fb47591628cbff7f38270969e7c1765bf6ae39c7655a8927f24450b13f9152"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextSpellingEvidence.cs",
+      "bytes": 1018,
+      "sha256": "3f36d1bbc4e1ab36d9ca7f19f5274a9da3b45b4cb69e75fdd49c1b56d3a7f4f0"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextSyntaxEvidence.cs",
+      "bytes": 1343,
+      "sha256": "85db55be953439a8dee49ff02620bee96ec38f7882654cd54c58de54dbe7ae33"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextValidationEvidence.cs",
+      "bytes": 701,
+      "sha256": "6c191693f8efa3297f956b06a7012f301a916f40e658f536d63b4efa9ec0b46e"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextWordConstructionEvidence.cs",
+      "bytes": 796,
+      "sha256": "dc97c37716bc3a90b2b4591106733516f55127b650c684a1aeef4211bde27d1a"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TokenAnalysis.cs",
@@ -1081,6 +1641,31 @@
       "path": "src/BgLang.Contracts/Kernel/WordAnalysis.cs",
       "bytes": 2737,
       "sha256": "4acacb404db3b6c47ac1f0cd207e4bffd6030ed8a4a786bc8742ecf21c842247"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/WordConstructionCandidate.cs",
+      "bytes": 470,
+      "sha256": "514cdc6863e5b562df2ef0fd8933fd5490b48d5ca8f27045dc857bab20b4fded"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/WordConstructionMatch.cs",
+      "bytes": 257,
+      "sha256": "d08f1832a0d7b143b1ba506c76f16ccb682d2dcfb751f1b75a34c5d54556f675"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/WordConstructionOwnerEvidence.cs",
+      "bytes": 317,
+      "sha256": "794f0204d9048d35bf681d8e804d15587c6ebbb22646ed2c46986dc284c84efb"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/WordConstructionResult.cs",
+      "bytes": 493,
+      "sha256": "462fe3923d3b1d0775fc99e62126b660ccbe0abb2493e1cecb31f84ebcb5b3bb"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/WordConstructionStatus.cs",
+      "bytes": 154,
+      "sha256": "a6b2ed4235e89693298259c9ac7e4f8c2dedf6066c38448aa0df063e6ee6c6a5"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordDecomposition.cs",
@@ -1121,6 +1706,11 @@
       "path": "src/BgLang.Core/BgLang.Core.csproj",
       "bytes": 440,
       "sha256": "6ceb4826a3999c31682ef7b1297e044fddf8533c411ed33b0ce7a5700efdc706"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/AnnotationPhrase.cs",
+      "bytes": 1512,
+      "sha256": "e613770366015b1f7012396e57c400b0c90cf07e520e58e4cc38a135a3faf08a"
     },
     {
       "path": "src/BgLang.Core/Kernel/ArticleCoverageEvidenceAnalyzer.cs",
@@ -1169,8 +1759,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianStressLookup.cs",
-      "bytes": 1803,
-      "sha256": "1c03dac0bb5037f34146b172434e2b3b6684b5044530162bec187d7aa3e45044"
+      "bytes": 5605,
+      "sha256": "4b3bd06a62e0d3cae7dc80b60b08e819e43854c57898131bedd7bc7828ffc9f1"
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianTextNormalizer.cs",
@@ -1198,9 +1788,49 @@
       "sha256": "7d884f9fafbb2def0c0befe3ce68bc3a616b3cd10965cd901afbea61ba0e92a8"
     },
     {
+      "path": "src/BgLang.Core/Kernel/ConstructionSpanMatcher.cs",
+      "bytes": 5883,
+      "sha256": "9bbc26d92ae05cdc2da5880ef6a5db4649856e8170b07e6b0c189b54ce59e401"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ConstructionTemplateComposer.cs",
+      "bytes": 12031,
+      "sha256": "4eef6ddbca9866c6970a45fc749b1cd5a85d9263813b253b84847c3f42756f53"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
+      "bytes": 3197,
+      "sha256": "266466f71d1e1f6e42d77c03c88c983d882ffe0150a773c785161ab1af83bb0d"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ContextJointSelection.cs",
+      "bytes": 7845,
+      "sha256": "373489fff008cbfea8e4be0913106933f70d42c5349932d21e88c6dfa12f8f77"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ContextLanes.cs",
+      "bytes": 28064,
+      "sha256": "3fbf3bb26caf5c6dc0338bea42cf453cc9781005f55fa194a0942977ca1469b1"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ContextReadingProjection.cs",
+      "bytes": 3308,
+      "sha256": "46fad0967fe053b6b24028793a9d74d556effd0b8baad611a26766e71200943f"
+    },
+    {
       "path": "src/BgLang.Core/Kernel/DawgIndex.cs",
-      "bytes": 24257,
-      "sha256": "fe732eee30921ca7a922fc0110e53752f78660fd8cf6b5cbb7bd69e8e3490a42"
+      "bytes": 27169,
+      "sha256": "224adc48eae3268d05f41dc67009000def7018023500608d87787a581bdb4244"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/DocumentReadingProfileAnalyzer.cs",
+      "bytes": 10438,
+      "sha256": "2b47457f5ec80489ecc16d0002bdc3d60e001f23fb7ee6425bfaf0f4496da5c7"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ExactLookupResult.cs",
+      "bytes": 715,
+      "sha256": "1bfc35c8bbf6b8775bcb90047f466a5e6f0dd437397ef3574c204cd8f515251f"
     },
     {
       "path": "src/BgLang.Core/Kernel/ExactWordSegmenter.cs",
@@ -1249,13 +1879,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/IRuntimeLexicon.cs",
-      "bytes": 1290,
-      "sha256": "624d956619f4c745189f597404f0111b85b24e3d60e74bceae5afa0feaf2339b"
+      "bytes": 2912,
+      "sha256": "8415ab35648bd9fbe75ecb4a3398581dae5ac47bca79ae9b7f1eb90a8671feb8"
     },
     {
       "path": "src/BgLang.Core/Kernel/InMemoryRuntimeLexicon.cs",
-      "bytes": 3217,
-      "sha256": "03a2e4631d1098f68e55cee6c169b16bd632434ca68bb86b46ca58023b97b03e"
+      "bytes": 7137,
+      "sha256": "b037d8fc42fbac7c3eac6f6fab1118a3b624e67f6d7090b3f618bb4805bce591"
     },
     {
       "path": "src/BgLang.Core/Kernel/LastOccurrenceReplacement.cs",
@@ -1264,8 +1894,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/LexemeAnnotations.cs",
-      "bytes": 11887,
-      "sha256": "47bc4eae1ca16e5f557cab5926169d8c37a59932d818e8cbc0cb57d098403b31"
+      "bytes": 12882,
+      "sha256": "8fd9762c4ff1c6126381a989e6a4262ce85578bdf8282e040dc7fdfdd6415ea7"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexicalCliticProjection.cs",
@@ -1274,8 +1904,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/LexicalIdentity.cs",
-      "bytes": 7130,
-      "sha256": "5d64a06fa4b92dd5785419fbbdca834e6a1141d9484cb3b97535efbe15a8ceb6"
+      "bytes": 7541,
+      "sha256": "3105ed856225bb03ac1cbc39adfd2067f983727499da6e57488a9aeff88c22c8"
     },
     {
       "path": "src/BgLang.Core/Kernel/MorphologyProposal.cs",
@@ -1284,8 +1914,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/NeutralDictionaryPackageLoader.cs",
-      "bytes": 36519,
-      "sha256": "f3578f19588a8c95489ac6e8e6f7504b9d5fd1656ffea1781a065583b949e928"
+      "bytes": 37061,
+      "sha256": "ff853380c10bfe1bc7fbd018c794a15c3306981f7ad47d3bc8f79c652d3a87fa"
     },
     {
       "path": "src/BgLang.Core/Kernel/NeutralPackageSnapshot.cs",
@@ -1306,6 +1936,11 @@
       "path": "src/BgLang.Core/Kernel/OrdinaryParadigmAlias.cs",
       "bytes": 290,
       "sha256": "c3640e91aa0b2c8c0c66e83111ca99fc94a172e2c011524dc4cca74a7524733d"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/PackageLexicalCatalog.cs",
+      "bytes": 8282,
+      "sha256": "dc70b701bf7e4a9903e5088ccff17b42c19ce16b5e626f8432002787ee56ba66"
     },
     {
       "path": "src/BgLang.Core/Kernel/PackageLoadEvents.cs",
@@ -1343,9 +1978,14 @@
       "sha256": "aab09969936f7a6cd9d207a18041555563d9c56457170efde50e5d58079f5c7a"
     },
     {
+      "path": "src/BgLang.Core/Kernel/ProperNameAnalyzer.cs",
+      "bytes": 15626,
+      "sha256": "b89f2f165f52c38566046561a880fd466a077fed877558521ba374bad30b1d67"
+    },
+    {
       "path": "src/BgLang.Core/Kernel/ProperNameEvidenceAnalyzer.cs",
-      "bytes": 7628,
-      "sha256": "c74d4772e33a808bec0f1f36eaa71c5c08d3b203d4852b425a85fcfaba4d1d9c"
+      "bytes": 7631,
+      "sha256": "20a847f05cd2f2a060c1f39c6d111ad526e3930d83a6aeff33d878d5d3888ca8"
     },
     {
       "path": "src/BgLang.Core/Kernel/ReviewedCliticPolicy.cs",
@@ -1359,8 +1999,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/RuntimePackageState.cs",
-      "bytes": 2417,
-      "sha256": "2a0094e9cfa5b14ed74726851d289126da6a46aa87abb74a13890ae6bdde3385"
+      "bytes": 2612,
+      "sha256": "7bd73c665b076c12919e0842ad63439f83eeb43d33ae11d300c0ee1dd9a07aa6"
     },
     {
       "path": "src/BgLang.Core/Kernel/SentenceBoundaryDetector.cs",
@@ -1368,9 +2008,14 @@
       "sha256": "1c25cc72d5cb06d3124d797d82f1f1fb8c2b12cffaedc21a9be5b74deeeca64a"
     },
     {
+      "path": "src/BgLang.Core/Kernel/SpellingCandidateCache.cs",
+      "bytes": 1921,
+      "sha256": "36de9a06e49761d44e11af8201c272b18abedf3c2ce461fd6583193edb414e06"
+    },
+    {
       "path": "src/BgLang.Core/Kernel/SpellingProjectionAnalyzer.cs",
-      "bytes": 9038,
-      "sha256": "6fe9de6d324ee8bf0540bb588aa1e38368fd6b1028082626ced89150beff1fa7"
+      "bytes": 8730,
+      "sha256": "cd308471ca8848e5d361f9d54017d556c14783dc3b600d58615792cbc3d8b395"
     },
     {
       "path": "src/BgLang.Core/Kernel/StrictJson.cs",
@@ -1388,9 +2033,39 @@
       "sha256": "474d67000ba49965d42bafde0ab668da4527a9471dcd26c5f479c3776c3eaa0b"
     },
     {
+      "path": "src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
+      "bytes": 28585,
+      "sha256": "6d4569c3dabda71eede454fde5ee59df6709d58d3976e8bbf16b2b0562cf9931"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
+      "bytes": 11862,
+      "sha256": "40d5d6c8e045f770fdc797196aa633d7f659fbac9e39ddd4431b573477b198ec"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/TextMetricsAnalyzer.cs",
+      "bytes": 2372,
+      "sha256": "32511d76f7d538a841819c4bf8f5e12b815c86ba3379af6b540ac8ecb087b6ae"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/TextSpellingAnalyzer.cs",
+      "bytes": 3834,
+      "sha256": "209ab36a32a37e8adc3a6e2fa962b9dce62d2e2c9b0b52523550717a08501245"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
+      "bytes": 29958,
+      "sha256": "d2544ba4705bc07c6ab82569f6ddb27ae92c3f3d855c33ac67acb0f062eab0c0"
+    },
+    {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
       "bytes": 17529,
       "sha256": "204d802ab1f3c44b541aa7909e7c167469f0a7afbfe4491cd9c2026479ff0918"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/WordConstructionAnalyzer.cs",
+      "bytes": 12843,
+      "sha256": "31852dcddc1dfe6d8e428b648dc9fa7350ba877ab569a8863e5b715b5f11e639"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationAnalyzer.cs",
@@ -1419,8 +2094,13 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-      "bytes": 954,
-      "sha256": "02f9903f41465a0ff189cf908ce65d19535b4bb98549e75f6d34a59fb7939136"
+      "bytes": 1108,
+      "sha256": "fe04029302e30ab732ccc707a73a980e9a111baa8a5605dffd08509775b6fc47"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json",
+      "bytes": 1298,
+      "sha256": "4a4da62b4e33643429bc4f7fea50a86e0e73ca6380ca55c6d2b7f972e130b3ba"
     },
     {
       "path": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
@@ -1429,8 +2109,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 37270,
-      "sha256": "e6cf289aab85e318ceeca02c18b21f915b038b3d199604de847c365f692f053b"
+      "bytes": 58519,
+      "sha256": "ca6042e7a31afbe258f8115fe8013e68792b7bf3039d8654236689a30b85bf38"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",
@@ -1438,9 +2118,99 @@
       "sha256": "f0cbe1e7566d90cb67e931f666c8a6d2b30616d5562619f47b916b10880f5bcc"
     },
     {
+      "path": "tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
+      "bytes": 869,
+      "sha256": "aee370322ac58d6f35cff8e856b86fcb1d115a1ae2e783d19032a32c95ceb53d"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/ConstructionHttpTests.cs",
+      "bytes": 16332,
+      "sha256": "c165470f0255be3000587bbda757e6ceea5bf2685530b03b9a968eec5b248287"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/ConstructionResponseTests.cs",
+      "bytes": 8214,
+      "sha256": "c5cdb1a47d39b69403f930a58c6a31959aaef0b0416038d492a6c53734775b6e"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/ContextCompositionHttpTests.cs",
+      "bytes": 16774,
+      "sha256": "05a904628b8271f18e46c01fefc0fac754e41131572f0f0d411c405cc34c8c7c"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/ContextCompositionResponseTests.cs",
+      "bytes": 14160,
+      "sha256": "693239728c104b9552b5b8c66a37cef8e747bd2460b703565b9070540a2bd239"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/DefaultResponseTests.cs",
+      "bytes": 36723,
+      "sha256": "9d28742e1a91bb83e986bfacae3e1552503ddbcdc1af4c2006bfcd2681450448"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/Fixtures/dense-unknown-text.v1.txt",
+      "bytes": 7871,
+      "sha256": "baf55333210537903584f47ecb6b86d159802f6b93198b5195d16c658e0409f3"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/Fixtures/text-composition-http-independent.v1.json",
+      "bytes": 36345,
+      "sha256": "83a4a06887e5a5668237e67ccf9e560824b792731f9bb06f078c91f7912b090e"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/FullPackageHttpTests.cs",
+      "bytes": 20642,
+      "sha256": "ce352b9d3f40d7fc671b9abcf5ea70a2066e52461095297557bd0b80c154d41d"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/HttpBoundaryTests.cs",
+      "bytes": 4137,
+      "sha256": "30cfe115e17b91782c94133f5a6f7d2074f1da580c4a3a1cd207dfb2b737db48"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/LexicalHttpTests.cs",
+      "bytes": 9743,
+      "sha256": "c369cd3bb25dd523e8a89ef2ff8f66188f2d1679383cde48f2d69effa734b4aa"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
+      "bytes": 4805,
+      "sha256": "1a88e5a6bd55411cd40f1e2641f3903c57b01f6c7b934fe78a2cc80071e7f084"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
+      "bytes": 23592,
+      "sha256": "32e3f2edef735ba5cbecc5da303a89d581e651fbbcda42a7f1939a706cf87e84"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextAnalysisCancellationTests.cs",
+      "bytes": 3858,
+      "sha256": "1dcab91ce4160f2c748377725bf0e9c627581c7778f9cb1f4ec3d053710e961d"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextCompositionHttpFixture.cs",
+      "bytes": 6953,
+      "sha256": "67d678ab233593e1c30cdc37d43042595899e9fe087babe1f597e7aa106386ce"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextCompositionOptInHttpTests.cs",
+      "bytes": 12640,
+      "sha256": "cb4c0b3d911143906d7e8e093e8bf9b623f7ff8beef9e2fdc5201db426ef5979"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextCompositionResponseTests.cs",
+      "bytes": 10091,
+      "sha256": "e0522ffd204c4f2ad0ccadc71030d7abf5d46b3540cf824f6307f2ca255a5ed5"
+    },
+    {
+      "path": "tests/BgLang.Web.Tests/TextMatchProjectionTests.cs",
+      "bytes": 30516,
+      "sha256": "f752f2b60cbfaf9057144c3e1b90f7020c65352219b295f11a75e555de6d6703"
+    },
+    {
       "path": "tools/BgLang.SourceBuilder/AuthoringDocument.cs",
-      "bytes": 1738,
-      "sha256": "2c22283f396c4b844987c7429fa0f0121f784666c4bfbeb9e7bc37164d34af6d"
+      "bytes": 1931,
+      "sha256": "fa0a952b4be7ef805d3521ce285dd6d9f1a7fd13f1305aa7c25ae598d340b2fe"
     },
     {
       "path": "tools/BgLang.SourceBuilder/AuthoringLexeme.cs",
@@ -1459,13 +2229,13 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/NeutralSourceBuilder.cs",
-      "bytes": 10256,
-      "sha256": "1dba85c8849b2909a032771da3d05d2fe4786c108193d5644fc168f1af964d73"
+      "bytes": 10423,
+      "sha256": "f4e272ad5a3a2b0f19092b0cdd0ae4714a5eccb694c3a68ff0c3d91f8b45c551"
     },
     {
       "path": "tools/BgLang.SourceBuilder/NeutralSourceEditor.cs",
-      "bytes": 12023,
-      "sha256": "eead0d8adce28682ff527cc9e2066c70c242357072c79d9606c516134ccb158e"
+      "bytes": 12149,
+      "sha256": "4cb8253a70ba19c359c012dc228e75a1a642dc1112b77f18705e37a9d9b2b724"
     },
     {
       "path": "tools/BgLang.SourceBuilder/OwnedStageDirectory.cs",
@@ -1506,21 +2276,6 @@
       "path": "tools/BgLang.SourceBuilder/example.source.jsonl",
       "bytes": 640,
       "sha256": "9f5b05330af57b773d66416e4d26552a1066499a486cea77a0b9d8a4f95d77c9"
-    },
-    {
-      "path": "public-inputs/ela-imperative-corrected-stored-v1/manifest.json",
-      "bytes": 550,
-      "sha256": "9622c2362d32895468bb766f8d135f832faa0590278fa38c6da033bb6b62caf2"
-    },
-    {
-      "path": "public-inputs/ela-imperative-corrected-stored-v1/lexicon.v3.jsonl",
-      "bytes": 268576648,
-      "sha256": "a594daaf7a5336f3e27fe313defb0b81689012209afc7b19dd9acf956ad022ff"
-    },
-    {
-      "path": "public-inputs/ela-imperative-corrected-stored-v1/word-formation.v0.json",
-      "bytes": 531796,
-      "sha256": "c86db9a91e612464fdf76348be77356463816b1a5e09b8713fb0f4077630c44d"
     }
   ],
   "publication": false

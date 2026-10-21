@@ -130,3 +130,28 @@ tests/BgLang.Tests/Kernel/Fixtures/residual10-native-consumer-pins.v1.json text 
 tests/BgLang.Tests/Kernel/Fixtures/adverb-degree-native-consumer-pins.v1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/adverb-provenance-native-consumer-pins.v1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/ela-imperative-native-consumer-pins.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/lexical-annotated-consumer-pins.v1.json text eol=lf
+tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/lexical-collision-occurrences.v1.tsv text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/text-inventory-independent.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/text-profile-independent.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/text-full-inventory-controls.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/text-composition-independent.v1.json text eol=lf
+tests/BgLang.Web.Tests/Fixtures/text-composition-http-independent.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/text-acquisition-independent.v1.json text eol=lf
+
+tests/BgLang.Tests/Kernel/Fixtures/common-feature-context-compatibility.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/bounded-validation-independent-inputs.json text eol=lf
+
+tests/BgLang.Tests/Kernel/Fixtures/contextual-syntax-independent-literals-1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/syntax-role-validation-independent-literals-1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/syntax-role-scope-gap-addendum-1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/joint-selection-independent-literals.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/syntax-role-dispatch-and-source-map.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/context-typed-fixture-inputs.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/syntax-role-exact-proof-bindings.v1.json text eol=lf
+
+# Owner-bound construction literal fixture bytes.
+tests/BgLang.Tests/Kernel/Fixtures/construction-literal-fixture-1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/construction-boundary-controls-1.json text eol=lf
+public-inputs/lexical-annotated-source-v1/lexemes.source.json -text

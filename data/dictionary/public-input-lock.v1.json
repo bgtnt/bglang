@@ -1,11 +1,12 @@
 {
   "schema": "bglang.public-input-lock.v1",
-  "status": "LOCKED_LOCAL_RELEASE_CANDIDATE",
+  "status": "LOCKED_ANNOTATED_SUCCESSOR_PUBLICATION_PREPARATION",
   "contractComplete": true,
   "source": {
     "baseCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "exportManifest": "public-source-manifest.json",
-    "authority": "Accepted runtime/offline producer commit anchor; exact current recipe/docs RAW files are independently bound by public-source-manifest.json."
+    "authority": "baseCommit is the historical runtime/offline producer anchor; acceptedImplementationCommit identifies the accepted implementation base. Exact recipe/docs/source RAW files are bound by public-source-manifest.json. Neither field is the eventual public source commit or tag.",
+    "acceptedImplementationCommit": "f5f71a52878ecce309cfeca2465e0862f303f6bb"
   },
   "sdk": {
     "requestedVersion": "10.0.402",
@@ -50,6 +51,110 @@
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
+    "profile": "lexical-annotated-native.v1",
+    "packageId": "bglang-neutral:bec73e12c06e560f",
+    "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
+    "createdAtUtc": "1970-01-01T00:00:00+00:00",
+    "files": [
+      {
+        "name": "lexeme-annotations.v1.json",
+        "bytes": 53931041,
+        "sha256": "90d543344370798af4d0001f0b12d67b463eb555b1ad8c629c572b0b9c16e487"
+      },
+      {
+        "name": "lexicon.v3.jsonl",
+        "bytes": 47335883,
+        "sha256": "e76c91b4ddd90f9ce87bf86b3cd57482aafeb04f198fc91982f31d721d96922a"
+      },
+      {
+        "name": "manifest.json",
+        "bytes": 796,
+        "sha256": "7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651"
+      },
+      {
+        "name": "word-formation.v0.json",
+        "bytes": 2106720,
+        "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e"
+      }
+    ],
+    "releaseRelativeDirectory": "artifacts/public-package",
+    "selectors": {
+      "publicTarget": "BGLANG_PUBLIC_PACKAGE_MANIFEST",
+      "currentCandidate": "BGLANG_LEXICAL_MANIFEST",
+      "strictCurrent": "BGLANG_LEXICAL_REQUIRE_MANIFEST=1",
+      "httpTarget": "BGLANG_WEB_TEST_MANIFEST",
+      "httpManifestSha256": "BGLANG_WEB_TEST_MANIFEST_SHA256"
+    },
+    "readingCount": 1549263,
+    "distinctForms": 1266121,
+    "lexemes": 119290,
+    "nativeLexemes": 106551,
+    "nativeReadings": 1533555,
+    "storedLexemes": 12739,
+    "storedReadings": 15708,
+    "manifestSchema": "bglang-neutral-runtime-package.v2",
+    "annotations": {
+      "path": "lexeme-annotations.v1.json",
+      "bytes": 53931041,
+      "sha256": "90d543344370798af4d0001f0b12d67b463eb555b1ad8c629c572b0b9c16e487",
+      "sourceId": "neutral-annotations-v2:0f2e4d30655431b84b5dea0d4d9452859a9c53af1b938990708cad31c3becd11"
+    }
+  },
+  "independentLiteralFixture": {
+    "releaseRelativePath": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
+    "bytes": 8226,
+    "sha256": "a8a188b2145a8201b8d6d49ae85ac730bc21839645f1311c52a2e6387f0659f4"
+  },
+  "testDependencies": {
+    "Microsoft_NET_Test_Sdk": "18.7.0",
+    "MSTest_TestAdapter": "4.2.3",
+    "MSTest_TestFramework": "4.2.3",
+    "transitiveLock": "tests/BgLang.Public.Tests/packages.lock.json"
+  },
+  "baselineObligations": {
+    "publicTypes": 80,
+    "publicMembers": 1769,
+    "publicMethods": 349,
+    "facadeMethods": 17,
+    "productCompileInputs": 129,
+    "productInwardDependencyEdges": 3,
+    "inwardDependencyEdges": 4,
+    "basis": "Accepted construction compiled complete arrays: Product API/Core/Contracts has three inward edges; the unchanged four-project Public solution adds the PublicTests->API edge. Optional exported tools/example/HTTP consumers are separate."
+  },
+  "ownerRightsBasis": "Owner-authored code/data; owner states MIT release intent. Third-party test dependencies retain their licenses.",
+  "releaseApproval": false,
+  "publicationPerformed": false,
+  "releaseCandidate": {
+    "label": "lexical-context-construction-successor",
+    "runtimeCommit": "f5f71a52878ecce309cfeca2465e0862f303f6bb",
+    "publicVersion": "v0.1.0-preview.5",
+    "publicDestination": "bgtnt/bglang",
+    "inputBaseUrl": null,
+    "status": "PUBLICATION_PREPARATION_VALIDATION_PENDING",
+    "publicSourceCommit": null
+  },
+  "authoringInput": {
+    "profile": "lexical-annotated-source.v1",
+    "releaseRelativeDirectory": "public-inputs/lexical-annotated-source-v1",
+    "entryFile": "lexemes.source.json",
+    "files": [
+      {
+        "name": "lexemes.source.json",
+        "bytes": 71102352,
+        "sha256": "1bee5073aaaea3b0267f82d8854f85a81ca82cbcf0ed904a6951edf735668113"
+      }
+    ],
+    "distribution": {
+      "location": "public-inputs/lexical-annotated-source-v1",
+      "url": null
+    },
+    "deliveryStaged": false,
+    "hiddenPrivateFallbackAllowed": false,
+    "rawContract": "Deliver this exact annotated authoring source unchanged. SourceBuilder build plus the locked graph must reproduce all four accepted runtime files; do not regenerate or revise expected identity from a differing output.",
+    "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit"
+  },
+  "storedInputQualification": "Historical preview.4 STORED producer provenance only. The successor recipe consumes authoringInput, never storedInput.",
+  "priorUnannotatedCandidate": {
     "profile": "adverb-degree-native.v1",
     "packageId": "bglang-neutral:de06b9b2e254e61a",
     "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
@@ -85,33 +190,11 @@
     "storedLexemes": 12739,
     "storedReadings": 15708
   },
-  "independentLiteralFixture": {
-    "releaseRelativePath": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
-    "bytes": 8226,
-    "sha256": "a8a188b2145a8201b8d6d49ae85ac730bc21839645f1311c52a2e6387f0659f4"
-  },
-  "testDependencies": {
-    "Microsoft_NET_Test_Sdk": "18.7.0",
-    "MSTest_TestAdapter": "4.2.3",
-    "MSTest_TestFramework": "4.2.3",
-    "transitiveLock": "tests/BgLang.Public.Tests/packages.lock.json"
-  },
-  "baselineObligations": {
+  "priorBaselineObligations": {
     "publicTypes": 29,
     "publicMembers": 378,
     "facadeMethods": 12,
     "inwardDependencyEdges": 4,
     "basis": "Accepted RESIDUAL10 evaluated/compiled complete arrays; packaging changes no runtime/API/dependency."
-  },
-  "ownerRightsBasis": "Owner-authored code/data; owner states MIT release intent. Third-party test dependencies retain their licenses.",
-  "releaseApproval": false,
-  "publicationPerformed": false,
-  "releaseCandidate": {
-    "label": "adverb-degree-local-successor",
-    "runtimeCommit": "399c166d9aa82355a8599f64a7457348789bb395",
-    "publicVersion": null,
-    "publicDestination": null,
-    "inputBaseUrl": null,
-    "status": "LOCAL_SUCCESSOR_REVIEW_PENDING_PUBLICATION_NOT_AUTHORIZED"
   }
 }

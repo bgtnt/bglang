@@ -8,6 +8,7 @@ namespace BgLang.Core;
 internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations.Entry[] Entries)
 {
     internal const string Schema = "bglang-neutral-annotations.v1";
+    internal const string SourceEvidenceSchema = "bglang-neutral-annotations.v2";
     internal const string FileName = "lexeme-annotations.v1.json";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -29,9 +30,11 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
         LexemeAnnotations result = StrictJson.ReadText<LexemeAnnotations>(text, label, root =>
         {
             StrictJson.RequireObject(root, label, ["schemaVersion", "entries"]);
-            if (StrictJson.RequireString(root, "schemaVersion", label) != Schema)
+            string schema = StrictJson.RequireString(root, "schemaVersion", label);
+            if (schema is not (Schema or SourceEvidenceSchema))
                 throw new InvalidDataException("Unsupported annotation schema.");
-            foreach (JsonElement entry in StrictJson.RequireArray(root, "entries", label)) ValidateEntryJson(entry);
+            foreach (JsonElement entry in StrictJson.RequireArray(root, "entries", label))
+                ValidateEntryJson(entry, allowUnresolved: schema == SourceEvidenceSchema);
         });
         for (int i = 1; i < result.Entries.Length; i++)
             if (StringComparer.Ordinal.Compare(result.Entries[i - 1].EntryId, result.Entries[i].EntryId) >= 0)
@@ -66,8 +69,8 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
 
     internal byte[] Serialize() => [.. JsonSerializer.SerializeToUtf8Bytes(Canonicalize(), Json), (byte)'\n'];
 
-    internal string SourceId => "neutral-annotations-v1:" + LexicalIdentity.HashLengthPrefixed(
-        [Schema, JsonSerializer.Serialize(Canonicalize(), Json)]);
+    internal string SourceId => (SchemaVersion == SourceEvidenceSchema ? "neutral-annotations-v2:" : "neutral-annotations-v1:") +
+        LexicalIdentity.HashLengthPrefixed([SchemaVersion, JsonSerializer.Serialize(Canonicalize(), Json)]);
 
     /// <summary>Bind all references, then retain only stress supported by every visible reading and owner.</summary>
     internal IReadOnlyDictionary<string, int[]>? Bind(IReadOnlyDictionary<string, WordReading[]> inventory)
@@ -100,7 +103,7 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
                 candidates.TryAdd(BulgarianTextNormalizer.NormalizeKey(row.Form), row.VowelOrdinals);
             }
             if (stress is not null) stressByEntry.Add(entry.EntryId, stress);
-            foreach (WordReference word in entry.Related.SelectMany(r => r.Phrases).SelectMany(p => p))
+            foreach (WordReference word in entry.Related.SelectMany(r => r.Phrases).SelectMany(p => p.Words))
                 if (!entries.TryGetValue(word.EntryId, out Entry? target) || !Contains(target.LexemeKey, word.Form, word.FullTag))
                     throw new InvalidDataException("Related words must bind an existing owner and its exact form/fullTag.");
         }
@@ -127,21 +130,21 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
         return resolved.Count == 0 ? null : resolved;
     }
 
-    internal static void ValidateEntryJson(JsonElement entry)
+    internal static void ValidateEntryJson(JsonElement entry, bool allowUnresolved = false)
     {
         const string label = "Annotation entry";
         StrictJson.RequireObject(entry, label, ["entryId", "lexemeKey", "meaning", "stress", "related"]);
         RequireCanonical(entry, "lexemeKey");
-        ValidateMetadataJson(entry);
+        ValidateMetadataJson(entry, allowUnresolved);
     }
 
-    internal static void ValidateMetadataJson(JsonElement entry)
+    internal static void ValidateMetadataJson(JsonElement entry, bool allowUnresolved = false)
     {
         const string label = "Editorial metadata";
         RequireCanonical(entry, "entryId");
         foreach (JsonElement line in StrictJson.RequireArray(entry, "meaning", label))
-            if (line.ValueKind != JsonValueKind.String || line.GetString()!.IndexOfAny(['\r', '\n']) >= 0)
-                throw new InvalidDataException("Meaning must contain strings representing individual lines.");
+            if (line.ValueKind != JsonValueKind.String)
+                throw new InvalidDataException("Meaning must contain literal strings.");
         foreach (JsonElement stress in StrictJson.RequireArray(entry, "stress", label))
         {
             StrictJson.RequireObject(stress, label, ["form", "fullTag", "vowelOrdinals"]);
@@ -159,6 +162,15 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
             if (phrases.GetArrayLength() == 0) throw new InvalidDataException("Related groups require phrases.");
             foreach (JsonElement phrase in phrases.EnumerateArray())
             {
+                if (allowUnresolved && phrase.ValueKind == JsonValueKind.Object)
+                {
+                    StrictJson.RequireObject(phrase, label, ["unresolvedSourcePhrase"]);
+                    JsonElement words = StrictJson.RequireProperty(phrase, "unresolvedSourcePhrase", JsonValueKind.Array, label);
+                    if (words.GetArrayLength() == 0 || words.EnumerateArray().Any(word =>
+                        word.ValueKind != JsonValueKind.Number || !word.TryGetUInt32(out uint id) || id == 0))
+                        throw new InvalidDataException("Unavailable source phrases require nonzero raw Word IDs.");
+                    continue;
+                }
                 if (phrase.ValueKind != JsonValueKind.Array || phrase.GetArrayLength() == 0)
                     throw new InvalidDataException("Related phrases require words.");
                 foreach (JsonElement word in phrase.EnumerateArray())
@@ -193,6 +205,6 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
 
     internal sealed record Entry(string EntryId, string LexemeKey, string[] Meaning, StressRow[] Stress, Relation[] Related);
     internal sealed record StressRow(string Form, string? FullTag, int[] VowelOrdinals);
-    internal sealed record Relation(string Kind, WordReference[][] Phrases);
+    internal sealed record Relation(string Kind, AnnotationPhrase[] Phrases);
     internal sealed record WordReference(string EntryId, string Form, string? FullTag);
 }

@@ -55,15 +55,15 @@ internal static class NeutralSourceEditor
             List<LexemeAnnotations.Relation> relations = [];
             foreach (LexemeAnnotations.Relation relation in remaining[index].Related)
             {
-                List<LexemeAnnotations.WordReference[]> phrases = [];
-                foreach (LexemeAnnotations.WordReference[] phrase in relation.Phrases)
+                List<AnnotationPhrase> phrases = [];
+                foreach (AnnotationPhrase phrase in relation.Phrases)
                 {
-                    bool incoming = phrase.Any(word => word.EntryId == entryId);
+                    bool incoming = phrase.Words.Any(word => word.EntryId == entryId);
                     if (incoming && dropInboundPhrases) continue;
                     if (incoming && transferTo is null)
                         throw new InvalidDataException("Запазен запис сочи към изтривания; посочете политика за препратките.");
                     phrases.Add(incoming
-                        ? phrase.Select(word => word.EntryId == entryId ? word with { EntryId = transferTo! } : word).ToArray()
+                        ? phrase with { Words = phrase.Words.Select(word => word.EntryId == entryId ? word with { EntryId = transferTo! } : word).ToArray() }
                         : phrase);
                 }
                 if (phrases.Count > 0) relations.Add(relation with { Phrases = phrases.ToArray() });
@@ -181,7 +181,8 @@ internal static class NeutralSourceEditor
             }
             declarations.Add(key, source);
         }
-        return (new(AuthoringDocument.Schema, annotations.Entries.Select(e => new AuthoringDocument.Entry(
+        return (new(annotations.SchemaVersion == LexemeAnnotations.SourceEvidenceSchema ? AuthoringDocument.SourceEvidenceSchema : AuthoringDocument.Schema,
+            annotations.Entries.Select(e => new AuthoringDocument.Entry(
             e.EntryId, declarations[e.LexemeKey], e.Meaning, e.Stress, e.Related)).ToArray()), snapshot.WordFormation, loaded.WordFormation);
     }
 

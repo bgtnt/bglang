@@ -17,10 +17,23 @@ public readonly record struct MorphologicalFeatures(
     bool HasUnrecognizedFeatures,
     bool HasConflictingFeatures)
 {
+    /// <summary>Explicit source proper-name subtype; does not establish an entity or select a reading.</summary>
+    public MorphologicalNameKind? NameKind { get; init; }
+
+    /// <summary>Explicit personal-pronoun case; absence never implies nominative.</summary>
+    public MorphologicalCase? Case { get; init; }
+
+    /// <summary>True for the explicit personal-pronoun Кратка marker; null does not mean long.</summary>
+    public bool? IsShortForm { get; init; }
+
+    /// <summary>Exact supported past-participle class; no lexical or construction acceptance is implied.</summary>
+    public MorphologicalParticipleKind? ParticipleKind { get; init; }
+
     /// <summary>
     /// Projects Bulgarian compatibility tags without inspecting a word's spelling.
     /// Unmarked Legacy noun/adjective/verb number is singular; unmarked noun/adjective
-    /// article is indefinite. Personal-pronoun types 90/91/95/96 license person and number.
+    /// article is indefinite. Personal-pronoun types 90–97 license person and number;
+    /// types 92/93/94 also license masculine/feminine/neuter gender respectively.
     /// Simple imperatives license second person and no finite tense; Legacy First/Present
     /// boilerplate is projected without changing RawTag or hiding contradictory markers.
     /// </summary>
@@ -31,9 +44,16 @@ public readonly record struct MorphologicalFeatures(
         int end = fullTag.IndexOfAny([',', ';']);
         string head = end < 0 ? fullTag : fullTag[..end];
         int colon = head.IndexOf(':');
-        string category = colon < 0 ? head : head[..colon];
+        string category = (colon < 0 ? head : head[..colon]).ToUpperInvariant();
         string? paradigm = colon < 0 ? null : head[(colon + 1)..];
-        MorphologicalPartOfSpeech pos = Category(category);
+        MorphologicalNameKind? nameKind = category switch
+        {
+            "ИМЕ" => MorphologicalNameKind.GivenName,
+            "ФАМИЛИЯ" => MorphologicalNameKind.FamilyName,
+            "МЯСТО" or "ДЪРЖАВА" or "ГРАД" or "СТОЛИЦА" => MorphologicalNameKind.PlaceName,
+            _ => null
+        };
+        MorphologicalPartOfSpeech pos = nameKind.HasValue ? MorphologicalPartOfSpeech.ProperNoun : Category(category);
         if (pos == MorphologicalPartOfSpeech.Unknown)
             return new(fullTag, pos, paradigm, null, null, null, null, null, null, true, false);
         string[] atoms = end < 0 ? [] : fullTag[(end + 1)..].Split(
@@ -44,6 +64,10 @@ public readonly record struct MorphologicalFeatures(
         MorphologicalTense? tense = null;
         MorphologicalVerbForm? form = null;
         MorphologicalArticle? article = null;
+        MorphologicalCase? grammaticalCase = null;
+        bool? shortForm = null;
+        MorphologicalParticipleKind? participleKind = null;
+        bool caseConflict = false, participleKindConflict = false;
         bool unknown = false, conflict = false;
         bool nonFinite = pos == MorphologicalPartOfSpeech.Verb && atoms.Any(IsNonFinite);
         int personAtoms = 0;
@@ -61,15 +85,29 @@ public readonly record struct MorphologicalFeatures(
             else if (Equal(atom, "Мъжки")) Set(ref gender, MorphologicalGender.Masculine, ref genderConflict);
             else if (Equal(atom, "Женски")) Set(ref gender, MorphologicalGender.Feminine, ref genderConflict);
             else if (Equal(atom, "Среден")) Set(ref gender, MorphologicalGender.Neuter, ref genderConflict);
-            else if (nominal && Equal(atom, "Членуван")) definite = true;
-            else if (nominal && Equal(atom, "Пълен")) full = true;
+            else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "Винителен"))
+                Set(ref grammaticalCase, MorphologicalCase.Accusative, ref caseConflict);
+            else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "Дателен"))
+                Set(ref grammaticalCase, MorphologicalCase.Dative, ref caseConflict);
+            else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "ДателенПредложна"))
+                Set(ref grammaticalCase, MorphologicalCase.PrepositionalDative, ref caseConflict);
+            else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "Кратка")) shortForm = true;
+            // Verb article atoms are accepted only if the final coarse form is an unambiguous participle.
+            else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Членуван")) definite = true;
+            else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Пълен")) full = true;
             else if (nominal && (Equal(atom, "Непълен") || Equal(atom, "Кратка"))) shortArticle = true;
-            else if (nominal && Equal(atom, "Нечленуван")) indefinite = true;
+            else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Нечленуван")) indefinite = true;
             else if (pos == MorphologicalPartOfSpeech.Verb && Equal(atom, "Повелително"))
                 Set(ref form, MorphologicalVerbForm.Imperative, ref formConflict);
             else if (pos == MorphologicalPartOfSpeech.Verb && IsNonFinite(atom))
             {
                 Set(ref form, Starts(atom, "Деепричастие") ? MorphologicalVerbForm.Converb : MorphologicalVerbForm.Participle, ref formConflict);
+                if (Equal(atom, "Минало_свършено_деятелно"))
+                    Set(ref participleKind, MorphologicalParticipleKind.PastAoristActive, ref participleKindConflict);
+                else if (Equal(atom, "Минало_несвършено_деятелно"))
+                    Set(ref participleKind, MorphologicalParticipleKind.PastImperfectActive, ref participleKindConflict);
+                else if (Equal(atom, "Минало_страдателно"))
+                    Set(ref participleKind, MorphologicalParticipleKind.PastPassive, ref participleKindConflict);
                 if (Starts(atom, "Сегашно")) Set(ref tense, MorphologicalTense.Present, ref tenseConflict);
                 else if (Starts(atom, "Минало")) Set(ref tense, MorphologicalTense.Past, ref tenseConflict);
             }
@@ -85,13 +123,17 @@ public readonly record struct MorphologicalFeatures(
         }
         if (pos == MorphologicalPartOfSpeech.PersonalPronoun)
         {
-            (MorphologicalPerson? Person, MorphologicalNumber? Number) pronoun = paradigm switch
+            (MorphologicalPerson? Person, MorphologicalNumber? Number, MorphologicalGender? Gender) pronoun = paradigm switch
             {
-                "90" => (MorphologicalPerson.First, MorphologicalNumber.Singular),
-                "91" => (MorphologicalPerson.Second, MorphologicalNumber.Singular),
-                "95" => (MorphologicalPerson.First, MorphologicalNumber.Plural),
-                "96" => (MorphologicalPerson.Second, MorphologicalNumber.Plural),
-                _ => (null, null)
+                "90" => (MorphologicalPerson.First, MorphologicalNumber.Singular, null),
+                "91" => (MorphologicalPerson.Second, MorphologicalNumber.Singular, null),
+                "92" => (MorphologicalPerson.Third, MorphologicalNumber.Singular, MorphologicalGender.Masculine),
+                "93" => (MorphologicalPerson.Third, MorphologicalNumber.Singular, MorphologicalGender.Feminine),
+                "94" => (MorphologicalPerson.Third, MorphologicalNumber.Singular, MorphologicalGender.Neuter),
+                "95" => (MorphologicalPerson.First, MorphologicalNumber.Plural, null),
+                "96" => (MorphologicalPerson.Second, MorphologicalNumber.Plural, null),
+                "97" => (MorphologicalPerson.Third, MorphologicalNumber.Plural, null),
+                _ => (null, null, null)
             };
             if (pronoun.Person is null) { person = null; number = null; unknown = true; }
             else
@@ -100,6 +142,11 @@ public readonly record struct MorphologicalFeatures(
                 else person = pronoun.Person;
                 if (numberConflict || number is not null && number != pronoun.Number) { number = null; conflict = true; }
                 else number = pronoun.Number;
+                if (pronoun.Gender is { } licensedGender)
+                {
+                    if (genderConflict || gender is not null && gender != licensedGender) { gender = null; conflict = true; }
+                    else gender = licensedGender;
+                }
             }
         }
         if (personAtoms > 1) { person = null; conflict = true; }
@@ -120,17 +167,19 @@ public readonly record struct MorphologicalFeatures(
         }
         if (number is null && !numberConflict && (nominal || pos == MorphologicalPartOfSpeech.Verb))
             number = MorphologicalNumber.Singular;
-        if (nominal)
+        if (nominal || form == MorphologicalVerbForm.Participle)
         {
             if (full && shortArticle || indefinite && (full || shortArticle || definite)) conflict = true;
             else article = full ? MorphologicalArticle.Full : shortArticle ? MorphologicalArticle.Short :
-                definite ? MorphologicalArticle.Definite : MorphologicalArticle.Indefinite;
+                definite ? MorphologicalArticle.Definite : indefinite || nominal ? MorphologicalArticle.Indefinite : null;
         }
-        conflict |= numberConflict || genderConflict || tenseConflict || formConflict;
-        return new(fullTag, pos, paradigm, person, number, gender, tense, form, article, unknown, conflict);
+        else if (definite || full || indefinite) unknown = true;
+        conflict |= numberConflict || genderConflict || tenseConflict || formConflict || caseConflict || participleKindConflict;
+        return new(fullTag, pos, paradigm, person, number, gender, tense, form, article, unknown, conflict)
+        { NameKind = nameKind, Case = grammaticalCase, IsShortForm = shortForm, ParticipleKind = participleKind };
     }
 
-    private static MorphologicalPartOfSpeech Category(string category) => category.ToUpperInvariant() switch
+    private static MorphologicalPartOfSpeech Category(string category) => category switch
     {
         "СЪЩЕСТВИТЕЛНО" or "СЪЩЕСТВИТЕЛНО ИМЕ" => MorphologicalPartOfSpeech.Noun,
         "ПРИЛАГАТЕЛНО" or "ПРИЛАГАТЕЛНО ИМЕ" => MorphologicalPartOfSpeech.Adjective,
@@ -145,7 +194,6 @@ public readonly record struct MorphologicalFeatures(
         "ПРЕДЛОГ" => MorphologicalPartOfSpeech.Preposition,
         "СЪЮЗ" => MorphologicalPartOfSpeech.Conjunction,
         "МЕЖДУМЕТИЕ" => MorphologicalPartOfSpeech.Interjection,
-        "ИМЕ" or "ФАМИЛИЯ" or "МЯСТО" => MorphologicalPartOfSpeech.ProperNoun,
         _ => MorphologicalPartOfSpeech.Unknown
     };
 
