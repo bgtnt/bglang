@@ -70,7 +70,17 @@ internal sealed class GraphSegmentation(Morph[] morphs, Transform[] transforms, 
         var pieces = new List<Piece>();
         string? mechanical = edge.Evidence
             .FirstOrDefault(item => item.StartsWith("mechanical_split=", StringComparison.Ordinal));
-        if (mechanical is not null)
+        string? surfaceStem = edge.ApplicationDecision?.SurfaceStem;
+        if (surfaceStem is not null)
+        {
+            InputSlot stemSlot = inputSlots.Single(slot => !slot.IsLexicalAnchor && slot.Role == "stem");
+            InputSlot suffixSlot = inputSlots.Single(slot => !slot.IsLexicalAnchor && slot.Role == "suffix");
+            if (!TryFindMorph(stemSlot.NodeId, out Morph stem) || !TryFindMorph(suffixSlot.NodeId, out Morph suffix))
+                throw new InvalidDataException("Reviewed surface alignment lost its typed morph identity.");
+            pieces.Add(new Piece(surfaceStem, stem.Text, MorphKind.Stem, stem.Id));
+            pieces.Add(new Piece(suffix.Text, suffix.Text, MorphKind.DerivationalSuffix, suffix.Id));
+        }
+        else if (mechanical is not null)
         {
             foreach (string part in mechanical["mechanical_split=".Length..]
                          .Split('+', StringSplitOptions.RemoveEmptyEntries))

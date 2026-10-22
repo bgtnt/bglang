@@ -219,7 +219,11 @@ internal static class WordFormationGraphCompiler
                 application.RuleId,
                 application.Id,
                 surfaces,
-                new ApplicationDecision(application.Transparency, application.BlockReason, rule?.OutputPos),
+                new ApplicationDecision(application.Transparency, application.BlockReason, rule?.OutputPos)
+                {
+                    SurfaceStem = application.EvidenceCodes.FirstOrDefault(code => code.StartsWith(
+                        WordFormationAnalyzer.SurfaceStemEvidencePrefix, StringComparison.Ordinal))?[WordFormationAnalyzer.SurfaceStemEvidencePrefix.Length..]
+                },
                 trust,
                 trust == ReviewTrust.Accepted &&
                     application.Transparency == "transparent" &&

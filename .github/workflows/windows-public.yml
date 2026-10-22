@@ -1,6 +1,7 @@
 name: Windows public package
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -9,7 +10,7 @@ on:
         required: true
         type: string
       test_web:
-        description: Also build and test the independent HTTP consumer against the full annotated package
+        description: Also build and test the independent HTTP consumer against the full stress-annotated package
         required: true
         type: boolean
         default: true
@@ -41,7 +42,7 @@ jobs:
           if (!$base.IsAbsoluteUri -or $base.Scheme -ne 'https') { throw 'HTTPS input directory required.' }
           $lock = Get-Content data/dictionary/public-input-lock.v1.json -Raw | ConvertFrom-Json
           if (!$lock.authoringInput -or !$lock.authoringInput.files) { throw 'The successor authoringInput lock is required.' }
-          $authoringDirectory = Join-Path $env:RUNNER_TEMP 'lexical-annotated-source-v1'
+          $authoringDirectory = Join-Path $env:RUNNER_TEMP 'authoring-input'
           New-Item -ItemType Directory -Path $authoringDirectory | Out-Null
           foreach ($file in $lock.authoringInput.files) {
             $download = Join-Path $authoringDirectory $file.name

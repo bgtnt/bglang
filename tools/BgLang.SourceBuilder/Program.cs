@@ -18,7 +18,9 @@ internal static class Program
             args.Length == 5 && args[4] == "--drop-inbound-phrases" || args.Length == 6 && args[4] == "--transfer-to");
         bool carryStress = args.Length is 4 or 5 && args[0] == "carry-stress" &&
             (args.Length == 4 || args[4] == "--replace-form-stress");
-        if (!build && !export && !remove && !carryStress && !retainLemmas && !promoteNative && !correctStored && !measureOpen)
+        bool compactStress = args.Length == 4 && args[0] == "compact-stress";
+        bool importStress = args.Length == 7 && args[0] == "import-legacy-stress";
+        if (!build && !export && !remove && !carryStress && !retainLemmas && !promoteNative && !correctStored && !measureOpen && !importStress && !compactStress)
         {
             Console.Error.WriteLine("Употреба: build <lexemes.source.jsonl> <reviewed-graph.json> <new-output-directory>");
             Console.Error.WriteLine("Или: export <manifest.json> <new-source-directory>");
@@ -28,12 +30,15 @@ internal static class Program
             Console.Error.WriteLine("Или: measure-open <manifest.json>");
             Console.Error.WriteLine("Или: remove <manifest.json> <entryId> <new-package-directory> [--transfer-to <entryId> | --drop-inbound-phrases]");
             Console.Error.WriteLine("Или: carry-stress <manifest.json> <entryId> <new-package-directory> [--replace-form-stress]");
+            Console.Error.WriteLine("Или: compact-stress <source.json> <graph.json> <new-source-directory>");
+            Console.Error.WriteLine("Или: import-legacy-stress <source.json> <graph.json> <owner-map.jsonl> <captured-observations.jsonl> <legacy-stress-v1:hash> <new-source-directory>");
             Console.Error.WriteLine("--replace-form-stress премахва всички стари non-base корекции и ги изчислява отново; точният base seed остава.");
             return 2;
         }
         try
         {
-            object result = correctStored ? StoredSourceCorrection.Correct(args[1], args[2], args[3]) : measureOpen ? PackageOpenMeasurement.Run(args[1]) : promoteNative
+            object result = compactStress ? LegacyStressCompactor.Compact(args[1], args[2], args[3]) : importStress ? LegacyStressImporter.Import(args[1], args[2], args[3], args[4], args[5], args[6]) :
+                correctStored ? StoredSourceCorrection.Correct(args[1], args[2], args[3]) : measureOpen ? PackageOpenMeasurement.Run(args[1]) : promoteNative
                 ? NativeSourcePromotion.Promote(args[1], args[2], args[3]) : retainLemmas ? StoredLemmaMigration.RetainLemmas(args[1], args[2], args[3]) : build ? NeutralSourceBuilder.Build(args[1], args[2], args[3]) : export
                 ? NeutralSourceEditor.Export(args[1], args[2])
                 : remove ? NeutralSourceEditor.Remove(args[1], args[2], args[3], args.Length == 6 ? args[5] : null, args.Length == 5)

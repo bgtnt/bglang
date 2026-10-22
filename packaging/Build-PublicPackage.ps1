@@ -115,11 +115,18 @@ function Invoke-Dotnet([string] $label, [string[]] $arguments) {
     $state = [ordered]@{ startAttempted = $false; started = $false; startRejectedBeforeNative = $false; pid = $null; birthUtc = $null; nativeExitCode = $null;
         waitCompleted = $false; nativeExitObserved = $false; stdoutDrained = $false; stderrDrained = $false;
         stdoutTaskTerminal = $null; stderrTaskTerminal = $null; stdoutDisposed = $false; stderrDisposed = $false; processDisposed = $false }
-    $child = $null; $stdout = $null; $stderr = $null; $outTask = $null; $errTask = $null
+    $child = $null; $stdout = $null; $stderr = $null; $outTask = $null; $errTask = $null; $environmentProof = $null
     $errors = [Collections.Generic.List[string]]::new()
     try {
         $stdout = [IO.File]::Open($prefix + '.stdout.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
         $stderr = [IO.File]::Open($prefix + '.stderr.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+        $bindings = @(foreach ($environmentName in @('TEMP','TMP','BGLANG_PUBLIC_PACKAGE_MANIFEST','BGLANG_LEXICAL_MANIFEST','BGLANG_LEXICAL_REQUIRE_MANIFEST','BGLANG_STRESS_MANIFEST','BGLANG_STRESS_REQUIRE_MANIFEST','BGLANG_WEB_TEST_MANIFEST','BGLANG_WEB_TEST_MANIFEST_SHA256')) {
+            $present = $start.Environment.ContainsKey($environmentName)
+            [ordered]@{ name = $environmentName; present = $present; value = $(if ($present) { $start.Environment[$environmentName] } else { $null }) }
+        })
+        $environmentProof = Write-JsonNew ($prefix + '.process-environment.json') ([ordered]@{
+            createdBeforeNativeStart = $true; nativeStartAttempted = $state.startAttempted; bindings = $bindings;
+            qualification = 'Actual ProcessStartInfo.Environment dictionary before Process.Start; absent differs from empty. Child GetTempPath is a separate proof.' })
         $child = [Diagnostics.Process]::new(); $child.StartInfo = $start
         $state.startAttempted = $true; $state.started = $null; $state.started = $child.Start()
         if ($state.started -ne $true) { throw 'Native start returned false.' }
@@ -154,7 +161,7 @@ function Invoke-Dotnet([string] $label, [string[]] $arguments) {
     try { if (Test-Path -LiteralPath ($prefix + '.stderr.bin')) { $errPin = File-Pin ($prefix + '.stderr.bin') } } catch { $errors.Add('stderr-pin: ' + $_.Exception) }
     $record = [ordered]@{ label = $label; executable = $dotnet; arguments = $arguments; explicitTEMP = $start.Environment['TEMP']; explicitTMP = $start.Environment['TMP'];
         actualSupervisorGetTempPath = [IO.Path]::GetTempPath(); state = $state; errors = $errors.ToArray(); finishedUtc = [DateTime]::UtcNow.ToString('o');
-        stdout = $outPin; stderr = $errPin; streamPinsFinal = [bool]($state.stdoutDisposed -and $state.stderrDisposed); allJobsClosed = [bool]$closed }
+        processEnvironment = $environmentProof; stdout = $outPin; stderr = $errPin; streamPinsFinal = [bool]($state.stdoutDisposed -and $state.stderrDisposed); allJobsClosed = [bool]$closed }
     $script:nativeCommands.Add($record)
     $saved = $false
     try { $null = Write-JsonNew ($prefix + '.terminal.json') $record; $saved = $true } catch { $errors.Add('terminal-receipt: ' + $_.Exception) }
@@ -181,7 +188,7 @@ function Assert-PassedTrx([string] $path, [string] $label) {
 }
 
 $previousLocation = Get-Location
-$changedSelectors = @('BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST')
+$changedSelectors = @('BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST', 'BGLANG_STRESS_MANIFEST', 'BGLANG_STRESS_REQUIRE_MANIFEST')
 if ($TestWeb) { $changedSelectors += @('BGLANG_WEB_TEST_MANIFEST', 'BGLANG_WEB_TEST_MANIFEST_SHA256') }
 $originalEnvironment = [Environment]::GetEnvironmentVariables('Process')
 $consumerChecks = [Collections.Generic.List[object]]::new()
@@ -205,6 +212,8 @@ try {
         [Environment]::SetEnvironmentVariable('BGLANG_PUBLIC_PACKAGE_MANIFEST', $manifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_LEXICAL_MANIFEST', $manifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_LEXICAL_REQUIRE_MANIFEST', '1', 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_STRESS_MANIFEST', $manifest, 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_STRESS_REQUIRE_MANIFEST', '1', 'Process')
         $null = Invoke-Dotnet 'public-restore' @('restore', 'BgLang.Public.slnx', '--locked-mode', '--disable-parallel', '-nr:false')
         $null = Invoke-Dotnet 'public-build' @('build', 'BgLang.Public.slnx', '-c', 'Release', '--no-restore', '-nr:false', '-maxCpuCount:1', '-p:UseSharedCompilation=false')
         $null = Invoke-Dotnet 'public-test' @('test', 'tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj', '-c', 'Release', '--no-build', '--no-restore',

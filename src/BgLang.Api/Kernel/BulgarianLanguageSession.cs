@@ -49,6 +49,25 @@ public sealed class BulgarianLanguageSession : IDisposable
         return WordConstructionAnalyzer.GetCandidates(package.Lexicon, package.LexicalCatalog, entryId, cancellationToken);
     }
 
+    /// <summary>Returns all exact stress alternatives and conservatively accents unambiguous word tokens.</summary>
+    /// <remarks>Written marks are observations; single-vowel inference does not predict sentence prosody.</remarks>
+    public StressEvidence GetStressEvidence(string text, StressReadingSelection? selection = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(text);
+        if (text.Length > MaximumTextLength)
+            throw new ArgumentException($"Input must not exceed {MaximumTextLength} UTF-16 characters.", nameof(text));
+        if (selection is not null)
+        {
+            ArgumentNullException.ThrowIfNull(selection.EntryId);
+            ArgumentNullException.ThrowIfNull(selection.Form);
+        }
+        RuntimePackageState package = GetPackage();
+        return StressEvidenceAnalyzer.Analyze(text, package.Lexicon, package.LexicalCatalog,
+            package.WordFormation, package.Provenance, selection, cancellationToken);
+    }
+
     /// <summary>Performs exact, bounded prefix, or bounded suffix lookup over immutable minimal DAWGs.</summary>
     public IReadOnlyList<WordReading> Lookup(
         string text,
@@ -153,12 +172,37 @@ public sealed class BulgarianLanguageSession : IDisposable
         };
     }
 
+    /// <summary>Generates qualified accents through an explicitly selected lexical prototype and its guarded graph program.</summary>
+    /// <remarks>A new lemma inherits the selected lexical accent class, not an accent inferred from its part of speech.</remarks>
+    public GeneratedStressParadigm GenerateStressForms(string prototypeEntryId, string lemma, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(prototypeEntryId);
+        ArgumentNullException.ThrowIfNull(lemma);
+        cancellationToken.ThrowIfCancellationRequested();
+        RuntimePackageState package = GetPackage();
+        string normalized = BulgarianTextNormalizer.NormalizeKey(lemma);
+        if (normalized.Length > MaximumBound || !BulgarianOrthography.IsWellFormedWord(normalized))
+            throw new ArgumentException("A well-formed word within the existing graph input bound is required.", nameof(lemma));
+        return package.LexicalCatalog?.GenerateStressForms(prototypeEntryId, normalized, package.WordFormation, cancellationToken)
+            ?? new(false, prototypeEntryId, null, normalized, null, null, package.WordFormation.SourceId, []);
+    }
+
     /// <summary>Returns package forms from stored readings or explicitly declared productive paradigms.</summary>
     public IReadOnlyList<WordForm> GenerateForms(string lemma, int limit = 128)
     {
         ArgumentNullException.ThrowIfNull(lemma);
         ValidateBound(limit);
         return GetPackage().Lexicon.GenerateForms(lemma, limit);
+    }
+
+    /// <summary>Projects a qualified lexical accent transition from the word's actual reviewed decomposition.</summary>
+    /// <remarks>Reviewed non-generating applications remain non-generating; this query does not license arbitrary suffix formations.</remarks>
+    public DerivationalStressEvidence GetDerivationalStressEvidence(string word, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        WordDecomposition decomposition = DecomposeWord(word);
+        cancellationToken.ThrowIfCancellationRequested();
+        return DerivationalAccent.Project(decomposition);
     }
 
     /// <summary>Composes licensed paths from an exact typed lemma anchor, shortest first, with evidence and semantic diversity within each depth tier.</summary>

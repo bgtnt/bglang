@@ -1,12 +1,12 @@
 {
   "schema": "bglang.public-input-lock.v1",
-  "status": "LOCKED_ANNOTATED_SUCCESSOR_PUBLICATION_PREPARATION",
+  "status": "LOCKED_STRESS_SUCCESSOR_PUBLICATION_PREPARATION",
   "contractComplete": true,
   "source": {
     "baseCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "exportManifest": "public-source-manifest.json",
     "authority": "baseCommit is the historical runtime/offline producer anchor; acceptedImplementationCommit identifies the accepted implementation base. Exact recipe/docs/source RAW files are bound by public-source-manifest.json. Neither field is the eventual public source commit or tag.",
-    "acceptedImplementationCommit": "f5f71a52878ecce309cfeca2465e0862f303f6bb"
+    "acceptedImplementationCommit": "ea3d4bb4195795d0a89e93658967551409002e17"
   },
   "sdk": {
     "requestedVersion": "10.0.402",
@@ -46,20 +46,20 @@
   },
   "graph": {
     "releaseRelativePath": "data/word-formation/word-formation-source.v0.json",
-    "bytes": 2106720,
-    "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e",
+    "bytes": 2106761,
+    "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f",
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
-    "profile": "lexical-annotated-native.v1",
-    "packageId": "bglang-neutral:bec73e12c06e560f",
+    "profile": "stress-annotated-native.v1",
+    "packageId": "bglang-neutral:e0de331f066ab7cf",
     "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "lexeme-annotations.v1.json",
-        "bytes": 53931041,
-        "sha256": "90d543344370798af4d0001f0b12d67b463eb555b1ad8c629c572b0b9c16e487"
+        "bytes": 129258513,
+        "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c"
       },
       {
         "name": "lexicon.v3.jsonl",
@@ -68,13 +68,13 @@
       },
       {
         "name": "manifest.json",
-        "bytes": 796,
-        "sha256": "7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651"
+        "bytes": 797,
+        "sha256": "c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12"
       },
       {
         "name": "word-formation.v0.json",
-        "bytes": 2106720,
-        "sha256": "310484aebc51927f73bf8c07a57820b4ac098ad382a1e65dd73582bdb2ca760e"
+        "bytes": 2106761,
+        "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f"
       }
     ],
     "releaseRelativeDirectory": "artifacts/public-package",
@@ -83,7 +83,9 @@
       "currentCandidate": "BGLANG_LEXICAL_MANIFEST",
       "strictCurrent": "BGLANG_LEXICAL_REQUIRE_MANIFEST=1",
       "httpTarget": "BGLANG_WEB_TEST_MANIFEST",
-      "httpManifestSha256": "BGLANG_WEB_TEST_MANIFEST_SHA256"
+      "httpManifestSha256": "BGLANG_WEB_TEST_MANIFEST_SHA256",
+      "stressTarget": "BGLANG_STRESS_MANIFEST",
+      "strictStress": "BGLANG_STRESS_REQUIRE_MANIFEST=1"
     },
     "readingCount": 1549263,
     "distinctForms": 1266121,
@@ -95,10 +97,13 @@
     "manifestSchema": "bglang-neutral-runtime-package.v2",
     "annotations": {
       "path": "lexeme-annotations.v1.json",
-      "bytes": 53931041,
-      "sha256": "90d543344370798af4d0001f0b12d67b463eb555b1ad8c629c572b0b9c16e487",
-      "sourceId": "neutral-annotations-v2:0f2e4d30655431b84b5dea0d4d9452859a9c53af1b938990708cad31c3becd11"
-    }
+      "bytes": 129258513,
+      "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c",
+      "sourceId": "neutral-annotations-v4:a3babeea01b64e4c9a21d190eb42f587dac3666659e208146a67ed833aff05a1"
+    },
+    "stressPatterns": 54138,
+    "capturedStressRows": 829449,
+    "qualifiedPrototypeModels": 43467
   },
   "independentLiteralFixture": {
     "releaseRelativePath": "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
@@ -112,46 +117,47 @@
     "transitiveLock": "tests/BgLang.Public.Tests/packages.lock.json"
   },
   "baselineObligations": {
-    "publicTypes": 80,
-    "publicMembers": 1769,
-    "publicMethods": 349,
-    "facadeMethods": 17,
-    "productCompileInputs": 129,
+    "publicTypes": 94,
+    "publicMembers": 2036,
+    "publicMethods": 412,
+    "facadeMethods": 20,
+    "productCompileInputs": 134,
     "productInwardDependencyEdges": 3,
     "inwardDependencyEdges": 4,
-    "basis": "Accepted construction compiled complete arrays: Product API/Core/Contracts has three inward edges; the unchanged four-project Public solution adds the PublicTests->API edge. Optional exported tools/example/HTTP consumers are separate."
+    "basis": "Accepted stress ea3d4bb compiled complete arrays: Product API/Core/Contracts has three inward edges; the four-project Public solution adds PublicTests->API. Packaging does not change runtime/API/dependencies."
   },
   "ownerRightsBasis": "Owner-authored code/data; owner states MIT release intent. Third-party test dependencies retain their licenses.",
   "releaseApproval": false,
   "publicationPerformed": false,
   "releaseCandidate": {
-    "label": "lexical-context-construction-successor",
-    "runtimeCommit": "f5f71a52878ecce309cfeca2465e0862f303f6bb",
-    "publicVersion": "v0.1.0-preview.5",
+    "label": "stress-parity-plus-r1-successor",
+    "runtimeCommit": "ea3d4bb4195795d0a89e93658967551409002e17",
+    "publicVersion": "v0.1.0-preview.6",
     "publicDestination": "bgtnt/bglang",
     "inputBaseUrl": null,
     "status": "PUBLICATION_PREPARATION_VALIDATION_PENDING",
     "publicSourceCommit": null
   },
   "authoringInput": {
-    "profile": "lexical-annotated-source.v1",
-    "releaseRelativeDirectory": "public-inputs/lexical-annotated-source-v1",
+    "profile": "stress-annotated-source.v1",
+    "releaseRelativeDirectory": "public-inputs/stress-annotated-source-v1",
     "entryFile": "lexemes.source.json",
     "files": [
       {
         "name": "lexemes.source.json",
-        "bytes": 71102352,
-        "sha256": "1bee5073aaaea3b0267f82d8854f85a81ca82cbcf0ed904a6951edf735668113"
+        "bytes": 146429824,
+        "sha256": "ee04e48f602a2525acd7dc26976b804d840fe0f98124a52b4a40381671ada904"
       }
     ],
     "distribution": {
-      "location": "public-inputs/lexical-annotated-source-v1",
+      "location": "public-inputs/stress-annotated-source-v1",
       "url": null
     },
     "deliveryStaged": false,
     "hiddenPrivateFallbackAllowed": false,
-    "rawContract": "Deliver this exact annotated authoring source unchanged. SourceBuilder build plus the locked graph must reproduce all four accepted runtime files; do not regenerate or revise expected identity from a differing output.",
-    "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit"
+    "rawContract": "Deliver the exact compact-stress authoring4 source unchanged, including required bindingId and qualified prototype models. Existing SourceBuilder build with the locked graph must reproduce all four predeclared accepted package4 files. Do not run legacy import/compaction, use a runtime output as build input, recompute stale bindings, or revise expected pins from a differing output.",
+    "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit",
+    "schemaVersion": "bglang-neutral-authoring.v5"
   },
   "storedInputQualification": "Historical preview.4 STORED producer provenance only. The successor recipe consumes authoringInput, never storedInput.",
   "priorUnannotatedCandidate": {
@@ -196,5 +202,15 @@
     "facadeMethods": 12,
     "inwardDependencyEdges": 4,
     "basis": "Accepted RESIDUAL10 evaluated/compiled complete arrays; packaging changes no runtime/API/dependency."
+  },
+  "previousAnnotatedRelease": {
+    "version": "v0.1.0-preview.5",
+    "publicSourceCommit": "de7f317ebe713c30280b6a229cba43d5aea5f263",
+    "packageId": "bglang-neutral:bec73e12c06e560f",
+    "manifest": {
+      "name": "manifest.json",
+      "bytes": 796,
+      "sha256": "7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651"
+    }
   }
 }

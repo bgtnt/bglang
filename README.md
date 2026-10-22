@@ -1,12 +1,12 @@
 # BgLang
 
-## v0.1.0-preview.5 — подготовка на следващия prerelease
+## v0.1.0-preview.6 — подготовка на следващия prerelease
 
-**Текущият source checkout подготвя `v0.1.0-preview.5`. Новата версия, assets и нов CI резултат още не са публикувани или потвърдени.** Публикуваният preview.4 е отделната историческа версия по-долу; неговите source/runtime assets не съдържат автоматично следващите разширения.
+**Текущият source checkout подготвя `v0.1.0-preview.6`; новите export/consumer/archives и hosted CI проверки са pending.** Preview.5 е публикуван с public source `de7f317ebe713c30280b6a229cba43d5aea5f263`. Preview.6 още няма потвърдени public source/tag или assets.
 
-Локално са приети Lexical, Text, Context, Syntax, Validation и owner-bound constructions за 20 семейства. Това довежда плана до **10 от 11 квалифицирани области на интеграция**; stress/explicit-accent multigroup authority остава задържана. Броят описва проектния обхват, без обща езикова accuracy или завършен parser. Animacy/Transitivity, общ NER, semantic disambiguation и corpus accuracy не са обещани.
+Локално са приети Lexical, Text, Context, Syntax, Validation, owner-bound constructions и новите `GetStressEvidence`, `GenerateStressForms`, `GetDerivationalStressEvidence`. Private implementation commit е `ea3d4bb4195795d0a89e93658967551409002e17`. Legacy captures, писмени знаци и qualified prototype/derivational predictions пазят различен произход. Няма обща нормативна гаранция за непозната дума, завършен parser, Animacy/Transitivity или corpus accuracy.
 
-Новият целеви runtime е пълният annotated `bglang-neutral:bec73e12c06e560f`, schema `bglang-neutral-runtime-package.v2`, с точно четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **103 374 440 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини. API използва готовия runtime; authoring input е нужен само за отделното offline възпроизвеждане.
+Новият целеви runtime е пълният annotated `bglang-neutral:e0de331f066ab7cf`, schema `bglang-neutral-runtime-package.v2`, с точно четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **178 701 954 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини. API използва готовия runtime; authoring input е нужен само за отделното offline възпроизвеждане.
 
 Използвайте source export и runtime от една и съща бъдеща проверена distribution. [Текущият guide](packaging/RELEASE-CANDIDATE.md) описва four-file package recipe, source-only режима, CLI и optional HTTP consumer. [Input lock](data/dictionary/public-input-lock.v1.json) фиксира authoring input, current graph и output hashes; липса или mismatch е FAIL без private fallback. Нови download links ще се добавят след действително publication readback.
 
@@ -34,7 +34,7 @@ TextAnalysis text = language.AnalyzeText("😀 писал съм.", false,
 
 ### Console и HTTP
 
-Съществуващият CLI е само `<manifest.json> [--json] [--measure] [--text-file <utf8.txt>]`. Няма CLI Context/construction flags. Source projection добавя всички 15 Text fields към съществуващия JSON wrapper; result полетата са PascalCase, а outer `method/input/result` са lowercase. Default JSON не доказва opt-in изпълнение. Точният export/projection consumer run остава задължителен преди release.
+Съществуващият CLI е само `<manifest.json> [--json] [--measure] [--text-file <utf8.txt>]`. Няма CLI Context/construction flags. Примерът извиква и трите stress метода, с exact selected owner, display-only evidence, писмен знак, Unknown и unavailable prototype. JSON checker пази тези разграничения и проверява, че prediction не добавя речников запис. Source projection добавя всички 15 Text fields към съществуващия JSON wrapper; result полетата са PascalCase, а outer `method/input/result` са lowercase. Default JSON не доказва opt-in изпълнение. Точният export/projection consumer run остава задължителен преди release.
 
 ```powershell
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -48,7 +48,7 @@ HTTP host/tests са отделен, optional consumer, без промяна н
 
 ```powershell
 $env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
-$env:BgLang__ManifestSha256 = '7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651'
+$env:BgLang__ManifestSha256 = 'c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12'
 dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 ```
 
@@ -56,9 +56,9 @@ Host default е `http://127.0.0.1:5070`. Примерен construction input е 
 
 ### Validation и release identity
 
-Локално приетият runtime batch има 3972 Passed / 0 Failed / 13 exact historical NotExecuted, с 43 mandatory package gate sets; historical skips не получават completion credit. Тези резултати не са нов exported-source consumer run или public CI. Преди preview.5 са нужни actual twin four-file reproduction, exact source export, Public/console/optional HTTP validation, release checksums и отделен publication readback. SourceOnly не включва authoring inputs или runtime и сам по себе си не възпроизвежда data package.
+Локално приетият runtime batch има 4047 Passed / 0 Failed / 13 exact historical NotExecuted, с 45 mandatory package gate sets; historical skips не получават completion credit. Тези резултати не са нов exported-source consumer run или public CI. Преди preview.6 са нужни actual twin four-file reproduction, exact source export, Public/console/optional HTTP validation, release checksums и отделен publication readback. SourceOnly не включва authoring inputs или runtime и сам по себе си не възпроизвежда data package.
 
-Съществуващият Windows workflow е consumer validation с `contents: read`, не publication job. Той използва HTTPS URL за точно locked authoring asset, а не runtime ZIP или трите preview.4 STORED inputs. Новият public source commit/tag, RAW export manifest, runtime/archive hashes и public CI identity се записват отделно. Не се заменят historical producer anchors с public commit ID.
+Съществуващият Windows workflow е consumer validation с `contents: read`. Push се изпълнява за всички branches чрез `branches: ['**']`; PR/manual са запазени. Release изисква main push CI и explicit dispatch на exact preview.6 tag с matching authoring input и test_web=true. Той използва HTTPS URL за точно locked authoring asset, а не runtime ZIP или трите preview.4 STORED inputs. Новият public source commit/tag, RAW export manifest, runtime/archive hashes и public CI identity се записват отделно. Не се заменят historical producer anchors с public commit ID.
 
 ---
 

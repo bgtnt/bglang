@@ -50,6 +50,28 @@ Query("Lookup", new { word = "книгата", mode = "Exact", limit = 16 },
 Query("GenerateForms", new { lemma = "книга", limit = 256 },
     () => language.GenerateForms("книга", 256), values => values,
     values => string.Join("; ", values.Select(value => $"{value.Form}: {value.Tag}")));
+// Captured Legacy evidence, written observations and qualified predictions stay separate.
+Query("GetStressEvidence", new { text = "😀 аванпост.", selection = new StressReadingSelection(1, "legacy-base:64", "аванпост", "Съществително:1,Мъжки") },
+    () => language.GetStressEvidence("😀 аванпост.", new(1, "legacy-base:64", "аванпост", "Съществително:1,Мъжки")),
+    value => value, value => value.RenderedText);
+Query("GetStressEvidence", new { text = "абата кни\u0300ги жжжабракадабрю.", selection = new StressReadingSelection(0, "legacy-base:824640", "абата", "Съществително:41,Женски,Членуван") },
+    () => language.GetStressEvidence("абата кни\u0300ги жжжабракадабрю.", new(0, "legacy-base:824640", "абата", "Съществително:41,Женски,Членуван")),
+    value => value, value => value.RenderedText);
+foreach (string prototypeEntryId in new[] { "legacy-base:64", " legacy-base:64 " })
+    Query("GenerateStressForms", new { prototypeEntryId, lemma = "космоаванпост" },
+        () => language.GenerateStressForms(prototypeEntryId, "космоаванпост"), value => value,
+        value => JsonSerializer.Serialize(value, options));
+Query("GetDerivationalStressEvidence", new { word = "играч" },
+    () => language.GetDerivationalStressEvidence("играч"), value => value,
+    value => JsonSerializer.Serialize(value, options));
+// A prototype prediction does not insert a novel lemma into the exact dictionary.
+Query("Lookup", new { word = "космоаванпост", mode = "Exact", limit = 16 },
+    () => language.Lookup("космоаванпост", LookupMode.Exact, 16),
+    values => values.Select(ReadingValue).ToArray(), values => JsonSerializer.Serialize(values, options));
+Query("GenerateForms", new { lemma = "космоаванпост", limit = 256 },
+    () => language.GenerateForms("космоаванпост", 256), values => values,
+    values => JsonSerializer.Serialize(values, options));
+
 foreach (string input in new[] { "книгата", "суперработник", "свръхсупертракторите", "супертрактор",
     "суперхубав", "суперкнига", "трактористка", "жълто-зелен", "жълто-зеления", "жълто--зелен", "жълто-книга" })
     Query("AnalyzeWord", new { word = input, maxReadings = 256 },

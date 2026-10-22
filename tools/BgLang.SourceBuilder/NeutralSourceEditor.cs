@@ -93,6 +93,8 @@ internal static class NeutralSourceEditor
             ?? throw new InvalidDataException("Продуктивният запис няма точно базово ударение.");
         if (seed.VowelOrdinals.Length == 0)
             throw new InvalidDataException("Базовото ударение трябва да съдържа поне една гласна.");
+        if (seed.Source is not null)
+            throw new InvalidDataException("Legacy ударение не може да бъде преквалифицирано като редакционно чрез carry-stress.");
 
         int[] vowelPositions = VowelPositions(lemma);
         Dictionary<(string Form, string? FullTag), List<int[]>> paths = [];
@@ -181,9 +183,16 @@ internal static class NeutralSourceEditor
             }
             declarations.Add(key, source);
         }
-        return (new(annotations.SchemaVersion == LexemeAnnotations.SourceEvidenceSchema ? AuthoringDocument.SourceEvidenceSchema : AuthoringDocument.Schema,
+        string authoringSchema = annotations.SchemaVersion switch
+        {
+            LexemeAnnotations.AccentSchema => AuthoringDocument.AccentSchema,
+            LexemeAnnotations.StressEvidenceSchema => AuthoringDocument.StressEvidenceSchema,
+            LexemeAnnotations.SourceEvidenceSchema => AuthoringDocument.SourceEvidenceSchema,
+            _ => AuthoringDocument.Schema
+        };
+        return (new(authoringSchema,
             annotations.Entries.Select(e => new AuthoringDocument.Entry(
-            e.EntryId, declarations[e.LexemeKey], e.Meaning, e.Stress, e.Related)).ToArray()), snapshot.WordFormation, loaded.WordFormation);
+            e.EntryId, declarations[e.LexemeKey], e.Meaning, e.Stress, e.Related) { AccentParadigm = e.AccentParadigm, StressPattern = e.StressPattern }).ToArray()), snapshot.WordFormation, loaded.WordFormation);
     }
 
     internal sealed record ExportResult(string SourcePath, string GraphPath, int Entries, string RebuildGuarantee);

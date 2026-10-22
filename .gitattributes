@@ -155,3 +155,8 @@ tests/BgLang.Tests/Kernel/Fixtures/syntax-role-exact-proof-bindings.v1.json text
 tests/BgLang.Tests/Kernel/Fixtures/construction-literal-fixture-1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/construction-boundary-controls-1.json text eol=lf
 public-inputs/lexical-annotated-source-v1/lexemes.source.json -text
+
+# Exact stress successor and independent source controls.
+tests/BgLang.Tests/Kernel/Fixtures/stress-annotated-consumer-pins.v1.json text eol=lf
+tests/BgLang.Public.Tests/Fixtures/stress-annotated-package.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/stress-independent-source.v1.json text eol=lf

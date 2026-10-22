@@ -287,3 +287,9 @@ successor и отделно текущия graph.
 `BgLang.SourceBuilder.Checks`. Те проверяват точни preimages, пълна корекция,
 foreign-owner unions/route, RAW/order preservation, reproducible twins,
 отказ на грешни maps/generated вход и create-only publication.
+
+## Compact stress source за preview.6
+
+Release recipe използва exact locked `bglang-neutral-authoring.v5` source с required `stressPattern.bindingId` и qualified `accentParadigm`. Подайте `lexemes.source.json` и exact locked graph към съществуващия `build`. Runtime annotations source е v4, а manifest schema е v2; тези версии имат различни роли.
+
+`export` пази bindingId. Редакция на complete form/full-tag inventory, owner/source, captured reading index или WordId с остарял binding се отказва при build/open; physical reorder се канонизира. Не пресмятайте нов binding върху променени данни, за да прехвърлите стар sparse capture. Липсващ capture остава Unknown. Legacy import/compact-stress са offline authoring операции и не са нужни за публичното reproduction на вече подготвения input. Qualified fit не е нормативна гаранция за нова дума.

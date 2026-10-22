@@ -49,7 +49,8 @@ internal static class HttpContract
 }
 
 internal sealed record WebInput(string? Text, int? Limit = null, string? Query = null,
-    string? EvidenceFormat = null, bool? IncludeUnknownContextProperNames = null, TextContextOptions? Context = null);
+    string? EvidenceFormat = null, bool? IncludeUnknownContextProperNames = null, TextContextOptions? Context = null,
+    StressReadingSelection? StressSelection = null, string? PrototypeEntryId = null);
 internal sealed record RuntimeVersions(string Host, string PublicApi, string Contracts, string Dotnet);
 internal sealed record ResultLimits(int? Requested, int? Effective, int? HostMaximum,
     bool HostLimitApplied, string Scope);

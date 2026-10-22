@@ -9,7 +9,7 @@
 
 ## Публикационен статус
 
-Този source checkout подготвя `v0.1.0-preview.5`; нови public source/tag,
+Този source checkout подготвя `v0.1.0-preview.6`; preview.5 е публикуван отделно. Нови public source/tag,
 release assets, exported-source consumer резултати и CI още не са потвърдени.
 Локалното приемане на API разширенията е отделно от проверката на distribution.
 Използвайте source и пълен четирифайлов runtime от една и съща проверена версия;
@@ -17,6 +17,20 @@ release assets, exported-source consumer резултати и CI още не с
 Предходните checkpoints, receipts и pending статуси по-долу остават исторически.
 Историческите private `.tmp` и `Docs/` provenance identifiers не са public evidence
 връзки и съответните файлове не се включват в публичния source export.
+
+## Stress HTTP операции за preview.6
+
+Трите операции са под `/api/v1/` и `/api/v2/`; JSON отговорите са camelCase. Изпращайте exact opaque EntryId и оригиналния raw fullTag. Полето fullTag е задължително в stressSelection, включително когато стойността му е null. Към тези операции не се изпраща limit; prototypeEntryId е приложимо само към generate-stress-forms.
+
+| Route | JSON body |
+| --- | --- |
+| `POST /api/v2/stress` | `{"text":"😀 аванпост.","stressSelection":{"tokenIndex":1,"entryId":"legacy-base:64","form":"аванпост","fullTag":"Съществително:1,Мъжки"}}` |
+| `POST /api/v2/generate-stress-forms` | `{"text":"космоаванпост","prototypeEntryId":"legacy-base:64"}` |
+| `POST /api/v2/derivational-stress` | `{"text":"играч"}` |
+
+Captured Legacy е provenance, не нова linguistic review. Display-only realization остава Inferred; InputObservation не е нормативно потвърдено ударение. Required source bindingId пази original capture identity. Prototype fit и derivational realization са qualified predictions с източник; липсващ или несвързан prototype дава unavailable/empty forms. Те не попълват Lookup/GenerateForms и не дават forward generation permission. Legacy offset arrays остават null, когато няма действителни captures. Stress rendering не предсказва sentence prosody.
+
+Използвайте тези директни HTTP заявки; explorer-ът няма отделни stress controls. HTTP consumer tests проверяват действителните routes; това не е нова UI функционалност. Exact package4 manifest SHA за подготовката е `c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12`. Нов distribution/hosted CI резултат се записва след изпълнение, отделно от приетите private tests.
 
 ## Подготовка и стартиране
 

@@ -421,7 +421,8 @@
       "transparency": "transparent",
       "blockReason": null,
       "evidenceIds": ["ev:reviewed-stem-family:играч"],
-      "evidenceCodes": ["reviewed_family=player_agent_noun_family"]
+      "evidenceCodes": ["reviewed_family=player_agent_noun_family",
+        "reviewed_surface_stem=игр"]
     },
     {
       "id": "a:плетач",

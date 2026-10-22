@@ -68,6 +68,13 @@ internal sealed class GraphSurfaceOperations(Morph[] morphs, GraphSurfaceOperati
     internal IEnumerable<string> ApplyTransform(string surface, int transformIndex) =>
         transforms[transformIndex].Apply(surface, forward: true);
 
+    internal int? EndingStart(string form, int operationOffset, int operationCount)
+    {
+        if (operationCount == 0) return null;
+        SurfaceOperation last = operations[operationOffset + operationCount - 1];
+        return last.Kind == OperationKind.AppendLiteral ? form.Length - literals[last.OperandIndex].Length : null;
+    }
+
     internal int RetainedOriginalPrefixLength(string lemma, string form, int operationOffset, int operationCount)
     {
         if (operationCount == 0)

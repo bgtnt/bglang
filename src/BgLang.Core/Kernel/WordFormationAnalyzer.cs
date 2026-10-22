@@ -14,6 +14,7 @@ internal sealed class WordFormationAnalyzer
     internal const string SchemaVersion = "bglang-word-formation-source.v0";
     internal const string SchemaVersionV1 = "bglang-word-formation-source.v1";
     internal const string SchemaVersionV2 = "bglang-word-formation-source.v2";
+    internal const string SurfaceStemEvidencePrefix = "reviewed_surface_stem=";
     private const string ReviewedStressSchemaVersion = "bglang-reviewed-exact-stress-source.v1";
     private const string ReviewedStressSourceId = "official-beron-ibl-reviewed-exact-stress.v1";
     private const string ReviewedStressReviewer = "codex-assisted-official-source-review";
@@ -174,6 +175,10 @@ internal sealed class WordFormationAnalyzer
     internal HashSet<(string Form, string Tag)> GenerateLexicalTuples(string lemma, string baseFullTag, string ruleId,
         CancellationToken cancellationToken = default) =>
         _graph.GenerateLexicalTuples(lemma, baseFullTag, ruleId, cancellationToken: cancellationToken);
+
+    internal HashSet<(string Form, string Tag)> GenerateAccentTuples(string lemma, string baseFullTag, string ruleId,
+        Action<WordFormationGraph.GenerationObservation> observe, CancellationToken cancellationToken) =>
+        _graph.GenerateLexicalTuples(lemma, baseFullTag, ruleId, observe, cancellationToken: cancellationToken);
 
     internal void ValidateBase(string lemma, string baseFullTag, string ruleId, CancellationToken cancellationToken = default) =>
         _graph.GenerateLexicalTuples(lemma, baseFullTag, ruleId, cancellationToken: cancellationToken);
@@ -687,6 +692,20 @@ internal sealed class WordFormationAnalyzer
                 dependencyTrust = Math.Min(
                     dependencyTrust,
                     TrustLevel(inputMorph.ReviewState, $"Morph '{input.NodeId}'"));
+            }
+            const string surfaceStemPrefix = SurfaceStemEvidencePrefix;
+            string[] alignments = application.EvidenceCodes.Where(code => code.StartsWith(surfaceStemPrefix, StringComparison.Ordinal)).ToArray();
+            if (alignments.Length > 0)
+            {
+                string surfaceStem = alignments[0][surfaceStemPrefix.Length..];
+                InputNode[] pieces = application.Inputs.Where(input => !input.NodeId.StartsWith("lemma:", StringComparison.Ordinal)).ToArray();
+                if (alignments.Length != 1 || application.Transparency != "transparent" || applicationTrust < 2 ||
+                    pieces.Length != 2 || pieces[0].Role != "stem" || pieces[1].Role != "suffix" ||
+                    morphIds[pieces[0].NodeId].Kind != "stem" || morphIds[pieces[1].NodeId].Kind != "derivational_suffix" ||
+                    !BulgarianOrthography.IsWellFormedWord(surfaceStem) || surfaceStem != BulgarianTextNormalizer.NormalizeKey(surfaceStem) ||
+                    surfaceStem + morphIds[pieces[1].NodeId].CanonicalText != application.OutputCanonical ||
+                    application.EvidenceCodes.Any(code => code.StartsWith("mechanical_split=", StringComparison.Ordinal)))
+                    throw new InvalidDataException($"Application '{application.Id}' requires one exact reviewed surface-stem/suffix alignment.");
             }
             if (applicationTrust >= 2 && dependencyTrust == 0)
                 throw new InvalidDataException($"Application '{application.Id}' review state exceeds a referenced dependency.");

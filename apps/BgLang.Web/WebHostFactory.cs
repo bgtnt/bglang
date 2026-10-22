@@ -76,7 +76,7 @@ internal static class WebHostFactory
                     retainedIpMaximum = HttpContract.ClientCapacity },
                 forwardedHeadersTrusted = false
             }, HttpContract.Json));
-            foreach (string operation in new[] { "lookup", "lookup-lexical-entries", "lexical-entry", "word-constructions", "analyze-word", "analyze-text", "generate-forms", "derive-words", "decompose-word", "find-forms-in-text" })
+            foreach (string operation in new[] { "lookup", "lookup-lexical-entries", "lexical-entry", "word-constructions", "stress", "generate-stress-forms", "derivational-stress", "analyze-word", "analyze-text", "generate-forms", "derive-words", "decompose-word", "find-forms-in-text" })
                 app.MapPost($"/api/v{version}/" + operation,
                     (HttpContext context, SessionHost host, ClientRateLimit rate, ResponseWriter writer) =>
                         HandleAsync(context, host, rate, writer, operation, version));

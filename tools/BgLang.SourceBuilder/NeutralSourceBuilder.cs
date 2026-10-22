@@ -50,7 +50,8 @@ internal static class NeutralSourceBuilder
         using JsonDocument first = JsonDocument.ParseValue(ref probe);
         bool annotated = first.RootElement.ValueKind == JsonValueKind.Object &&
             first.RootElement.TryGetProperty("schemaVersion", out JsonElement schema) &&
-            schema.ValueKind == JsonValueKind.String && schema.GetString() is AuthoringDocument.Schema or AuthoringDocument.SourceEvidenceSchema;
+            schema.ValueKind == JsonValueKind.String && schema.GetString() is AuthoringDocument.Schema or
+                AuthoringDocument.SourceEvidenceSchema or AuthoringDocument.StressEvidenceSchema or AuthoringDocument.AccentSchema;
         List<(string Key, string Line, int Readings)> rows = [];
         LexemeAnnotations? annotations = null;
         if (annotated)
@@ -61,7 +62,7 @@ internal static class NeutralSourceBuilder
             {
                 var row = Materialize(entry.Lexeme, graph, owners.Count + 1);
                 rows.Add(row);
-                owners.Add(new(entry.EntryId, row.Key, entry.Meaning, entry.Stress, entry.Related));
+                owners.Add(new(entry.EntryId, row.Key, entry.Meaning, entry.Stress, entry.Related) { AccentParadigm = entry.AccentParadigm, StressPattern = entry.StressPattern });
             }
             rows = rows.GroupBy(row => row.Key, StringComparer.Ordinal).Select(group =>
             {
@@ -70,8 +71,14 @@ internal static class NeutralSourceBuilder
                     throw new InvalidDataException("Shared owners require identical complete lexical declarations.");
                 return firstRow;
             }).ToList();
-            annotations = new LexemeAnnotations(document.SchemaVersion == AuthoringDocument.SourceEvidenceSchema
-                ? LexemeAnnotations.SourceEvidenceSchema : LexemeAnnotations.Schema, owners.ToArray()).Canonicalize();
+            string annotationSchema = document.SchemaVersion switch
+            {
+                AuthoringDocument.AccentSchema => LexemeAnnotations.AccentSchema,
+                AuthoringDocument.StressEvidenceSchema => LexemeAnnotations.StressEvidenceSchema,
+                AuthoringDocument.SourceEvidenceSchema => LexemeAnnotations.SourceEvidenceSchema,
+                _ => LexemeAnnotations.Schema
+            };
+            annotations = new LexemeAnnotations(annotationSchema, owners.ToArray()).Canonicalize();
             annotations = LexemeAnnotations.Read(StrictUtf8.GetString(annotations.Serialize()));
         }
         else

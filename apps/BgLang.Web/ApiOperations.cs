@@ -11,10 +11,23 @@ internal static class ApiOperations
             throw new ApiRequestException(400, "option-not-applicable", "Контекстните кандидати за собствени имена се включват само за analyze-text.");
         if (input.Context is not null && operation != "analyze-text")
             throw new ApiRequestException(400, "option-not-applicable", "Контекстните опции се използват само за analyze-text.");
+        if (input.PrototypeEntryId is not null && operation != "generate-stress-forms")
+            throw new ApiRequestException(400, "option-not-applicable", "Лексемният прототип се използва само за generate-stress-forms.");
+        if (operation == "generate-stress-forms" && string.IsNullOrWhiteSpace(input.PrototypeEntryId))
+            throw new ApiRequestException(400, "prototype-required", "Избери точен лексемен прототип чрез prototypeEntryId.");
+        if (input.StressSelection is not null)
+        {
+            if (operation != "stress")
+                throw new ApiRequestException(400, "option-not-applicable", "Изборът на прочит за ударение се използва само за stress.");
+            StressReadingSelection selection = input.StressSelection;
+            // The existing body-byte bound also bounds opaque selection strings.
+            if (selection.EntryId is null || selection.Form is null || selection.TokenIndex < 0)
+                throw new ApiRequestException(400, "invalid-stress-selection", "Изборът изисква индекс на токен, точен собственик, форма и fullTag.");
+        }
         if (input.EvidenceFormat is not (null or HttpContract.RawFormat or SharedDonorResponse.Format
             or SharedDonorResponse.AnalysisFormat))
             throw new ApiRequestException(400, "invalid-evidence-format", "Непознат формат за evidence.");
-        bool textOperation = operation is "analyze-text" or "find-forms-in-text";
+        bool textOperation = operation is "analyze-text" or "find-forms-in-text" or "stress";
         int maximum = textOperation ? HttpContract.TextLength : HttpContract.WordLength;
         if (input.Text is null || string.IsNullOrWhiteSpace(input.Text))
             throw new ApiRequestException(400, "text-required", "Въведи непразен текст.");
@@ -25,7 +38,7 @@ internal static class ApiOperations
             throw new ApiRequestException(400, "invalid-control-character", "Текстът съдържа недопустим контролен символ.");
         if (input.Limit is < 1 or > HttpContract.MaximumResultLimit)
             throw new ApiRequestException(400, "invalid-limit", $"Поисканият лимит трябва да е между 1 и {HttpContract.MaximumResultLimit}.");
-        if (input.Limit is not null && operation is "analyze-text" or "decompose-word" or "find-forms-in-text" or "lexical-entry" or "word-constructions")
+        if (input.Limit is not null && operation is "analyze-text" or "decompose-word" or "find-forms-in-text" or "lexical-entry" or "word-constructions" or "stress" or "generate-stress-forms" or "derivational-stress")
             throw new ApiRequestException(400, "limit-not-applicable", "Тази операция няма входен лимит за резултатите.");
         if (operation == "find-forms-in-text")
         {
@@ -50,6 +63,9 @@ internal static class ApiOperations
             "lookup-lexical-entries" => session.LookupLexicalEntries(input.Text!, effective, cancellationToken),
             "lexical-entry" => session.FindLexicalEntry(input.Text!, cancellationToken),
             "word-constructions" => session.GetWordConstructionCandidates(input.Text!, cancellationToken),
+            "stress" => session.GetStressEvidence(input.Text!, input.StressSelection, cancellationToken),
+            "generate-stress-forms" => session.GenerateStressForms(input.PrototypeEntryId!, input.Text!, cancellationToken),
+            "derivational-stress" => session.GetDerivationalStressEvidence(input.Text!, cancellationToken),
             "analyze-word" => session.AnalyzeWord(input.Text!, effective, cancellationToken),
             "analyze-text" => session.AnalyzeText(input.Text!, input.IncludeUnknownContextProperNames ?? false, input.Context ?? default, cancellationToken),
             "generate-forms" => session.GenerateForms(input.Text!, effective),
@@ -88,6 +104,9 @@ internal static class ApiOperations
         {
             "analyze-text" => new(null, HttpContract.TextWordAnalysisLimit, HttpContract.TextWordAnalysisLimit, false, "per-word-analysis"),
             "decompose-word" or "lexical-entry" or "word-constructions" => new(null, null, null, false, "scalar-evidence"),
+            "stress" => new(null, null, null, false, "complete-exact-stress-inventory; lexical-evidence-not-prosody"),
+            "generate-stress-forms" => new(null, null, null, false, "complete-guarded-paradigm; explicit-lexical-class-inference"),
+            "derivational-stress" => new(null, null, null, false, "reviewed-target-decomposition; qualified-accent-transition"),
             "find-forms-in-text" => new(null, HttpContract.QueryAnalysisLimit, HttpContract.QueryAnalysisLimit, false,
                 "per-query-and-word-analysis; all-text-matches-retained"),
             _ => new(input.Limit, effective, HttpContract.MaximumResultLimit, false, "per-result-collection")

@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using BgLang.Contracts;
 
 namespace BgLang.Core;
@@ -9,6 +10,8 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
 {
     internal const string Schema = "bglang-neutral-annotations.v1";
     internal const string SourceEvidenceSchema = "bglang-neutral-annotations.v2";
+    internal const string StressEvidenceSchema = "bglang-neutral-annotations.v3";
+    internal const string AccentSchema = "bglang-neutral-annotations.v4";
     internal const string FileName = "lexeme-annotations.v1.json";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -31,10 +34,10 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
         {
             StrictJson.RequireObject(root, label, ["schemaVersion", "entries"]);
             string schema = StrictJson.RequireString(root, "schemaVersion", label);
-            if (schema is not (Schema or SourceEvidenceSchema))
+            if (schema is not (Schema or SourceEvidenceSchema or StressEvidenceSchema or AccentSchema))
                 throw new InvalidDataException("Unsupported annotation schema.");
             foreach (JsonElement entry in StrictJson.RequireArray(root, "entries", label))
-                ValidateEntryJson(entry, allowUnresolved: schema == SourceEvidenceSchema);
+                ValidateEntryJson(entry, allowUnresolved: schema != Schema, allowStressSource: schema is StressEvidenceSchema or AccentSchema, allowAccent: schema == AccentSchema);
         });
         for (int i = 1; i < result.Entries.Length; i++)
             if (StringComparer.Ordinal.Compare(result.Entries[i - 1].EntryId, result.Entries[i].EntryId) >= 0)
@@ -54,6 +57,23 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
                         throw new InvalidDataException("Stress ordinals must be unique, increasing and within the exact form.");
                     previous = ordinal;
                 }
+                if (row.Source is { } source)
+                {
+                    bool displayOnly = source.Kind == "LegacyDisplayInferred";
+                    int[]? capturedPositions = displayOnly ? source.DisplayUtf16Positions : source.Utf16Positions;
+                    if (entry.EntryId != $"legacy-base:{source.OwnerId}" ||
+                        source.Kind is not ("LegacyStored" or "LegacyCarried" or "LegacyDisplayInferred") ||
+                        !source.SourceId.StartsWith("legacy-stress-v1:", StringComparison.Ordinal) ||
+                        source.SourceId.Length != 81 || source.SourceId[17..].Any(c => c is not (>= '0' and <= '9' or >= 'a' and <= 'f')) ||
+                        capturedPositions is null || capturedPositions.Length != row.VowelOrdinals.Length ||
+                        displayOnly && source.Utf16Positions is { Length: > 0 } ||
+                        !displayOnly && source.DisplayUtf16Positions is not null)
+                        throw new InvalidDataException("Legacy stress requires exact owner and captured source provenance.");
+                    int[] positions = row.Form.Select((c, i) => (c, i)).Where(p => IsVowel(p.c)).Select(p => p.i).ToArray();
+                    for (int i = 0; i < row.VowelOrdinals.Length; i++)
+                        if (positions[row.VowelOrdinals[i]] != capturedPositions[i])
+                            throw new InvalidDataException("Legacy offsets must match the exact form's vowel ordinals.");
+                }
             }
         }
         return result;
@@ -69,11 +89,13 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
 
     internal byte[] Serialize() => [.. JsonSerializer.SerializeToUtf8Bytes(Canonicalize(), Json), (byte)'\n'];
 
-    internal string SourceId => (SchemaVersion == SourceEvidenceSchema ? "neutral-annotations-v2:" : "neutral-annotations-v1:") +
+    internal string SourceId => (SchemaVersion == AccentSchema ? "neutral-annotations-v4:" :
+        SchemaVersion == StressEvidenceSchema ? "neutral-annotations-v3:" :
+        SchemaVersion == SourceEvidenceSchema ? "neutral-annotations-v2:" : "neutral-annotations-v1:") +
         LexicalIdentity.HashLengthPrefixed([SchemaVersion, JsonSerializer.Serialize(Canonicalize(), Json)]);
 
     /// <summary>Bind all references, then retain only stress supported by every visible reading and owner.</summary>
-    internal IReadOnlyDictionary<string, int[]>? Bind(IReadOnlyDictionary<string, WordReading[]> inventory)
+    internal IReadOnlyDictionary<string, int[]>? Bind(IReadOnlyDictionary<string, WordReading[]> inventory, WordFormationAnalyzer? graph = null)
     {
         Dictionary<string, Entry> entries = Entries.ToDictionary(e => e.EntryId, StringComparer.Ordinal);
         HashSet<string> ownedKeys = Entries.Select(e => e.LexemeKey).ToHashSet(StringComparer.Ordinal);
@@ -94,13 +116,27 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
         var stressByEntry = new Dictionary<string, Dictionary<(string Form, string? Tag), int[]>>(StringComparer.Ordinal);
         foreach (Entry entry in Entries)
         {
+            if (entry.StressPattern is { } pattern)
+            {
+                WordReading[] canonical = LexemeStressPattern.CanonicalReadings(inventory[entry.LexemeKey]);
+                pattern.Validate(entry.EntryId, canonical);
+                if (entry.Stress.Any(row => Array.Exists(canonical, reading => reading.Form == row.Form &&
+                    reading.PartOfSpeech == row.FullTag && pattern.Find(entry.EntryId, canonical, Array.IndexOf(canonical, reading)) is not null)))
+                    throw new InvalidDataException("Explicit and compressed stress cells cannot overlap.");
+            }
+            if (entry.AccentParadigm is { } accent) accent.Validate(inventory[entry.LexemeKey],
+                graph ?? throw new InvalidDataException("Accent paradigms require their exact graph program."));
             Dictionary<(string Form, string? Tag), int[]>? stress = null;
             foreach (StressRow row in entry.Stress)
             {
                 if (!Contains(entry.LexemeKey, row.Form, row.FullTag))
                     throw new InvalidDataException("Stress must bind an exact reading of its owner.");
-                (stress ??= []).Add((row.Form, row.FullTag), row.VowelOrdinals);
-                candidates.TryAdd(BulgarianTextNormalizer.NormalizeKey(row.Form), row.VowelOrdinals);
+                // Legacy evidence has its own per-owner query; do not relabel it as editorial consensus.
+                if (row.Source is null)
+                {
+                    (stress ??= []).Add((row.Form, row.FullTag), row.VowelOrdinals);
+                    candidates.TryAdd(BulgarianTextNormalizer.NormalizeKey(row.Form), row.VowelOrdinals);
+                }
             }
             if (stress is not null) stressByEntry.Add(entry.EntryId, stress);
             foreach (WordReference word in entry.Related.SelectMany(r => r.Phrases).SelectMany(p => p.Words))
@@ -130,28 +166,53 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
         return resolved.Count == 0 ? null : resolved;
     }
 
-    internal static void ValidateEntryJson(JsonElement entry, bool allowUnresolved = false)
+    internal static void ValidateEntryJson(JsonElement entry, bool allowUnresolved = false, bool allowStressSource = false, bool allowAccent = false)
     {
         const string label = "Annotation entry";
-        StrictJson.RequireObject(entry, label, ["entryId", "lexemeKey", "meaning", "stress", "related"]);
+        StrictJson.RequireObject(entry, label, ["entryId", "lexemeKey", "meaning", "stress", "related"],
+            allowAccent ? ["accentParadigm", "stressPattern"] : []);
         RequireCanonical(entry, "lexemeKey");
-        ValidateMetadataJson(entry, allowUnresolved);
+        ValidateMetadataJson(entry, allowUnresolved, allowStressSource, allowAccent);
     }
 
-    internal static void ValidateMetadataJson(JsonElement entry, bool allowUnresolved = false)
+    internal static void ValidateMetadataJson(JsonElement entry, bool allowUnresolved = false, bool allowStressSource = false, bool allowAccent = false)
     {
         const string label = "Editorial metadata";
         RequireCanonical(entry, "entryId");
+        if (entry.TryGetProperty("accentParadigm", out JsonElement accent))
+        {
+            if (!allowAccent) throw new InvalidDataException("Accent paradigms require annotation v4 /authoring v5.");
+            LexemeAccentParadigm.ValidateJson(accent);
+        }
+        if (entry.TryGetProperty("stressPattern", out JsonElement pattern))
+        {
+            if (!allowAccent) throw new InvalidDataException("Stress patterns require annotation v4 /authoring v5.");
+            LexemeStressPattern.ValidateJson(pattern);
+        }
         foreach (JsonElement line in StrictJson.RequireArray(entry, "meaning", label))
             if (line.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("Meaning must contain literal strings.");
         foreach (JsonElement stress in StrictJson.RequireArray(entry, "stress", label))
         {
-            StrictJson.RequireObject(stress, label, ["form", "fullTag", "vowelOrdinals"]);
+            StrictJson.RequireObject(stress, label, ["form", "fullTag", "vowelOrdinals"],
+                allowStressSource ? ["source"] : []);
             ValidateFormTag(stress);
             foreach (JsonElement ordinal in StrictJson.RequireArray(stress, "vowelOrdinals", label))
                 if (ordinal.ValueKind != JsonValueKind.Number || !ordinal.TryGetInt32(out _))
                     throw new InvalidDataException("Stress ordinals must be integers.");
+            if (stress.TryGetProperty("source", out JsonElement source))
+            {
+                StrictJson.RequireObject(source, "Stress source", ["kind", "sourceId", "ownerId", "wordId", "utf16Positions"],
+                    ["displayUtf16Positions"]);
+                StrictJson.RequireString(source, "kind", label);
+                StrictJson.RequireString(source, "sourceId", label);
+                foreach (string id in new[] { "ownerId", "wordId" })
+                    if (!StrictJson.RequireProperty(source, id, JsonValueKind.Number, label).TryGetUInt32(out _))
+                        throw new InvalidDataException("Legacy stress IDs must be unsigned integers.");
+                JsonElement rawOffsets = StrictJson.RequireProperty(source, "utf16Positions", JsonValueKind.Array, JsonValueKind.Null, label);
+                if (rawOffsets.ValueKind == JsonValueKind.Array) ValidateOffsets(rawOffsets);
+                if (source.TryGetProperty("displayUtf16Positions", out JsonElement displayOffsets)) ValidateOffsets(displayOffsets);
+            }
         }
         foreach (JsonElement relation in StrictJson.RequireArray(entry, "related", label))
         {
@@ -203,8 +264,31 @@ internal sealed record LexemeAnnotations(string SchemaVersion, LexemeAnnotations
 
     private static bool IsVowel(char value) => char.ToLowerInvariant(value) is 'а' or 'ъ' or 'о' or 'у' or 'е' or 'и' or 'ю' or 'я' or 'ѐ' or 'ѝ';
 
-    internal sealed record Entry(string EntryId, string LexemeKey, string[] Meaning, StressRow[] Stress, Relation[] Related);
-    internal sealed record StressRow(string Form, string? FullTag, int[] VowelOrdinals);
+    internal sealed record Entry(string EntryId, string LexemeKey, string[] Meaning, StressRow[] Stress, Relation[] Related)
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public LexemeAccentParadigm? AccentParadigm { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public LexemeStressPattern? StressPattern { get; init; }
+    }
+    internal sealed record StressRow(string Form, string? FullTag, int[] VowelOrdinals)
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public StressSource? Source { get; init; }
+    }
+    internal sealed record StressSource(string Kind, string SourceId, uint OwnerId, uint WordId, int[]? Utf16Positions)
+    {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int[]? DisplayUtf16Positions { get; init; }
+    }
+
+    private static void ValidateOffsets(JsonElement offsets)
+    {
+        if (offsets.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Legacy display offsets must be an array.");
+        foreach (JsonElement offset in offsets.EnumerateArray())
+            if (offset.ValueKind != JsonValueKind.Number || !offset.TryGetInt32(out _))
+                throw new InvalidDataException("Legacy stress offsets must be integers.");
+    }
     internal sealed record Relation(string Kind, AnnotationPhrase[] Phrases);
     internal sealed record WordReference(string EntryId, string Form, string? FullTag);
 }

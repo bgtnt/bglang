@@ -11,6 +11,7 @@
     <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
     <Content Include="Fixtures/public-literal-readings.v1.json" Link="data/public-literal-readings.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures/lexical-annotated-package.v1.json" Link="data/lexical-annotated-package.v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/stress-annotated-package.v1.json" Link="data/stress-annotated-package.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../data/dictionary/public-input-lock.v1.json" Link="data/public-input-lock.v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

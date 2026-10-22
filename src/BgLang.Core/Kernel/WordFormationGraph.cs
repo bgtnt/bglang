@@ -2546,7 +2546,10 @@ internal sealed class WordFormationGraph
     internal readonly record struct ApplicationDecision(
         string Transparency,
         string? BlockReason,
-        string? OutputPartOfSpeech);
+        string? OutputPartOfSpeech)
+    {
+        internal string? SurfaceStem { get; init; }
+    }
 
     internal readonly record struct StructuralDecision(
         string Transparency,
@@ -2666,6 +2669,7 @@ internal sealed class WordFormationGraph
         int RetainedOriginalPrefixLength)
     {
         internal int EdgeIndex { get; init; }
+        internal int? EndingStart { get; init; }
     }
 
     internal sealed record BinaryPath(string Right, string LeftTag, string RightTag, string Program, string FullTag);

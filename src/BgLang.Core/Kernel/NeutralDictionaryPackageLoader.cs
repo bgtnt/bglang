@@ -94,8 +94,9 @@ internal static class NeutralDictionaryPackageLoader
             LexemeAnnotations annotations = LexemeAnnotations.Read(ReadUtf8(annotationStream, "annotations"));
             if (annotations.SourceId != manifest.Annotations!.SourceId)
                 throw new InvalidDataException("Annotation semantic identity does not match the manifest.");
-            lexicalStress = annotations.Bind(declarations!.ToDictionary(row => row.LexemeKey, row => row.Readings, StringComparer.Ordinal));
-            lexicalCatalog = new PackageLexicalCatalog(annotations, source!.LexemeKeys!);
+            var inventory = declarations!.ToDictionary(row => row.LexemeKey, row => row.Readings, StringComparer.Ordinal);
+            lexicalStress = annotations.Bind(inventory, graph);
+            lexicalCatalog = new PackageLexicalCatalog(annotations, source!.LexemeKeys!, inventory);
         }
         ValidateExactFileSet(root, manifest.Lexicon.Path, annotated);
         PackageProvenance provenance = new(

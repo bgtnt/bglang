@@ -9,10 +9,27 @@ internal sealed class PackageLexicalCatalog
     private readonly LexicalEntry[][] _owners;
     private readonly Dictionary<string, int> _ordinalByLexemeKey;
     private readonly Dictionary<string, Phrase[]> _phrases;
+    private readonly Dictionary<(string EntryId, string Form, string? Tag), LexemeAnnotations.StressRow> _stress;
+    private readonly Dictionary<string, LexemeAccentParadigm> _accentParadigms;
+    private readonly Dictionary<string, (LexemeStressPattern Pattern, WordReading[] Readings)> _patterns;
     private readonly bool _incomplete;
 
-    internal PackageLexicalCatalog(LexemeAnnotations annotations, IReadOnlyList<string> lexemeKeys)
+    internal PackageLexicalCatalog(LexemeAnnotations annotations, IReadOnlyList<string> lexemeKeys,
+        IReadOnlyDictionary<string, WordReading[]>? inventory = null)
     {
+        Dictionary<string, WordReading[]> canonical = new(StringComparer.Ordinal);
+        _patterns = new(StringComparer.Ordinal);
+        foreach (var entry in annotations.Entries.Where(entry => entry.StressPattern is not null))
+        {
+            if (!canonical.TryGetValue(entry.LexemeKey, out var readings))
+                canonical.Add(entry.LexemeKey, readings = LexemeStressPattern.CanonicalReadings((inventory ??
+                    throw new InvalidDataException("Compact stress requires its exact validated owner inventory."))[entry.LexemeKey]));
+            _patterns.Add(entry.EntryId, (entry.StressPattern!, readings));
+        }
+        _accentParadigms = annotations.Entries.Where(entry => entry.AccentParadigm is not null)
+            .ToDictionary(entry => entry.EntryId, entry => entry.AccentParadigm!, StringComparer.Ordinal);
+        _stress = annotations.Entries.SelectMany(entry => entry.Stress.Select(row => (entry.EntryId, Row: row)))
+            .ToDictionary(item => (item.EntryId, item.Row.Form, item.Row.FullTag), item => item.Row);
         _entries = annotations.Entries.ToDictionary(entry => entry.EntryId, entry => new LexicalEntry(
             entry.EntryId, entry.LexemeKey, Array.AsReadOnly((string[])entry.Meaning.Clone()),
             Array.AsReadOnly(entry.Related.Select(group => new LexicalRelationGroup(group.Kind,
@@ -36,9 +53,36 @@ internal sealed class PackageLexicalCatalog
                 .ThenBy(phrase => phrase.RelationIndex).ThenBy(phrase => phrase.PhraseIndex).ToArray(), StringComparer.Ordinal);
     }
 
+    internal GeneratedStressParadigm GenerateStressForms(string entryId, string lemma, WordFormationAnalyzer graph,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _accentParadigms.TryGetValue(entryId, out var paradigm)
+            ? paradigm.Generate(entryId, lemma, graph, cancellationToken)
+            : new(false, entryId, null, lemma, null, null, graph.SourceId, []);
+    }
+
     internal LexicalEntryResult Find(string entryId) => new(true, _entries.GetValueOrDefault(entryId)) { PackageHasUnresolvedRelations = _incomplete };
 
     internal int OwnerCount => _owners.Length;
+
+    internal LexemeAnnotations.StressRow? GetStress(string entryId, WordReading reading)
+    {
+        if (_stress.TryGetValue((entryId, reading.Form, reading.PartOfSpeech), out var row)) return row;
+        if (!_patterns.TryGetValue(entryId, out var pattern)) return null;
+        int low = 0, high = pattern.Readings.Length - 1;
+        while (low <= high)
+        {
+            int index = low + (high - low) / 2;
+            WordReading candidate = pattern.Readings[index];
+            int order = StringComparer.Ordinal.Compare(candidate.Form, reading.Form);
+            if (order == 0) order = StringComparer.Ordinal.Compare(candidate.PartOfSpeech, reading.PartOfSpeech);
+            if (order < 0) low = index + 1;
+            else if (order > 0) high = index - 1;
+            else return pattern.Pattern.Find(entryId, pattern.Readings, index);
+        }
+        return null;
+    }
 
     internal bool TryGetOwnerOrdinal(string entryId, out int lexemeOrdinal, CancellationToken cancellationToken)
     {

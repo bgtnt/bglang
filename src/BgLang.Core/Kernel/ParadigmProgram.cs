@@ -54,7 +54,8 @@ internal sealed class ParadigmProgram(string stateId, ParadigmProgram.Cell[] cel
                     if (observations.Count >= maximumObservations)
                         throw new BinaryProofBudget.Failure(BinaryProofBudget.Outcome.ProofOverflow);
                     observations.Add(new(form, tag, surfaceOperations.RetainedOriginalPrefixLength(
-                        lemma, form, cell.OperationOffset, cell.OperationCount)) { EdgeIndex = cell.OriginalEdgeIndex });
+                        lemma, form, cell.OperationOffset, cell.OperationCount)) { EdgeIndex = cell.OriginalEdgeIndex,
+                        EndingStart = surfaceOperations.EndingStart(form, cell.OperationOffset, cell.OperationCount) });
                 }
                 if (!seen.Add((form, tag))) continue;
                 if (seen.Count > 256)

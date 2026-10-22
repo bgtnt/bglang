@@ -17,6 +17,31 @@ public sealed class PublicPackageTests
     private static JsonElement[] typedTags = [];
 
     [TestMethod]
+    [DataRow("аванпост", "legacy-base:64", "Съществително:1,Мъжки", "ава\u0300нпост", StressOrigin.LegacyStored, 2)]
+    [DataRow("абата", "legacy-base:824640", "Съществително:41,Женски,Членуван", "аба\u0300та", StressOrigin.LegacyDisplayInferred, 2)]
+    [DataRow("алпаката", "legacy-base:839872", "Съществително:41,Женски,Членуван", "алпака\u0300та", StressOrigin.LegacyDisplayInferred, 5)]
+    public void Stress_public_query_returns_captured_owner_bound_realizations_without_source_promotion(
+        string form, string id, string tag, string displayed, StressOrigin origin, int offset)
+    {
+        Assert.AreEqual("1", Environment.GetEnvironmentVariable("BGLANG_STRESS_REQUIRE_MANIFEST"));
+        StressEvidence actual = session.GetStressEvidence("😀 " + form + ".", new(1, id, form, tag));
+        Assert.AreEqual(StressSelectionStatus.Matched, actual.SelectionStatus); Assert.AreEqual("😀 " + displayed + ".", actual.RenderedText);
+        StressTokenEvidence token = actual.Tokens.Single(); Assert.AreEqual(3, token.Start); Assert.AreEqual(form.Length, token.Length);
+        StressRealization realization = token.Readings.Where(row => row.Reading.Form == form && row.Reading.PartOfSpeech == tag)
+            .SelectMany(row => row.Owners).Where(owner => owner.EntryId == id).First().Realizations.Single();
+        Assert.AreEqual(origin, realization.Origin); Assert.AreEqual(3 + offset, realization.Marks.Single().Utf16Position);
+        if (origin == StressOrigin.LegacyDisplayInferred)
+        { Assert.AreEqual(StressStatus.Inferred, token.Status); Assert.IsNull(realization.LegacyUtf16Positions); CollectionAssert.AreEqual(new[] { offset }, realization.LegacyDisplayUtf16Positions!.ToArray()); }
+        else Assert.AreEqual(StressStatus.Supported, token.Status);
+        StressEvidence disconnected = session.GetStressEvidence(form, new(0, " " + id, form, tag));
+        Assert.AreEqual(StressSelectionStatus.NotConnected, disconnected.SelectionStatus); Assert.AreEqual(form, disconnected.RenderedText);
+        using var cancel = new CancellationTokenSource(); cancel.Cancel();
+        Assert.AreEqual(cancel.Token, Assert.Throws<OperationCanceledException>(() =>
+            session.GetStressEvidence(form, cancellationToken: cancel.Token)).CancellationToken);
+        Assert.AreEqual(displayed, session.GetStressEvidence(form, new(0, id, form, tag)).RenderedText);
+    }
+
+    [TestMethod]
     public void Construction_query_preserves_exact_owner_identity_and_ready_empty_state()
     {
         LexicalEntryLookup lookup = session.LookupLexicalEntries("знаме", 256);
@@ -474,22 +499,29 @@ public sealed class PublicPackageTests
     [ClassInitialize]
     public static void OpenExactCompletePackage(TestContext _)
     {
+        string? stressManifest = Environment.GetEnvironmentVariable("BGLANG_STRESS_MANIFEST");
+        if (Environment.GetEnvironmentVariable("BGLANG_STRESS_REQUIRE_MANIFEST") == "1")
+            Assert.IsFalse(string.IsNullOrWhiteSpace(stressManifest), "The required stress successor cannot fall back to an older package.");
+        bool stress = stressManifest is not null;
         string? lexicalManifest = Environment.GetEnvironmentVariable("BGLANG_LEXICAL_MANIFEST");
         if (Environment.GetEnvironmentVariable("BGLANG_LEXICAL_REQUIRE_MANIFEST") == "1")
             Assert.IsFalse(string.IsNullOrWhiteSpace(lexicalManifest), "The required annotated successor cannot fall back to the historical public lock.");
         bool lexical = lexicalManifest is not null;
-        string fixtureName = lexical ? "lexical-annotated-package.v1.json" : "public-input-lock.v1.json";
+        string fixtureName = stress ? "stress-annotated-package.v1.json" : lexical ? "lexical-annotated-package.v1.json" : "public-input-lock.v1.json";
         byte[] identity = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data", fixtureName));
-        if (lexical) Assert.AreEqual("4a4da62b4e33643429bc4f7fea50a86e0e73ca6380ca55c6d2b7f972e130b3ba", Convert.ToHexStringLower(SHA256.HashData(identity)));
+        if (stress) Assert.AreEqual("59e28d79691ac42fe6e9db79417032bd55709530a7056917f7baf7c764de1ab9", Convert.ToHexStringLower(SHA256.HashData(identity)));
+        else if (lexical) Assert.AreEqual("4a4da62b4e33643429bc4f7fea50a86e0e73ca6380ca55c6d2b7f972e130b3ba", Convert.ToHexStringLower(SHA256.HashData(identity)));
         using var document = JsonDocument.Parse(identity);
-        Assert.AreEqual(lexical ? "bglang.lexical-public-package.v1" : "bglang.public-input-lock.v1", document.RootElement.GetProperty("schema").GetString());
+        Assert.AreEqual(stress ? "bglang.stress-public-package.v1" : lexical ? "bglang.lexical-public-package.v1" : "bglang.public-input-lock.v1",
+            document.RootElement.GetProperty("schema").GetString());
         Assert.IsTrue(document.RootElement.GetProperty("contractComplete").GetBoolean(), "Complete public input contract is required; missing inputs never skip.");
         candidate = document.RootElement.GetProperty("expectedCandidate").Clone();
         string? supplied = Environment.GetEnvironmentVariable("BGLANG_PUBLIC_PACKAGE_MANIFEST");
         Assert.IsFalse(string.IsNullOrWhiteSpace(supplied), "Set the explicit complete candidate manifest.");
         Assert.IsTrue(Path.IsPathFullyQualified(supplied!));
         manifest = Path.GetFullPath(supplied!);
-        if (lexical) Assert.AreEqual(Path.GetFullPath(lexicalManifest!), manifest, true, "Public and generic controls must select the same exact annotated package.");
+        if (stress) Assert.AreEqual(Path.GetFullPath(stressManifest!), manifest, true, "Public and generic controls must select the same exact stress successor.");
+        else if (lexical) Assert.AreEqual(Path.GetFullPath(lexicalManifest!), manifest, true, "Public and generic controls must select the same exact annotated package.");
         Assert.AreEqual("manifest.json", Path.GetFileName(manifest));
         string directory = Path.GetDirectoryName(manifest)!;
         var files = candidate.GetProperty("files").EnumerateArray().ToArray();

@@ -44,6 +44,32 @@ function Pin-ConsumerFile([string]$Path) {
     return [ordered]@{ path=[IO.Path]::GetFullPath($Path); bytes=$data.LongLength;
         sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($data)).ToLowerInvariant() }
 }
+function Select-Observation([System.Text.Json.JsonElement]$Items, [string]$Method, [string]$Field, [string]$InputValue) {
+    $selected = @($Items.EnumerateArray() | Where-Object {
+        (Get-Field $_ 'method').GetString() -ceq $Method -and
+        (Get-Field (Get-Field $_ 'input') $Field).GetString() -ceq $InputValue
+    })
+    Assert-Consumer ($selected.Count -eq 1) ('exactly one ' + $Method + ' for literal ' + $InputValue)
+    return Get-Field $selected[0] 'result'
+}
+function Assert-Mark([System.Text.Json.JsonElement]$Marks, [int]$Ordinal, [int]$Position, [string]$Kind, [string]$Label) {
+    Assert-Count $Marks 1 $Label
+    Assert-Fields $Marks[0] @('VowelOrdinal','Utf16Position','Kind') $Label
+    Assert-Number (Get-Field $Marks[0] 'VowelOrdinal') $Ordinal ($Label + '.ordinal')
+    Assert-Number (Get-Field $Marks[0] 'Utf16Position') $Position ($Label + '.position')
+    Assert-String (Get-Field $Marks[0] 'Kind') $Kind ($Label + '.kind')
+}
+function Select-OwnerRealization([System.Text.Json.JsonElement]$Token, [string]$Form, [string]$Tag, [string]$OwnerId) {
+    $rows = @((Get-Field $Token 'Readings').EnumerateArray() | Where-Object {
+        $reading = Get-Field $_ 'Reading'
+        (Get-Field $reading 'Form').GetString() -ceq $Form -and (Get-Field $reading 'PartOfSpeech').GetString() -ceq $Tag
+    })
+    Assert-Consumer ($rows.Count -gt 0) 'literal exact form/tag reading present'
+    $owners = @($rows | ForEach-Object { (Get-Field $_ 'Owners').EnumerateArray() } | Where-Object { (Get-Field $_ 'EntryId').GetString() -ceq $OwnerId })
+    Assert-Consumer ($owners.Count -gt 0) 'literal opaque owner present'
+    $realizations = Get-Field $owners[0] 'Realizations'; Assert-Count $realizations 1 'coherent captured realization'
+    return $realizations[0]
+}
 $literalSamples = @{
     'known-repeat' = @{ text='знаме знаме.'; utf16Length=12; bytes=22; sha256='18db9d15a6b5d6914f9806b829928b5d6e7aa278abb47ed18641517c26e50e0a' }
     'empty' = @{ text=''; utf16Length=0; bytes=0; sha256='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
@@ -63,10 +89,95 @@ try {
     Assert-Fields $root @('schema','Provenance','environment','startup','measurementNote','observations') 'outer envelope'
     Assert-String (Get-Field $root 'schema') 'bglang-public-example.v1' 'schema'
     $provenance = Get-Field $root 'Provenance'
-    Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:bec73e12c06e560f' 'package identity'
-    Assert-String (Get-Field $provenance 'ManifestSha256') '7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651' 'matching accepted manifest'
+    Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:e0de331f066ab7cf' 'package identity'
+    Assert-String (Get-Field $provenance 'ManifestSha256') 'c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12' 'matching accepted manifest'
     $observations = Get-Field $root 'observations'
     Assert-Kind $observations 'Array' 'observations'
+    # Prospective literals from the accepted Public/Full/HTTP stress controls, never derived from this output.
+    $stored = Select-Observation $observations 'GetStressEvidence' 'text' '😀 аванпост.'
+    Assert-Fields $stored @('Text','RenderedText','OwnersAvailable','SelectionStatus','Tokens') 'stress projection'
+    Assert-String (Get-Field $stored 'Text') '😀 аванпост.' 'stored original text'
+    Assert-String (Get-Field $stored 'RenderedText') "😀 ава$([char]0x0300)нпост." 'stored conservative rendering'
+    Assert-Bool (Get-Field $stored 'OwnersAvailable') $true 'stored owners available'
+    Assert-String (Get-Field $stored 'SelectionStatus') 'Matched' 'stored exact owner selection'
+    $storedTokens = Get-Field $stored 'Tokens'; Assert-Count $storedTokens 1 'stored word token'
+    $storedToken = $storedTokens[0]
+    Assert-Number (Get-Field $storedToken 'Start') 3 'stored absolute UTF16 start'
+    Assert-Number (Get-Field $storedToken 'Length') 8 'stored raw length'
+    Assert-String (Get-Field $storedToken 'Status') 'Supported' 'stored token status'
+    $captureSource = 'legacy-stress-v1:ae70252c3e252d8e568cfa16cfde94a47c95f10553cfe72c567413bc4c9286ec'
+    $capture = Select-OwnerRealization $storedToken 'аванпост' 'Съществително:1,Мъжки' 'legacy-base:64'
+    Assert-String (Get-Field $capture 'Origin') 'LegacyStored' 'stored origin'
+    Assert-String (Get-Field $capture 'SourceId') $captureSource 'stored capture provenance'
+    Assert-Mark (Get-Field $capture 'Marks') 1 5 'Unspecified' 'stored absolute mark'
+    $rawOffsets = Get-Field $capture 'LegacyUtf16Positions'; Assert-Count $rawOffsets 1 'raw Legacy offsets'
+    Assert-Number $rawOffsets[0] 2 'raw Legacy local offset'
+    Assert-Kind (Get-Field $capture 'LegacyDisplayUtf16Positions') 'Null' 'no fabricated display offsets'
+
+    $mixedText = "абата кни$([char]0x0300)ги жжжабракадабрю."
+    $mixed = Select-Observation $observations 'GetStressEvidence' 'text' $mixedText
+    Assert-String (Get-Field $mixed 'SelectionStatus') 'Matched' 'display-inferred owner selection'
+    $mixedTokens = Get-Field $mixed 'Tokens'; Assert-Count $mixedTokens 3 'mixed stress tokens'
+    $displayToken = $mixedTokens[0]
+    Assert-String (Get-Field $displayToken 'RenderedText') "аба$([char]0x0300)та" 'display-inferred rendering'
+    Assert-Number (Get-Field $displayToken 'Start') 0 'display raw start'; Assert-Number (Get-Field $displayToken 'Length') 5 'display raw length'
+    Assert-String (Get-Field $displayToken 'Status') 'Inferred' 'display remains inferred'
+    $display = Select-OwnerRealization $displayToken 'абата' 'Съществително:41,Женски,Членуван' 'legacy-base:824640'
+    Assert-String (Get-Field $display 'Origin') 'LegacyDisplayInferred' 'display provenance not promoted'
+    Assert-String (Get-Field $display 'SourceId') $captureSource 'display capture provenance'
+    Assert-Mark (Get-Field $display 'Marks') 1 2 'Unspecified' 'display mark'
+    Assert-Kind (Get-Field $display 'LegacyUtf16Positions') 'Null' 'display raw getter stays null'
+    $displayOffsets = Get-Field $display 'LegacyDisplayUtf16Positions'; Assert-Count $displayOffsets 1 'display offsets'
+    Assert-Number $displayOffsets[0] 2 'display local offset'
+    $writtenToken = $mixedTokens[1]
+    Assert-Number (Get-Field $writtenToken 'Start') 6 'written raw start'; Assert-Number (Get-Field $writtenToken 'Length') 6 'written raw length'
+    $observed = Get-Field $writtenToken 'Observations'; Assert-Count $observed 1 'written observation'
+    Assert-String (Get-Field $observed[0] 'Origin') 'InputObservation' 'written origin'
+    Assert-String (Get-Field $observed[0] 'Status') 'Unclassified' 'written mark is not normative authority'
+    Assert-Kind (Get-Field $observed[0] 'SourceId') 'Null' 'written source absent'
+    Assert-Mark (Get-Field $observed[0] 'Marks') 0 8 'Grave' 'written absolute mark'
+    Assert-String (Get-Field $mixedTokens[2] 'Text') 'жжжабракадабрю' 'unknown literal'
+    Assert-Number (Get-Field $mixedTokens[2] 'Start') 13 'unknown raw start'; Assert-Number (Get-Field $mixedTokens[2] 'Length') 14 'unknown raw length'
+    Assert-String (Get-Field $mixedTokens[2] 'Status') 'Unknown' 'unknown stays unknown'
+    Assert-String (Get-Field $mixedTokens[2] 'RenderedText') 'жжжабракадабрю' 'unknown unchanged'
+
+    $generated = Select-Observation $observations 'GenerateStressForms' 'prototypeEntryId' 'legacy-base:64'
+    Assert-Fields $generated @('Available','PrototypeEntryId','PrototypeLemma','Lemma','RuleId','EvidenceSourceId','GraphSourceId','Forms') 'prototype projection'
+    Assert-Bool (Get-Field $generated 'Available') $true 'prototype available'
+    Assert-String (Get-Field $generated 'PrototypeEntryId') 'legacy-base:64' 'explicit prototype identity'
+    Assert-String (Get-Field $generated 'PrototypeLemma') 'аванпост' 'prototype lemma'
+    Assert-String (Get-Field $generated 'Lemma') 'космоаванпост' 'novel lemma'
+    Assert-String (Get-Field $generated 'GraphSourceId') 'word-formation-source-v0' 'prototype graph provenance'
+    $fitSource = Get-Field $generated 'EvidenceSourceId'; Assert-Kind $fitSource 'String' 'qualified model provenance'
+    Assert-Consumer ($fitSource.GetString().StartsWith('legacy-pattern-fit-v1:', [StringComparison]::Ordinal)) 'qualified fit retains provenance'
+    $baseForms = @((Get-Field $generated 'Forms').EnumerateArray() | Where-Object { (Get-Field $_ 'Form').GetString() -ceq 'космоаванпост' -and (Get-Field $_ 'FullTag').GetString() -ceq 'Съществително:1,Мъжки' })
+    Assert-Consumer ($baseForms.Count -eq 1) 'literal generated base row'
+    Assert-Fields $baseForms[0] @('Form','FullTag','Status','Marks') 'generated row projection'
+    Assert-String (Get-Field $baseForms[0] 'Status') 'Inferred' 'prototype is a prediction'
+    Assert-Mark (Get-Field $baseForms[0] 'Marks') 3 7 'Unspecified' 'predicted local mark'
+    $missing = Select-Observation $observations 'GenerateStressForms' 'prototypeEntryId' ' legacy-base:64 '
+    Assert-Bool (Get-Field $missing 'Available') $false 'unconnected prototype unavailable'
+    Assert-String (Get-Field $missing 'PrototypeEntryId') ' legacy-base:64 ' 'opaque prototype is not trimmed'
+    Assert-Count (Get-Field $missing 'Forms') 0 'unavailable prototype forms empty'
+    Assert-Count (Select-Observation $observations 'Lookup' 'word' 'космоаванпост') 0 'prediction is not exact storage'
+    Assert-Count (Select-Observation $observations 'GenerateForms' 'lemma' 'космоаванпост') 0 'prediction does not add an ordinary paradigm'
+
+    $derived = Select-Observation $observations 'GetDerivationalStressEvidence' 'word' 'играч'
+    Assert-Fields $derived @('Decomposition','Status','Realization') 'derivational projection'
+    Assert-String (Get-Field $derived 'Status') 'Inferred' 'derivational status'
+    $decomposition = Get-Field $derived 'Decomposition'
+    foreach ($pair in @(@('Word','играч'),@('NormalizedWord','играч'),@('Base','играя'),@('ApplicationId','a:играч'),@('RuleId','derivational_suffix.stem_family.ach.v0'),@('Transparency','transparent'))) {
+        Assert-String (Get-Field $decomposition $pair[0]) $pair[1] ('derivational proof.' + $pair[0])
+    }
+    Assert-Bool (Get-Field $decomposition 'ProductiveGeneration') $false 'analysis does not grant forward generation'
+    $prediction = Get-Field $derived 'Realization'
+    Assert-String (Get-Field $prediction 'Origin') 'DerivationalRulePrediction' 'derivational origin'
+    Assert-String (Get-Field $prediction 'Status') 'Inferred' 'derivational realization status'
+    Assert-String (Get-Field $prediction 'SourceId') 'patseva-bulgarian-lexical-accent:section-5.3.1.1:agentive-ach' 'named accent source'
+    Assert-Mark (Get-Field $prediction 'Marks') 1 3 'Unspecified' 'derivational local mark'
+    Assert-Kind (Get-Field $prediction 'LegacyUtf16Positions') 'Null' 'no fabricated Legacy raw capture'
+    Assert-Kind (Get-Field $prediction 'LegacyDisplayUtf16Positions') 'Null' 'no fabricated Legacy display capture'
+
     $selectedObservations = @($observations.EnumerateArray() | Where-Object {
         $item = $_
         if ((Get-Field $item 'method').GetString() -cne 'AnalyzeText') { return $false }
@@ -202,7 +313,7 @@ try {
             Assert-Kind (Get-Field $evidence 'UnavailableReason') 'Null' ($pair[0] + '.UnavailableReason')
         }
     }
-    [pscustomobject]@{ schema='bglang.publication-console-literal-check.v1'; status='PASS_CONSOLE_DEFAULT_PROJECTION';
-        sampleId=$SampleId; sample=$samplePin; inputJson=$jsonPin; textFieldCount=15; passedAssertions=$script:consumerCheckCount;
+    [pscustomobject]@{ schema='bglang.publication-console-literal-check.v1'; status='PASS_CONSOLE_DEFAULT_AND_STRESS_PROJECTION';
+        sampleId=$SampleId; sample=$samplePin; inputJson=$jsonPin; textFieldCount=15; stressQueries=5; predictionStorageControls=2; passedAssertions=$script:consumerCheckCount;
         qualification='Default console projection and independent literals only. No CLI opt-in, corpus/grammar/resource/publication claim. Native/provider terminal belongs to caller.' }
 } finally { $document.Dispose() }
