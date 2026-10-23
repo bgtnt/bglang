@@ -1,12 +1,12 @@
 {
   "schema": "bglang.public-input-lock.v1",
-  "status": "LOCKED_STRESS_SUCCESSOR_PUBLICATION_PREPARATION",
+  "status": "LOCKED_PREVIEW7_REPAIR_DISTRIBUTION_PREPARATION",
   "contractComplete": true,
   "source": {
     "baseCommit": "399c166d9aa82355a8599f64a7457348789bb395",
     "exportManifest": "public-source-manifest.json",
     "authority": "baseCommit is the historical runtime/offline producer anchor; acceptedImplementationCommit identifies the accepted implementation base. Exact recipe/docs/source RAW files are bound by public-source-manifest.json. Neither field is the eventual public source commit or tag.",
-    "acceptedImplementationCommit": "ea3d4bb4195795d0a89e93658967551409002e17"
+    "acceptedImplementationCommit": "dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a"
   },
   "sdk": {
     "requestedVersion": "10.0.402",
@@ -46,35 +46,35 @@
   },
   "graph": {
     "releaseRelativePath": "data/word-formation/word-formation-source.v0.json",
-    "bytes": 2106761,
-    "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f",
+    "bytes": 2109799,
+    "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b",
     "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
   },
   "expectedCandidate": {
-    "profile": "stress-annotated-native.v1",
-    "packageId": "bglang-neutral:e0de331f066ab7cf",
-    "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
+    "profile": "preview6-auxiliary-repair-stress",
+    "packageId": "bglang-neutral:36b0b69685d6d3e9",
+    "sourceId": "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
     "createdAtUtc": "1970-01-01T00:00:00+00:00",
     "files": [
       {
         "name": "lexeme-annotations.v1.json",
-        "bytes": 129258513,
-        "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c"
+        "bytes": 129258517,
+        "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5"
       },
       {
         "name": "lexicon.v3.jsonl",
         "bytes": 47335883,
-        "sha256": "e76c91b4ddd90f9ce87bf86b3cd57482aafeb04f198fc91982f31d721d96922a"
+        "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
       },
       {
         "name": "manifest.json",
         "bytes": 797,
-        "sha256": "c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12"
+        "sha256": "451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7"
       },
       {
         "name": "word-formation.v0.json",
-        "bytes": 2106761,
-        "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f"
+        "bytes": 2109799,
+        "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
       }
     ],
     "releaseRelativeDirectory": "artifacts/public-package",
@@ -85,21 +85,23 @@
       "httpTarget": "BGLANG_WEB_TEST_MANIFEST",
       "httpManifestSha256": "BGLANG_WEB_TEST_MANIFEST_SHA256",
       "stressTarget": "BGLANG_STRESS_MANIFEST",
-      "strictStress": "BGLANG_STRESS_REQUIRE_MANIFEST=1"
+      "strictStress": "BGLANG_STRESS_REQUIRE_MANIFEST=1",
+      "repairTarget": "BGLANG_PREVIEW6_REPAIR_MANIFEST",
+      "strictRepair": "BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST=1"
     },
-    "readingCount": 1549263,
-    "distinctForms": 1266121,
+    "readingCount": 1549275,
+    "distinctForms": 1266125,
     "lexemes": 119290,
     "nativeLexemes": 106551,
-    "nativeReadings": 1533555,
+    "nativeReadings": 1533567,
     "storedLexemes": 12739,
     "storedReadings": 15708,
     "manifestSchema": "bglang-neutral-runtime-package.v2",
     "annotations": {
       "path": "lexeme-annotations.v1.json",
-      "bytes": 129258513,
-      "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c",
-      "sourceId": "neutral-annotations-v4:a3babeea01b64e4c9a21d190eb42f587dac3666659e208146a67ed833aff05a1"
+      "bytes": 129258517,
+      "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5",
+      "sourceId": "neutral-annotations-v4:f8f04b61cc9cf7e8ae03a19aa2b72ec85601689b89a30689f67a4483d8c23865"
     },
     "stressPatterns": 54138,
     "capturedStressRows": 829449,
@@ -124,38 +126,38 @@
     "productCompileInputs": 134,
     "productInwardDependencyEdges": 3,
     "inwardDependencyEdges": 4,
-    "basis": "Accepted stress ea3d4bb compiled complete arrays: Product API/Core/Contracts has three inward edges; the four-project Public solution adds PublicTests->API. Packaging does not change runtime/API/dependencies."
+    "basis": "Accepted repair dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a retains compiled Product API/Core/Contracts with three inward edges and PublicTests->API as the fourth public-solution edge. Packaging changes no runtime/API/dependency."
   },
   "ownerRightsBasis": "Owner-authored code/data; owner states MIT release intent. Third-party test dependencies retain their licenses.",
   "releaseApproval": false,
   "publicationPerformed": false,
   "releaseCandidate": {
-    "label": "stress-parity-plus-r1-successor",
-    "runtimeCommit": "ea3d4bb4195795d0a89e93658967551409002e17",
-    "publicVersion": "v0.1.0-preview.6",
+    "label": "unicode-auxiliary-repair-successor",
+    "runtimeCommit": "dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a",
+    "publicVersion": "v0.1.0-preview.7",
     "publicDestination": "bgtnt/bglang",
     "inputBaseUrl": null,
-    "status": "PUBLICATION_PREPARATION_VALIDATION_PENDING",
+    "status": "LOCAL_DRAFT_PACKAGING_VALIDATION_PENDING",
     "publicSourceCommit": null
   },
   "authoringInput": {
-    "profile": "stress-annotated-source.v1",
-    "releaseRelativeDirectory": "public-inputs/stress-annotated-source-v1",
+    "profile": "preview7-auxiliary-repair-authoring.v1",
+    "releaseRelativeDirectory": "public-inputs/preview7-auxiliary-repair-authoring-v5",
     "entryFile": "lexemes.source.json",
     "files": [
       {
         "name": "lexemes.source.json",
-        "bytes": 146429824,
-        "sha256": "ee04e48f602a2525acd7dc26976b804d840fe0f98124a52b4a40381671ada904"
+        "bytes": 146429828,
+        "sha256": "55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a"
       }
     ],
     "distribution": {
-      "location": "public-inputs/stress-annotated-source-v1",
+      "location": "public-inputs/preview7-auxiliary-repair-authoring-v5",
       "url": null
     },
     "deliveryStaged": false,
     "hiddenPrivateFallbackAllowed": false,
-    "rawContract": "Deliver the exact compact-stress authoring4 source unchanged, including required bindingId and qualified prototype models. Existing SourceBuilder build with the locked graph must reproduce all four predeclared accepted package4 files. Do not run legacy import/compaction, use a runtime output as build input, recompute stale bindings, or revise expected pins from a differing output.",
+    "rawContract": "Deliver exactly the accepted auxiliary-authoring-2 lexemes.source.json unchanged, with its required bindingId and qualified prototype models. The twelve old owner143 captures were rebound, not invented. Existing SourceBuilder build with the locked graph must reproduce all four predeclared accepted repair files. Do not import/compact Legacy, use runtime output as build input, recompute bindings or revise expected pins from a differing fresh output.",
     "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit",
     "schemaVersion": "bglang-neutral-authoring.v5"
   },
@@ -212,5 +214,94 @@
       "bytes": 796,
       "sha256": "7e37b0f47a1ad4dcd23c899258c5fd09aa40538cba61b55987533481c2ff6651"
     }
+  },
+  "previousPreview6": {
+    "version": "v0.1.0-preview.6",
+    "acceptedImplementationCommit": "ea3d4bb4195795d0a89e93658967551409002e17",
+    "publicSourceCommit": "362b85eaeb712a994430b24894b9f2c333d0bbbc",
+    "releaseUrl": "https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.6",
+    "expectedCandidate": {
+      "profile": "stress-annotated-native.v1",
+      "packageId": "bglang-neutral:e0de331f066ab7cf",
+      "sourceId": "neutral-source-v3:cd595704188df3b69aa1321901ba74d17293f013351e55701ef87c5b615ed6e9",
+      "createdAtUtc": "1970-01-01T00:00:00+00:00",
+      "files": [
+        {
+          "name": "lexeme-annotations.v1.json",
+          "bytes": 129258513,
+          "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c"
+        },
+        {
+          "name": "lexicon.v3.jsonl",
+          "bytes": 47335883,
+          "sha256": "e76c91b4ddd90f9ce87bf86b3cd57482aafeb04f198fc91982f31d721d96922a"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 797,
+          "sha256": "c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12"
+        },
+        {
+          "name": "word-formation.v0.json",
+          "bytes": 2106761,
+          "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f"
+        }
+      ],
+      "releaseRelativeDirectory": "artifacts/public-package",
+      "selectors": {
+        "publicTarget": "BGLANG_PUBLIC_PACKAGE_MANIFEST",
+        "currentCandidate": "BGLANG_LEXICAL_MANIFEST",
+        "strictCurrent": "BGLANG_LEXICAL_REQUIRE_MANIFEST=1",
+        "httpTarget": "BGLANG_WEB_TEST_MANIFEST",
+        "httpManifestSha256": "BGLANG_WEB_TEST_MANIFEST_SHA256",
+        "stressTarget": "BGLANG_STRESS_MANIFEST",
+        "strictStress": "BGLANG_STRESS_REQUIRE_MANIFEST=1"
+      },
+      "readingCount": 1549263,
+      "distinctForms": 1266121,
+      "lexemes": 119290,
+      "nativeLexemes": 106551,
+      "nativeReadings": 1533555,
+      "storedLexemes": 12739,
+      "storedReadings": 15708,
+      "manifestSchema": "bglang-neutral-runtime-package.v2",
+      "annotations": {
+        "path": "lexeme-annotations.v1.json",
+        "bytes": 129258513,
+        "sha256": "7b9dbee0395b0c1bf5a3fba0da285d61bd5797db19d8cd9bca22d92e55aefd6c",
+        "sourceId": "neutral-annotations-v4:a3babeea01b64e4c9a21d190eb42f587dac3666659e208146a67ed833aff05a1"
+      },
+      "stressPatterns": 54138,
+      "capturedStressRows": 829449,
+      "qualifiedPrototypeModels": 43467
+    },
+    "graph": {
+      "releaseRelativePath": "data/word-formation/word-formation-source.v0.json",
+      "bytes": 2106761,
+      "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f",
+      "rawContract": "Explicit RAW graph snapshot bytes; no canonical Git LF substitution or silent normalization"
+    },
+    "authoringInput": {
+      "profile": "stress-annotated-source.v1",
+      "releaseRelativeDirectory": "public-inputs/stress-annotated-source-v1",
+      "entryFile": "lexemes.source.json",
+      "files": [
+        {
+          "name": "lexemes.source.json",
+          "bytes": 146429824,
+          "sha256": "ee04e48f602a2525acd7dc26976b804d840fe0f98124a52b4a40381671ada904"
+        }
+      ],
+      "distribution": {
+        "location": "public-inputs/stress-annotated-source-v1",
+        "url": null
+      },
+      "deliveryStaged": false,
+      "hiddenPrivateFallbackAllowed": false,
+      "rawContract": "Deliver the exact compact-stress authoring4 source unchanged, including required bindingId and qualified prototype models. Existing SourceBuilder build with the locked graph must reproduce all four predeclared accepted package4 files. Do not run legacy import/compaction, use a runtime output as build input, recompute stale bindings, or revise expected pins from a differing output.",
+      "ownerRightsBasis": "Owner directly states ownership and MIT release intent; no new general provenance audit",
+      "schemaVersion": "bglang-neutral-authoring.v5"
+    },
+    "qualification": "Immutable prior released Preview6 identities; these are historical bindings and not Preview7 inputs or expected outputs."
   }
 }

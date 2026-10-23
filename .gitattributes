@@ -160,3 +160,5 @@ public-inputs/lexical-annotated-source-v1/lexemes.source.json -text
 tests/BgLang.Tests/Kernel/Fixtures/stress-annotated-consumer-pins.v1.json text eol=lf
 tests/BgLang.Public.Tests/Fixtures/stress-annotated-package.v1.json text eol=lf
 tests/BgLang.Tests/Kernel/Fixtures/stress-independent-source.v1.json text eol=lf
+tests/BgLang.Public.Tests/Fixtures/preview6-repair-package.v1.json text eol=lf
+tests/BgLang.Tests/Kernel/Fixtures/preview6-repair-consumer-pins.v1.json text eol=lf

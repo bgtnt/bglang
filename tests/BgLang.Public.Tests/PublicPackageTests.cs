@@ -499,6 +499,10 @@ public sealed class PublicPackageTests
     [ClassInitialize]
     public static void OpenExactCompletePackage(TestContext _)
     {
+        string? repairManifest = Environment.GetEnvironmentVariable("BGLANG_PREVIEW6_REPAIR_MANIFEST");
+        if (Environment.GetEnvironmentVariable("BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST") == "1")
+            Assert.IsFalse(string.IsNullOrWhiteSpace(repairManifest), "The required repair successor cannot fall back or skip.");
+        bool repair = repairManifest is not null;
         string? stressManifest = Environment.GetEnvironmentVariable("BGLANG_STRESS_MANIFEST");
         if (Environment.GetEnvironmentVariable("BGLANG_STRESS_REQUIRE_MANIFEST") == "1")
             Assert.IsFalse(string.IsNullOrWhiteSpace(stressManifest), "The required stress successor cannot fall back to an older package.");
@@ -507,12 +511,13 @@ public sealed class PublicPackageTests
         if (Environment.GetEnvironmentVariable("BGLANG_LEXICAL_REQUIRE_MANIFEST") == "1")
             Assert.IsFalse(string.IsNullOrWhiteSpace(lexicalManifest), "The required annotated successor cannot fall back to the historical public lock.");
         bool lexical = lexicalManifest is not null;
-        string fixtureName = stress ? "stress-annotated-package.v1.json" : lexical ? "lexical-annotated-package.v1.json" : "public-input-lock.v1.json";
+        string fixtureName = repair ? "preview6-repair-package.v1.json" : stress ? "stress-annotated-package.v1.json" : lexical ? "lexical-annotated-package.v1.json" : "public-input-lock.v1.json";
         byte[] identity = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data", fixtureName));
-        if (stress) Assert.AreEqual("59e28d79691ac42fe6e9db79417032bd55709530a7056917f7baf7c764de1ab9", Convert.ToHexStringLower(SHA256.HashData(identity)));
+        if (repair) Assert.AreEqual("01460077278b1b315e5e9c17199b88340f5916ba187f1bc9c17a47290d163116", Convert.ToHexStringLower(SHA256.HashData(identity)));
+        else if (stress) Assert.AreEqual("59e28d79691ac42fe6e9db79417032bd55709530a7056917f7baf7c764de1ab9", Convert.ToHexStringLower(SHA256.HashData(identity)));
         else if (lexical) Assert.AreEqual("4a4da62b4e33643429bc4f7fea50a86e0e73ca6380ca55c6d2b7f972e130b3ba", Convert.ToHexStringLower(SHA256.HashData(identity)));
         using var document = JsonDocument.Parse(identity);
-        Assert.AreEqual(stress ? "bglang.stress-public-package.v1" : lexical ? "bglang.lexical-public-package.v1" : "bglang.public-input-lock.v1",
+        Assert.AreEqual(repair ? "bglang.preview6-repair-public-package.v1" : stress ? "bglang.stress-public-package.v1" : lexical ? "bglang.lexical-public-package.v1" : "bglang.public-input-lock.v1",
             document.RootElement.GetProperty("schema").GetString());
         Assert.IsTrue(document.RootElement.GetProperty("contractComplete").GetBoolean(), "Complete public input contract is required; missing inputs never skip.");
         candidate = document.RootElement.GetProperty("expectedCandidate").Clone();
@@ -520,6 +525,7 @@ public sealed class PublicPackageTests
         Assert.IsFalse(string.IsNullOrWhiteSpace(supplied), "Set the explicit complete candidate manifest.");
         Assert.IsTrue(Path.IsPathFullyQualified(supplied!));
         manifest = Path.GetFullPath(supplied!);
+        if (repair) Assert.AreEqual(Path.GetFullPath(repairManifest!), manifest, true, "Public and generic controls must select the same exact repair successor.");
         if (stress) Assert.AreEqual(Path.GetFullPath(stressManifest!), manifest, true, "Public and generic controls must select the same exact stress successor.");
         else if (lexical) Assert.AreEqual(Path.GetFullPath(lexicalManifest!), manifest, true, "Public and generic controls must select the same exact annotated package.");
         Assert.AreEqual("manifest.json", Path.GetFileName(manifest));
@@ -797,6 +803,45 @@ public sealed class PublicPackageTests
         CollectionAssert.AreEqual(new[] { 4 }, value.Phonetics.InferredSingleVowelStressPositions.ToArray());
         CollectionAssert.AreEqual(new[] { "е" }, value.Phonetics.ExplicitRhymeTailCandidates.ToArray());
         CollectionAssert.AreEqual(new[] { "ой" }, value.Phonetics.InferredSingleVowelRhymeTailCandidates.ToArray());
+    }
+
+    [TestMethod]
+    public void Marked_compounds_preserve_public_raw_tokens_and_utf16_spans()
+    {
+        const string input = "😀 наи\u0306-силен по-си\u0300лен.";
+        TextAnalysis actual = session.AnalyzeText(input);
+        Assert.AreEqual(input, actual.Text);
+        CollectionAssert.AreEqual(new[] { "Symbol@0:2:😀", "Word@3:10:наи\u0306-силен", "Word@14:9:по-си\u0300лен", "Punctuation@23:1:." },
+            actual.Tokens.Select(token => $"{token.Kind}@{token.Start}:{token.Length}:{token.Text}").ToArray());
+        Assert.IsNotNull(actual.Validation);
+        Assert.IsTrue(actual.Validation.Available);
+        Assert.IsFalse(actual.Validation.Diagnostics.Any(row => row.Code == "invalid_word_phrase_compact_separator_order"));
+        Assert.IsNull(actual.Validation.SubordinateCommaDiagnostics);
+    }
+
+    [TestMethod]
+    [DataRow("Ще дойда само когато мога.")]
+    [DataRow("Само аз ще дойда когато мога.")]
+    public void Public_comma_trigger_unavailability_is_preserved(string input)
+    {
+        const string reason = "subordinate_comma:trigger_authority_unavailable";
+        TextAnalysis disabled = session.AnalyzeText(input);
+        TextAnalysis enabled = session.AnalyzeText(input, false,
+            new TextContextOptions { IncludeSubordinateCommaDiagnostics = true }, default);
+        Assert.AreEqual(input, enabled.Text);
+        Assert.IsNotNull(disabled.Validation);
+        Assert.IsNull(disabled.Validation.SubordinateCommaDiagnostics);
+        Assert.IsFalse(disabled.Validation.UnavailableChecks.Contains(reason));
+        Assert.IsNotNull(enabled.Validation);
+        Assert.IsTrue(enabled.Validation.Available);
+        Assert.IsNull(enabled.Validation.UnavailableReason);
+        Assert.IsNotNull(enabled.Validation.SubordinateCommaDiagnostics);
+        Assert.AreEqual(0, enabled.Validation.SubordinateCommaDiagnostics.Count);
+        Assert.IsTrue(enabled.Validation.UnavailableChecks.Contains(reason));
+        TextReadingInventory inventory = enabled.ReadingInventory!;
+        TextReadingOccurrence occurrence = inventory.Occurrences.Single(row => row.Text == "когато");
+        CollectionAssert.AreEqual(new[] { "Наречие:188" }, inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(row => row.Raw.PartOfSpeech).ToArray());
+        CollectionAssert.AreEqual(disabled.Diagnostics.ToArray(), enabled.Diagnostics.ToArray());
     }
 
     [TestMethod]

@@ -1,10 +1,10 @@
 {
   "schema": "bglang.public-source-manifest.v1",
-  "sourceBaseCommit": "ea3d4bb4195795d0a89e93658967551409002e17",
+  "sourceBaseCommit": "dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a",
   "authority": "Accepted implementation base anchor; exact recipe/docs/source snapshot is the RAW file manifest. This is not the public source commit or tag.",
   "sourceOnly": true,
   "authoringInputDelivered": false,
-  "authoringInputProfile": "stress-annotated-source.v1",
+  "authoringInputProfile": "preview7-auxiliary-repair-authoring.v1",
   "releaseBuildClosure": [
     {
       "project": "apps/BgLang.Web/BgLang.Web.csproj",
@@ -849,6 +849,7 @@
         "Compile|tests/BgLang.Public.Tests/PublicPackageTests.cs",
         "Content|data/dictionary/public-input-lock.v1.json",
         "Content|tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json",
+        "Content|tests/BgLang.Public.Tests/Fixtures/preview6-repair-package.v1.json",
         "Content|tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
         "Content|tests/BgLang.Public.Tests/Fixtures/stress-annotated-package.v1.json",
         "Import|Directory.Build.props",
@@ -1264,8 +1265,8 @@
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 11853,
-      "sha256": "3faf9ec9e9ca0d640471d78c32791d172d4d32f79c8e38be48c0c26c14fa19bc"
+      "bytes": 12017,
+      "sha256": "e4d1f9941cc4110d27c4e5c1cf7d94d56771babc914bd22dc1a76ec14e7a3d19"
     },
     {
       "path": ".github/workflows/windows-public.yml",
@@ -1294,8 +1295,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 22487,
-      "sha256": "8082a79e67b72557b7442851dc454646d5f49fa5f36813817537f69384315153"
+      "bytes": 25949,
+      "sha256": "3dbffc53ef1ff3b63142ca047d6e7737fa28754022248a33c46a480422fc8690"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1389,13 +1390,13 @@
     },
     {
       "path": "data/dictionary/public-input-lock.v1.json",
-      "bytes": 8954,
-      "sha256": "91d6f6c3fdd4652738fbce80483120d13838fac88de6340de188dcad648d080e"
+      "bytes": 13345,
+      "sha256": "0ee86b47aa007e43fceb89f8c4ac1f6604a00dbe343c766fc52007adabbc5e95"
     },
     {
       "path": "data/word-formation/word-formation-source.v0.json",
-      "bytes": 2106761,
-      "sha256": "9f4d695710b2a219372b4a4d9c04c28829880fcdf1666b9cf009ab15b501002f"
+      "bytes": 2109799,
+      "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
     },
     {
       "path": "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
@@ -1414,8 +1415,8 @@
     },
     {
       "path": "packaging/Build-PublicPackage.ps1",
-      "bytes": 21598,
-      "sha256": "8cf6238fe762fc57c76bb837371157a445b7b4aca045fa061c8e8ef1aea724e9"
+      "bytes": 21984,
+      "sha256": "4ffa39990a04935ed51f8612f442ff15d262af325870be8ddc5d61fc3088f3e0"
     },
     {
       "path": "packaging/Export-PublicSource.ps1",
@@ -1424,18 +1425,18 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 36437,
-      "sha256": "4003168a0a804a7da86ffd342c06a56622a2e4bfa02c09a64b788157cc134904"
+      "bytes": 37751,
+      "sha256": "2500ae582f1037e84cd564d1a272dd92a4dc4549aa711e2506ee95fae91efd02"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
       "bytes": 27792,
-      "sha256": "dd7f254839b550d38184d50e28c6415d6eb52ef14ca317a6b6c2b8fcc6a7bf16"
+      "sha256": "0dbe3865ed061015787d4aec19a1b819d39875894e4582f18000c86011af7ead"
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 12692,
-      "sha256": "cf45a7283d638c3f28a0375d04d6232d83bcb953187a7a95364afaaf88413618"
+      "bytes": 12778,
+      "sha256": "fc0588abf970c40ec14fae193d24ec8cfe5455742159a21ef0f2353008074ad6"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2089,8 +2090,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 29958,
-      "sha256": "d2544ba4705bc07c6ab82569f6ddb27ae92c3f3d855c33ac67acb0f062eab0c0"
+      "bytes": 30221,
+      "sha256": "a917db3b99301bf23d6fa1e186bc08a7a712f7eb5452f0a88af7ef958b2922cb"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2129,8 +2130,13 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-      "bytes": 1260,
-      "sha256": "dee1c2a1feaa1ca26203c8e0e00ef3ae859051bc6d0067be67e078bdbdc9fb7b"
+      "bytes": 1410,
+      "sha256": "c9373d21d930843154b82c18c658870b4ed0c97c5a255c5b419419186bcf7105"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/Fixtures/preview6-repair-package.v1.json",
+      "bytes": 1308,
+      "sha256": "01460077278b1b315e5e9c17199b88340f5916ba187f1bc9c17a47290d163116"
     },
     {
       "path": "tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json",
@@ -2149,8 +2155,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 61858,
-      "sha256": "d3d6378cc64f951dac9b2efba050d189447fefca579511bc90a30013b1dc9b6c"
+      "bytes": 65152,
+      "sha256": "28dbc6a005b1149deb19cf024da02929e6f9a910691152b6bb917d76fb849d22"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",
@@ -2174,8 +2180,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionHttpTests.cs",
-      "bytes": 16774,
-      "sha256": "05a904628b8271f18e46c01fefc0fac754e41131572f0f0d411c405cc34c8c7c"
+      "bytes": 20458,
+      "sha256": "f7bd2fe756978eeb457d8365a63ca6fcf00cf2385ff5b9a62f3214e2c7fa2a31"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionResponseTests.cs",

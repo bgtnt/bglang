@@ -1701,6 +1701,12 @@
       "kind": "linguistic_paradigm_review",
       "reference": "Docs/RESIDUAL10-PARITY-2026-10-17.md; prospective 16cf9a806a01f45c9fab0d56b376f031ccd5fd762bc428b5a386f5a29c2fc86d; exact named sources in external receipt",
       "note": "Ten finite original owners: corrected IR4 two definite passive yat cells with146other readings exact; four exact clitic frames with positive owner-specific person/aspect/transitivity facts and bounded class completion; преспичка singular yat correction; source-qualified нуминозен adjective cells with original public neuter owner нуминозно. Existing exact-input lexical literal execution; no root graph/OOV, generic homonym/aspect inheritance or all-variant authority. Declaration is not batch acceptance."
+    },
+    {
+      "id": "ev:ibl:auxiliary143-restoration-20261022",
+      "kind": "linguistic_paradigm_review",
+      "reference": "Docs/PREVIEW6-REPAIR-2026-10-22.md; https://ibl.bas.bg/infolex/dictionary.php?word=%D0%B1%D0%B8%D1%85; https://ibl.bas.bg/infolex/dictionary.php?word=%D0%B1%D0%B8%D0%B4%D0%BE%D1%85",
+      "note": "Restore twelve independently supported legacy-owner143 aorist readings across the бих/бидох series after complete-package RED confirmed absence. Preserve all twenty existing readings, other owners and homographs. Isolated raw tags retain the existing finite Aorist/person/number contract; no context-selected lemma, Mood or productive conditional construction is inferred. The twelve existing Legacy stress captures require exact tuple rebind; no new capture is supplied. Declaration is not batch acceptance."
     }
   ],
   "negativeControls": [
@@ -42824,15 +42830,16 @@
       ]
     },
     {
-      "id": "paradigm|state:verb:143|lexical.residual10.owner6202240.v1|residual10-6202240",
+      "id": "paradigm|state:verb:143|lexical.residual10.owner6202240.v2|residual10-6202240",
       "stateId": "state:verb:143",
-      "ruleId": "lexical.residual10.owner6202240.v1",
+      "ruleId": "lexical.residual10.owner6202240.v2",
       "baseFullTag": "Глагол:143,1л.,Сегашно",
       "fullTagPrefix": "Глагол:143",
       "stemTransformId": "stem-transform:residual10:6202240",
       "reviewState": "accepted",
       "evidenceIds": [
-        "ev:ibl:residual10-finite"
+        "ev:ibl:residual10-finite",
+        "ev:ibl:auxiliary143-restoration-20261022"
       ],
       "executionKind": "lexical",
       "forms": [
@@ -42962,6 +42969,78 @@
           "ending": "бидейки",
           "fullTags": [
             "Глагол:143,Деепричастие"
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бих",
+          "fullTags": [
+            "Глагол:143,1л.,Минало_свършено"
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "би",
+          "fullTags": [
+            "Глагол:143,2л.,Минало_свършено",
+            "Глагол:143,3л.,Минало_свършено"
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бихме",
+          "fullTags": [
+            "Глагол:143,1л.,Минало_свършено,мн.ч."
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бихте",
+          "fullTags": [
+            "Глагол:143,2л.,Минало_свършено,мн.ч."
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "биха",
+          "fullTags": [
+            "Глагол:143,3л.,Минало_свършено,мн.ч."
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бидох",
+          "fullTags": [
+            "Глагол:143,1л.,Минало_свършено"
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "биде",
+          "fullTags": [
+            "Глагол:143,2л.,Минало_свършено",
+            "Глагол:143,3л.,Минало_свършено"
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бидохме",
+          "fullTags": [
+            "Глагол:143,1л.,Минало_свършено,мн.ч."
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бидохте",
+          "fullTags": [
+            "Глагол:143,2л.,Минало_свършено,мн.ч."
+          ]
+        },
+        {
+          "source": "literal",
+          "ending": "бидоха",
+          "fullTags": [
+            "Глагол:143,3л.,Минало_свършено,мн.ч."
           ]
         }
       ]

@@ -89,8 +89,8 @@ try {
     Assert-Fields $root @('schema','Provenance','environment','startup','measurementNote','observations') 'outer envelope'
     Assert-String (Get-Field $root 'schema') 'bglang-public-example.v1' 'schema'
     $provenance = Get-Field $root 'Provenance'
-    Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:e0de331f066ab7cf' 'package identity'
-    Assert-String (Get-Field $provenance 'ManifestSha256') 'c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12' 'matching accepted manifest'
+    Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:36b0b69685d6d3e9' 'package identity'
+    Assert-String (Get-Field $provenance 'ManifestSha256') '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7' 'matching accepted manifest'
     $observations = Get-Field $root 'observations'
     Assert-Kind $observations 'Array' 'observations'
     # Prospective literals from the accepted Public/Full/HTTP stress controls, never derived from this output.

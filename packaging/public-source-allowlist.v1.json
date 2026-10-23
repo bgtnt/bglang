@@ -1,6 +1,6 @@
 {
   "schema": "bglang.public-source-allowlist.v1",
-  "sourceBaseCommit": "ea3d4bb4195795d0a89e93658967551409002e17",
+  "sourceBaseCommit": "dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a",
   "projects": [
     "apps/BgLang.Web/BgLang.Web.csproj",
     "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
@@ -187,6 +187,7 @@
     "src/BgLang.Core/Kernel/WordFormationGraphCompiler.cs",
     "src/BgLang.Core/Kernel/WordReadingOrder.cs",
     "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
+    "tests/BgLang.Public.Tests/Fixtures/preview6-repair-package.v1.json",
     "tests/BgLang.Public.Tests/Fixtures/lexical-annotated-package.v1.json",
     "tests/BgLang.Public.Tests/Fixtures/public-literal-readings.v1.json",
     "tests/BgLang.Public.Tests/Fixtures/stress-annotated-package.v1.json",
@@ -229,7 +230,7 @@
     "tools/BgLang.SourceBuilder/derive_native_pins.py",
     "tools/BgLang.SourceBuilder/example.source.jsonl"
   ],
-  "inputDirectory": "public-inputs/stress-annotated-source-v1",
+  "inputDirectory": "public-inputs/preview7-auxiliary-repair-authoring-v5",
   "inputFiles": [
     "lexemes.source.json"
   ],

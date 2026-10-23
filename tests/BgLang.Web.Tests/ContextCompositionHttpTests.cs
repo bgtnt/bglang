@@ -170,6 +170,56 @@ public sealed class ContextCompositionHttpTests
         await host.StopAsync(CancellationToken.None);
     }
 
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("1")][DataRow("2")]
+    public async Task Marked_compounds_keep_raw_http_tokens_and_utf16_spans(string version)
+    {
+        await WithPackage(async (_, _, client) =>
+        {
+            const string input = "😀 наи\u0306-силен по-си\u0300лен.";
+            using JsonDocument response = await Analyze(client, version, JsonSerializer.Serialize(new { text = input }));
+            JsonElement data = response.RootElement.GetProperty("data");
+            Assert.AreEqual(input, data.GetProperty("text").GetString());
+            CollectionAssert.AreEqual(new[] { "0:2:😀", "3:10:наи\u0306-силен", "14:9:по-си\u0300лен", "23:1:." },
+                data.GetProperty("tokens").EnumerateArray().Select(token =>
+                    $"{token.GetProperty("start").GetInt32()}:{token.GetProperty("length").GetInt32()}:{token.GetProperty("text").GetString()}").ToArray());
+            JsonElement validation = data.GetProperty("validation");
+            Assert.IsTrue(validation.GetProperty("available").GetBoolean());
+            Assert.IsFalse(validation.GetProperty("diagnostics").EnumerateArray().Any(row =>
+                row.GetProperty("code").GetString() == "invalid_word_phrase_compact_separator_order"));
+            Assert.AreEqual(JsonValueKind.Null, validation.GetProperty("subordinateCommaDiagnostics").ValueKind);
+        });
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("1")][DataRow("2")]
+    public async Task Existing_comma_trigger_unavailability_is_visible_over_http(string version)
+    {
+        await WithPackage(async (_, _, client) =>
+        {
+            foreach (string input in new[] { "Ще дойда само когато мога.", "Само аз ще дойда когато мога." })
+            {
+                using JsonDocument disabled = await Analyze(client, version, JsonSerializer.Serialize(new { text = input }));
+                using JsonDocument enabled = await Analyze(client, version, JsonSerializer.Serialize(new
+                    { text = input, context = new { includeSubordinateCommaDiagnostics = true } }));
+                JsonElement off = disabled.RootElement.GetProperty("data"), on = enabled.RootElement.GetProperty("data");
+                Assert.AreEqual(input, on.GetProperty("text").GetString());
+                Assert.AreEqual(JsonValueKind.Null, off.GetProperty("validation").GetProperty("subordinateCommaDiagnostics").ValueKind);
+                JsonElement validation = on.GetProperty("validation");
+                Assert.IsTrue(validation.GetProperty("available").GetBoolean());
+                Assert.AreEqual(JsonValueKind.Null, validation.GetProperty("unavailableReason").ValueKind);
+                const string reason = "subordinate_comma:trigger_authority_unavailable";
+                Assert.IsFalse(off.GetProperty("validation").GetProperty("unavailableChecks").EnumerateArray().Any(row => row.GetString() == reason));
+                Assert.IsTrue(validation.GetProperty("unavailableChecks").EnumerateArray().Any(row => row.GetString() == reason));
+                JsonElement diagnostics = validation.GetProperty("subordinateCommaDiagnostics");
+                Assert.AreEqual(JsonValueKind.Array, diagnostics.ValueKind);
+                Assert.AreEqual(0, diagnostics.GetArrayLength());
+                Assert.IsTrue(SharedDonorResponseTests.SameJson(off.GetProperty("diagnostics"), on.GetProperty("diagnostics")));
+                Assert.IsTrue(SharedDonorResponseTests.SameJson(off.GetProperty("readingInventory"), on.GetProperty("readingInventory")));
+            }
+        });
+    }
+
     private static void AssertOptions(JsonElement data, TextContextOptions options)
     {
         Assert.AreEqual(JsonValueKind.Object, data.GetProperty("context").ValueKind);

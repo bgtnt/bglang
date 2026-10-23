@@ -1,14 +1,52 @@
 # BgLang
 
-## v0.1.0-preview.6 — подготовка на следващия prerelease
+BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
-**Текущият source checkout подготвя `v0.1.0-preview.6`; новите export/consumer/archives и hosted CI проверки са pending.** Preview.5 е публикуван с public source `de7f317ebe713c30280b6a229cba43d5aea5f263`. Preview.6 още няма потвърдени public source/tag или assets.
+## Preview7 — локална подготовка, 23 октомври 2026
 
-Локално са приети Lexical, Text, Context, Syntax, Validation, owner-bound constructions и новите `GetStressEvidence`, `GenerateStressForms`, `GetDerivationalStressEvidence`. Private implementation commit е `ea3d4bb4195795d0a89e93658967551409002e17`. Legacy captures, писмени знаци и qualified prototype/derivational predictions пазят различен произход. Няма обща нормативна гаранция за непозната дума, завършен parser, Animacy/Transitivity или corpus accuracy.
+`v0.1.0-preview.7` е кандидат за distribution; export/build/archive проверките предстоят. Няма публикуван Preview7 tag, assets или download URL. Приетата локална поправка е commit `dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a`:12 спомагателни прочита на „бъда“ и четири Unicode combining-mark validation корекции. Валидните homographs са запазени; нов comma дефект не е установен.
 
-Новият целеви runtime е пълният annotated `bglang-neutral:e0de331f066ab7cf`, schema `bglang-neutral-runtime-package.v2`, с точно четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **178 701 954 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини. API използва готовия runtime; authoring input е нужен само за отделното offline възпроизвеждане.
+Кандидатът използва complete runtime `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. [Текущият release guide](packaging/RELEASE-CANDIDATE.md) описва matching authoring input и локалното A/B възпроизвеждане. След осигуряване на точния input в `./authoring-input`:
 
-Използвайте source export и runtime от една и съща бъдеща проверена distribution. [Текущият guide](packaging/RELEASE-CANDIDATE.md) описва four-file package recipe, source-only режима, CLI и optional HTTP consumer. [Input lock](data/dictionary/public-input-lock.v1.json) фиксира authoring input, current graph и output hashes; липса или mismatch е FAIL без private fallback. Нови download links ще се добавят след действително publication readback.
+```powershell
+$ErrorActionPreference = 'Stop'
+./packaging/Build-PublicPackage.ps1 `
+    -InputDirectory ./authoring-input -OutputDirectory ./artifacts/preview7-runtime `
+    -Test -TestWeb -ResultsDirectory ./artifacts/preview7-checks
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- ./artifacts/preview7-runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+```
+
+Input/output/results папките са отделни; output/results трябва да са нови. Това са prospective команди, не резултат от изпълнение. Legacy captures, InputObservation, Inferred predictions и Unknown запазват различния си произход. Липсващ capture не става сигурно ударение.
+
+## Публикуван preview 6 — 22 октомври 2026
+
+Публикуван е **[v0.1.0-preview.6](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.6)** от 22 октомври 2026.
+
+### Бърз старт
+
+Нужен е .NET10 SDK, съвместим с `global.json` от същия source export. Изтеглете [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.6/bglang-v0.1.0-preview.6-source.zip) и [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.6/bglang-v0.1.0-preview.6-runtime.zip). Разархивирайте source в нова папка, а runtime — в нейната подпапка `runtime`, така че да има `runtime/manifest.json` и останалите три data файла. От source папката:
+
+```powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+```
+
+API използва готовия complete runtime `bglang-neutral:e0de331f066ab7cf`; authoring input е нужен само за offline възпроизвеждане. [Release guide от preview6](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.6/packaging/RELEASE-CANDIDATE.md) описва неговите hashes/reproduction; [Web guide](apps/BgLang.Web/README.md) — HTTP заявките. Различавайте Legacy captures, писмени знаци и qualified predictions; няма обща normative accuracy, sentence parser, automatic correction или RAM/latency гаранция.
+
+## API и runtime пакет
+
+Текущият Preview7 candidate запазва Lexical, Text, Context, Syntax, Validation, owner-bound constructions и `GetStressEvidence`, `GenerateStressForms`, `GetDerivationalStressEvidence`. Legacy captures, писмени знаци и qualified prototype/derivational predictions пазят различен произход.
+
+Кандидатният runtime пакет е annotated `bglang-neutral:36b0b69685d6d3e9`, schema `bglang-neutral-runtime-package.v2`, с четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **178 704 996 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини.
+
+Публикуваният preview6 няма12 спомагателни прочита на „бъда“ за сериите „бих“ и „бидох“. Те и Unicode validation поправката са приети в локалния commit `dd547b56…`; packaging проверките за Preview7 предстоят. Новият source/input lock не описва стария preview6 runtime.
+
+За възпроизвеждане използвайте [Release guide](packaging/RELEASE-CANDIDATE.md) и [input lock](data/dictionary/public-input-lock.v1.json) от същия source tag като runtime пакета. Липса или mismatch е FAIL без private fallback.
 
 ### C# API и optional анализи
 
@@ -40,31 +78,31 @@ TextAnalysis text = language.AnalyzeText("😀 писал съм.", false,
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
 dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
-    -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+    -c Release --no-build --no-restore -- ./artifacts/preview7-runtime/manifest.json --json
 if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
 ```
 
 HTTP host/tests са отделен, optional consumer, без промяна на default Product solution. [Web guide](apps/BgLang.Web/README.md) и `/docs` описват v1/v2 и трите response formats. `word-constructions` използва съществуващото JSON поле `text`, чиято стойност е точният opaque `EntryId`; поле `entryId` се отхвърля. Whitespace в ID не се trim-ва.
 
 ```powershell
-$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
-$env:BgLang__ManifestSha256 = 'c137643e00ca568b2fcf249627c5c1396ab8a004dd63fed213f575a2faeedb12'
+$env:BgLang__ManifestPath = (Resolve-Path './artifacts/preview7-runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7'
 dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 ```
 
 Host default е `http://127.0.0.1:5070`. Примерен construction input е `{"text":"<точният EntryId от lookup-lexical-entries>"}`; за Text opt-in: `{"text":"😀 писал съм.","context":{"includeWordConstructions":true}}` към `/api/v2/analyze-text`.
 
-### Validation и release identity
+### Публикуван Preview6 — validation и release identity
 
-Локално приетият runtime batch има 4047 Passed / 0 Failed / 13 exact historical NotExecuted, с 45 mandatory package gate sets; historical skips не получават completion credit. Тези резултати не са нов exported-source consumer run или public CI. Преди preview.6 са нужни actual twin four-file reproduction, exact source export, Public/console/optional HTTP validation, release checksums и отделен publication readback. SourceOnly не включва authoring inputs или runtime и сам по себе си не възпроизвежда data package.
+Preview.6 е публикуван с 11 assets, възпроизведен пълен пакет и проверени public consumer/console/HTTP входове. Main и exact-tag CI са успешни: [main run](https://github.com/bgtnt/bglang/actions/runs/39830165466) и [tag run](https://github.com/bgtnt/bglang/actions/runs/39830166832). Приетият runtime baseline има 4047 Passed / 0 Failed / 13 exact historical NotExecuted и 45 mandatory package gate sets; тези historical skips не получават completion credit. SourceOnly не включва authoring inputs или runtime; за възпроизвеждане са нужни съответстващите source, recipe и locked authoring inputs от същия release.
 
-Съществуващият Windows workflow е consumer validation с `contents: read`. Push се изпълнява за всички branches чрез `branches: ['**']`; PR/manual са запазени. Release изисква main push CI и explicit dispatch на exact preview.6 tag с matching authoring input и test_web=true. Той използва HTTPS URL за точно locked authoring asset, а не runtime ZIP или трите preview.4 STORED inputs. Новият public source commit/tag, RAW export manifest, runtime/archive hashes и public CI identity се записват отделно. Не се заменят historical producer anchors с public commit ID.
+Windows workflow изпълнява consumer validation с `contents: read` за всички branches (`branches: ['**']`), PR и manual dispatch. Публикуваният preview.6 е проверен през main push CI и explicit dispatch на точния tag с matching authoring input и `test_web=true`. Workflow използва HTTPS URL за locked authoring asset. Release assets съдържат source export, runtime, inputs и checksums; public readback е приключил. Historical producer anchors остават отделни от public commit identity.
 
 ---
 
 ## Исторически публикуван preview.4
 
-Следващите инструкции, identities, source/lock/workflow references и validation са за immutable preview.4 checkout. Командите му се изпълняват само с неговия source/recipe/input набор. За текущия preview.5 source използвайте новите секции и текущия guide по-горе.
+Следващите инструкции, identities, source/lock/workflow references и validation са за immutable preview.4 checkout. Командите му се изпълняват само с неговия source/recipe/input набор. За текущия публикуван preview.6 използвайте guide по-горе.
 
 
 **[Изтегли preview 4](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.4)** — публикуван prerelease.

@@ -68,7 +68,7 @@ function Assert-Files([string] $directory, $expected) {
             $file.name.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0 -or !$names.Add($file.name)) { throw 'Invalid or duplicate locked file name.' }
     }
     $items = @(Get-ChildItem -LiteralPath $directory -Force)
-    if ((@($items.Name | Sort-Object) -join "\n") -cne (@($expected.name | Sort-Object) -join "\n")) { throw "Unexpected package/input file set: $directory" }
+    if ((@($items | ForEach-Object { $_.Name } | Sort-Object) -join "\n") -cne (@($expected.name | Sort-Object) -join "\n")) { throw "Unexpected package/input file set: $directory" }
     foreach ($file in $expected) {
         $pin = File-Pin (Join-Path $directory $file.name)
         if ($pin.bytes -ne $file.bytes -or $pin.sha256 -cne $file.sha256) { throw "RAW bytes/SHA differ: $($pin.path)" }
@@ -120,7 +120,7 @@ function Invoke-Dotnet([string] $label, [string[]] $arguments) {
     try {
         $stdout = [IO.File]::Open($prefix + '.stdout.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
         $stderr = [IO.File]::Open($prefix + '.stderr.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
-        $bindings = @(foreach ($environmentName in @('TEMP','TMP','BGLANG_PUBLIC_PACKAGE_MANIFEST','BGLANG_LEXICAL_MANIFEST','BGLANG_LEXICAL_REQUIRE_MANIFEST','BGLANG_STRESS_MANIFEST','BGLANG_STRESS_REQUIRE_MANIFEST','BGLANG_WEB_TEST_MANIFEST','BGLANG_WEB_TEST_MANIFEST_SHA256')) {
+        $bindings = @(foreach ($environmentName in @('TEMP','TMP','BGLANG_PUBLIC_PACKAGE_MANIFEST','BGLANG_LEXICAL_MANIFEST','BGLANG_LEXICAL_REQUIRE_MANIFEST','BGLANG_STRESS_MANIFEST','BGLANG_STRESS_REQUIRE_MANIFEST','BGLANG_PREVIEW6_REPAIR_MANIFEST','BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST','BGLANG_WEB_TEST_MANIFEST','BGLANG_WEB_TEST_MANIFEST_SHA256')) {
             $present = $start.Environment.ContainsKey($environmentName)
             [ordered]@{ name = $environmentName; present = $present; value = $(if ($present) { $start.Environment[$environmentName] } else { $null }) }
         })
@@ -188,7 +188,7 @@ function Assert-PassedTrx([string] $path, [string] $label) {
 }
 
 $previousLocation = Get-Location
-$changedSelectors = @('BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST', 'BGLANG_STRESS_MANIFEST', 'BGLANG_STRESS_REQUIRE_MANIFEST')
+$changedSelectors = @('BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST', 'BGLANG_STRESS_MANIFEST', 'BGLANG_STRESS_REQUIRE_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST')
 if ($TestWeb) { $changedSelectors += @('BGLANG_WEB_TEST_MANIFEST', 'BGLANG_WEB_TEST_MANIFEST_SHA256') }
 $originalEnvironment = [Environment]::GetEnvironmentVariables('Process')
 $consumerChecks = [Collections.Generic.List[object]]::new()
@@ -214,6 +214,8 @@ try {
         [Environment]::SetEnvironmentVariable('BGLANG_LEXICAL_REQUIRE_MANIFEST', '1', 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_STRESS_MANIFEST', $manifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_STRESS_REQUIRE_MANIFEST', '1', 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_PREVIEW6_REPAIR_MANIFEST', $manifest, 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST', '1', 'Process')
         $null = Invoke-Dotnet 'public-restore' @('restore', 'BgLang.Public.slnx', '--locked-mode', '--disable-parallel', '-nr:false')
         $null = Invoke-Dotnet 'public-build' @('build', 'BgLang.Public.slnx', '-c', 'Release', '--no-restore', '-nr:false', '-maxCpuCount:1', '-p:UseSharedCompilation=false')
         $null = Invoke-Dotnet 'public-test' @('test', 'tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj', '-c', 'Release', '--no-build', '--no-restore',

@@ -1,0 +1,37 @@
+{
+  "schema": "bglang.preview6-repair-public-package.v1",
+  "contractComplete": true,
+  "expectedCandidate": {
+    "packageId": "bglang-neutral:36b0b69685d6d3e9",
+    "sourceId": "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
+    "manifestSchema": "bglang-neutral-runtime-package.v2",
+    "annotations": {
+      "path": "lexeme-annotations.v1.json",
+      "bytes": 129258517,
+      "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5",
+      "sourceId": "neutral-annotations-v4:f8f04b61cc9cf7e8ae03a19aa2b72ec85601689b89a30689f67a4483d8c23865"
+    },
+    "files": [
+      {
+        "name": "lexeme-annotations.v1.json",
+        "bytes": 129258517,
+        "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5"
+      },
+      {
+        "name": "lexicon.v3.jsonl",
+        "bytes": 47335883,
+        "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+      },
+      {
+        "name": "manifest.json",
+        "bytes": 797,
+        "sha256": "451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7"
+      },
+      {
+        "name": "word-formation.v0.json",
+        "bytes": 2109799,
+        "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
+      }
+    ]
+  }
+}

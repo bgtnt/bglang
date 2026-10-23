@@ -382,10 +382,13 @@ internal static class TextValidationAnalyzer
                 "compact_compound_shape;explicit_source_span;partial_advice;not_dictionary_truth", Freeze<TextReadingReference>([])));
         }
         if (first > end) { Add("empty_text"); return Freeze(result); }
+        ReadOnlySpan<char> source = text.AsSpan(first, end - first + 1);
         char last = '\0', previous = ' ';
         for (int index = first; index <= end; index++)
         {
             ct.ThrowIfCancellationRequested(); char ch = text[index];
+            bool attachedMark = (ch is '\u0300' or '\u0301' or '\u0306') &&
+                Bulgarian(last) && BulgarianTokenizer.IsWordContinuation(source, index - first);
             if (Bulgarian(ch))
             {
                 if (index > first && Bulgarian(last) && char.IsWhiteSpace(previous)) Add("word_phrase_internal_space_after_letter_run");
@@ -394,7 +397,7 @@ internal static class TextValidationAnalyzer
             else if (ch == '.') { if (last != '-' && !Bulgarian(last)) Add("invalid_word_phrase_compact_separator_order"); last = ch; }
             else if (ch == '-') { if (!Bulgarian(last)) Add("invalid_word_phrase_compact_separator_order"); last = ch; }
             else if (ch == '/') { if (last != '.' && !Bulgarian(last)) Add("invalid_word_phrase_compact_separator_order"); last = ch; }
-            else if (!char.IsWhiteSpace(ch)) { Add("invalid_word_phrase_compact_separator_order"); last = ch; }
+            else if (!char.IsWhiteSpace(ch) && !attachedMark) { Add("invalid_word_phrase_compact_separator_order"); last = ch; }
             previous = ch;
         }
         return Freeze(result);
