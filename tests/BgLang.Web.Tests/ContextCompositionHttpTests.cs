@@ -192,6 +192,34 @@ public sealed class ContextCompositionHttpTests
     }
 
     [TestMethod, TestCategory("FullPackage")]
+    [DataRow("1", "по-ле\u0300сен", 9, 12)]
+    [DataRow("1", "по-л\u0450сен", 8, 11)]
+    [DataRow("1", "ПО-ЛЕ\u0300СЕН", 9, 12)]
+    [DataRow("1", "ПО-Л\u0400СЕН", 8, 11)]
+    [DataRow("2", "по-ле\u0300сен", 9, 12)]
+    [DataRow("2", "по-л\u0450сен", 8, 11)]
+    [DataRow("2", "ПО-ЛЕ\u0300СЕН", 9, 12)]
+    [DataRow("2", "ПО-Л\u0400СЕН", 8, 11)]
+    public async Task Grave_e_compounds_keep_raw_http_tokens_and_utf16_spans(string version, string form, int length, int periodStart)
+    {
+        await WithPackage(async (_, _, client) =>
+        {
+            string input = "😀 " + form + ".";
+            using JsonDocument response = await Analyze(client, version, JsonSerializer.Serialize(new { text = input }));
+            JsonElement data = response.RootElement.GetProperty("data");
+            Assert.AreEqual(input, data.GetProperty("text").GetString());
+            CollectionAssert.AreEqual(new[] { "0:2:😀", $"3:{length}:{form}", $"{periodStart}:1:." },
+                data.GetProperty("tokens").EnumerateArray().Select(token =>
+                    $"{token.GetProperty("start").GetInt32()}:{token.GetProperty("length").GetInt32()}:{token.GetProperty("text").GetString()}").ToArray());
+            JsonElement validation = data.GetProperty("validation");
+            Assert.IsTrue(validation.GetProperty("available").GetBoolean());
+            Assert.IsFalse(validation.GetProperty("diagnostics").EnumerateArray().Any(row =>
+                row.GetProperty("code").GetString() == "invalid_word_phrase_compact_separator_order"));
+            Assert.AreEqual(JsonValueKind.Null, validation.GetProperty("subordinateCommaDiagnostics").ValueKind);
+        });
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
     [DataRow("1")][DataRow("2")]
     public async Task Existing_comma_trigger_unavailability_is_visible_over_http(string version)
     {

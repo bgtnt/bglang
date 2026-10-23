@@ -422,7 +422,7 @@ internal static class TextValidationAnalyzer
         for (int index = start; index < end; index++) if (!char.IsWhiteSpace(text[index])) return false;
         return true;
     }
-    private static bool Bulgarian(char ch) => ch is >= 'а' and <= 'я' or >= 'А' and <= 'Я' or 'ѝ' or 'Ѝ';
+    private static bool Bulgarian(char ch) => ch is >= 'а' and <= 'я' or >= 'А' and <= 'Я' or 'ѝ' or 'Ѝ' or 'ѐ' or 'Ѐ';
     private static string Key(string value) => BulgarianTextNormalizer.NormalizeKey(value);
     private static bool Within(int start, int length, int innerStart, int innerLength) => innerStart >= start && (long)innerStart + innerLength <= (long)start + length;
     private static bool Overlap(int start, int length, int otherStart, int otherLength) => start < (long)otherStart + otherLength && otherStart < (long)start + length;

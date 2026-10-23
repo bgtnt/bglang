@@ -1295,8 +1295,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 25949,
-      "sha256": "3dbffc53ef1ff3b63142ca047d6e7737fa28754022248a33c46a480422fc8690"
+      "bytes": 27743,
+      "sha256": "2ef026b9ab36d351918b08dfd2df17460485b7eef40cd16253611e3a1b709550"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1391,7 +1391,7 @@
     {
       "path": "data/dictionary/public-input-lock.v1.json",
       "bytes": 13345,
-      "sha256": "0ee86b47aa007e43fceb89f8c4ac1f6604a00dbe343c766fc52007adabbc5e95"
+      "sha256": "7d505ffaf8727955bace067ba632313dd7533aab49a2b11e481924670833e2fb"
     },
     {
       "path": "data/word-formation/word-formation-source.v0.json",
@@ -1425,8 +1425,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 37751,
-      "sha256": "2500ae582f1037e84cd564d1a272dd92a4dc4549aa711e2506ee95fae91efd02"
+      "bytes": 38804,
+      "sha256": "c3ae306834fa64db3588a1ccbee339f3388fb097c30ceb582aae61690333db92"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -2090,8 +2090,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 30221,
-      "sha256": "a917db3b99301bf23d6fa1e186bc08a7a712f7eb5452f0a88af7ef958b2922cb"
+      "bytes": 30237,
+      "sha256": "d09b2d6501d6028a96f469a2a2bdeface868fc2a548550aaa416bc9ab0138930"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2155,8 +2155,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 65152,
-      "sha256": "28dbc6a005b1149deb19cf024da02929e6f9a910691152b6bb917d76fb849d22"
+      "bytes": 69565,
+      "sha256": "fe14a403b781f52a29bbb59649513f6adea9c4f702252b6b22d0371757eb0511"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",
@@ -2180,8 +2180,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionHttpTests.cs",
-      "bytes": 20458,
-      "sha256": "f7bd2fe756978eeb457d8365a63ca6fcf00cf2385ff5b9a62f3214e2c7fa2a31"
+      "bytes": 22236,
+      "sha256": "5aa26467dbeb022e13db96a20c6f9ebeba74233d0b3117ab47de5a958c3b4bde"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionResponseTests.cs",

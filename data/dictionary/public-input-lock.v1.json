@@ -134,7 +134,7 @@
   "releaseCandidate": {
     "label": "unicode-auxiliary-repair-successor",
     "runtimeCommit": "dd547b56a41b6f4ba01a4fea01829d90cf5bdb9a",
-    "publicVersion": "v0.1.0-preview.7",
+    "publicVersion": "v0.1.0-preview.8",
     "publicDestination": "bgtnt/bglang",
     "inputBaseUrl": null,
     "status": "LOCAL_DRAFT_PACKAGING_VALIDATION_PENDING",

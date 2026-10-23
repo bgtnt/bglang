@@ -820,6 +820,67 @@ public sealed class PublicPackageTests
     }
 
     [TestMethod]
+    [DataRow("по-ле\u0300сен", 9, 12)]
+    [DataRow("по-л\u0450сен", 8, 11)]
+    [DataRow("ПО-ЛЕ\u0300СЕН", 9, 12)]
+    [DataRow("ПО-Л\u0400СЕН", 8, 11)]
+    public void Grave_e_compounds_preserve_public_raw_tokens_and_utf16_spans(string form, int length, int periodStart)
+    {
+        string input = "😀 " + form + ".";
+        TextAnalysis actual = session.AnalyzeText(input);
+        Assert.AreEqual(input, actual.Text);
+        CollectionAssert.AreEqual(new[] { "Symbol@0:2:😀", $"Word@3:{length}:{form}", $"Punctuation@{periodStart}:1:." },
+            actual.Tokens.Select(token => $"{token.Kind}@{token.Start}:{token.Length}:{token.Text}").ToArray());
+        TextReadingOccurrence occurrence = actual.ReadingInventory!.Occurrences.Single();
+        Assert.AreEqual(form, occurrence.Text); Assert.AreEqual(3, occurrence.Start); Assert.AreEqual(length, occurrence.Length);
+        Assert.IsNotNull(actual.Validation); Assert.IsTrue(actual.Validation.Available);
+        Assert.IsFalse(actual.Validation.Diagnostics.Any(row => row.Code == "invalid_word_phrase_compact_separator_order"));
+        Assert.IsNull(actual.Validation.SubordinateCommaDiagnostics);
+    }
+
+    // Literal tuples are independently established by the accepted auxiliary authority.
+    [TestMethod]
+    [DataRow("бих", "Глагол:143,1л.,Минало_свършено", 3)]
+    [DataRow("би", "Глагол:143,2л.,Минало_свършено", 7)]
+    [DataRow("би", "Глагол:143,3л.,Минало_свършено", 7)]
+    [DataRow("бихме", "Глагол:143,1л.,Минало_свършено,мн.ч.", 3)]
+    [DataRow("бихте", "Глагол:143,2л.,Минало_свършено,мн.ч.", 3)]
+    [DataRow("биха", "Глагол:143,3л.,Минало_свършено,мн.ч.", 3)]
+    [DataRow("бидох", "Глагол:143,1л.,Минало_свършено", 1)]
+    [DataRow("биде", "Глагол:143,2л.,Минало_свършено", 3)]
+    [DataRow("биде", "Глагол:143,3л.,Минало_свършено", 3)]
+    [DataRow("бидохме", "Глагол:143,1л.,Минало_свършено,мн.ч.", 1)]
+    [DataRow("бидохте", "Глагол:143,2л.,Минало_свършено,мн.ч.", 1)]
+    [DataRow("бидоха", "Глагол:143,3л.,Минало_свършено,мн.ч.", 1)]
+    public void Auxiliary_readings_preserve_literal_form_tag_and_owner(string form, string tag, int totalReadings)
+    {
+        WordReading[] rows = session.Lookup(form, LookupMode.Exact, 256).ToArray();
+        Assert.AreEqual(totalReadings, rows.Length);
+        CollectionAssert.AreEqual(rows, session.AnalyzeWord(form, 256).Readings.ToArray());
+        WordReading reading = rows.Single(row => row.Form == form && row.Lemma == "бъда" && row.PartOfSpeech == tag);
+        Assert.AreEqual(1d, reading.Score); Assert.AreEqual(session.Provenance.LexiconSource, reading.Source);
+        StressEvidence evidence = session.GetStressEvidence(form, new(0, "legacy-base:6202240", form, tag));
+        Assert.AreEqual(StressSelectionStatus.Matched, evidence.SelectionStatus);
+        StressOwnerEvidence owner = evidence.Tokens.Single().Readings
+            .Where(row => row.Reading.Form == form && row.Reading.Lemma == "бъда" && row.Reading.PartOfSpeech == tag)
+            .SelectMany(row => row.Owners).Single(row => row.EntryId == "legacy-base:6202240");
+        Assert.IsFalse(owner.Realizations.Any(row =>
+            row.Origin is StressOrigin.LegacyStored or StressOrigin.LegacyCarried or StressOrigin.LegacyDisplayInferred));
+    }
+
+    [TestMethod]
+    [DataRow("бих", "бия", "Глагол:163ti,1л.,Минало_свършено")]
+    [DataRow("биха", "бия", "Глагол:163ti,3л.,Минало_свършено,мн.ч.")]
+    [DataRow("би", "би", "Частица:191")]
+    [DataRow("биде", "биде", "Съществително:65,Среден")]
+    public void Auxiliary_surface_homographs_keep_their_literal_readings(string form, string lemma, string tag)
+    {
+        WordReading[] rows = session.Lookup(form, LookupMode.Exact, 256).ToArray();
+        Assert.AreEqual(1, rows.Count(row => row.Form == form && row.Lemma == lemma && row.PartOfSpeech == tag));
+        Assert.IsTrue(rows.Any(row => row.Lemma == "бъда" && row.Features.ParadigmId == "143"));
+    }
+
+    [TestMethod]
     [DataRow("Ще дойда само когато мога.")]
     [DataRow("Само аз ще дойда когато мога.")]
     public void Public_comma_trigger_unavailability_is_preserved(string input)
