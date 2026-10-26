@@ -57,6 +57,7 @@ internal static class ContextLanes
     internal const string ProductiveGraphMismatch = "productive_morphology_agreement_mismatch";
     internal const string ProductiveNominalLane = "productive_nominal_phrase_graph.v1";
     internal const string ProductiveAttributeMismatch = "productive_attribute_agreement_mismatch";
+    internal const string ExactAgreementLane = "closed_exact_agreement.v1";
     internal static ContextOverlayInput? CalculateProductive(string text, SentenceSpan sentence,
         IReadOnlyList<TokenView> words, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey,
         CancellationToken ct, out string? unavailableReason)
@@ -64,6 +65,16 @@ internal static class ContextLanes
         ct.ThrowIfCancellationRequested();
         Validate(text, sentence, words, ct);
         return new Calculation(text, sentence, words, sourceKey, ct).Productive(out unavailableReason);
+    }
+
+    // Diagnostic evidence only; never fed into ContextJointSelection or Syntax selection.
+    internal static ContextOverlayInput? CalculateExactAgreement(string text, SentenceSpan sentence,
+        IReadOnlyList<TokenView> words, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Validate(text, sentence, words, ct);
+        return new Calculation(text, sentence, words, sourceKey, ct).ExactAgreement();
     }
 
     internal sealed record NominalHead(MorphologicalNumber Number, MorphologicalGender? Gender,
@@ -292,6 +303,87 @@ internal static class ContextLanes
             }
             return new(true, false, null, candidates.ToArray(), [],
                 words.Where(word => word.UsesGraph && word.Readings.Count > 1).Select(word => word.OriginalIndex).ToArray());
+        }
+
+        internal ContextOverlayInput? ExactAgreement()
+        {
+            Check();
+            if (words.Count < 2 || words.Any(w => w.UsesGraph || !w.Complete || w.Readings.Count == 0 ||
+                w.Readings.Any(r => r.Features.HasConflictingFeatures)) || !Closed()) return null;
+            int predicate = words.Count - 1;
+            List<int> finite = [], personal = [];
+            for (int i = 0; i < T(predicate).Readings.Count; i++)
+            {
+                Check();
+                ReadingView row = T(predicate).Readings[i];
+                if (row.Category != Category.Verb) continue;
+                if (row.Features.HasUnrecognizedFeatures || row.Features.VerbForm is null) return null;
+                if (row.Features.VerbForm is not (MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative)) continue;
+                if (!Guard.IsPersonalPredicate(row.Features)) return null;
+                personal.Add(i);
+                if (row.Features.VerbForm == MorphologicalVerbForm.Finite) finite.Add(i);
+            }
+            if (finite.Count == 0) return null;
+            Group[] predicates = PredicateGroups(finite), competing = PredicateGroups(personal);
+            if (words.Count == 2 && T(0).Readings.Any(r => r.SourcePersonalPronoun))
+            {
+                int[] pronoun = T(0).Readings.Select((row, i) => (row, i)).Where(x =>
+                    x.row.Category == Category.Pronoun && x.row.SourcePersonalPronoun &&
+                    x.row.Features.Case is null && x.row.Features.IsShortForm != true &&
+                    Norm(x.row.Lemma) == T(0).CanonicalText).Select(x => x.i).ToArray();
+                if (pronoun.Length == 0 || pronoun.Any(i => !Guard.LicensedSubject(T(0).CanonicalText, T(0).Readings[i]))) return null;
+                List<Group> subjects = pronoun.GroupBy(i => (T(0).Readings[i].Features.Person, T(0).Readings[i].Features.Number))
+                    .Select(g => new Group(0, Category.Pronoun, g.Key.Person, g.Key.Number, g.ToArray())).ToList();
+                if (T(0).Readings.Any(r => r.Category == Category.Noun))
+                {
+                    NominalPhrase? homographs = NominalMembers(words, 0, cancel);
+                    if (homographs is null) return null;
+                    subjects.AddRange(homographs.Heads.Select(h => new Group(0, Category.Noun, null, h.Number, h.Members)));
+                }
+                if (subjects.Any(s => competing.Any(p => Agreement(s, p) != Guard.Agreement.Mismatch))) return null;
+                foreach (Group subject in subjects)
+                    foreach (Group verb in predicates) Add(subject, verb.Members, [], ProductiveGraphMismatch, null);
+            }
+            else
+            {
+                int head = words.Count - 2;
+                NominalPhrase? phrase = NominalMembers(words, head, cancel);
+                if (phrase is null) return null;
+                Group[] heads = phrase.Heads.Select(h => new Group(head, Category.Noun, null, h.Number, h.Members)).ToArray();
+                bool finiteMismatch = heads.All(h => competing.All(p => Agreement(h, p) == Guard.Agreement.Mismatch));
+                if (finiteMismatch)
+                    foreach (NominalHead h in phrase.Heads.Where(h => h.Attributes.All(a => a.Length > 0)))
+                        foreach (Group verb in predicates)
+                            Add(new(head, Category.Noun, null, h.Number, h.Members), verb.Members,
+                                h.Attributes, ProductiveGraphMismatch, null);
+                for (int a = 0; a < head; a++)
+                {
+                    Check();
+                    if (!phrase.AnyAttributeMatch[a])
+                        Add(new(head, Category.Noun, null, null, phrase.NounMembers), finite.ToArray(),
+                            phrase.AttributeMembers, ProductiveAttributeMismatch, a);
+                }
+            }
+            return candidates.Count == 0 ? null : new(true, false, null, candidates.ToArray(), [], []);
+
+            Group[] PredicateGroups(IEnumerable<int> members) => members.GroupBy(i =>
+                (T(predicate).Readings[i].Features.Person, T(predicate).Readings[i].Features.Number))
+                .Select(g => new Group(predicate, Category.Verb, g.Key.Person, g.Key.Number, g.ToArray())).ToArray();
+            void Add(Group subject, int[] verb, int[][] attributes, string mismatch, int? bad)
+            {
+                Check();
+                List<ContextOverlayRoleSelection> roles =
+                [
+                    Role(ContextOverlayRole.Predicate, predicate, verb, "complete_exact_reading"),
+                    Role(ContextOverlayRole.Subject, subject.Token, subject.Members, "complete_exact_reading")
+                ];
+                for (int a = 0; a < attributes.Length; a++)
+                { Check(); roles.Add(Role(ContextOverlayRole.Attribute, a, attributes[a], "complete_exact_reading")); }
+                List<string> evidence = ["complete_exact_reading", mismatch];
+                if (bad is int attribute) evidence.Add("attribute_mismatch_token=" + T(attribute).OriginalIndex);
+                candidates.Add(new(T(predicate).OriginalIndex, false, ExactAgreementLane, 80,
+                    sourceKey(roles), roles.ToArray(), evidence.ToArray()));
+            }
         }
 
         // One head tuple supports the entire phrase. Lists retain source occurrences;

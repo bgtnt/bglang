@@ -350,11 +350,13 @@ public sealed class BulgarianLanguageSession : IDisposable
             Diagnostics = diagnostics
         };
         MorphologyEvidenceProjection.View morphology = MorphologyEvidenceProjection.Create(analysis, cancellationToken);
+        analysis = analysis with { Spelling = TextSpellingAnalyzer.WithContext(analysis, morphology, cancellationToken) };
         (TextContextEvidence context, TextSyntaxEvidence syntax) =
             TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken, morphology);
         TextContinuationEvidence? continuation = contextOptions.Continuation is { } requested
             ? TextContinuationAnalyzer.Calculate(analysis, morphology, package.Lexicon, requested, cancellationToken) : null;
-        IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(context, cancellationToken);
+        IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(
+            context, cancellationToken, analysis.Diagnostics);
         if (graphDiagnostics.Count > 0) analysis = analysis with
         {
             Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(graphDiagnostics).OrderBy(d => d.Start)

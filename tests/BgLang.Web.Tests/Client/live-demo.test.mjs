@@ -271,16 +271,46 @@ test('completion preserves emoji/NFD and replaces the entire old suffix only for
 });
 
 class TinyNode {
-  constructor(doc,kind,name='',text='') {this.ownerDocument=doc;this.kind=kind;this.nodeName=name;this.children=[];this.value=text;this.dataset={};this.attributes=new Map();this.listeners=new Map();}
-  append(...nodes) {for(const node of nodes){if(node.kind==='fragment'){this.append(...node.children);node.children=[];}else this.children.push(node);}}
-  replaceChildren(...nodes) {this.children=[];this.value='';this.append(...nodes);}
-  get textContent() {return this.value+this.children.map(n=>n.textContent).join('');}
-  set textContent(value) {this.children=[];this.value=String(value);}
+  constructor(doc,kind,name='',text='') {
+    this.ownerDocument=doc;this.kind=kind;this.nodeName=name;this.children=[];this.value=text;
+    this.parentNode=null;this.dataset={};this.attributes=new Map();this.listeners=new Map();
+  }
+  get nodeType() {return this.kind==='text'?3:this.kind==='fragment'?11:1;}
+  get childNodes() {return this.children;}
+  get firstChild() {return this.children[0]??null;}
+  get nextSibling() {const rows=this.parentNode?.childNodes,index=rows?.indexOf(this);return rows&&index>=0?rows[index+1]??null:null;}
+  get data() {return this.value;}
+  set data(value) {this.value=String(value);}
+  get nodeValue() {return this.kind==='text'?this.value:null;}
+  set nodeValue(value) {if(this.kind==='text')this.value=String(value);}
+  append(...nodes) {for(const node of nodes)this.insertBefore(node,null);}
+  insertBefore(node,reference) {
+    if(node.kind==='fragment'){for(const child of [...node.childNodes])this.insertBefore(child,reference);return node;}
+    if(node===reference)return node;
+    if(reference!==null&&!this.children.includes(reference))throw Error('Fixture reference is not a child.');
+    node.parentNode?.removeChild(node);
+    const index=reference===null?this.children.length:this.children.indexOf(reference);
+    this.children.splice(index,0,node);node.parentNode=this;return node;
+  }
+  removeChild(node) {
+    const index=this.children.indexOf(node);if(index<0)throw Error('Fixture node is not a child.');
+    this.children.splice(index,1);node.parentNode=null;return node;
+  }
+  remove() {this.parentNode?.removeChild(this);}
+  contains(node) {return node===this||this.childNodes.some(child=>child.contains(node));}
+  get isConnected() {return this.ownerDocument.documentElement?.contains(this)??false;}
+  replaceChildren(...nodes) {for(const node of [...this.children])this.removeChild(node);this.append(...nodes);}
+  get textContent() {return this.kind==='text'?this.value:this.children.map(node=>node.textContent).join('');}
+  set textContent(value) {
+    const text=value==null?'':String(value);
+    if(this.kind==='text'){this.value=text;return;}
+    this.replaceChildren(...(text?[this.ownerDocument.createTextNode(text)]:[]));
+  }
   set innerHTML(_) {throw new Error('Unsafe HTML sink used.');}
   setAttribute(name,value) {this.attributes.set(name,String(value));}
   getAttribute(name) {return this.attributes.get(name)??null;}
   addEventListener(name,fn) {const callbacks=this.listeners.get(name)??[];callbacks.push(fn);this.listeners.set(name,callbacks);}
-  click() {for(const fn of this.listeners.get('click')??[])fn({type:'click'});}
+  click() {if(this.disabled)return;for(const fn of this.listeners.get('click')??[])fn({type:'click',target:this,currentTarget:this});}
 }
 function documentFixture() {
   const created=[];
@@ -858,4 +888,617 @@ test('the actual static page exposes Auto verb and noun modes outside the hidden
   const help=html.match(/<[^>]+\bid="live-continuation-help"[^>]*>([\s\S]*?)<\/[^>]+>/);
   assert.ok(help);assert.match(help[1],/глагол|finite|финитн/iu);
   assert.match(help[1],/съществителн/iu);assert.match(help[1],/приоритет|предпочит/iu);
+});
+
+
+// Independent presentation oracles. These are synthetic public-wire fixtures,
+// not assertions about package-produced morphology, warning coverage or accuracy.
+const {diagnosticPresentation} = await import(new URL('live-demo.js', source).href);
+const CHECK_TOKEN = {kind:'Word',start:3,length:4};
+const CHECK_WARNING = {code:'pronoun_verb_agreement_mismatch',start:3,length:4,ruleId:'literal-agreement'};
+const CHECK_UNSUPPORTED = {code:'full_short_article_check_not_ready',start:3,length:4,ruleId:null};
+const CHECK_INFORMATION = {code:'reviewed_word_formation_evidence',start:3,length:4,ruleId:'literal-morphology'};
+function checksWire(diagnostics = [], validation = {available:true,diagnostics:[]}) {
+  return {text:'Аз чете.',tokens:[{kind:'Word',start:0,length:2},CHECK_TOKEN,{kind:'Punctuation',start:7,length:1}],diagnostics,validation};
+}
+
+test('diagnostic presentation warns only for the eleven explicit supported warning codes',()=>{
+  const codes=['missing_terminal_punctuation','sentence_initial_lowercase','mixed_script_ocr_known_candidate',
+    'digit_shape_ocr_known_candidate','accent_sensitive_i_grave','spelling_unknown_word_unique_distance_one_candidate',
+    'pronoun_verb_agreement_mismatch','preposition_missing_complement','full_article_expected_for_subject_candidate',
+    'productive_morphology_agreement_mismatch','productive_attribute_agreement_mismatch'];
+  for(const code of codes){
+    const diagnostic=Object.freeze({...CHECK_WARNING,code});
+    const actual=diagnosticPresentation(checksWire([diagnostic]),CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-warning',code);
+    assert.equal(actual.messages[0].classification,'warning',code);
+    assert.equal(actual.messages[0].label,'Предупреждение',code);
+    assert.strictEqual(actual.messages[0].diagnostic,diagnostic,'Original diagnostic identity is preserved.');
+  }
+});
+
+test('not-ready article check is unsupported coverage rather than an agreement warning',()=>{
+  const actual=diagnosticPresentation(checksWire([CHECK_UNSUPPORTED]),CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-unsupported-check');
+  assert.equal(actual.messages[0].classification,'unsupported-check');
+  assert.equal(actual.messages[0].text,'Неподдържана проверка · full_short_article_check_not_ready · 3+4');
+});
+
+test('reviewed word-formation evidence is information with its original exact reading support',()=>{
+  const readings=Object.freeze([{tokenIndex:1,completeReadingIndex:3}]);
+  const diagnostic=Object.freeze({...CHECK_INFORMATION,readings});
+  const actual=diagnosticPresentation(checksWire([diagnostic]),CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-information');
+  assert.equal(actual.messages[0].classification,'information');
+  assert.strictEqual(actual.messages[0].diagnostic.readings,readings);
+  assert.equal(actual.messages[0].text,'Информация · reviewed_word_formation_evidence · 3+4');
+});
+
+test('hyphenated degree morphology remains informational evidence',()=>{
+  const actual=diagnosticPresentation(checksWire([{...CHECK_INFORMATION,code:'hyphenated_degree_morphology_evidence'}]),CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-information');
+  assert.equal(actual.messages[0].text,'Информация · hyphenated_degree_morphology_evidence · 3+4');
+});
+
+test('unknown and mismatch-looking future codes retain identity as information',()=>{
+  for(const code of ['future_diagnostic','future_agreement_mismatch','mismatch_retained_for_diagnostic']){
+    const actual=diagnosticPresentation(checksWire([{...CHECK_INFORMATION,code}]),CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-information',code);
+    assert.equal(actual.messages[0].classification,'information',code);
+    assert.equal(actual.messages[0].diagnostic.code,code);
+  }
+});
+
+test('overlapping warning unsupported and information use strongest class without dropping any message',()=>{
+  const w=CHECK_WARNING,u=CHECK_UNSUPPORTED,i=CHECK_INFORMATION;
+  for(const rows of [[w,u,i],[w,i,u],[u,w,i],[u,i,w],[i,w,u],[i,u,w]]){
+    const actual=diagnosticPresentation(checksWire(rows),CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-warning');
+    assert.equal(actual.messages.length,3);
+    assert.deepEqual(actual.messages.map(row=>row.diagnostic),rows,'Keep original message order and all lower classes.');
+    assert.deepEqual(actual.messages.map(row=>row.label).sort(),['Информация','Неподдържана проверка','Предупреждение'].sort());
+  }
+});
+
+test('unsupported outranks information and multiple informational messages stay visible',()=>{
+  for(const rows of [[CHECK_UNSUPPORTED,CHECK_INFORMATION],[CHECK_INFORMATION,CHECK_UNSUPPORTED]]){
+    const actual=diagnosticPresentation(checksWire(rows),CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-unsupported-check');assert.equal(actual.messages.length,2);
+  }
+  const actual=diagnosticPresentation(checksWire([CHECK_INFORMATION,{...CHECK_INFORMATION,code:'future'}]),CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-information');assert.equal(actual.messages.length,2);
+});
+
+test('measured empty checks are neutral and explicitly do not certify grammar or unavailable coverage',()=>{
+  const unavailableChecks=Object.freeze(['literal-unimplemented-check']);
+  const data=checksWire([],{available:true,diagnostics:[],spacingDiagnostics:null,unavailableChecks});
+  const actual=diagnosticPresentation(data,CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-empty');assert.equal(actual.messages.length,0);
+  assert.equal(actual.coverage,'Кандидатни проверки в ограничения обхват; липсата на съобщение не удостоверява граматична правилност.');
+  assert.strictEqual(data.validation.unavailableChecks,unavailableChecks,'Presentation does not consume or erase coverage details.');
+});
+
+test('null missing and unavailable checks retain distinct coverage messages and a neutral unavailable class',()=>{
+  const absent=checksWire();delete absent.validation;
+  const cases=[
+    [checksWire([],null),'Проверките не са върнати.'],
+    [absent,'Проверките липсват в отговора.'],
+    [checksWire([],{available:false,unavailableReason:'literal-offline'}),'Проверките са недостъпни. literal-offline']
+  ];
+  for(const [data,coverage]of cases){
+    const actual=diagnosticPresentation(data,CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-unavailable');assert.equal(actual.coverage,coverage);assert.equal(actual.messages.length,0);
+  }
+});
+
+test('returned top-level warning remains visible when validation coverage is absent or unavailable',()=>{
+  for(const validation of [null,undefined,{available:false,unavailableReason:'literal-unavailable'}]){
+    const data=checksWire([CHECK_WARNING]);
+    if(validation===undefined)delete data.validation;else data.validation=validation;
+    const actual=diagnosticPresentation(data,CHECK_TOKEN);
+    assert.equal(actual.tokenClass,'check-warning');
+    assert.strictEqual(actual.messages[0].diagnostic,CHECK_WARNING);
+    assert.notEqual(actual.coverage,'Кандидатни проверки в ограничения обхват; липсата на съобщение не удостоверява граматична правилност.');
+  }
+});
+
+test('all five actual diagnostic arrays contribute messages without merging original source records',()=>{
+  const rows=[CHECK_WARNING,CHECK_UNSUPPORTED,CHECK_INFORMATION,
+    {...CHECK_INFORMATION,code:'hyphenated_degree_morphology_evidence'}, {...CHECK_INFORMATION,code:'future-fragment'}];
+  const data=checksWire([rows[0]],{available:true,diagnostics:[rows[1]],spacingDiagnostics:[rows[2]],
+    subordinateCommaDiagnostics:[rows[3]],fragmentDiagnostics:[rows[4]]});
+  const actual=diagnosticPresentation(data,CHECK_TOKEN);
+  assert.deepEqual(actual.messages.map(row=>row.diagnostic),rows);assert.equal(actual.tokenClass,'check-warning');
+  for(let index=0;index<rows.length;index++)assert.strictEqual(actual.messages[index].diagnostic,rows[index]);
+});
+
+test('diagnostic token DOM preserves emoji NFD repeated words and exact UTF-16 target identity',()=>{
+  const text='😀 и\u0300 Аз чете. Аз чете.';
+  const tokens=[{kind:'Symbol',start:0,length:2},{kind:'Word',start:3,length:2},{kind:'Word',start:6,length:2},
+    {kind:'Word',start:9,length:4},{kind:'Punctuation',start:13,length:1},{kind:'Word',start:15,length:2},
+    {kind:'Word',start:18,length:4},{kind:'Punctuation',start:22,length:1}];
+  const data={...checksWire([{...CHECK_WARNING,start:18}]),text,tokens};
+  const {doc,target}=documentFixture(),selected=[];
+  renderTokenText(target,text,tokens,index=>diagnosticPresentation(data,tokens[index]).tokenClass,index=>selected.push(index));
+  assert.equal(target.textContent,text);assert.equal(text.length,23);
+  const buttons=target.children.filter(node=>node.nodeName==='button');
+  assert.equal(buttons[2].textContent,'чете');assert.equal(buttons[2].className,'live-token check-empty');
+  assert.equal(buttons.at(-1).textContent,'чете');assert.equal(buttons.at(-1).className,'live-token check-warning');
+  assert.equal(buttons.at(-1).dataset.tokenIndex,'6');buttons.at(-1).click();assert.deepEqual(selected,[6]);
+  assert.equal(doc.created.includes('img'),false);
+});
+
+test('zero-length boundary diagnostics remain messages without underlining either adjacent word',()=>{
+  const data={...checksWire([{...CHECK_WARNING,code:'missing_terminal_punctuation',start:7,length:0}]),text:'Аз чета.'};
+  const first=diagnosticPresentation(data,data.tokens[0]),last=diagnosticPresentation(data,CHECK_TOKEN);
+  assert.equal(first.tokenClass,'check-empty');assert.equal(last.tokenClass,'check-empty');
+  assert.equal(last.messages[0].text,'Предупреждение · missing_terminal_punctuation · 7+0');
+});
+
+test('context preview mismatch evidence alone cannot create an actual warning',()=>{
+  const data=checksWire();data.context={sentences:[{candidates:[{selectable:false,
+    evidenceCodes:['mismatch_retained_for_diagnostic','productive_morphology_agreement_mismatch']}]}]};
+  const actual=diagnosticPresentation(data,CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-empty');assert.deepEqual(actual.messages,[]);
+});
+
+test('diagnostic labels keep unsafe-looking data literal and graph authority follows explicit supports',()=>{
+  const code='<img src=x onerror=alert(1)>',graphReadings=Object.freeze([{tokenIndex:1,graphCandidateIndex:0,fullTagIndex:0}]);
+  const diagnostic=Object.freeze({...CHECK_INFORMATION,code,graphReadings});
+  const actual=diagnosticPresentation(checksWire([diagnostic],{available:false,unavailableReason:code}),CHECK_TOKEN);
+  assert.equal(actual.tokenClass,'check-information');assert.strictEqual(actual.messages[0].diagnostic.graphReadings,graphReadings);
+  assert.equal(actual.messages[0].text,'Информация · '+code+' · 3+4 · Графова опора (хипотеза)');
+  assert.equal(actual.coverage,'Проверките са недостъпни. '+code);
+  const {doc,target}=documentFixture(),row=doc.createElement('p');row.textContent=actual.messages[0].text;target.append(row);
+  assert.equal(target.textContent,actual.messages[0].text);assert.deepEqual(doc.created,['p']);
+});
+
+test('late diagnostic classes cannot revive old caret revisions and composition still sends only its final input',async()=>{
+  const pending=[],views=[],selection={start:8,end:8};
+  const lane={cancel(){},post(operation,payload,options){const d=deferred();pending.push({operation,payload,options,...d});return d.promise;}};
+  const controller=createLiveController({lane,readSelection:()=>selection,
+    commit:result=>views.push(diagnosticPresentation(result.response.data,CHECK_TOKEN)),invalidate:()=>{},state:()=>{}});
+  controller.edit('Аз чете.');controller.flush();
+  selection.start=selection.end=0;controller.refreshSelection();controller.flush();
+  selection.start=selection.end=8;controller.refreshSelection();controller.flush();
+  assert.equal(pending.length,3);
+  pending[2].resolve({stale:false,response:{data:checksWire()}});await drain();
+  pending[0].resolve({stale:false,response:{data:checksWire([CHECK_WARNING])}});
+  pending[1].resolve({stale:false,response:{data:checksWire([CHECK_UNSUPPORTED])}});await drain();
+  assert.equal(views.length,1);assert.equal(views[0].tokenClass,'check-empty');
+  controller.compositionStart();controller.edit('Аз чете.');controller.flush();assert.equal(pending.length,3);
+  controller.compositionEnd('Аз чете.');controller.flush();assert.equal(pending.length,4);
+  pending[3].resolve({stale:false,response:{data:checksWire([CHECK_WARNING])}});await drain();
+  assert.equal(views.length,2);assert.equal(views[1].tokenClass,'check-warning');controller.setEnabled(false);
+});
+
+
+// Real initLiveDemo lifecycle fixture. Extend the existing tiny DOM; no browser
+// engine is simulated. Real-browser focus/scroll/IME evidence remains separate.
+const {initLiveDemo} = await import(new URL('live-demo.js', source).href);
+class LiveLifecycleNode extends TinyNode {
+  constructor(doc,kind,name='',text='') {
+    super(doc,kind,name,text);this.hidden=false;this.disabled=false;this.open=false;
+    this.scrollTop=0;this.scrollLeft=0;this.selectionStart=0;this.selectionEnd=0;this.checked=false;
+    this.className='';this.id='';this.setRangeTextCalls=[];
+  }
+  record(operation,before) {
+    this.ownerDocument.mutations?.push({target:this,operation,before,after:super.textContent});
+  }
+  insertBefore(node,reference) {const before=super.textContent,result=super.insertBefore(node,reference);this.record('insertBefore',before);return result;}
+  removeChild(node) {
+    const before=super.textContent;
+    if(node.contains?.(this.ownerDocument.activeElement)||node===this.ownerDocument.activeElement)this.ownerDocument.activeElement=this.ownerDocument.body;
+    const result=super.removeChild(node);this.record('removeChild',before);return result;
+  }
+  replaceChildren(...nodes) {const before=super.textContent;super.replaceChildren(...nodes);this.record('replaceChildren',before);}
+  get textContent() {return super.textContent;}
+  set textContent(value) {const before=super.textContent;super.textContent=value;this.record('textContent',before);}
+  get isConnected() {return this.ownerDocument.documentElement?.contains(this)??false;}
+  contains(node) {return node===this||this.childNodes.some(child=>child.contains?.(node)??child===node);}
+  get classList() {
+    const tokens=()=>new Set(this.className.split(/\s+/).filter(Boolean));
+    return {contains:name=>tokens().has(name),add:(...names)=>{this.className=[...new Set([...tokens(),...names])].join(' ');},
+      remove:(...names)=>{this.className=[...tokens()].filter(name=>!names.includes(name)).join(' ');},
+      toggle:(name,force)=>{const set=tokens(),enabled=force??!set.has(name);if(enabled)set.add(name);else set.delete(name);this.className=[...set].join(' ');return enabled;}};
+  }
+  setAttribute(name,value) {
+    super.setAttribute(name,value);
+    if(name==='class')this.className=String(value);
+    if(name==='id')this.id=String(value);
+    if(name.startsWith('data-'))this.dataset[name.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase())]=String(value);
+    if(['disabled','hidden','inert'].includes(name))this[name]=true;
+  }
+  getAttribute(name) {
+    if(name==='class')return this.className||null;if(name==='id')return this.id||null;
+    if(name.startsWith('data-'))return this.dataset[name.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase())]??null;
+    return super.getAttribute(name);
+  }
+  removeAttribute(name) {
+    this.attributes.delete(name);
+    if(name.startsWith('data-'))delete this.dataset[name.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase())];
+    if(['disabled','hidden','inert'].includes(name))this[name]=false;
+  }
+  hasAttribute(name) {return this.getAttribute(name)!==null;}
+  toggleAttribute(name,force) {const enabled=force??!this.hasAttribute(name);if(enabled)this.setAttribute(name,'');else this.removeAttribute(name);return enabled;}
+  matches(selector) {
+    return selector.split(',').some(part=>{
+      const s=part.trim();
+      if(s.startsWith('#'))return this.id===s.slice(1);
+      if(s.startsWith('.'))return this.className.split(/\s+/).includes(s.slice(1));
+      const attribute=/^\[([^=\]]+)(?:=["']?([^"'\]]+)["']?)?\]$/.exec(s);
+      if(attribute)return attribute[2]===undefined?this.hasAttribute(attribute[1]):this.getAttribute(attribute[1])===attribute[2];
+      return this.nodeName.toLowerCase()===s.toLowerCase();
+    });
+  }
+  querySelectorAll(selector) {
+    const result=[];
+    const visit=node=>{for(const child of node.childNodes){if(child.nodeType===1&&child.matches(selector))result.push(child);visit(child);}};
+    visit(this);return result;
+  }
+  querySelector(selector) {return this.querySelectorAll(selector)[0]??null;}
+  closest(selector) {for(let node=this;node;node=node.parentNode)if(node.nodeType===1&&node.matches?.(selector))return node;return null;}
+  dispatch(type,extra={}) {
+    if(type==='click'&&this.disabled&&!extra.force)return false;
+    const event={type,target:this,currentTarget:this,defaultPrevented:false,
+      preventDefault(){this.defaultPrevented=true;},...extra};
+    for(const fn of [...(this.listeners.get(type)??[])])fn(event);
+    if(typeof this['on'+type]==='function')this['on'+type](event);
+    return !event.defaultPrevented;
+  }
+  dispatchEvent(event) {return this.dispatch(event.type,event);}
+  click() {return this.dispatch('click');}
+  focus() {if(!this.disabled&&this.isConnected)this.ownerDocument.activeElement=this;}
+  blur() {if(this.ownerDocument.activeElement===this)this.ownerDocument.activeElement=this.ownerDocument.body;}
+  setSelectionRange(start,end) {this.selectionStart=start;this.selectionEnd=end;}
+  setRangeText(form,start,end,mode='preserve') {
+    const oldStart=this.selectionStart,oldEnd=this.selectionEnd,delta=form.length-(end-start);
+    this.setRangeTextCalls.push({form,start,end,mode});this.value=this.value.slice(0,start)+form+this.value.slice(end);
+    if(mode==='end')this.selectionStart=this.selectionEnd=start+form.length;
+    else if(mode==='start')this.selectionStart=this.selectionEnd=start;
+    else if(mode==='select'){this.selectionStart=start;this.selectionEnd=start+form.length;}
+    else {
+      this.selectionStart=oldStart>end?oldStart+delta:oldStart>start?start:oldStart;
+      this.selectionEnd=oldEnd>end?oldEnd+delta:oldEnd>start?start+form.length:oldEnd;
+    }
+  }
+  scrollIntoView(options) {this.lastScrollIntoView=options;}
+}
+function liveLifecycleDocument() {
+  const doc={created:[],mutations:[],activeElement:null};
+  doc.createDocumentFragment=()=>new LiveLifecycleNode(doc,'fragment');
+  doc.createTextNode=text=>new LiveLifecycleNode(doc,'text','#text',text);
+  doc.createElement=name=>{doc.created.push(name);return new LiveLifecycleNode(doc,'element',name);};
+  doc.documentElement=doc.createElement('html');doc.body=doc.createElement('body');doc.documentElement.append(doc.body);doc.activeElement=doc.body;
+  const add=(id,tag='div',parent=doc.body)=>{const node=doc.createElement(tag);node.id=id;parent.append(node);return node;};
+  const nodes=new Map();
+  const tags={'live-text':'textarea','live-auto':'input','live-heuristics':'input','live-layer':'select','live-continuation-target':'select',
+    'live-json':'pre','live-refresh':'button','live-stress':'button','theme-toggle':'button','inspect-title':'h3'};
+  for(const id of ['live-text','live-preview','live-inspector','live-auto','live-heuristics','live-layer','live-state','live-panels',
+    'live-action-result','live-completion','live-spelling','live-continuation-target','live-timing','live-word-count','live-reading-count',
+    'live-length','live-legend','inspect-title','live-refresh','live-stress','live-budget','theme-toggle'])nodes.set('#'+id,add(id,tags[id]??'div'));
+  const rawDetails=add('fixture-raw-details','details');nodes.set('#live-json',add('live-json','pre',rawDetails));
+  const secondary=add('fixture-secondary','details');secondary.className='secondary-workspace';nodes.set('.secondary-workspace',secondary);
+  nodes.set('#explorer',add('explorer','details',secondary));
+  const inspectorHost=add('fixture-inspector-host','aside');inspectorHost.className='inspector';
+  inspectorHost.append(nodes.get('#inspect-title'),nodes.get('#live-inspector'));
+  nodes.get('#live-state').append(doc.createElement('i'),doc.createElement('span'));
+  doc.querySelector=selector=>nodes.get(selector)??doc.documentElement.querySelector(selector);
+  doc.querySelectorAll=selector=>selector==='[data-live-example]'?[]:doc.documentElement.querySelectorAll(selector);
+  nodes.get('#live-auto').checked=true;nodes.get('#live-heuristics').checked=true;
+  nodes.get('#live-layer').value='pos';nodes.get('#live-continuation-target').value='Auto';
+  nodes.get('#live-completion').hidden=true;nodes.get('#live-spelling').hidden=true;nodes.get('#live-action-result').hidden=true;
+  nodes.get('#inspect-title').textContent='Текущата дума';
+  return {doc,nodes,rawDetails};
+}
+function lifecycleReply(text,{search='literal-search-1',leadingSymbol=false,continuation=null}={}) {
+  // Explicit wire-only projection. This fixture supplies opaque reading evidence,
+  // never a grammar/corpus oracle or a fallback language engine.
+  const tokens=[...text.matchAll(/[\p{L}\p{M}-]+/gu)].map(match=>({kind:'Word',text:match[0],start:match.index,length:match[0].length,analysis:{isKnown:true}}));
+  if(leadingSymbol)tokens.unshift({kind:'Symbol',text:text.slice(0,2),start:0,length:2});
+  const occurrences=[],sets=[],words=[];
+  tokens.forEach((token,tokenIndex)=>{if(token.kind!=='Word')return;
+    occurrences.push({tokenIndex,readingSetIndex:sets.length});
+    sets.push({canonicalReadings:[{raw:{form:token.text,lemma:token.text.toLowerCase(),partOfSpeech:'literal-tag'},
+      features:{partOfSpeech:'Noun',number:'Singular'}}],supportReadings:null});
+    words.push({tokenIndex,fullReadingCount:1,observedProjectedAmbiguity:false,actualDisplayTruncated:false,issues:[]});});
+  return {data:{text,tokens,readingInventory:{occurrences,sets},profile:{fullReadingOccurrences:occurrences.length,words},
+    diagnostics:[],lexical:{tokens:[]},context:{available:true,sentences:[]},syntax:{available:true,sentences:[]},
+    validation:{available:true,diagnostics:[],spacingDiagnostics:null,subordinateCommaDiagnostics:null,fragmentDiagnostics:null,unavailableChecks:[]},
+    spelling:{words:tokens.map((token,tokenIndex)=>({tokenIndex,search,alternatives:[]})).filter(row=>tokens[row.tokenIndex].kind==='Word')},
+    properNames:{candidates:[]},wordConstructions:null,phonetics:null,metrics:{},continuation}};
+}
+async function withLiveLifecycle(body,{text='Котката спи.',caret=2}={}) {
+  const f=fixture(),dom=liveLifecycleDocument(),saved=new Map(),searches=[],details=[];
+  const globals={document:dom.doc,localStorage:{getItem:()=>null,setItem(){}},matchMedia:()=>({matches:false}),
+    performance:{now:f.clock.now},setTimeout:f.clock.setTimer,clearTimeout:f.clock.clearTimer};
+  for(const [name,value]of Object.entries(globals)){saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});}
+  const get=selector=>dom.doc.querySelector(selector),editor=get('#live-text');editor.value=text;editor.setSelectionRange(caret,caret);editor.focus();
+  const nativeHeaders=f.net.headers.bind(f.net);f.net.headers=async(index,...args)=>{f.net.calls[index].lifecycleHeaders=true;await nativeHeaders(index,...args);};
+  const view={...f,...dom,get,editor,preview:get('#live-preview'),inspector:get('#live-inspector'),panels:get('#live-panels'),
+    title:get('#inspect-title'),completion:get('#live-completion'),spelling:get('#live-spelling'),
+    scrollHost:get('#live-inspector').closest('.inspector'),actionHost:get('#live-action-result'),searches,details,
+    type(value,position=value.length){editor.value=value;editor.setSelectionRange(position,position);editor.dispatch('input');},
+    caret(position,key='ArrowRight'){editor.setSelectionRange(position,position);editor.dispatch('keyup',{key});},
+    forceClick(node){node.dispatch('click',{force:true});},
+    words(){return Array.from(get('#live-preview').querySelectorAll('[data-token-index]'));},
+    refresh(){get('#live-refresh').click();},
+    async accept(index,reply=lifecycleReply(editor.value)){await f.net.finish(index,reply);},
+    async first(reply=lifecycleReply(editor.value)){await f.clock.advance(150);assert.equal(f.net.calls.length,1);await f.net.finish(0,reply);}
+  };
+  try {
+    view.app=initLiveDemo({lane:f.lane,tokenAnalysis:token=>token.analysis??null,
+      showTokenDetails:(token,raw,response)=>details.push({token,raw,response}),search:(operation,raw)=>searches.push({operation,raw})});
+    view.app.metadata({limits:{requestsPerMinutePerIp:30}});
+    await body(view);
+  } finally {
+    try {
+      get('#live-auto').checked=false;get('#live-auto').dispatch('change');f.lane.cancel('manual');
+      for(let index=0;index<f.net.calls.length;index++)if(!f.net.calls[index].finished){
+        if(f.net.calls[index].lifecycleHeaders)await f.net.badBody(index,new Error('Fixture disposal'));
+        else await f.net.fail(index,new Error('Fixture disposal'));
+      }
+      await drain();
+    } finally {
+      for(const [name,descriptor]of saved)if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];
+    }
+  }
+}
+
+
+// Prospective actual-init regressions. Server data below is an opaque public-wire
+// presentation fixture; it does not claim linguistic correctness or browser IME.
+test('actual Live keeps the last complete frame through sustained typing and shared-lane max-wait', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();
+    const words=f.words(),panelNodes=[...f.panels.childNodes],inspectorNodes=[...f.inspector.childNodes];
+    const checkpoint=f.doc.mutations.length;
+    for(let index=0;index<40;index++){
+      if(index)await f.clock.advance(100);
+      f.type('Котката спи '+index);
+      assert.equal(f.preview.textContent,'Котката спи.','The editor changes while the displayed analysis remains explicitly old.');
+      assert.match(f.title.textContent,/Котката/);assert.doesNotMatch(f.title.textContent,/Текущата дума/);
+      assert.equal(f.preview.dataset.fresh,'false');
+      assert.ok(words.every(node=>f.preview.contains(node)));assert.ok(panelNodes.every(node=>f.panels.contains(node)));
+      assert.ok(inspectorNodes.every(node=>f.inspector.contains(node)));
+    }
+    assert.ok(f.net.calls.length>=2,'An actual analyze-text request starts during sustained typing, before silence.');
+    assert.ok(f.net.calls[1].start<f.clock.now());assert.equal(f.net.maxInFlight,1);
+    for(let index=1;index<f.net.calls.length;index++)assert.ok(f.net.calls[index].start-f.net.calls[index-1].start>=2025);
+    const destructive=f.doc.mutations.slice(checkpoint).filter(row=>[f.preview,f.inspector,f.panels].includes(row.target)&&row.after==='');
+    assert.deepEqual(destructive,[],'No blank analysis/panel/inspector frames are produced by edit invalidation.');
+  });
+});
+
+test('actual Live caret-only selection uses the still-valid analysis without rebuilding the same occurrence', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();
+    const wordNodes=f.words(),first=f.inspector.firstChild,reading=f.inspector.querySelector('details'),forms=reading.querySelector('button');
+    reading.open=true;reading.dispatch('toggle');f.scrollHost.scrollTop=73;f.scrollHost.scrollLeft=9;forms.focus();
+    f.caret(3);
+    assert.strictEqual(f.inspector.firstChild,first);assert.strictEqual(f.inspector.querySelector('details'),reading);
+    assert.equal(reading.open,true);assert.strictEqual(f.doc.activeElement,forms);assert.equal(f.scrollHost.scrollTop,73);assert.equal(f.scrollHost.scrollLeft,9);
+    assert.match(f.title.textContent,/Котката/);assert.ok(wordNodes.every(node=>f.preview.contains(node)));
+    f.caret(9);
+    assert.match(f.title.textContent,/спи/,'Another occurrence is selected locally before a network reply.');
+    assert.doesNotMatch(f.title.textContent,/Текущата дума/);assert.equal(f.preview.textContent,'Котката спи.');
+    assert.ok(wordNodes.every(node=>f.preview.contains(node)));assert.equal(f.completion.hidden,true);
+  });
+});
+
+test('actual Live refreshes changed data for the same occurrence while retaining semantic details scroll and focus', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();
+    const oldWord=f.words()[0],reading=f.inspector.querySelector('details'),forms=reading.querySelector('button');
+    reading.open=true;reading.dispatch('toggle');f.scrollHost.scrollTop=61;f.scrollHost.scrollLeft=7;forms.focus();
+    assert.match(f.inspector.textContent,/literal-search-1/);
+    f.refresh();await f.clock.advance(2025);assert.equal(f.net.calls.length,2);
+    await f.accept(1,lifecycleReply(f.editor.value,{search:'literal-search-2'}));
+    assert.strictEqual(f.words()[0],oldWord,'Unchanged source occurrence keeps its word button.');
+    assert.match(f.inspector.textContent,/literal-search-2/);assert.doesNotMatch(f.inspector.textContent,/literal-search-1/);
+    assert.equal(f.inspector.querySelector('details').open,true);assert.equal(f.scrollHost.scrollTop,61);assert.equal(f.scrollHost.scrollLeft,7);
+    assert.ok(f.inspector.contains(f.doc.activeElement));assert.equal(f.doc.activeElement.textContent,'Словоформи за тази лема');
+  });
+});
+
+test('actual Live keyed word nodes refresh token-index and click bindings after a valid response plan changes', {concurrency:false}, async()=>{
+  const raw='😀 и\u0300 Котка спи';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleReply(raw));
+    const old=f.words().find(node=>node.textContent==='Котка');assert.equal(old.dataset.tokenIndex,'1');
+    old.focus();f.refresh();await f.clock.advance(2025);
+    await f.accept(1,lifecycleReply(raw,{leadingSymbol:true}));
+    const current=f.words().find(node=>node.textContent==='Котка');
+    assert.strictEqual(current,old);assert.equal(current.dataset.tokenIndex,'2');
+    current.click();assert.match(f.title.textContent,/Котка/);
+    assert.equal(f.editor.selectionStart,6);assert.equal(f.editor.selectionEnd,11);assert.equal(f.preview.textContent,raw);
+    assert.equal(current.getAttribute('aria-pressed'),'true');
+  },{text:raw,caret:8});
+});
+
+test('actual Live edit immediately disables displayed old actions and forced old callbacks cannot act on new text', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();
+    const oldWord=f.words()[0],oldActions=Array.from(f.inspector.querySelectorAll('button'));
+    assert.ok(oldActions.length>=2);
+    f.type('Котката спят.');const selection=[f.editor.selectionStart,f.editor.selectionEnd];
+    assert.equal(f.get('#live-stress').disabled,true);assert.ok(oldActions.every(button=>button.disabled));
+    for(const button of oldActions)f.forceClick(button);
+    f.forceClick(oldWord);f.forceClick(f.get('#live-stress'));
+    assert.deepEqual(f.searches,[]);assert.deepEqual(f.details,[]);assert.deepEqual([f.editor.selectionStart,f.editor.selectionEnd],selection);
+    assert.equal(f.actionHost.hidden,true);assert.equal(f.preview.dataset.fresh,'false');
+    await f.clock.advance(2025);
+    assert.ok(f.net.calls.every(call=>call.url==='/api/v2/analyze-text'),'No queued old stress/word action starts later.');
+  });
+});
+
+test('actual Live caret and IME changes invalidate old continuation callbacks without blanking displayed analysis', {concurrency:false}, async()=>{
+  const raw='Котката раб';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleReply(raw,{continuation:finiteEvidence({caret:11,start:8,length:3,prefix:'раб'})}));
+    const button=f.completion.querySelector('button');assert.ok(button);assert.equal(f.completion.hidden,false);
+    f.editor.setSelectionRange(10,10);f.forceClick(button);
+    assert.equal(f.editor.value,raw);assert.equal(f.editor.setRangeTextCalls.length,0,'Raw caret movement is checked even before its event.');
+    f.caret(9);assert.equal(f.completion.hidden,true);assert.equal(f.preview.textContent,raw);f.forceClick(button);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.dispatch('compositionstart');f.type(raw+'о');f.forceClick(button);await f.clock.advance(5000);
+    assert.equal(f.net.calls.length,1);assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.preview.textContent,raw);
+    f.editor.dispatch('compositionend');await f.clock.advance(150);
+    assert.equal(f.net.calls.length,2);assert.equal(posted(f.net.calls[1]).text,raw+'о');
+    f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:raw,caret:11});
+});
+
+test('actual Live stale malformed 429 keeps cooldown and cannot restore old actions or a blank frame', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();const frame=[...f.preview.childNodes];
+    f.type('Котката спят.',10);await f.clock.advance(2025);assert.equal(f.net.calls.length,2);
+    f.type('Котката спят тук.',10);
+    await f.net.headers(1,429,'3');await f.net.badBody(1);
+    assert.equal(f.preview.textContent,'Котката спи.');assert.ok(frame.every(node=>f.preview.contains(node)));
+    assert.equal(f.get('#live-stress').disabled,true);assert.equal(f.preview.dataset.fresh,'false');
+    await f.clock.advance(2999);assert.equal(f.net.calls.length,2);
+    await f.clock.advance(1);assert.equal(f.net.calls.length,3);assert.equal(posted(f.net.calls[2]).text,'Котката спят тук.');
+    await f.accept(2);assert.equal(f.preview.textContent,'Котката спят тук.');assert.equal(f.preview.dataset.fresh,'true');
+  });
+});
+
+test('actual Live rejects invalid response spans atomically and keeps the last good display stale/error', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();const frame=[...f.preview.childNodes],inspector=f.inspector.textContent,panels=[...f.panels.childNodes];
+    f.type('Котката спят.',10);await f.clock.advance(2025);
+    const bad=lifecycleReply(f.editor.value);bad.data.tokens[1]={...bad.data.tokens[1],start:2};
+    await f.accept(1,bad);
+    assert.equal(f.preview.textContent,'Котката спи.');assert.deepEqual([...f.preview.childNodes],frame);
+    assert.equal(f.inspector.textContent,inspector);assert.ok(panels.every(node=>f.panels.contains(node)));
+    assert.match(f.title.textContent,/Котката/);assert.equal(f.preview.dataset.fresh,'false');
+    assert.equal(f.get('#live-state').dataset.state,'error');assert.equal(f.get('#live-stress').disabled,true);
+  });
+});
+
+test('actual Live placeholders return only for an explicit clear and old controls remain inert', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    await f.first();const action=f.inspector.querySelector('button');
+    f.type('');assert.equal(f.preview.textContent,'');assert.equal(f.words().length,0);assert.equal(f.completion.hidden,true);
+    assert.equal(f.spelling.hidden,true);assert.doesNotMatch(f.title.textContent,/Котката/);
+    f.forceClick(action);assert.deepEqual(f.searches,[]);await f.clock.advance(5000);assert.equal(f.net.calls.length,1);
+  });
+});
+
+test('actual Live preserves literal HTML emoji and NFD through layer/theme changes without reparsing token nodes', {concurrency:false}, async()=>{
+  const raw='😀 по-ле\u0300сен <img src=x onerror=alert(1)>';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleReply(raw));const words=f.words();
+    assert.equal(f.preview.textContent,raw);assert.equal(f.editor.value,raw);assert.ok(words.some(node=>node.textContent==='по-ле\u0300сен'));
+    assert.equal(f.doc.created.includes('img'),false);
+    f.get('#live-layer').value='checks';f.get('#live-layer').dispatch('change');f.get('#theme-toggle').click();
+    assert.equal(f.preview.textContent,raw);assert.ok(words.every(node=>f.preview.contains(node)));assert.equal(f.doc.created.includes('img'),false);
+    f.rawDetails.open=true;f.rawDetails.dispatch('toggle');assert.equal(JSON.parse(f.get('#live-json').textContent).data.text,raw);
+  },{text:raw,caret:9});
+});
+
+function lifecycleMisspellingReply(contextual=true) {
+  const reply=lifecycleReply('Това е друфа дума'),word=reply.data.spelling.words.find(row=>row.tokenIndex===2);
+  reply.data.tokens[2].analysis={isKnown:false};reply.data.readingInventory.sets[2].canonicalReadings=[];
+  word.alternatives=[{form:'друга',distance:1},{form:'друма',distance:1}];
+  if(contextual)word.contextualCandidates=[{alternativeIndex:0,assessment:'Supported',matches:[{candidateReadingIndex:0,followingNounReading:{tokenIndex:3,completeReadingIndex:0}}]},{alternativeIndex:1,assessment:'Unassessed',matches:[]}];
+  return reply;
+}
+
+test('actual Live chooses an earlier spelling candidate by captured word span while caret remains at text end', {concurrency:false}, async()=>{
+  const raw='Това е друфа дума';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleMisspellingReply();assert.equal(reply.data.tokens[2].start,7);assert.equal(reply.data.tokens[2].length,5);
+    await f.first(reply);const candidate=Array.from(f.spelling.querySelectorAll('button')).find(node=>node.textContent.includes('друга'));
+    assert.ok(candidate);assert.equal(f.editor.selectionStart,17);assert.equal(f.spelling.hidden,false);
+    candidate.click();assert.equal(f.editor.value,'Това е друга дума');assert.equal(f.editor.selectionStart,17);assert.equal(f.editor.selectionEnd,17);
+    assert.deepEqual(f.editor.setRangeTextCalls.at(-1),{form:'друга',start:7,end:12,mode:'preserve'});
+    assert.equal(candidate.disabled,true);assert.equal(f.spelling.hidden,false,'Previous candidate evidence stays visible, explicitly stale.');
+    f.forceClick(candidate);assert.equal(f.editor.setRangeTextCalls.length,1);await f.clock.advance(2025);
+    assert.equal(posted(f.net.calls[1]).text,'Това е друга дума');
+  },{text:raw,caret:17});
+});
+
+test('actual Live spelling callbacks veto pre-event caret changes edit and IME while stale evidence stays visible', {concurrency:false}, async()=>{
+  const raw='Това е друфа дума';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleMisspellingReply());const candidate=Array.from(f.spelling.querySelectorAll('button')).find(node=>node.textContent.includes('друга'));
+    assert.ok(candidate);f.editor.setSelectionRange(13,13);f.forceClick(candidate);
+    assert.equal(f.editor.value,raw);assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.dispatch('compositionstart');f.forceClick(candidate);await f.clock.advance(5000);
+    assert.equal(f.net.calls.length,1);assert.equal(f.spelling.hidden,false);assert.equal(candidate.disabled,true);assert.equal(f.editor.value,raw);
+    f.editor.dispatch('compositionend');f.type('Това е друга дума');f.forceClick(candidate);
+    assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.spelling.hidden,false);assert.equal(candidate.disabled,true);
+  },{text:raw,caret:17});
+});
+
+test('actual Live spelling surface keeps raw alternatives when contextual assessment metadata is absent', {concurrency:false}, async()=>{
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleMisspellingReply(false);await f.first(reply);
+    assert.equal(f.spelling.hidden,false);assert.match(f.spelling.textContent,/друга/);assert.match(f.spelling.textContent,/друма/);
+    assert.deepEqual(reply.data.spelling.words[2].alternatives.map(row=>row.distance),[1,1]);
+    assert.equal(f.editor.value,'Това е друфа дума');assert.equal(f.editor.setRangeTextCalls.length,0,'Rendering never automatically corrects text.');
+  },{text:'Това е друфа дума',caret:17});
+});
+
+
+// Five opaque UI passthrough fixtures. The distance1 values below are synthetic
+// server fields, not computed Levenshtein facts or package witnesses for these5
+// forms. Only друга is separately covered by the primary package-bound oracle.
+const LIFECYCLE_RAW_FIVE_FORMS=['друга','друма','opaque-form-3','opaque-form-4','opaque-form-5'];
+function lifecycleContextSpellingReply(text,assessment='Supported',{rawFive=false}={}) {
+  const reply=lifecycleReply(text),typo=reply.data.tokens.findIndex(token=>token.text==='друфа'),noun=reply.data.tokens.findIndex(token=>token.text==='дума'||token.text==='дом');
+  reply.data.tokens[typo].analysis={isKnown:false};
+  const occurrence=reply.data.readingInventory.occurrences.find(row=>row.tokenIndex===typo);
+  reply.data.readingInventory.sets[occurrence.readingSetIndex].canonicalReadings=[];
+  const word=reply.data.spelling.words.find(row=>row.tokenIndex===typo);
+  word.alternatives=(rawFive?LIFECYCLE_RAW_FIVE_FORMS:['друга','друма']).map(form=>({form,distance:1}));
+  word.contextualCandidates=[{alternativeIndex:0,assessment,matches:assessment.toLowerCase()==='supported'
+    ?[{candidateReadingIndex:0,followingNounReading:{tokenIndex:noun,completeReadingIndex:0}}]:[]},
+    ...word.alternatives.slice(1).map((_,index)=>({alternativeIndex:index+1,assessment:'Unassessed',matches:[]}))];
+  return reply;
+}
+
+test('actual Live qualifies supported spelling readings and preserves all5 raw distance fields for Pascal and camel assessment', {concurrency:false}, async()=>{
+  for(const assessment of ['Supported','supported'])await withLiveLifecycle(async f=>{
+    const reply=lifecycleContextSpellingReply('Това е друфа дума',assessment,{rawFive:true});await f.first(reply);
+    assert.match(f.spelling.textContent,/съвместим прочит с „дума“/,'The label qualifies an attested compatible reading, not a unique correction.');
+    for(const form of LIFECYCLE_RAW_FIVE_FORMS)assert.ok(f.spelling.textContent.includes(form),'Raw form remains visible: '+form);
+    assert.ok((f.spelling.textContent.match(/разстояние\s*1/g)??[]).length>=5,'Each raw distance1 remains visible; contextual assessment does not replace the metric.');
+    assert.deepEqual(reply.data.spelling.words[2].alternatives.map(row=>row.distance),[1,1,1,1,1]);
+    assert.equal(f.editor.value,'Това е друфа дума');assert.equal(f.editor.setRangeTextCalls.length,0,'Rendering and qualification never automatically edit the text.');
+  },{text:'Това е друфа дума',caret:17});
+});
+
+test('actual Live updates spelling support when only the following noun changes for the same selected typo occurrence', {concurrency:false}, async()=>{
+  for(const assessment of ['NoCompatiblePair','Unassessed'])await withLiveLifecycle(async f=>{
+    await f.first(lifecycleContextSpellingReply('Това е друфа дума'));
+    const typo=f.words().find(node=>node.textContent==='друфа'),details=f.inspector.querySelector('details');
+    assert.ok(typo);assert.ok(details);details.open=true;details.dispatch('toggle');f.scrollHost.scrollTop=47;
+    assert.match(f.title.textContent,/друфа/);assert.match(f.spelling.textContent,/съвместим прочит с „дума“/);
+    f.type('Това е друфа дом',9);assert.equal(f.editor.selectionStart,9);await f.clock.advance(2025);
+    const next=lifecycleContextSpellingReply('Това е друфа дом',assessment);
+    assert.equal(next.data.tokens[2].start,7);assert.equal(next.data.tokens[2].length,5);assert.equal(next.data.tokens[3].text,'дом');
+    await f.accept(1,next);
+    assert.strictEqual(f.words().find(node=>node.textContent==='друфа'),typo,'The unchanged source span retains its token node.');
+    assert.match(f.title.textContent,/друфа/);assert.equal(f.inspector.querySelector('details').open,true);assert.equal(f.scrollHost.scrollTop,47);
+    assert.doesNotMatch(f.spelling.textContent,/съвместим прочит с „дума“/,'A previous Supported badge must not be cached by typo span/form alone.');
+    assert.equal(f.editor.value,'Това е друфа дом');assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:'Това е друфа дума',caret:9});
+});
+
+test('actual Live spelling replacement preserves earlier UTF16 spans after emoji and NFD prefixes at end caret', {concurrency:false}, async()=>{
+  const cases=[
+    {raw:'😀 Това е друфа дума',start:10,nounStart:16,caret:20,expected:'😀 Това е друга дума'},
+    {raw:'и\u0300. Това е друфа дума',start:11,nounStart:17,caret:21,expected:'и\u0300. Това е друга дума'}
+  ];
+  for(const row of cases)await withLiveLifecycle(async f=>{
+    const reply=lifecycleContextSpellingReply(row.raw),typo=reply.data.tokens.find(token=>token.text==='друфа'),noun=reply.data.tokens.find(token=>token.text==='дума');
+    assert.equal(row.raw.length,row.caret);assert.equal(typo.start,row.start);assert.equal(typo.length,5);assert.equal(noun.start,row.nounStart);assert.equal(noun.length,4);
+    await f.first(reply);const candidate=Array.from(f.spelling.querySelectorAll('button')).find(node=>node.textContent.includes('друга'));
+    assert.ok(candidate);assert.equal(f.editor.selectionStart,row.caret);candidate.click();
+    assert.equal(f.editor.value,row.expected);assert.equal(f.editor.selectionStart,row.caret);assert.equal(f.editor.selectionEnd,row.caret);
+    assert.deepEqual(f.editor.setRangeTextCalls.at(-1),{form:'друга',start:row.start,end:row.start+5,mode:'preserve'});
+    assert.ok(f.editor.value.endsWith('друга дума'));assert.equal(f.doc.created.includes('img'),false);
+  },{text:row.raw,caret:row.caret});
 });

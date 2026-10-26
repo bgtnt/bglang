@@ -53,10 +53,12 @@ internal static class TextContextAnalyzer
             if (productive is not null) input = productive;
             if (graphReason is not null) scopeEvidence.Add(graphReason);
             ContextSelectionOverlay? selected = ContextJointSelection.Select(input, cancellationToken);
+            ContextOverlayInput? exactDiagnostics = productive is null
+                ? ContextLanes.CalculateExactAgreement(analysis.Text, sentence, laneWords, CanonicalKey, cancellationToken) : null;
             TextContextRoleSelection MapRole(ContextOverlayRoleSelection role) => new((TextContextRole)role.Role,
                 role.TokenIndex, role.Start, role.Length, References(role.TokenIndex, role.AlternativeIndices), Freeze(role.EvidenceCodes))
                 { GraphReadings = GraphReferences(role.TokenIndex, role.AlternativeIndices) };
-            var candidates = input.Candidates.Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
+            var candidates = input.Candidates.Concat(exactDiagnostics?.Candidates ?? []).Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
                 candidate.Selectable, candidate.AuthorityLane, candidate.Score, candidate.CanonicalKey,
                 Freeze(candidate.Roles.Select(MapRole)), Freeze(candidate.EvidenceCodes)));
             contextSentences.Add(new(sentence.Start, sentence.Length, !input.Truncated,
@@ -165,14 +167,16 @@ internal static class TextContextAnalyzer
             string.Join(',', role.AlternativeIndices.Select(index => byToken[role.TokenIndex].Identities[index]))));
     }
 
-    internal static IReadOnlyList<TextDiagnostic> GraphAgreementDiagnostics(TextContextEvidence context, CancellationToken ct)
+    // Existing graph routes and the explicit diagnostic-only exact lane share original relation binding.
+    internal static IReadOnlyList<TextDiagnostic> GraphAgreementDiagnostics(TextContextEvidence context, CancellationToken ct,
+        IReadOnlyList<TextDiagnostic>? existingDiagnostics = null)
     {
         var output = new List<TextDiagnostic>();
         foreach (TextContextSentence sentence in context.Sentences)
         {
             ct.ThrowIfCancellationRequested();
             foreach (var group in sentence.Candidates.Where(candidate =>
-                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane &&
+                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane or ContextLanes.ExactAgreementLane &&
                 candidate.EvidenceCodes.Any(code => code is ContextLanes.ProductiveGraphMismatch or ContextLanes.ProductiveAttributeMismatch))
                 .GroupBy(candidate => (candidate.PredicateTokenIndex, candidate.AuthorityLane,
                     Attribute: candidate.EvidenceCodes.FirstOrDefault(code => code.StartsWith("attribute_mismatch_token=", StringComparison.Ordinal)))))
@@ -182,14 +186,21 @@ internal static class TextContextAnalyzer
                 int attributeToken = attributeMismatch ? int.Parse(group.Key.Attribute!.AsSpan("attribute_mismatch_token=".Length), CultureInfo.InvariantCulture) : -1;
                 TextContextRoleSelection[] relation = roles.Where(role => role.Role == TextContextRole.Subject ||
                     (attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken : role.Role == TextContextRole.Predicate)).ToArray();
-                TextContextRoleSelection? target = relation.Where(role => role.GraphReadings is { Count: > 0 }).OrderBy(role => role.Start).FirstOrDefault();
-                if (target is null) throw new InvalidOperationException("Productive mismatch needs graph support in its actual relation.");
+                bool exact = group.Key.AuthorityLane == ContextLanes.ExactAgreementLane;
+                TextContextRoleSelection? target = exact
+                    ? relation.FirstOrDefault(role => attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken
+                        : role.Role == TextContextRole.Predicate)
+                    : relation.Where(role => role.GraphReadings is { Count: > 0 }).OrderBy(role => role.Start).FirstOrDefault();
+                if (target is null || exact && (target.Readings.Count == 0 || relation.Any(role => role.GraphReadings is { Count: > 0 })))
+                    throw new InvalidOperationException("Agreement mismatch needs original support in its actual relation.");
+                if (exact && !attributeMismatch && existingDiagnostics is not null && existingDiagnostics.Any(old =>
+                    old.Code == "pronoun_verb_agreement_mismatch" && old.Start == target.Start && old.Length == target.Length)) continue;
                 output.Add(new(attributeMismatch ? ContextLanes.ProductiveAttributeMismatch : ContextLanes.ProductiveGraphMismatch,
                     target.Start, target.Length, group.Key.AuthorityLane!)
                 {
                     Readings = Freeze(relation.SelectMany(role => role.Readings).Distinct()
                         .OrderBy(reference => reference.TokenIndex).ThenBy(reference => reference.CompleteReadingIndex)),
-                    GraphReadings = Freeze(relation.SelectMany(role => role.GraphReadings ?? []).Distinct()
+                    GraphReadings = exact ? null : Freeze(relation.SelectMany(role => role.GraphReadings ?? []).Distinct()
                         .OrderBy(reference => reference.TokenIndex).ThenBy(reference => reference.GraphCandidateIndex).ThenBy(reference => reference.FullTagIndex))
                 });
             }

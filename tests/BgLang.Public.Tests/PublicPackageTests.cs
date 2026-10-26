@@ -8,7 +8,7 @@ namespace BgLang.Public.Tests;
 
 // Complete candidate checks use public API fields and independent literal records only.
 [TestClass]
-public sealed class PublicPackageTests
+public sealed partial class PublicPackageTests
 {
     private static BulgarianLanguageSession session = null!;
     private static string manifest = null!;

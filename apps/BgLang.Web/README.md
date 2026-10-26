@@ -1,12 +1,52 @@
 # BgLang Live — езикова лаборатория
 
+## Preview10 — локален Web consumer
+
+Този guide описва [Preview10](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.10) source/runtime distribution. **Текстът е snapshot преди окончателната публикация**; целевите download връзки в [Preview10 quickstart](../../README.md) стават достъпни след release. Release страницата е authority за текущия статус, exact public source/tag, действителните main/tag CI и all11 anonymous bytes/hash readback. Тук няма предварителен hosted PASS или public hosting claim. Използвайте matching source и четирифайлов runtime от една версия. От source папката с runtime в `./runtime`:
+
+~~~powershell
+$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7'
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+~~~
+
+Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`. Complete runtime остава `bglang-neutral:36b0b69685d6d3e9`. [Release guide](../../packaging/RELEASE-CANDIDATE.md) описва source/package/consumer verification.
+
+### Live поведение в Preview10 source
+
+Последният завършен анализ остава видим, докато чака нов отговор, с обозначени предишни данни. Действията проверяват text/selection/revision и оригиналния диапазон; stale бутон не може да приложи промяна. Същият snapshot/избор запазва inspector DOM без междинен placeholder.
+
+Диагностиките имат три класа: „Предупреждение“, „Неподдържана проверка“ за `full_short_article_check_not_ready` и „Информация“. Preview кодове не се превръщат в warnings. Празни и недостъпни проверки се различават; липсата на съобщение не доказва обща граматична правилност. `closed_exact_agreement.v1` добавя diagnostic-only exact pronoun+finite и `ADJECTIVE* + един common-noun head + финален finite` проверки с original complete refs, запазени алтернативи и без нов Context/Syntax selection или fabricated graph опора.
+
+Правописният панел предлага близки речникови форми в целия текст, включително по-ранна дума при курсор в края. Замяна има само при изричен избор върху проверения оригинален UTF-16 span. Raw Alternatives, distance и всички candidate readings се запазват. Отделното `contextualCandidates` evidence може да даде предимство на measured adjective→following-noun съвместимост при равна distance. „друфа“ в „Това е друфа дума“ има пет distance-one алтернативи; съвместимият feminine singular прочит на „друга“ е подкрепа за предложение, без unique-correction claim. Имена, graph evidence и незавършена дума остават несигурни.
+
+### Client проверки и CI
+
+[Windows workflow](../../.github/workflows/windows-public.yml) конфигурира **Node.js 24** и изрично изпълнява syntax2 и transport/DOM [client harness](../../tests/BgLang.Web.Tests/Client/live-demo.test.mjs), отделно от C# recipe:
+
+~~~powershell
+node --check apps/BgLang.Web/wwwroot/live-client.js
+node --check apps/BgLang.Web/wwwroot/live-demo.js
+node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs
+~~~
+
+Локалното evidence е **Node.js 22.15.0**, client80 PASS/0 FAIL/0 skipped след DOM fixture поправката и syntax2 PASS за същите product JS bytes; предходният fixture run73 PASS/7 FAIL е запазен. Това не е Node24 hosted резултат или окончателно full-suite/browser/export приемане. Действителните публикационни проверки и точните им bindings се записват в release body след изпълнение.
+
+### Предходен публикуван Preview9
+
+[Preview9](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9) от public source `e43ef2b97ef2fa2a9d9f01c2bc5e616d5f37d0c1` има успешни main/tag CI и anonymous all11 readback. Неговият workflow няма JS step; това е исторически факт за Preview9, не описание на Preview10 конфигурацията.
+
+## Исторически snapshot — преди публикацията на Preview9, 26 октомври 2026
+
+Целият запазен текст по-долу отразява тогавашния source/preparation етап. „Локален Preview9“, Node22+, client48, старите Preview6 hashes и твърденията за pending publication/липсващ JS CI step са исторически; текущият статус, runtime и candidate договор са горе. Историческите секции не се преномерират и старите receipts не се приемат за новия кандидат.
+
 ## Текущият Web интерфейс
 
-Това е Web интерфейсът от [Preview9](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9). Source/runtime distribution и public hosting имат отделен статус. /demo е жив редактор: анализ на целия оригинален текст, инспектор при движение на курсора, typed части на речта, речникова многозначност и кандидатни проверки. Всички текстови слоеве идват с една analyze-text заявка с явни opt-ins; няма frontend езиков engine. Старият API explorer, word actions, donor/JSON evidence и търсенето по лема остават в „Разширена работилница“. /docs остава HTTP справката.
+Това е текущият локален кандидат `v0.1.0-preview.9` върху приетия source `44bb169b`, без нова публикация или public hosting claim. /demo е жив редактор: анализ на целия оригинален текст, инспектор при движение на курсора, typed части на речта, речникова многозначност и кандидатни проверки. Всички текстови слоеве идват с една analyze-text заявка с явни opt-ins; няма frontend езиков engine. Старият API explorer, word actions, donor/JSON evidence и търсенето по лема остават в „Разширена работилница“. /docs остава HTTP справката.
 
 Оцветяването изисква съгласие между върнатите typed POS, а не frontend разчитане на raw tags. Пълните прочити се адресират през occurrence/readingSetIndex и supportReadings ?? canonicalReadings; празен support не преминава към canonical. Unknown, непълнота и многозначност не са червени езикови грешки. Null изключено, изпълнен празен списък и unavailable са различни състояния. Евристичните роли, имена и конструкции не са общ dependency parser или нормативно решение.
 
-Контекстните finite и noun продължения в Live от Preview9 идват чрез `context.continuation` в същата `analyze-text` заявка. Selector „Авто / Глаголи / Съществителни“ използва `Auto` по подразбиране; API default остава `Finite`. Typed person/number съвместимостта за finite или coherent number/gender/article tuple за noun се проверява преди лимита за показани форми (1–256), включително при празен prefix след whitespace и при частично въведена дума. Контекстът използва същия оригинален inventory и exact/graph опори; всяка предложена форма пази пълната exact група прочити и matching reading indices. При изричен избор се заменя целият captured Word span (или се вмъква при празен span) само ако заснетите text/caret/revision и режим още съвпадат, без range selection или IME composition. Десният текст се запазва, без гаранция за неговата граматика. Редът е детерминистичен dictionary rank, не probability.
+Контекстните finite и noun продължения в текущия локален Live идват чрез `context.continuation` в същата `analyze-text` заявка. Selector „Авто / Глаголи / Съществителни“ използва `Auto` по подразбиране; API default остава `Finite`. Typed person/number съвместимостта за finite или coherent number/gender/article tuple за noun се проверява преди лимита за показани форми (1–256), включително при празен prefix след whitespace и при частично въведена дума. Контекстът използва същия оригинален inventory и exact/graph опори; всяка предложена форма пази пълната exact група прочити и matching reading indices. При изричен избор се заменя целият captured Word span (или се вмъква при празен span) само ако заснетите text/caret/revision и режим още съвпадат, без range selection или IME composition. Десният текст се запазва, без гаранция за неговата граматика. Редът е детерминистичен dictionary rank, не probability.
 
 `POST /api/v2/lookup-prefix` остава отделен обикновен речников endpoint с `text` и optional `limit` (1–256, default32), тънък adapter към съществуващия `Lookup(Prefix)`; `lookup` остава Exact. Неговият лимит е за прочити, така че surface група може да е отрязана. Той не се използва за контекстните finite предложения в Live.
 
@@ -595,7 +635,7 @@ Nested limit използва текущия HTTP bound1–256. Невалидн
 
 ### Локални Noun/Auto продължения в Live
 
-Noun/Auto е включено в Preview9; точните public source/tag, активи и CI/readback резултати са на [release страницата](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9). Omitted `context.continuation.target` запазва API default `Finite`, съществуващия finite отговор и C# constructor/deconstruction. Live изпраща избрания `Auto`, `Finite` или `Noun` в същата caret-aware заявка; няма второ lookup или frontend tag grammar. Примерът е вход към Preview9 source, не записан резултат:
+Noun/Auto е прието и локално commit-нато в `44bb169b`; текущата Preview9 distribution остава кандидат, без нова публикация или hosting claim. Omitted `context.continuation.target` запазва API default `Finite`, съществуващия finite отговор и C# constructor/deconstruction. Live изпраща избрания `Auto`, `Finite` или `Noun` в същата caret-aware заявка; няма второ lookup или frontend tag grammar. Примерът е вход към локалния source, не записан резултат:
 
 ```http
 POST /api/v2/analyze-text

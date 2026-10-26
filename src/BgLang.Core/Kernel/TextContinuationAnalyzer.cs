@@ -137,7 +137,7 @@ internal static class TextContinuationAnalyzer
             int[] subject = Enumerable.Range(0, words[0].Readings.Count).Where(i =>
             {
                 ct.ThrowIfCancellationRequested();
-                return LicensedSubject(words[0].CanonicalText, words[0].Readings[i]);
+                return ContextEvidenceGuards.LicensedSubject(words[0].CanonicalText, words[0].Readings[i]);
             }).ToArray();
             if (subject.Length > 0)
             {
@@ -208,31 +208,6 @@ internal static class TextContinuationAnalyzer
 
     private static bool IsFinite(MorphologicalFeatures f) => !f.HasUnrecognizedFeatures &&
         f.VerbForm == MorphologicalVerbForm.Finite && ContextEvidenceGuards.IsPersonalPredicate(f);
-
-    // These eight exact canonical subject cells license omitted Case/Short markers.
-    // Other null-feature pronouns are not inferred to be nominative or long forms.
-    private static bool LicensedSubject(string canonical, ContextLanes.ReadingView row)
-    {
-        var license = canonical switch
-        {
-            "аз" => (90, MorphologicalPerson.First, MorphologicalNumber.Singular),
-            "ти" => (91, MorphologicalPerson.Second, MorphologicalNumber.Singular),
-            "той" => (92, MorphologicalPerson.Third, MorphologicalNumber.Singular),
-            "тя" => (93, MorphologicalPerson.Third, MorphologicalNumber.Singular),
-            "то" => (94, MorphologicalPerson.Third, MorphologicalNumber.Singular),
-            "ние" => (95, MorphologicalPerson.First, MorphologicalNumber.Plural),
-            "вие" => (96, MorphologicalPerson.Second, MorphologicalNumber.Plural),
-            "те" => (97, MorphologicalPerson.Third, MorphologicalNumber.Plural),
-            _ => default
-        };
-        MorphologicalFeatures f = row.Features;
-        return license.Item1 != 0 && row.Category == ContextLanes.Category.Pronoun && row.SourcePersonalPronoun &&
-            f.PartOfSpeech == MorphologicalPartOfSpeech.PersonalPronoun && !f.HasConflictingFeatures && !f.HasUnrecognizedFeatures &&
-            f.Person == license.Item2 && f.Number == license.Item3 && f.IsShortForm != true &&
-            f.Case is null &&
-            StringComparer.Ordinal.Equals(BulgarianTextNormalizer.NormalizeKey(row.Lemma), canonical) &&
-            StringComparer.Ordinal.Equals(f.RawTag, "Лично_местоимение:" + license.Item1.ToString(CultureInfo.InvariantCulture));
-    }
 
     private static TextContextRoleSelection Support(ContextLanes.TokenView word, TextContextRole role,
         int[] members, MorphologyEvidenceProjection.View morphology, CancellationToken ct,

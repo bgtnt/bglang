@@ -223,7 +223,8 @@ object DiagnosticValue(TextDiagnostic value) => new {
         "mixed_script_ocr_known_candidate" or "digit_shape_ocr_known_candidate" or
         "accent_sensitive_i_grave" or "spelling_unknown_word_unique_distance_one_candidate" or
         "pronoun_verb_agreement_mismatch" or "preposition_missing_complement" or
-        "full_article_expected_for_subject_candidate" => "warning",
+        "full_article_expected_for_subject_candidate" or "productive_morphology_agreement_mismatch" or
+        "productive_attribute_agreement_mismatch" => "warning",
         _ => "information"
     }
 };

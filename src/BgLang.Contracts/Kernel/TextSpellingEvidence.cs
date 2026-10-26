@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BgLang.Contracts;
 
 // Completed is one bounded ordinary-index invocation, never uniqueness or all-package coverage.
@@ -20,7 +22,21 @@ public sealed record SpellingWordEvidence(
     string NormalizedQuery,
     SpellingSearchDisposition Search,
     string? Reason,
-    IReadOnlyList<FuzzyMatch> Alternatives);
+    IReadOnlyList<FuzzyMatch> Alternatives)
+{
+    // Optional local evidence, ordered by Distance/support/original index. Raw Alternatives stay unchanged.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<SpellingContextCandidate>? ContextualCandidates { get; init; }
+}
+
+public enum SpellingContextAssessment { Unassessed, Supported, NoCompatiblePair }
+
+// Candidate indices address Alternatives and its complete Readings, never the unknown token's inventory.
+public sealed record SpellingContextMatch(int CandidateReadingIndex, TextReadingReference FollowingNounReading);
+
+// Matches are deterministic measured witnesses, not an exhaustive Cartesian product or correction confidence.
+public sealed record SpellingContextCandidate(int AlternativeIndex, SpellingContextAssessment Assessment,
+    IReadOnlyList<SpellingContextMatch> Matches);
 
 // These are configured bounds, not a claim that every word requested a search.
 // Alternatives retain existing ranking and Form/Readings; scores are not correction confidence.

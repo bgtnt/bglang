@@ -527,13 +527,39 @@ body.live-page {
   background: var(--token-multiple)!important
 }
 
-.known-known,.check-clear {
+.known-known {
   background: var(--good)!important
 }
 
-.check-signal {
+.check-empty {
+  background: var(--soft)!important
+}
+
+.check-warning {
   background: var(--signal-bg)!important;
-  border-bottom: 2px dotted var(--signal)!important
+  border-bottom: 2px solid var(--signal)!important
+}
+
+.check-unsupported-check {
+  background: var(--token-other)!important;
+  border-bottom: 2px dashed var(--muted)!important
+}
+
+.check-information {
+  background: var(--accent-soft)!important;
+  border-bottom: 2px dotted var(--accent)!important
+}
+
+.live-preview .live-token:disabled {
+  opacity: 1;
+  cursor: default
+}
+
+.spelling-suggestions button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left
 }
 
 .live-legend {

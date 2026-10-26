@@ -241,7 +241,9 @@
     "src/BgLang.Contracts/Kernel/TextContinuationEvidence.cs",
     "src/BgLang.Core/Kernel/MorphologyEvidenceProjection.cs",
     "src/BgLang.Core/Kernel/TextContinuationAnalyzer.cs",
-    "src/BgLang.Core/Kernel/PrefixDiscoveryResult.cs"
+    "src/BgLang.Core/Kernel/PrefixDiscoveryResult.cs",
+    "tests/BgLang.Public.Tests/ClosedAgreementPackageTests.cs",
+    "tests/BgLang.Web.Tests/AgreementHttpTests.cs"
   ],
   "inputDirectory": "public-inputs/preview7-auxiliary-repair-authoring-v5",
   "inputFiles": [

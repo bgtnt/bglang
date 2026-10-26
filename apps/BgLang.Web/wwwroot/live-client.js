@@ -203,7 +203,7 @@ export function createLiveController({
     });
   }
 
-  function edit(value, options = heuristics) {
+  function edit(value, options = heuristics, reason = 'text') {
     text = value;
     heuristics = options;
     lastSelection = selection();
@@ -212,7 +212,7 @@ export function createLiveController({
     if (timer !== null) clearTimer(timer);
     timer = null;
     lane.cancel('live');
-    invalidate(text, revision);
+    invalidate(text, revision, {reason, heuristics, target: lastTarget});
     if (!text.trim()) {
       clear();
       state('empty');
@@ -240,10 +240,10 @@ export function createLiveController({
   return {
     edit,
     refreshSelection() {
-      if (!sameSelection(lastSelection, selection())) edit(text);
+      if (!sameSelection(lastSelection, selection())) edit(text, heuristics, 'selection');
     },
     refreshTarget() {
-      if (lastTarget !== target()) edit(text);
+      if (lastTarget !== target()) edit(text, heuristics, 'target');
     },
     flush() {
       clear();
@@ -251,15 +251,15 @@ export function createLiveController({
     },
     compositionStart() {
       composing = true;
-      edit(text);
+      edit(text, heuristics, 'composition');
     },
     compositionEnd(value) {
       composing = false;
-      edit(value);
+      edit(value, heuristics, 'composition');
     },
     setEnabled(value) {
       enabled = value;
-      edit(text);
+      edit(text, heuristics, 'enabled');
     },
     get revision() {
       return revision;
@@ -312,30 +312,73 @@ export function applyCompletion(text, caret, revision, snapshot, form) {
   };
 }
 
+const tokenViews = new WeakMap();
+
 export function renderTokenText(target, text, tokens, classify, select) {
-  const doc = target.ownerDocument,
-    fragment = doc.createDocumentFragment();
+  const doc = target.ownerDocument;
   let cursor = 0;
-  tokens.forEach((token, index) => {
+  // Validate every source span, including non-word tokens, before touching live DOM.
+  for (const token of tokens) {
     const end = token.start + token.length;
     if (!Number.isInteger(token.start) || !Number.isInteger(token.length) || token.start < cursor || token.length < 0
       || end > text.length) throw new Error('Невалидни позиции в текстовия отговор.');
-    fragment.append(doc.createTextNode(text.slice(cursor, token.start)));
-    const raw = text.slice(token.start, end);
-    if (token.kind === 'Word' && token.length) {
-      const button = doc.createElement('button');
-      button.type = 'button';
-      button.className = 'live-token ' + classify(index);
-      button.textContent = raw;
-      button.dataset.tokenIndex = String(index);
-      button.setAttribute('aria-pressed', 'false');
-      button.addEventListener('click', () => select(index));
-      fragment.append(button);
-    } else fragment.append(doc.createTextNode(raw));
     cursor = end;
+  }
+  const plan = [];
+  cursor = 0;
+  tokens.forEach((token, index) => {
+    if (token.kind !== 'Word' || !token.length) return;
+    plan.push({key: 'gap:' + token.start, text: text.slice(cursor, token.start)});
+    plan.push({key: 'word:' + token.start, text: text.slice(token.start, token.start + token.length),
+      className: 'live-token ' + classify(index), index});
+    cursor = token.start + token.length;
   });
-  fragment.append(doc.createTextNode(text.slice(cursor)));
-  target.replaceChildren(fragment);
+  plan.push({key: 'tail', text: text.slice(cursor)});
+  // The complete plan, including classification, is valid before any mutation.
+  const previous = tokenViews.get(target) || [];
+  const available = new Map(previous.filter(row => row.node.parentNode === target).map(row => [row.key, row]));
+  const next = [], active = doc.activeElement;
+  for (const item of plan) {
+    let row = available.get(item.key);
+    if (!row) {
+      const node = item.index === undefined ? doc.createTextNode('') : doc.createElement('button');
+      row = {key: item.key, node, binding: null};
+      if (item.index !== undefined) {
+        node.type = 'button';
+        node.setAttribute('aria-pressed', 'false');
+        node.addEventListener('click', () => {
+          if (row.binding && !node.disabled) row.binding.select(row.binding.index);
+        });
+      }
+    }
+    if (item.index === undefined) {
+      if (row.node.nodeValue !== item.text) row.node.nodeValue = item.text;
+    } else {
+      if (row.node.textContent !== item.text) row.node.textContent = item.text;
+      if (row.node.className !== item.className) row.node.className = item.className;
+      row.node.dataset.tokenIndex = String(item.index);
+      row.node.disabled = false;
+      row.binding = {index: item.index, select};
+    }
+    next.push(row);
+  }
+  let position = target.firstChild;
+  for (const row of next) {
+    if (row.node !== position) target.insertBefore(row.node, position);
+    position = row.node.nextSibling;
+  }
+  while (position) {
+    const old = position;
+    position = old.nextSibling;
+    target.removeChild(old);
+  }
+  const retained = new Set(next);
+  for (const row of previous) if (!retained.has(row)) {
+    row.binding = null;
+    if (row.node.nodeType === 1) row.node.disabled = true;
+  }
+  tokenViews.set(target, next);
+  if (active && target.contains(active) && doc.activeElement !== active) active.focus({preventScroll: true});
 }
 
 // Contextual continuations keep the raw editor snapshot. No normalized offsets are applied.

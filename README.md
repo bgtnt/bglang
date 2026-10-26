@@ -2,15 +2,47 @@
 
 BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
-## Preview9 — 26 октомври 2026
+## Preview10 — source/runtime distribution
 
-**[v0.1.0-preview.9](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9)** доставя Live whole-text редактор, graph→context→syntax, coherent nominal head+finite predicate и exact finite/Noun/Auto продължения. Запазва речника, анализаторите, stress API, NFC `ѐ/Ѐ` и всичките 12 спомагателни прочита. Runtime data identity остава непроменена.
+[`v0.1.0-preview.10`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.10) е целевата версия на този guide. Това е **snapshot от подготовката преди окончателната публикация**: връзките по-долу задават release имената и стават достъпни след публикуване. За актуалния статус, точния public source/tag, действителните main/tag CI резултати и окончателната анонимна bytes/hash сверка на всичките 11 assets проверявайте release страницата. Този source текст не удостоверява завършването им или public hosting.
 
-Release страницата посочва точния public source commit/tag, активите и окончателните CI/readback резултати. Прикачените `publication.json`, `validation.json` и `SHA256SUMS` описват съответните identities и проверки. [Release guide](packaging/RELEASE-CANDIDATE.md) служи за възпроизвеждане; source/runtime публикацията не означава public hosting.
+## Бърз старт с Preview10
 
-## Бърз старт с Preview9
+Вземете matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.10/bglang-v0.1.0-preview.10-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.10/bglang-v0.1.0-preview.10-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.10/SHA256SUMS). Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`, с `runtime/manifest.json`. Използвайте .NET 10 SDK от същия `global.json`. От source папката:
 
-Нужен е .NET 10 SDK, съвместим с `global.json` от същия source export. Изтеглете [Preview9 source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.9/bglang-v0.1.0-preview.9-source.zip) и [Preview9 runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.9/bglang-v0.1.0-preview.9-runtime.zip). Разархивирайте source в нова папка, а runtime — в нейната подпапка `runtime`, така че да има `runtime/manifest.json` и останалите три data файла. От source папката:
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+Complete runtime е `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. Authoring input не е нужен за API. За offline възпроизвеждане използвайте [Preview10 inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.10/bglang-v0.1.0-preview.10-inputs.zip) и [guide от същия tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.10/packaging/RELEASE-CANDIDATE.md); source, recipe, lock и inputs трябва да съвпадат. [Web README](apps/BgLang.Web/README.md) описва локалния HTTP host, а [release guide](packaging/RELEASE-CANDIDATE.md) — verification договора.
+
+## Промени в Preview10 source
+
+Exact съгласуването е diagnostic-only за затворени personal-pronoun+finite и `ADJECTIVE* + един common-noun head + финален finite` структури. То използва complete original reading refs и пълните измерени алтернативи, без нов Context/Syntax избор. Live отделя предупреждение, неподдържана проверка и информация; празният резултат не удостоверява обща граматична правилност.
+
+Live запазва последния завършен изглед при pending анализ с обозначена давност и блокирани stale actions. Правописният панел предлага форми за целия текст, включително по-ранна дума при курсор в края; замяната изисква изричен избор върху проверения оригинален UTF-16 span. Adjective→following-noun съвместимостта е локална подкрепа, без unique-correction claim; имена, graph evidence и незавършени думи остават несигурни. Raw alternatives/readings се запазват. Windows workflow изрично включва Node24 syntax/client проверки; локалното Node22.15.0 evidence е отделно, както е описано в Web guide.
+
+## Предходен публикуван Preview9 — 26 октомври 2026
+
+[Preview9](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9) е отделният immutable release `424164472` от public source `e43ef2b97ef2fa2a9d9f01c2bc5e616d5f37d0c1`. Неговите [main CI](https://github.com/bgtnt/bglang/actions/runs/40315210500), [exact-tag CI](https://github.com/bgtnt/bglang/actions/runs/40315257341) и анонимната проверка на 11 assets са успешни; тези резултати не приемат Preview10. [Историческият Preview9 guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.9/packaging/RELEASE-CANDIDATE.md) остава за matching Preview9 artifacts.
+
+## Исторически snapshot — преди публикацията на Preview9, 26 октомври 2026
+
+Следващият запазен текст описва състоянието преди публикацията на Preview9. Обозначенията „текущ“, „локален кандидат Preview9“, Preview8 quickstart и тогавашните pending/validation твърдения се четат само в този исторически контекст. Публикационният статус и quickstart по-горе ги заместват за текуща употреба; старите версии и доказателства не се преномерират.
+
+## Публикуван Preview8 — 23 октомври 2026
+
+**[v0.1.0-preview.8](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.8)** е публикуван prerelease от 23 октомври 2026, 15:08:57 UTC, с 11 прикачени assets. Официалната release страница посочва public source commit `29fc3000822534cb185bc285e93cd27f9bebeb3d`. Версията включва поправката на compound diagnostic за NFC `ѐ/Ѐ`, Public/HTTP Unicode регресии и публичния тест за всичките 12 спомагателни прочита. Съществуващите анализатори и stress API се запазват.
+
+Публикацията е потвърдена по metadata на този конкретен release. Hosted CI и окончателният remote readback са отделни доказателства, оставени pending в release body; тази документационна сверка не ги удостоверява, не проверява binary hashes и не обявява „най-нов release“. Прикачените validation/publication разписки и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.8/packaging/RELEASE-CANDIDATE.md) са исторически snapshots от подготовката, дори когато съдържат pending flags. Guide-ът служи за възпроизвеждане; текущият статус на публикацията е в release страницата.
+
+## Бърз старт с публикувания Preview8
+
+Нужен е .NET 10 SDK, съвместим с `global.json` от същия source export. Изтеглете [Preview8 source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.8/bglang-v0.1.0-preview.8-source.zip) и [Preview8 runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.8/bglang-v0.1.0-preview.8-runtime.zip). Разархивирайте source в нова папка, а runtime — в нейната подпапка `runtime`, така че да има `runtime/manifest.json` и останалите три data файла. От source папката:
 
 ```powershell
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -20,46 +52,50 @@ dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
 if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
 ```
 
-API използва готовия complete runtime `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. Authoring input не е нужен за този quickstart. За optional offline възпроизвеждане изтеглете [Preview9 inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.9/bglang-v0.1.0-preview.9-inputs.zip) и следвайте [guide от същия tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.9/packaging/RELEASE-CANDIDATE.md). Source, recipe, lock и inputs трябва да са от същия release; разархивирайте inputs отделно в `./authoring-input`. Пример за възпроизвеждане:
+API използва готовия complete runtime `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. Authoring input не е нужен за този quickstart. За optional offline възпроизвеждане изтеглете [Preview8 inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.8/bglang-v0.1.0-preview.8-inputs.zip) и следвайте [guide от същия tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.8/packaging/RELEASE-CANDIDATE.md). Source, recipe, lock и inputs трябва да са от същия release; разархивирайте inputs отделно в `./authoring-input`. Пример за възпроизвеждане:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
 ./packaging/Build-PublicPackage.ps1 `
-    -InputDirectory ./authoring-input -OutputDirectory ./artifacts/preview9-runtime `
-    -Test -TestWeb -ResultsDirectory ./artifacts/preview9-checks
+    -InputDirectory ./authoring-input -OutputDirectory ./artifacts/preview8-runtime `
+    -Test -TestWeb -ResultsDirectory ./artifacts/preview8-checks
 ```
 
 Input/output/results са отделни папки; output/results трябва да са нови. Готовият runtime се използва директно от API, а producer входът е matching authoring input. Командите са указания за потребителя; не са изпълнявани при тази docs-only сверка.
 
-## Доставено в Preview9
+## Локален кандидат Preview9 — 26 октомври 2026
 
-Preview9 включва Live whole-text анализа, graph→context→syntax, coherent nominal head+finite predicate и exact finite/Noun/Auto продълженията. [Web README](apps/BgLang.Web/README.md) описва интерфейса, а [release guide](packaging/RELEASE-CANDIDATE.md) — distribution договора и проверките.
+`v0.1.0-preview.9` се подготвя локално върху приетия source commit `44bb169b9bb1586d0b61584f1f98a56bf527f3d9`; `accepted=false`, `published=false` за новата distribution партида. Preview8 по-горе остава отделният публикуван snapshot. Подготовката включва fresh Full/SourceOnly exports, package reproduction, exported consumer/client проверки, точни archives и едно независимо packaging review. Няма Preview9 download URLs, hosted CI или public hosting claim.
 
-Приетият локален browser smoke има ограничен scope: реален IME и изкуствено забавени races не са упражнявани. Preview8 остава отделен [исторически release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.8), който не включва тези разширения.
+Кандидатът включва Live whole-text анализа, graph→context→syntax, coherent nominal head+finite predicate и exact finite/Noun/Auto продълженията. Runtime data identity остава непроменена. Приетият локален browser smoke е с ограничен scope: реален IME и изкуствено забавени races не са упражнявани. [Web README](apps/BgLang.Web/README.md) описва интерфейса, а [release guide](packaging/RELEASE-CANDIDATE.md) — distribution договора и проверките.
+
+## Публикувано и локално доставено
+
+Preview8 е публикуваният snapshot по-горе. След него са локално приети и commit-нати Live `6279f78`, graph→context→syntax bridge `da875870`, nominal expansion `a9ea6363`, finite continuation `3c935f93` и Noun/Auto continuation `44bb169b`. Интерфейсът и договорите са в [Web README](apps/BgLang.Web/README.md), а fresh export/recipe/consumer проверките — в [release guide](packaging/RELEASE-CANDIDATE.md). Тези доставки не са част от Preview8. Подробните private implementation разписки остават вътрешен provenance и не се изнасят като public documentation.
 
 | Цел | Доставена способност | Оставащо доказателство или обхват |
 | --- | --- | --- |
-| Използваем компактен API | Preview9: речник, морфология, Text/Context/Syntax/Validation, owner-bound конструкции и qualified stress evidence; NFC и auxiliary12 регресиите са публикувани. | Писмен знак, Legacy capture, prediction и Unknown имат различна authority; няма обща нормативна точност. |
-| Анализ при писане | Live editor използва общ analyze-text inventory, слоеве и наблюдаеми времена. | Public hosting е отделен; измерените случаи не са обща latency гаранция. |
-| Продуктивна морфология в контекста | Graph/nominal разширенията свързват `ADJECTIVE* + един noun head + finite predicate` с един coherent head tuple и оригинални refs. | По-общ syntax, coordination, няколко heads и вътрешна пунктуация остават извън този договор. |
-| Съгласувани продължения | Finite lane поддържа nominal subject или source-licensed лично местоимение, empty/partial prefix, person/number filtering преди limit и точни речникови форми с preserved readings/caret span/cancellation. Preview9 добавя тесен `ADJECTIVE+`→noun lane и избор `Finite`/`Noun`/`Auto`, описани по-долу. | Общо членуване, продуктивно генериран output и граматика вдясно не са доставени. Dictionary rank не е вероятност за следваща дума. Finite/Noun/Auto са включени в Preview9. |
+| Използваем компактен API | Preview8: речник, морфология, Text/Context/Syntax/Validation, owner-bound конструкции и qualified stress evidence; NFC и auxiliary12 регресиите са публикувани. | Hosted CI/remote readback са отделни. Писмен знак, Legacy capture, prediction и Unknown имат различна authority; няма обща нормативна точност. |
+| Анализ при писане | Локалният Live editor използва общ analyze-text inventory, слоеве и наблюдаеми времена. | Отделно публикуване/евентуален hosting; измерените случаи не са обща latency гаранция. |
+| Продуктивна морфология в контекста | Локалните graph/nominal доставки свързват `ADJECTIVE* + един noun head + finite predicate` с един coherent head tuple и оригинални refs. | По-общ syntax, coordination, няколко heads и вътрешна пунктуация остават извън този договор. |
+| Съгласувани продължения | Локалният finite lane поддържа nominal subject или source-licensed лично местоимение, empty/partial prefix, person/number filtering преди limit и точни речникови форми с preserved readings/caret span/cancellation. Текущият локален source добавя тесен `ADJECTIVE+`→noun lane и избор `Finite`/`Noun`/`Auto`, описани по-долу. | Общо членуване, продуктивно генериран output и граматика вдясно не са доставени. Dictionary rank не е вероятност за следваща дума. Noun/Auto договорът е приет и локално commit-нат в `44bb169b`; Preview9 distribution и публикацията остават отделни. |
 | Проверимо M1–M4 качество | Конкретните приети/частични договори и пакетни контроли са отделни acceptance obligations; публичните граници са в [release guide](packaging/RELEASE-CANDIDATE.md). | Отворените obligations изискват собствени приложими доказателства. PASS бройки, finite census и corpus обем не затварят Legacy parity, productive precision или глобална точност. |
 
 Публичната навигация е в [Web README](apps/BgLang.Web/README.md) и [release guide](packaging/RELEASE-CANDIDATE.md). Примерите по-долу са обозначени според слоя си; общ runtime identity не прави по-късния API наличен в стария source ZIP.
 
 ## API и runtime пакет
 
-Preview9 запазва Lexical, Text, Context, Syntax, Validation, owner-bound constructions и `GetStressEvidence`, `GenerateStressForms`, `GetDerivationalStressEvidence`. Legacy captures, писмени знаци и qualified prototype/derivational predictions пазят различен произход.
+Публикуваният Preview8 запазва Lexical, Text, Context, Syntax, Validation, owner-bound constructions и `GetStressEvidence`, `GenerateStressForms`, `GetDerivationalStressEvidence`. Legacy captures, писмени знаци и qualified prototype/derivational predictions пазят различен произход.
 
 Публикуваният runtime пакет е annotated `bglang-neutral:36b0b69685d6d3e9`, schema `bglang-neutral-runtime-package.v2`, с четири data файла: `manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json` и `lexeme-annotations.v1.json` — общо **178 704 996 RAW data bytes**. ZIP размерът, .NET binaries и RAM са отделни величини.
 
 Preview8 запазва 12 спомагателни прочита на „бъда“ за 10 форми от сериите „бих“ и „бидох“ и включва поправката за NFC `ѐ/Ѐ` с Public/HTTP Unicode регресиите. Четирите runtime data файла остават byte-identical с приетия пакет. Exact form/lemma/full-tag/owner наличието не означава автоматичен contextual избор или ново captured ударение.
 
-За offline възпроизвеждане използвайте [guide от Preview9 tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.9/packaging/RELEASE-CANDIDATE.md) и lock/inputs от същия source export. Липса или mismatch е FAIL без private fallback.
+За offline възпроизвеждане използвайте [историческия guide от Preview8 tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.8/packaging/RELEASE-CANDIDATE.md) и lock/inputs от същия source export. Липса или mismatch е FAIL без private fallback.
 
 ### C# API и optional анализи
 
-**Базов пример за Preview9.** Owner-bound construction и Text opt-ins са част от API; graph и continuation договорите са описани отделно.
+**Базов пример за Preview8.** Следващите owner-bound construction и Text opt-ins са част от този публикуван API; локалните graph и continuation разширения са обозначени отделно.
 
 ```csharp
 using BgLang.Api;
@@ -80,23 +116,23 @@ TextAnalysis text = language.AnalyzeText("😀 писал съм.", false,
 `AnalyzeText` запазва оригиналния текст/UTF-16 spans и връща Lexical, complete ReadingInventory, Metrics, advisory Spelling, Profile, ProperNames и bounded Context/Syntax/Validation. Основните Context/Syntax/Validation остават активни при default options, с изрична availability. Допълнителните role, subordinate-comma, fragment, spacing и constructions опции са пет независими strict booleans с default false; unknown-context ProperNames има отделен opt-in.
 
 
-### Graph→context→syntax в Preview9
+### Локални graph→context→syntax разширения след Preview8
 
-Следващите два абзаца описват graph bridge и nominal разширението, включени в Preview9.
+Следващите два абзаца описват local bridge/nominal commits `da875870` и `a9ea6363` от картата по-горе.
 
 Default graph→context→syntax запазва двусловните nominal/pronominal Subject+finite Predicate клаузи и добавя затворено `ADJECTIVE* + един noun head + финален finite predicate`. Всички определения и сказуемото се обвързват с един и същ head tuple, без word-count cap или комбинации от отделни modifier alternatives. Сравняват се number и singular gender; plural gender може да липсва, а article equality не е условие. `Суперхубав супертрактор работи.` дава Attribute, Subject и Predicate. Expanded lane е `productive_nominal_phrase_graph.v1`; несъгласуването attribute–head е `productive_attribute_agreement_mismatch`, отделно от `productive_morphology_agreement_mismatch` за subject–predicate. Няма автоматична поправка или обща grammatical verdict.
 
 `GraphReadings` сочи оригиналните token/candidate/full-tag индекси; `Readings`, `IsKnown` и complete exact inventory запазват значението си. `GraphExactRootCandidatesComplete` удостоверява само точния root обхват, дори когато условната опашка остава глобално truncated. Неизмерени, противоречиви и условни морфологични хипотези водят до abstain. Съвместим preview със запазени graph alternatives не е избран прочит. Context/Syntax/Validation остават `bounded-context.v2`, `bounded-syntax-roles.v2`, `bounded-validation.v2`. Вътрешна пунктуация, няколко noun heads, coordination и open input са извън новата затворена структура; това не е full syntax или next-word prediction.
 
-### Owner-bound конструкции в Preview9
+### Owner-bound конструкции в Preview8
 
 `WordConstructions` е nullable петнадесето Text поле. Disabled е `null` и не придобива owner forms. Enabled представя candidate evidence от действителните complete exact readings; `Complete`, owner status и unavailable token/reading references показват ограниченията. Запазват се raw duplicates, aliases, families/targets и отделните occurrences. Text съвпаденията изискват поне две части, реално whitespace и едно sentence. Едночастните кандидати са query-only. `AcceptedWordForm=false`, `GrammarAuthority=false` и `ProductiveReplayAvailable=false` с `OriginalGenerationSeedNotRetained` не дават lexical compatibility или corpus attestation.
 
 ### Console и HTTP
 
-**Примери за Preview9.** [Web guide](apps/BgLang.Web/README.md) описва Live, graph и continuation поведенията от същия source export.
+**Базови примери за Preview8.** По-късните Live/graph/continuation поведения изискват съответния локален source checkout. [Web guide](apps/BgLang.Web/README.md) описва и тези локални разширения.
 
-Съществуващият CLI е само `<manifest.json> [--json] [--measure] [--text-file <utf8.txt>]`. Няма CLI Context/construction flags. Примерът извиква и трите stress метода, с exact selected owner, display-only evidence, писмен знак, Unknown и unavailable prototype. JSON checker пази тези разграничения и проверява, че prediction не добавя речников запис. Source projection добавя всички 15 Text fields към съществуващия JSON wrapper; result полетата са PascalCase, а outer `method/input/result` са lowercase. Default JSON не доказва opt-in изпълнение. Exact exported projection е проверена върху съответния export/runtime; hosted резултатите са отделно посочени в release страницата.
+Съществуващият CLI е само `<manifest.json> [--json] [--measure] [--text-file <utf8.txt>]`. Няма CLI Context/construction flags. Примерът извиква и трите stress метода, с exact selected owner, display-only evidence, писмен знак, Unknown и unavailable prototype. JSON checker пази тези разграничения и проверява, че prediction не добавя речников запис. Source projection добавя всички 15 Text fields към съществуващия JSON wrapper; result полетата са PascalCase, а outer `method/input/result` са lowercase. Default JSON не доказва opt-in изпълнение. За ново публикуване на локалните разширения остава задължителен consumer run върху точния export/runtime; това не е нова CI разписка за Preview8.
 
 ```powershell
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -116,12 +152,6 @@ dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 
 Host default е `http://127.0.0.1:5070`. Примерен construction input е `{"text":"<точният EntryId от lookup-lexical-entries>"}`; за Text opt-in: `{"text":"😀 писал съм.","context":{"includeWordConstructions":true}}` към `/api/v2/analyze-text`.
 
-
-## Исторически Preview8 — 23 октомври 2026
-
-**[v0.1.0-preview.8](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.8)** е публикуван prerelease от 23 октомври 2026, 15:08:57 UTC, с 11 прикачени assets. Официалната release страница посочва public source commit `29fc3000822534cb185bc285e93cd27f9bebeb3d`. Версията включва поправката на compound diagnostic за NFC `ѐ/Ѐ`, Public/HTTP Unicode регресии и публичния тест за всичките 12 спомагателни прочита. Съществуващите анализатори и stress API се запазват.
-
-Публикацията е потвърдена по metadata на този конкретен release. Hosted CI и окончателният remote readback са отделни доказателства, оставени pending в release body; тази документационна сверка не ги удостоверява, не проверява binary hashes и не обявява „най-нов release“. Прикачените validation/publication разписки и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.8/packaging/RELEASE-CANDIDATE.md) са исторически snapshots от подготовката, дори когато съдържат pending flags. Guide-ът служи за възпроизвеждане; текущият статус на публикацията е в release страницата.
 
 ## Исторически Preview7 — 23 октомври 2026
 
@@ -152,7 +182,7 @@ Windows workflow изпълнява consumer validation с `contents: read` за
 
 ## Исторически публикуван preview.4
 
-Следващите инструкции, identities, source/lock/workflow references и validation са за immutable preview.4 checkout. Командите му се изпълняват само с неговия source/recipe/input набор. За Preview9 използвайте quickstart по-горе.
+Следващите инструкции, identities, source/lock/workflow references и validation са за immutable preview.4 checkout. Командите му се изпълняват само с неговия source/recipe/input набор. За публикувания Preview8 използвайте quickstart по-горе.
 
 
 **[Изтегли preview 4](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.4)** — публикуван prerelease.
