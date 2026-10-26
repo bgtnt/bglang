@@ -1,11 +1,15 @@
 namespace BgLang.Web;
 
 /// <summary>Fixed per-client windows with a hard ceiling on retained IP entries.</summary>
-internal sealed class ClientRateLimit(TimeProvider? time = null)
+internal sealed class ClientRateLimit(TimeProvider? time = null,
+    int requestsPerMinute = HttpContract.RequestsPerMinute)
 {
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly Dictionary<string, Window> _clients = new(StringComparer.Ordinal);
     private readonly object _gate = new();
+
+    internal int RequestsPerMinute { get; } = requestsPerMinute > 0 ? requestsPerMinute
+        : throw new ArgumentOutOfRangeException(nameof(requestsPerMinute), "Requests per minute must be positive.");
 
     internal (int Status, int RetryAfter) TryAcquire(string client)
     {
@@ -24,7 +28,7 @@ internal sealed class ClientRateLimit(TimeProvider? time = null)
                 window = new(now.AddMinutes(1));
                 _clients[client] = window;
             }
-            if (window.Count >= HttpContract.RequestsPerMinute)
+            if (window.Count >= RequestsPerMinute)
                 return (429, Math.Max(1, (int)Math.Ceiling((window.Reset - now).TotalSeconds)));
             window.Count++;
             return (200, 0);

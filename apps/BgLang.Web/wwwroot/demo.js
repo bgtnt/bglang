@@ -1,4 +1,13 @@
-"use strict";
+import {createPostLane} from "/live-client.js";
+import {initLiveDemo} from "/live-demo.js";
+
+const postLane = createPostLane();
+async function requestApi(operation, payload) {
+  const result = await postLane.post(operation, payload);
+  if (result.error) throw result.error;
+  if (result.stale) throw new Error("Заявката е заменена от по-ново действие.");
+  return result;
+}
 const form = document.querySelector("#search");
 const mode = document.querySelector("#mode");
 const input = document.querySelector("#input");
@@ -66,7 +75,7 @@ function showDonors(response, reference, context, inlineDonors) {
     shownDonorResponse = response;
     shownDonorRef = donorKey;
   }
-  viewer.scrollIntoView({ behavior: "smooth", block: "start" });
+  viewer.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
 
 function setBusy(value) {
@@ -318,10 +327,7 @@ async function search(operation, text) {
   const request = { text };
   if (!limitField.disabled) request.limit = Number(limitField.value);
   try {
-    const http = await fetch(`/api/v2/${operation}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request)
-    });
-    const response = await http.json();
+    const {http, response} = await requestApi(operation, request);
     lazyJson("#json", response);
     document.querySelector("#detail-title").textContent = "Действителният HTTP отговор";
     details.hidden = false;
@@ -432,10 +438,7 @@ async function compareText() {
   document.querySelector("#json-context").hidden = true;
   textStatus.textContent = "Анализ на заявката и текста…";
   try {
-    const http = await fetch("/api/v2/find-forms-in-text", { method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: document.querySelector("#source-text").value, query: document.querySelector("#query").value }) });
-    const response = await http.json();
+    const {http, response} = await requestApi("find-forms-in-text", { text: document.querySelector("#source-text").value, query: document.querySelector("#query").value });
     if (!http.ok) { textStatus.textContent = `HTTP ${http.status}: ${response.message}`; return; }
     const data = response.data;
     comparison.hidden = false;
@@ -466,9 +469,12 @@ updateExplorerControls();
 for (const button of document.querySelectorAll("[data-example]"))
   button.addEventListener("click", () => search(button.dataset.mode, button.dataset.example));
 
+const liveDemo = initLiveDemo({lane:postLane,tokenAnalysis,donorSet,showTokenDetails,search});
+
 fetch("/api/v2/").then(async response => {
   if (!response.ok) throw new Error("metadata unavailable");
   const metadata = await response.json();
+  liveDemo.metadata(metadata);
   document.querySelector("#identity").textContent = `API ${metadata.apiVersion}; host ${metadata.versions.host}; public API ${metadata.versions.publicApi}; пакет ${metadata.package.packageId}; manifest SHA-256 ${metadata.package.manifestSha256}.`;
   status.textContent = "Готово за заявка.";
 }).catch(() => { status.textContent = "Неуспешно зареждане на идентичността на host-а."; });

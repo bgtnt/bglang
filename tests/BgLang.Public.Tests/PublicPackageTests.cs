@@ -1030,4 +1030,918 @@ public sealed class PublicPackageTests
             Assert.IsNull(reading.Features.VerbForm);
         }
     }
+    [TestMethod]
+    [DataRow("суперработник", "работник", "суперработник", "Съществително:14a,Мъжки")]
+    [DataRow("свръхсупертракторите", "трактор", "свръхсупертрактор", "Съществително:7,Мъжки,мн.ч.,Членуван")]
+    [DataRow("супертрактор", "трактор", "супертрактор", "Съществително:7,Мъжки")]
+    [DataRow("суперхубав", "хубав", "суперхубав", "Прилагателно:76,Мъжки")]
+    [DataRow("суперкнига", "книга", "суперкнига", "Съществително:41,Женски")]
+    public void Complete_graph_root_cells_bind_their_original_positions_and_source(
+        string word, string root, string lemma, string tag)
+    {
+        Assert.AreEqual("bglang-neutral:36b0b69685d6d3e9", session.Provenance.PackageId);
+        Assert.AreEqual("word-formation-source-v0", session.Provenance.WordFormationSource);
+        WordAnalysis actual = session.AnalyzeWord(word, 256);
+        Assert.IsFalse(actual.IsKnown); Assert.IsEmpty(actual.Readings);
+        Assert.IsFalse(actual.GraphSearchIncomplete); Assert.IsFalse(actual.GraphCandidatesTruncated);
+        Assert.IsTrue(actual.GraphExactRootCandidatesComplete);
+        WordDerivation path = actual.GraphCandidates[0];
+        Assert.IsFalse(path.IsConditional); Assert.IsNull(path.UnmetExactSelfReadingRequirements);
+        Assert.AreEqual(root, path.Base); Assert.AreEqual(lemma, path.DerivedLemma);
+        Assert.AreEqual("word-formation-source-v0", path.Source);
+        CollectionAssert.AreEqual(new[] { tag }, path.FullTags!.ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("Супертрактор работи.", false, false, "Съществително:7,Мъжки")]
+    [DataRow("Супертрактор работят.", true, false, "Съществително:7,Мъжки")]
+    [DataRow("Свръхсупертракторите работят.", false, true, "Съществително:7,Мъжки,мн.ч.,Членуван")]
+    public void Complete_package_graph_subjects_produce_nonempty_qualified_context_and_syntax(
+        string text, bool mismatch, bool conditionalTailTruncated, string literalTag)
+    {
+        const string code = "productive_morphology_agreement_mismatch";
+        TextAnalysis actual = session.AnalyzeText(text);
+        Assert.AreEqual(text, actual.Text);
+        Assert.AreEqual("bounded-context.v2", actual.Context!.Version);
+        Assert.AreEqual("bounded-syntax-roles.v2", actual.Syntax!.Version);
+        Assert.AreEqual("bounded-validation.v2", actual.Validation!.Version);
+        WordAnalysis subject = actual.Tokens[0].Analysis!;
+        Assert.IsFalse(subject.IsKnown); Assert.IsEmpty(subject.Readings);
+        Assert.IsEmpty(GraphBridgeComplete(actual, 0));
+        Assert.IsFalse(subject.GraphSearchIncomplete);
+        Assert.IsTrue(subject.GraphExactRootCandidatesComplete);
+        Assert.AreEqual(conditionalTailTruncated, subject.GraphCandidatesTruncated);
+        if (conditionalTailTruncated) Assert.HasCount(32, subject.GraphCandidates);
+        CollectionAssert.AreEqual(new[] { literalTag }, subject.GraphCandidates[0].FullTags!.ToArray());
+        Assert.IsNull(subject.GraphCandidates[0].Features.Single().Person,
+            "A noun has no lexical Person; third is the effective finite-agreement person only.");
+        Assert.IsNotEmpty(GraphBridgeComplete(actual, 1));
+        GraphBridgeAssertReferences(actual);
+        bool compatible = actual.Context.Sentences.SelectMany(sentence => sentence.Candidates).Any(candidate =>
+            candidate.Selectable && candidate.Roles.Any(role => role.Role == TextContextRole.Subject &&
+                role.GraphReadings?.Any(reference => reference.TokenIndex == 0) == true) &&
+            candidate.Roles.Any(role => role.Role == TextContextRole.Predicate && role.Readings.Any(reference => reference.TokenIndex == 1)));
+        if (mismatch)
+        {
+            Assert.IsFalse(compatible);
+            TextDiagnostic diagnostic = actual.Diagnostics.Single(item => item.Code == code);
+            // Qualified advice anchors the first graph-affected role; the exact predicate is separate support.
+        Assert.AreEqual(0, diagnostic.Start); Assert.AreEqual(12, diagnostic.Length);
+            Assert.AreEqual("productive_subject_predicate_graph.v1", diagnostic.RuleId);
+            Assert.IsNull(diagnostic.ProjectedText);
+            Assert.IsTrue(diagnostic.Readings!.Any(reference => reference.TokenIndex == 1));
+            Assert.IsTrue(diagnostic.GraphReadings!.Any(reference => reference.TokenIndex == 0 &&
+                GraphBridgeResolve(actual, reference).Tag == literalTag));
+        }
+        else
+        {
+            Assert.IsTrue(compatible, "A complete-package graph-only positive must be nonempty.");
+            Assert.IsFalse(actual.Diagnostics.Any(item => item.Code == code));
+            Assert.IsTrue(actual.Syntax.Sentences.SelectMany(sentence => sentence.Candidates).Any(candidate =>
+                candidate.Role == TextSyntaxRole.Subject && candidate.Targets.Concat(candidate.Context).Any(support =>
+                    support.GraphReadings?.Any(reference => reference.TokenIndex == 0) == true)));
+            Assert.IsTrue(actual.Syntax.Sentences.SelectMany(sentence => sentence.Candidates).Any(candidate =>
+                candidate.Role == TextSyntaxRole.Predicate && candidate.Targets.Any(support =>
+                    support.Readings.Any(reference => reference.TokenIndex == 1))));
+        }
+        Assert.IsNull(actual.WordConstructions);
+        Assert.IsFalse(actual.Diagnostics.Any(item => item.Code == "full_article_expected_for_subject_candidate"),
+            "Graph morphology cannot acquire exact-only article authority.");
+    }
+
+    [TestMethod]
+    public void Graph_bridge_shared_unicode_analyses_preserve_original_occurrence_indices()
+    {
+        const string text = "😀 и\u0300.\r\nСупертрактор работи. Супертрактор работи.";
+        Assert.AreEqual(49, text.Length);
+        TextAnalysis actual = session.AnalyzeText(text);
+        Assert.AreEqual(text, actual.Text); Assert.HasCount(9, actual.Tokens);
+        Assert.AreEqual("😀", actual.Tokens[0].Text); Assert.AreEqual(2, actual.Tokens[0].Length);
+        Assert.AreEqual("и\u0300", actual.Tokens[1].Text); Assert.AreEqual(3, actual.Tokens[1].Start);
+        Assert.AreEqual(8, actual.Tokens[3].Start); Assert.AreEqual(29, actual.Tokens[6].Start);
+        Assert.AreSame(actual.Tokens[3].Analysis, actual.Tokens[6].Analysis);
+        GraphBridgeAssertReferences(actual);
+        TextContextRoleSelection[] roles = GraphBridgeRoles(actual).Where(role => role.Role == TextContextRole.Subject &&
+            role.GraphReadings is { Count: > 0 }).ToArray();
+        foreach ((int token, int start) in new[] { (3, 8), (6, 29) })
+        {
+            Assert.IsTrue(roles.Any(role => role.TokenIndex == token && role.Start == start && role.Length == 12 &&
+                role.GraphReadings!.Any(reference => reference.TokenIndex == token && reference.GraphCandidateIndex == 0 && reference.FullTagIndex == 0)));
+            Assert.AreEqual("Супертрактор", text.Substring(start, 12));
+        }
+    }
+
+    private static IEnumerable<TextContextRoleSelection> GraphBridgeRoles(TextAnalysis actual) =>
+        actual.Context!.Sentences.SelectMany(sentence => sentence.LocalRoles.Concat(sentence.SelectedRoles)
+            .Concat(sentence.Candidates.SelectMany(candidate => candidate.Roles)));
+
+    private static IReadOnlyList<TextReadingSnapshot> GraphBridgeComplete(TextAnalysis actual, int tokenIndex)
+    {
+        TextReadingInventory inventory = actual.ReadingInventory!;
+        TextReadingOccurrence occurrence = inventory.Occurrences.Single(value => value.TokenIndex == tokenIndex);
+        TokenAnalysis token = actual.Tokens[tokenIndex];
+        Assert.AreEqual(token.Start, occurrence.Start); Assert.AreEqual(token.Length, occurrence.Length);
+        Assert.AreEqual(token.Text, occurrence.Text);
+        TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
+        return set.SupportReadings ?? set.CanonicalReadings;
+    }
+
+    private static (WordDerivation Path, string Tag) GraphBridgeResolve(TextAnalysis actual, TextGraphReadingReference reference)
+    {
+        Assert.IsTrue((uint)reference.TokenIndex < (uint)actual.Tokens.Count);
+        TokenAnalysis token = actual.Tokens[reference.TokenIndex]; WordAnalysis word = token.Analysis!;
+        Assert.AreEqual(TokenKind.Word, token.Kind);
+        Assert.AreEqual(token.Text, actual.Text.Substring(token.Start, token.Length));
+        Assert.IsTrue((uint)reference.GraphCandidateIndex < (uint)word.GraphCandidates.Count);
+        WordDerivation path = word.GraphCandidates[reference.GraphCandidateIndex];
+        Assert.IsNotNull(path.FullTags); Assert.IsTrue((uint)reference.FullTagIndex < (uint)path.FullTags.Count);
+        Assert.AreEqual(word.NormalizedWord, path.Word); Assert.IsFalse(path.IsConditional);
+        Assert.IsNotNull(path.DerivedLemma); Assert.IsTrue(path.UnmetExactSelfReadingRequirements is null or { Count: 0 });
+        Assert.IsFalse(word.GraphSearchIncomplete); Assert.IsTrue(word.GraphExactRootCandidatesComplete);
+        Assert.AreEqual("word-formation-source-v0", path.Source);
+        Assert.IsEmpty(GraphBridgeComplete(actual, reference.TokenIndex)); Assert.IsEmpty(word.Readings);
+        return (path, path.FullTags[reference.FullTagIndex]);
+    }
+
+    private static void GraphBridgeAssertReferences(TextAnalysis actual)
+    {
+        TextContextRoleSelection[] roles = GraphBridgeRoles(actual).ToArray();
+        TextSyntaxSupport[] supports = actual.Syntax!.Sentences.SelectMany(sentence => sentence.Candidates)
+            .SelectMany(candidate => candidate.Targets.Concat(candidate.Context)).ToArray();
+        foreach (TextContextRoleSelection role in roles)
+            foreach (TextGraphReadingReference reference in role.GraphReadings ?? [])
+            { Assert.AreEqual(role.TokenIndex, reference.TokenIndex); _ = GraphBridgeResolve(actual, reference); Assert.IsEmpty(role.Readings); }
+        foreach (TextSyntaxSupport support in supports)
+            foreach (TextGraphReadingReference reference in support.GraphReadings ?? [])
+            { Assert.AreEqual(support.TokenIndex, reference.TokenIndex); _ = GraphBridgeResolve(actual, reference); Assert.AreEqual("LicensedGraphMorphology", support.Basis); Assert.IsEmpty(support.Readings); }
+        foreach (TextGraphReadingReference reference in actual.Diagnostics.SelectMany(diagnostic => diagnostic.GraphReadings ?? []))
+            _ = GraphBridgeResolve(actual, reference);
+        IEnumerable<TextReadingReference> exact = roles.SelectMany(role => role.Readings)
+            .Concat(supports.SelectMany(support => support.Readings))
+            .Concat(actual.Diagnostics.SelectMany(diagnostic => diagnostic.Readings ?? []));
+        foreach (TextReadingReference reference in exact)
+        {
+            IReadOnlyList<TextReadingSnapshot> rows = GraphBridgeComplete(actual, reference.TokenIndex);
+            Assert.IsTrue((uint)reference.CompleteReadingIndex < (uint)rows.Count);
+            Assert.AreEqual("neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
+                rows[reference.CompleteReadingIndex].Raw.Source);
+        }
+    }
+
+    [TestMethod]
+    public void Graph_context_preserves_complete_exact_homographs_and_both_compatible_predicate_cells()
+    {
+        TextAnalysis actual = session.AnalyzeText("Супертрактор работи.");
+        IReadOnlyList<TextReadingSnapshot> exact = GraphBridgeComplete(actual, 1);
+        CollectionAssert.AreEqual(new[]
+        {
+            "Съществително:41,Женски,мн.ч.",
+            "Глагол:173ti,1л.,Сегашно,Повелително",
+            "Глагол:173ti,2л.,Минало_свършено",
+            "Глагол:173ti,3л.,Минало_свършено",
+            "Глагол:173ti,3л.,Сегашно"
+        }, exact.Select(row => row.Raw.PartOfSpeech).ToArray());
+        CollectionAssert.AreEqual(new[] { "работа", "работя", "работя", "работя", "работя" },
+            exact.Select(row => row.Raw.Lemma).ToArray());
+        Assert.IsTrue(exact.All(row => row.Raw.Form == "работи" && row.Raw.Source ==
+            "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7"));
+        TextContextSentence sentence = actual.Context!.Sentences.Single();
+        Assert.AreEqual(TextContextSelectionStatus.Selected, sentence.Status);
+        TextContextRoleSelection predicate = sentence.SelectedRoles.Single(role => role.Role == TextContextRole.Predicate);
+        CollectionAssert.AreEqual(new[] { new TextReadingReference(1, 3), new TextReadingReference(1, 4) }, predicate.Readings.ToArray());
+        Assert.IsNull(predicate.GraphReadings);
+        TextContextRoleSelection subject = sentence.SelectedRoles.Single(role => role.Role == TextContextRole.Subject);
+        Assert.IsEmpty(subject.Readings);
+        CollectionAssert.AreEqual(new[] { new TextGraphReadingReference(0, 0, 0) }, subject.GraphReadings!.ToArray());
+        // No nominal or imperative row is removed from the original exact inventory;
+        // finite-compatible supports are a response-local overlay only.
+    }
+
+    [TestMethod]
+    [DataRow("Суперхубав супертрактор работи.", 1, "3,4")]
+    [DataRow("Новият супертрактор работи.", 1, "3,4")]
+    [DataRow("Нова суперкнига пристигна.", 1, "2")]
+    [DataRow("Нови супертрактори работят.", 1, "0")]
+    [DataRow("Новият голям червен супертрактор работи.", 3, "3,4")]
+    public void Graph_nominal_phrase_public_query_binds_each_attribute_to_one_actual_head(string text, int head, string predicateIndices)
+    {
+        TextAnalysis actual = session.AnalyzeText(text);
+        GraphBridgeAssertReferences(actual);
+        TextContextSentence sentence = actual.Context!.Sentences.Single();
+        TextContextCandidate candidate = sentence.Candidates.Single(c => c.AuthorityLane == "productive_nominal_phrase_graph.v1");
+        Assert.IsTrue(candidate.Selectable); Assert.AreEqual(TextContextSelectionStatus.Selected, sentence.Status);
+        TextContextRoleSelection[] attributes = candidate.Roles.Where(r => r.Role == TextContextRole.Attribute).ToArray();
+        CollectionAssert.AreEqual(Enumerable.Range(0, head).ToArray(), attributes.Select(r => r.TokenIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { new TextGraphReadingReference(head, 0, 0) }, candidate.Roles.Single(r => r.Role == TextContextRole.Subject).GraphReadings!.ToArray());
+        CollectionAssert.AreEqual(predicateIndices.Split(',').Select(int.Parse).Select(i => new TextReadingReference(head + 1, i)).ToArray(),
+            candidate.Roles.Single(r => r.Role == TextContextRole.Predicate).Readings.ToArray());
+        if (text.StartsWith("Суперхубав", StringComparison.Ordinal))
+            CollectionAssert.AreEqual(new[] { new TextGraphReadingReference(0, 0, 0) }, attributes[0].GraphReadings!.ToArray());
+        foreach (TextContextRoleSelection attribute in attributes)
+        {
+            Assert.IsTrue(attribute.Readings.Count > 0 || attribute.GraphReadings is { Count: > 0 });
+            TextSyntaxCandidate syntax = actual.Syntax!.Sentences.Single().Candidates.Single(c => c.Role == TextSyntaxRole.Attribute && c.Start == attribute.Start);
+            Assert.AreEqual("ProductiveNominalPhraseAttribute", syntax.RuleId);
+            Assert.AreEqual(attribute.TokenIndex, syntax.Targets.Single().TokenIndex);
+            Assert.AreEqual(head, syntax.Context.Single().TokenIndex);
+            CollectionAssert.AreEqual(candidate.Roles.Single(r => r.Role == TextContextRole.Subject).GraphReadings!.ToArray(), syntax.Context.Single().GraphReadings!.ToArray());
+        }
+        TextSyntaxCandidate subject = actual.Syntax!.Sentences.Single().Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+        Assert.AreEqual(0, subject.Start); Assert.AreEqual(actual.Tokens[head].Start + actual.Tokens[head].Length, subject.Length);
+        Assert.AreEqual(head, subject.Targets.Single().TokenIndex);
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code is "productive_attribute_agreement_mismatch" or "productive_morphology_agreement_mismatch"));
+        Assert.IsFalse(actual.Tokens[head].Analysis!.IsKnown); Assert.IsEmpty(GraphBridgeComplete(actual, head));
+        if (text.StartsWith("Новият", StringComparison.Ordinal))
+        {
+            Assert.AreEqual(MorphologicalArticle.Full, GraphBridgeComplete(actual, 0)[0].Features.Article);
+            Assert.AreNotEqual(MorphologicalArticle.Full, actual.Tokens[head].Analysis!.GraphCandidates[0].Features[0].Article);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("Суперхубав суперкнига работи.", "productive_attribute_agreement_mismatch")]
+    [DataRow("Нови супертрактор работи.", "productive_attribute_agreement_mismatch")]
+    [DataRow("Суперхубав супертрактор работят.", "productive_morphology_agreement_mismatch")]
+    public void Graph_nominal_phrase_public_mismatch_identifies_only_the_measured_relation(string text, string expectedCode)
+    {
+        TextAnalysis actual = session.AnalyzeText(text); GraphBridgeAssertReferences(actual);
+        TextContextCandidate candidate = actual.Context!.Sentences.Single().Candidates.Single(c => c.AuthorityLane == "productive_nominal_phrase_graph.v1");
+        Assert.IsFalse(candidate.Selectable); Assert.IsEmpty(actual.Context.Sentences.Single().SelectedRoles);
+        TextDiagnostic diagnostic = actual.Diagnostics.Single(d => d.Code == expectedCode);
+        Assert.AreEqual("productive_nominal_phrase_graph.v1", diagnostic.RuleId); Assert.IsNull(diagnostic.ProjectedText);
+        Assert.IsNotEmpty(diagnostic.GraphReadings!);
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == (expectedCode == "productive_attribute_agreement_mismatch"
+            ? "productive_morphology_agreement_mismatch" : "productive_attribute_agreement_mismatch")));
+        if (expectedCode == "productive_attribute_agreement_mismatch")
+        {
+            CollectionAssert.AreEqual(new[] { 3, 4 }, candidate.Roles.Single(r => r.Role == TextContextRole.Predicate).Readings.Select(r => r.CompleteReadingIndex).ToArray());
+            Assert.IsTrue(diagnostic.GraphReadings!.All(r => r.TokenIndex is 0 or 1));
+            Assert.IsTrue((diagnostic.Readings ?? []).All(r => r.TokenIndex == 0));
+        }
+        else
+        {
+            Assert.IsTrue(diagnostic.GraphReadings!.All(r => r.TokenIndex == 1), "Graph Attribute cannot supply finite-relation diagnostic authority.");
+            Assert.IsTrue(diagnostic.Readings!.All(r => r.TokenIndex == 2));
+        }
+    }
+
+    [TestMethod]
+    [DataRow("Супертрактор нов работи.")][DataRow("Супертрактор суперкнига работи.")]
+    [DataRow("Супертрактор и суперкнига работят.")][DataRow("Новият хръмзог супертрактор работи.")]
+    [DataRow("Новият, супертрактор работи.")][DataRow("Новият супертрактор, работи.")]
+    [DataRow("Новият супертрактор. Работи.")][DataRow("Новият супертрактор")]
+    [DataRow("Новият супертрактор работи")][DataRow("Ние млади работим.")]
+    public void Graph_nominal_phrase_public_query_abstains_outside_the_closed_single_head_structure(string text)
+    {
+        TextAnalysis actual = session.AnalyzeText(text); GraphBridgeAssertReferences(actual);
+        Assert.IsFalse(actual.Context!.Sentences.SelectMany(s => s.Candidates).Any(c => c.AuthorityLane == "productive_nominal_phrase_graph.v1"));
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code is "productive_attribute_agreement_mismatch" or "productive_morphology_agreement_mismatch"));
+    }
+
+    [TestMethod]
+    public void Graph_nominal_phrase_public_long_repeated_chain_preserves_all_attributes_and_cancellation_retry()
+    {
+        const int count = 65;
+        string text = string.Concat(Enumerable.Repeat("Голям ", count)) + "супертрактор работи.";
+        using var cancel = new CancellationTokenSource(); cancel.Cancel();
+        Assert.AreEqual(cancel.Token, Assert.ThrowsExactly<OperationCanceledException>(() => session.AnalyzeText(text, cancellationToken: cancel.Token)).CancellationToken);
+        TextAnalysis actual = session.AnalyzeText(text); GraphBridgeAssertReferences(actual);
+        TextContextSentence sentence = actual.Context!.Sentences.Single();
+        Assert.AreEqual(TextContextSelectionStatus.Selected, sentence.Status);
+        CollectionAssert.AreEqual(Enumerable.Range(0, count).ToArray(), sentence.SelectedRoles.Where(r => r.Role == TextContextRole.Attribute).Select(r => r.TokenIndex).ToArray());
+        Assert.AreEqual(count, actual.Syntax!.Sentences.Single().Candidates.Count(c => c.Role == TextSyntaxRole.Attribute));
+        Assert.IsTrue(actual.Tokens.Take(count).All(t => ReferenceEquals(actual.Tokens[0].Analysis, t.Analysis)));
+    }
+
+
+    [TestMethod]
+    [DataRow("Суперхубав супертрактор раб", MorphologicalPerson.Third, MorphologicalNumber.Singular, "работи")]
+    [DataRow("Ти раб", MorphologicalPerson.Second, MorphologicalNumber.Singular, "работи")]
+    [DataRow("Ние чет", MorphologicalPerson.First, MorphologicalNumber.Plural, "четем")]
+    [DataRow("Вие чет", MorphologicalPerson.Second, MorphologicalNumber.Plural, "четете")]
+    public void Finite_continuation_preserves_original_candidate_homographs_and_matching_indices(
+        string text, MorphologicalPerson person, MorphologicalNumber number, string form)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false, new() { Continuation = new(text.Length, 256) }, default);
+        TextContinuationEvidence result = actual.Continuation!;
+        Assert.IsNotNull(result); Assert.IsTrue(result.Available, result.UnavailableReason);
+        Assert.AreEqual("finite_continuation.v1", result.Version);
+        Assert.AreEqual("exact_package_finite_vocabulary", result.CandidateSource);
+        Assert.AreEqual("dictionary_score", result.Ranking);
+        Assert.AreEqual(person, result.Expectations.Single().Person); Assert.AreEqual(number, result.Expectations.Single().Number);
+        TextContinuationSuggestion candidate = result.Suggestions.Single(row => row.Form == form);
+        CollectionAssert.AreEqual(session.Lookup(form, LookupMode.Exact, 256).ToArray(), candidate.Readings.ToArray());
+        if (form == "работи")
+        {
+            CollectionAssert.AreEqual(new[] { "Съществително:41,Женски,мн.ч.", "Глагол:173ti,1л.,Сегашно,Повелително",
+                "Глагол:173ti,2л.,Минало_свършено", "Глагол:173ti,3л.,Минало_свършено", "Глагол:173ti,3л.,Сегашно" },
+                candidate.Readings.Select(row => row.PartOfSpeech).ToArray());
+            CollectionAssert.AreEqual(person == MorphologicalPerson.Third ? new[] { 3, 4 } : new[] { 2 },
+                candidate.Matches.Select(match => match.ReadingIndex).ToArray());
+        }
+        if (text.StartsWith("Ти", StringComparison.Ordinal))
+            CollectionAssert.AreEqual(new[] { new TextReadingReference(0, 1) }, result.Expectations.Single().Supports.Single().Readings.ToArray());
+        foreach (TextContinuationSuggestion suggestion in result.Suggestions)
+            foreach (TextContinuationMatch match in suggestion.Matches)
+            {
+                MorphologicalFeatures features = suggestion.Readings[match.ReadingIndex].Features;
+                Assert.AreEqual(MorphologicalVerbForm.Finite, features.VerbForm);
+                foreach (int branch in match.ExpectationIndices)
+                { Assert.AreEqual(result.Expectations[branch].Person, features.Person); Assert.AreEqual(result.Expectations[branch].Number, features.Number); }
+            }
+    }
+
+    [TestMethod]
+    [DataRow("Супертрактор ", MorphologicalNumber.Singular)]
+    [DataRow("Нови супертрактори ", MorphologicalNumber.Plural)]
+    public void Empty_prefix_returns_real_finite_forms_from_graph_subject_context(string text, MorphologicalNumber number)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false, new() { Continuation = new(text.Length, 12) }, default);
+        TextContinuationEvidence result = actual.Continuation!;
+        Assert.IsTrue(result.Available, result.UnavailableReason); Assert.IsNotEmpty(result.Suggestions);
+        Assert.AreEqual(text.Length, result.Start); Assert.AreEqual(0, result.Length); Assert.AreEqual("", result.Prefix);
+        Assert.IsTrue(result.Expectations.All(e => e.Person == MorphologicalPerson.Third && e.Number == number));
+        Assert.IsTrue(result.Expectations.SelectMany(e => e.Supports).Any(s => s.GraphReadings is { Count: > 0 }));
+        Assert.IsTrue(actual.Tokens.Any(t => t.Analysis is { IsKnown: false, Readings.Count: 0 }));
+        foreach (var candidate in result.Suggestions)
+            foreach (var match in candidate.Matches)
+            {
+                Assert.AreEqual(MorphologicalVerbForm.Finite, candidate.Readings[match.ReadingIndex].Features.VerbForm);
+                Assert.AreEqual(number, candidate.Readings[match.ReadingIndex].Features.Number);
+                Assert.AreEqual(MorphologicalPerson.Third, candidate.Readings[match.ReadingIndex].Features.Person);
+            }
+    }
+
+    [TestMethod]
+    [DataRow("Супертрактор -раб")]
+    [DataRow("Супертрактор раб--сп")]
+    [DataRow("Новият ")]
+    [DataRow("Суперхубав суперкнига ")]
+    [DataRow("мен ")]
+    [DataRow("ми ")]
+    [DataRow("него ")]
+    [DataRow("го ")]
+    [DataRow("Ти и ")]
+    [DataRow("Супертрактор работи ")]
+    public void Unsupported_subject_context_does_not_become_complete_empty_prediction(string text)
+    {
+        TextContinuationEvidence result = session.AnalyzeText(text, false, new() { Continuation = new(text.Length) }, default).Continuation!;
+        Assert.IsFalse(result.Available); Assert.IsFalse(result.SearchComplete); Assert.IsFalse(result.Truncated);
+        Assert.IsNotEmpty(result.UnavailableReason!); Assert.IsEmpty(result.Expectations); Assert.IsEmpty(result.Suggestions);
+    }
+
+    [TestMethod]
+    public void Continuation_is_additive_and_omitted_from_default_text_json()
+    {
+        const string text = "Ти раб";
+        TextAnalysis original = session.AnalyzeText(text);
+        TextAnalysis optional = session.AnalyzeText(text, false, new() { Continuation = new(text.Length) }, default);
+        var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        string baseline = JsonSerializer.Serialize(original, json);
+        Assert.IsNull(original.Continuation);
+        using JsonDocument document = JsonDocument.Parse(baseline);
+        Assert.IsFalse(document.RootElement.TryGetProperty("continuation", out _));
+        Assert.AreEqual(baseline, JsonSerializer.Serialize(optional with { Continuation = null }, json));
+    }
+
+    [TestMethod]
+    [DataRow("Ти раб", -1, 12)]
+    [DataRow("Ти раб", 7, 12)]
+    [DataRow("Ти раб", 6, 0)]
+    [DataRow("Ти раб", 6, 257)]
+    [DataRow("😀. Ти раб", 1, 12)]
+    [DataRow("Ти ра̀б", 5, 12)]
+    public void Continuation_rejects_invalid_bounds_and_grapheme_carets(string text, int caret, int limit)
+        => Assert.Throws<ArgumentException>(() => session.AnalyzeText(text, false, new() { Continuation = new(caret, limit) }, default));
+
+    [TestMethod]
+    public void Continuation_midword_span_replaces_the_full_original_suffix_and_preserves_right_text()
+    {
+        const string text = "😀. Супертрактор рабXYZ край.";
+        TextAnalysis actual = session.AnalyzeText(text, false, new() { Continuation = new(20, 256) }, default);
+        TextContinuationEvidence result = actual.Continuation!;
+        Assert.IsTrue(result.Available, result.UnavailableReason);
+        Assert.AreEqual(20, result.Caret); Assert.AreEqual(17, result.Start); Assert.AreEqual(6, result.Length); Assert.AreEqual("раб", result.Prefix);
+        Assert.IsTrue(result.Suggestions.Any(s => s.Form == "работи"));
+        Assert.AreEqual("😀. Супертрактор работи край.", text[..result.Start] + "работи" + text[(result.Start + result.Length)..]);
+        Assert.AreEqual(text, actual.Text);
+    }
+
+    [TestMethod]
+    public void Continuation_cancellation_preserves_token_and_allows_session_reuse()
+    {
+        const string text = "Супертрактор ";
+        using var cancel = new CancellationTokenSource(); cancel.Cancel();
+        Assert.AreEqual(cancel.Token, Assert.Throws<OperationCanceledException>(() => session.AnalyzeText(text, false,
+            new() { Continuation = new(text.Length) }, cancel.Token)).CancellationToken);
+        Assert.IsTrue(session.AnalyzeText(text, false, new() { Continuation = new(text.Length) }, default).Continuation!.Available);
+    }
+    // Insert-only additions to PublicPackageTests. No old method/key/assertion changes.
+    // Six source-declared leaves; independent of new package-row bindings.
+    [TestMethod]
+    public void Nominal_target_preserves_existing_constructor_deconstruction_and_default_request_wire()
+    {
+        var request = new TextContinuationRequest(4);
+        (int caret, int limit) = request;
+        Assert.AreEqual(4, caret);
+        Assert.AreEqual(12, limit);
+        Assert.AreEqual(TextContinuationTarget.Finite, request.Target);
+        CollectionAssert.AreEqual(new[] { "Finite", "Noun", "Auto" }, Enum.GetNames<TextContinuationTarget>());
+        Assert.AreEqual(0, Convert.ToInt32(Enum.Parse<TextContinuationTarget>("Finite")));
+        var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        json.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        const string oldRequest = "{\"caret\":4,\"limit\":12}";
+        Assert.AreEqual(oldRequest, JsonSerializer.Serialize(request, json));
+        Assert.AreEqual(oldRequest, JsonSerializer.Serialize(request with { Target = TextContinuationTarget.Finite }, json));
+        using JsonDocument noun = JsonDocument.Parse(JsonSerializer.Serialize(request with { Target = TextContinuationTarget.Noun }, json));
+        using JsonDocument auto = JsonDocument.Parse(JsonSerializer.Serialize(request with { Target = TextContinuationTarget.Auto }, json));
+        Assert.AreEqual("Noun", noun.RootElement.GetProperty("target").GetString());
+        Assert.AreEqual("Auto", auto.RootElement.GetProperty("target").GetString());
+    }
+
+    [TestMethod]
+    [DataRow(-1)]
+    [DataRow(3)]
+    [DataRow(int.MaxValue)]
+    public void Nominal_target_rejects_undefined_public_enum_values(int undefined)
+    {
+        Assert.IsFalse(Enum.IsDefined((TextContinuationTarget)undefined));
+        Assert.Throws<ArgumentException>(() => session.AnalyzeText("Нова к", false,
+            new() { Continuation = new(6, 12) { Target = (TextContinuationTarget)undefined } }, default));
+    }
+
+    [TestMethod]
+    [DataRow("Ти раб")]
+    [DataRow("Супертрактор раб")]
+    public void Nominal_target_addition_keeps_default_explicit_finite_and_finite_auto_responses_identical(string text)
+    {
+        TextAnalysis omitted = session.AnalyzeText(text, false,
+            new() { Continuation = new(text.Length, 256) }, default);
+        TextAnalysis explicitFinite = session.AnalyzeText(text, false,
+            new() { Continuation = new(text.Length, 256) { Target = TextContinuationTarget.Finite } }, default);
+        TextAnalysis auto = session.AnalyzeText(text, false,
+            new() { Continuation = new(text.Length, 256) { Target = TextContinuationTarget.Auto } }, default);
+        var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        Assert.AreEqual(JsonSerializer.Serialize(omitted, json), JsonSerializer.Serialize(explicitFinite, json));
+        Assert.AreEqual(JsonSerializer.Serialize(omitted, json), JsonSerializer.Serialize(auto, json));
+        foreach (TextAnalysis analysis in new[] { omitted, explicitFinite, auto })
+        {
+            TextContinuationEvidence result = analysis.Continuation!;
+            Assert.IsTrue(result.Available, result.UnavailableReason);
+            Assert.AreEqual(TextContinuationTarget.Finite, result.Target);
+            Assert.AreEqual("finite_continuation.v1", result.Version);
+            Assert.AreEqual("exact_package_finite_vocabulary", result.CandidateSource);
+            Assert.IsNull(result.NominalExpectations);
+            using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(result, json));
+            Assert.IsFalse(document.RootElement.TryGetProperty("target", out _));
+            Assert.IsFalse(document.RootElement.TryGetProperty("nominalExpectations", out _));
+        }
+    }
+
+    [TestMethod]
+    [DataRow("P1", "Нов ", "град", "книга|училище|градове")]
+    [DataRow("P2", "Нова ", "книга", "град|училище|книги")]
+    [DataRow("P3", "Ново ", "училище", "град|книга|училища")]
+    [DataRow("P4", "Нови ", "градове|книги|училища", "град|книга|училище")]
+    [DataRow("D1", "Новият ", "град", "градът|града|книга|градове")]
+    [DataRow("D2", "Новия ", "град", "градът|града")]
+    [DataRow("D3", "Новата ", "книга", "книгата|книги|град")]
+    [DataRow("D4", "Новото ", "училище", "училището|училища|книга")]
+    [DataRow("D5", "Новите ", "градове|книги|училища", "градовете|книгите|училищата|книга")]
+    [DataRow("M1", "Новият голям ", "град", "градът|книга|градове")]
+    [DataRow("M2", "Новата голяма ", "книга", "книгата|град")]
+    [DataRow("M3", "Новото голямо ", "училище", "училището|град")]
+    [DataRow("M4", "Новите големи ", "книги|градове|училища", "книгите|книга")]
+    [DataRow("M5", "Новият голям красив български ", "град", "градът|книга")]
+    [DataRow("N1", "Нова голям ", "", "град|книга|училище")]
+    [DataRow("N2", "Новият големият ", "", "град")]
+    [DataRow("N3", "Нов големият ", "", "град")]
+    [DataRow("N4", "Нови голяма ", "", "книги|книга")]
+    [DataRow("A1", "Български ", "град|градове", "книга")]
+    [DataRow("A2", "Български нови ", "градове", "град")]
+    [DataRow("A3", "Нови ", "коли", "")]
+    public void Nominal_independent_literal_matrix_preserves_source_cells_and_only_compatible_noun_ordinals(
+        string id, string left, string acceptedForms, string excludedForms)
+    {
+        NominalLiteralBranch[] wanted = NominalLiteralBranches(id);
+        string[] accepted = acceptedForms.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        string[] excluded = excludedForms.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string form in accepted.Concat(excluded))
+        {
+            string text = left + form;
+            TextAnalysis analysis = NominalContinue(text);
+            TextContinuationEvidence evidence = analysis.Continuation!;
+            Assert.AreEqual(TextContinuationTarget.Noun, evidence.Target);
+            Assert.AreEqual("nominal_continuation.v1", evidence.Version);
+            Assert.AreEqual("exact_package_nominal_vocabulary", evidence.CandidateSource);
+            Assert.IsEmpty(evidence.Expectations);
+            Assert.AreEqual(left.Length, evidence.Start);
+            Assert.AreEqual(form.Length, evidence.Length);
+            Assert.AreEqual(form, evidence.Prefix);
+            if (wanted.Length == 0)
+            {
+                Assert.IsFalse(evidence.Available);
+                Assert.IsNotEmpty(evidence.UnavailableReason!);
+                Assert.IsEmpty(evidence.NominalExpectations ?? []);
+                Assert.IsEmpty(evidence.Suggestions);
+                Assert.IsFalse(evidence.SearchComplete);
+                Assert.IsFalse(evidence.Truncated);
+            }
+            else
+            {
+                int[] actualBranches = NominalAssertLiteralBranches(analysis, evidence, left, wanted);
+                if (accepted.Contains(form, StringComparer.Ordinal))
+                {
+                    TextContinuationSuggestion suggestion = evidence.Suggestions.Single(s => s.Form == form);
+                    WordReading[] source = NominalPinnedRows(form);
+                    CollectionAssert.AreEqual(source, suggestion.Readings.ToArray());
+                    CollectionAssert.AreEqual(source, session.Lookup(form, LookupMode.Exact, 256).ToArray());
+                    // The premeasurement noun witnesses all use row0. Коли has eight raw
+                    // rows: only noun-Plural row0 supports A3; Neuter-Singular row1 and
+                    // verb rows2..7 stay present but unmatched.
+                    CollectionAssert.AreEqual(new[] { 0 }, suggestion.Matches.Select(m => m.ReadingIndex).ToArray());
+                    int expectedBranch = id == "A1" && form == "градове" ? actualBranches[1] : actualBranches[0];
+                    CollectionAssert.AreEqual(new[] { expectedBranch }, suggestion.Matches.Single().ExpectationIndices.ToArray());
+                }
+                else
+                {
+                    // All excluded spellings in this pinned pool have no compatible
+                    // common-noun cell for this case. This is not a general surface ban.
+                    Assert.IsFalse(evidence.Suggestions.Any(s => s.Form.Equals(form, StringComparison.OrdinalIgnoreCase)));
+                    CollectionAssert.AreEqual(NominalPinnedRows(form), session.Lookup(form, LookupMode.Exact, 256).ToArray());
+                }
+                NominalAssertAllMatches(evidence);
+            }
+            NominalOriginalAnalysisUnchanged(analysis);
+        }
+    }
+
+    private static TextAnalysis NominalContinue(string text, int? caret = null, int limit = 256,
+        TextContinuationTarget target = TextContinuationTarget.Noun) => session.AnalyzeText(text, false,
+            new() { Continuation = new(caret ?? text.Length, limit) { Target = target } }, default);
+
+    private static int[] NominalAssertLiteralBranches(TextAnalysis analysis, TextContinuationEvidence evidence,
+        string left, NominalLiteralBranch[] wanted)
+    {
+        Assert.IsTrue(evidence.Available, evidence.UnavailableReason);
+        Assert.IsNull(evidence.UnavailableReason);
+        Assert.IsNotNull(evidence.NominalExpectations);
+        Assert.HasCount(wanted.Length, evidence.NominalExpectations!);
+        var actual = evidence.NominalExpectations!;
+        var result = new int[wanted.Length];
+        string[] words = left.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int b = 0; b < wanted.Length; b++)
+        {
+            NominalLiteralBranch expected = wanted[b];
+            int branch = Enumerable.Range(0, actual.Count).Single(i => actual[i].Number == expected.Number &&
+                actual[i].Gender == expected.Gender && actual[i].FirstAttributeArticle == expected.FirstArticle);
+            result[b] = branch;
+            TextNominalContinuationExpectation interpretation = actual[branch];
+            Assert.AreEqual(MorphologicalArticle.Indefinite, interpretation.NounArticle);
+            Assert.HasCount(words.Length, interpretation.Attributes);
+            Assert.HasCount(words.Length, expected.AttributeRows);
+            for (int token = 0; token < words.Length; token++)
+            {
+                TextContextRoleSelection support = interpretation.Attributes[token];
+                Assert.AreEqual(TextContextRole.Attribute, support.Role);
+                Assert.AreEqual(token, support.TokenIndex);
+                Assert.AreEqual(analysis.Tokens[token].Start, support.Start);
+                Assert.AreEqual(analysis.Tokens[token].Length, support.Length);
+                Assert.IsNull(support.GraphReadings);
+                CollectionAssert.AreEqual(expected.AttributeRows[token].Select(i => new TextReadingReference(token, i)).ToArray(),
+                    support.Readings.ToArray());
+                var occurrence = analysis.ReadingInventory!.Occurrences.Single(o => o.TokenIndex == token);
+                CollectionAssert.AreEqual(NominalPinnedRows(words[token]),
+                    analysis.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(row => row.Raw).ToArray());
+                CollectionAssert.AreEqual(NominalPinnedRows(words[token]), analysis.Tokens[token].Analysis!.Readings.ToArray());
+            }
+        }
+        Assert.AreEqual(result.Length, result.Distinct().Count());
+        return result;
+    }
+
+    private static void NominalAssertAllMatches(TextContinuationEvidence evidence)
+    {
+        Assert.AreEqual(TextContinuationTarget.Noun, evidence.Target);
+        Assert.IsEmpty(evidence.Expectations);
+        Assert.IsNotNull(evidence.NominalExpectations);
+        foreach (TextContinuationSuggestion suggestion in evidence.Suggestions)
+        {
+            Assert.IsNotEmpty(suggestion.Readings);
+            Assert.IsNotEmpty(suggestion.Matches);
+            Assert.AreEqual(suggestion.Matches.Count, suggestion.Matches.Select(m => m.ReadingIndex).Distinct().Count());
+            foreach (TextContinuationMatch match in suggestion.Matches)
+            {
+                Assert.IsTrue((uint)match.ReadingIndex < (uint)suggestion.Readings.Count);
+                Assert.IsNotEmpty(match.ExpectationIndices);
+                MorphologicalFeatures row = suggestion.Readings[match.ReadingIndex].Features;
+                Assert.AreEqual(MorphologicalPartOfSpeech.Noun, row.PartOfSpeech);
+                Assert.AreEqual(MorphologicalArticle.Indefinite, row.Article);
+                Assert.IsFalse(row.HasUnrecognizedFeatures);
+                Assert.IsFalse(row.HasConflictingFeatures);
+                Assert.IsNull(row.Case);
+                Assert.IsNull(row.IsShortForm);
+                foreach (int branch in match.ExpectationIndices)
+                {
+                    Assert.IsTrue((uint)branch < (uint)evidence.NominalExpectations!.Count);
+                    TextNominalContinuationExpectation expected = evidence.NominalExpectations[branch];
+                    Assert.AreEqual(expected.Number, row.Number);
+                    if (expected.Number == MorphologicalNumber.Singular) Assert.AreEqual(expected.Gender, row.Gender);
+                    else { Assert.AreEqual(MorphologicalNumber.Plural, row.Number); Assert.IsNull(expected.Gender); }
+                }
+            }
+            Assert.AreEqual(suggestion.Matches.Max(m => suggestion.Readings[m.ReadingIndex].Score), suggestion.Score);
+        }
+    }
+
+    private static void NominalOriginalAnalysisUnchanged(TextAnalysis enabled)
+    {
+        TextAnalysis ordinary = session.AnalyzeText(enabled.Text);
+        Assert.IsNull(ordinary.Continuation);
+        Assert.AreEqual(JsonSerializer.Serialize(ordinary), JsonSerializer.Serialize(enabled with { Continuation = null }),
+            "Future-head Attribute supports do not create accepted Context/Syntax roles, diagnostic authority, tokens or exact readings.");
+    }
+
+    private sealed record NominalLiteralBranch(MorphologicalNumber Number, MorphologicalGender? Gender,
+        MorphologicalArticle FirstArticle, int[][] AttributeRows);
+
+    private static NominalLiteralBranch[] NominalLiteralBranches(string id) => id switch
+    {
+        "P1" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Indefinite, [[0]])],
+        "P2" => [new(MorphologicalNumber.Singular, MorphologicalGender.Feminine, MorphologicalArticle.Indefinite, [[0]])],
+        "P3" => [new(MorphologicalNumber.Singular, MorphologicalGender.Neuter, MorphologicalArticle.Indefinite, [[0]])],
+        "P4" => [new(MorphologicalNumber.Plural, null, MorphologicalArticle.Indefinite, [[0]])],
+        "D1" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Full, [[0]])],
+        "D2" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Definite, [[0]])],
+        "D3" => [new(MorphologicalNumber.Singular, MorphologicalGender.Feminine, MorphologicalArticle.Definite, [[0]])],
+        "D4" => [new(MorphologicalNumber.Singular, MorphologicalGender.Neuter, MorphologicalArticle.Definite, [[0]])],
+        "D5" => [new(MorphologicalNumber.Plural, null, MorphologicalArticle.Definite, [[0]])],
+        "M1" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Full, [[0], [1]])],
+        "M2" => [new(MorphologicalNumber.Singular, MorphologicalGender.Feminine, MorphologicalArticle.Definite, [[0], [0]])],
+        "M3" => [new(MorphologicalNumber.Singular, MorphologicalGender.Neuter, MorphologicalArticle.Definite, [[0], [0]])],
+        "M4" => [new(MorphologicalNumber.Plural, null, MorphologicalArticle.Definite, [[0], [5]])],
+        "M5" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Full, [[0], [1], [0], [1]])],
+        "N1" => [],
+        "N2" => [],
+        "N3" => [],
+        "N4" => [],
+        "A1" => [new(MorphologicalNumber.Singular, MorphologicalGender.Masculine, MorphologicalArticle.Indefinite, [[1]]), new(MorphologicalNumber.Plural, null, MorphologicalArticle.Indefinite, [[2]])],
+        "A2" => [new(MorphologicalNumber.Plural, null, MorphologicalArticle.Indefinite, [[2], [0]])],
+        "A3" => [new(MorphologicalNumber.Plural, null, MorphologicalArticle.Indefinite, [[0]])],
+        _ => throw new InvalidOperationException("Unknown independent literal case: " + id)
+    };
+
+    // Immutable raw cells from premeasurement pool 0df19d9bf39da84a1c829721f23d9d3d09b6191c08854fd23ede5fadf6dcfa3a; no continuation output used.
+    private const string NominalPinnedSource = "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7";
+
+    private static WordReading[] NominalPinnedRows(string word) => word switch
+    {
+        "нов" =>
+        [
+            new("нов", "нов", "Прилагателно:76,Мъжки", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "град" =>
+        [
+            new("град", "град", "Съществително:1,Мъжки", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "книга" =>
+        [
+            new("книга", "книга", "Съществително:41,Женски", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "училище" =>
+        [
+            new("училище", "училище", "Съществително:66,Среден", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "градове" =>
+        [
+            new("градове", "град", "Съществително:1,Мъжки,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "нова" =>
+        [
+            new("нова", "нов", "Прилагателно:76,Женски", 1d, null, null, null, NominalPinnedSource),
+            new("Нова", "Нова", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "книги" =>
+        [
+            new("книги", "книга", "Съществително:41,Женски,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "ново" =>
+        [
+            new("ново", "нов", "Прилагателно:76,Среден", 1d, null, null, null, NominalPinnedSource),
+            new("Ново", "Ново", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "училища" =>
+        [
+            new("училища", "училище", "Съществително:66,Среден,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "нови" =>
+        [
+            new("нови", "нов", "Прилагателно:76,Мъжки,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+            new("Нови", "Нови", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "новият" =>
+        [
+            new("новият", "нов", "Прилагателно:76,Мъжки,Пълен", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "градът" =>
+        [
+            new("градът", "град", "Съществително:1,Мъжки,Пълен", 1d, null, null, null, NominalPinnedSource),
+            new("Градът", "Градът", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "града" =>
+        [
+            new("града", "град", "Съществително:1,Мъжки,Бройна", 1d, null, null, null, NominalPinnedSource),
+            new("града", "град", "Съществително:1,Мъжки,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "новия" =>
+        [
+            new("новия", "нов", "Прилагателно:76,Мъжки,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "новата" =>
+        [
+            new("новата", "нов", "Прилагателно:76,Женски,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "книгата" =>
+        [
+            new("книгата", "книга", "Съществително:41,Женски,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "новото" =>
+        [
+            new("новото", "нов", "Прилагателно:76,Среден,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "училището" =>
+        [
+            new("училището", "училище", "Съществително:66,Среден,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "новите" =>
+        [
+            new("новите", "нов", "Прилагателно:76,Мъжки,мн.ч.,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "градовете" =>
+        [
+            new("градовете", "град", "Съществително:1,Мъжки,мн.ч.,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "книгите" =>
+        [
+            new("книгите", "книга", "Съществително:41,Женски,мн.ч.,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "училищата" =>
+        [
+            new("училищата", "училище", "Съществително:66,Среден,мн.ч.,Членуван", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "голям" =>
+        [
+            new("Голям", "Голям", "Място:195", 1d, null, null, null, NominalPinnedSource),
+            new("голям", "голям", "Прилагателно:81,Мъжки", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "голяма" =>
+        [
+            new("голяма", "голям", "Прилагателно:81,Женски", 1d, null, null, null, NominalPinnedSource),
+            new("Голяма", "Голяма", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "голямо" =>
+        [
+            new("голямо", "голям", "Прилагателно:81,Среден", 1d, null, null, null, NominalPinnedSource),
+            new("Голямо", "Голямо", "Място:195", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "големи" =>
+        [
+            new("Големи", "Големи", "Място:195", 1d, null, null, null, NominalPinnedSource),
+            new("големи", "големя", "Глагол:174ii,1л.,Сегашно,Повелително", 1d, null, null, null, NominalPinnedSource),
+            new("големи", "големя", "Глагол:174ii,2л.,Минало_свършено", 1d, null, null, null, NominalPinnedSource),
+            new("големи", "големя", "Глагол:174ii,3л.,Минало_свършено", 1d, null, null, null, NominalPinnedSource),
+            new("големи", "големя", "Глагол:174ii,3л.,Сегашно", 1d, null, null, null, NominalPinnedSource),
+            new("големи", "голям", "Прилагателно:81,Мъжки,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "красив" =>
+        [
+            new("красив", "красив", "Прилагателно:76,Мъжки", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "български" =>
+        [
+            new("Български", "Български", "Място:195", 1d, null, null, null, NominalPinnedSource),
+            new("български", "български", "Прилагателно:78,Мъжки", 1d, null, null, null, NominalPinnedSource),
+            new("български", "български", "Прилагателно:78,Мъжки,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "големият" =>
+        [
+            new("големият", "голям", "Прилагателно:81,Мъжки,Пълен", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "коли" =>
+        [
+            new("коли", "кола", "Съществително:41,Женски,мн.ч.", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коли", "Съществително:65,Среден", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:173ti,1л.,Сегашно,Повелително", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:173ti,2л.,Минало_свършено", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:173ti,3л.,Минало_свършено", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:173ti,3л.,Сегашно", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:185ti,1л.,Сегашно,Повелително", 1d, null, null, null, NominalPinnedSource),
+            new("коли", "коля", "Глагол:185ti,3л.,Сегашно", 1d, null, null, null, NominalPinnedSource),
+        ],
+        "учен" =>
+        [
+            new("учен", "уча", "Глагол:176ti,Минало_страдателно,Мъжки,1л.,Сегашно", 1d, null, null, null, NominalPinnedSource),
+            new("учен", "учен", "Прилагателно:76,Мъжки", 1d, null, null, null, NominalPinnedSource),
+            new("учен", "учен", "Съществително:5,Мъжки", 1d, null, null, null, NominalPinnedSource),
+        ],
+        _ => throw new InvalidOperationException("No premeasurement raw fixture: " + word)
+    };
+
+    [TestMethod]
+    public void Nominal_explicit_noun_reveals_the_adjective_branch_of_real_uchen_while_auto_remains_finite()
+    {
+        const string text = "Учен гр";
+        TextAnalysis auto = NominalContinue(text, target: TextContinuationTarget.Auto);
+        TextAnalysis finite = NominalContinue(text, target: TextContinuationTarget.Finite);
+        TextAnalysis noun = NominalContinue(text);
+        CollectionAssert.AreEqual(NominalPinnedRows("учен"), auto.Tokens[0].Analysis!.Readings.ToArray());
+        CollectionAssert.AreEqual(NominalPinnedRows("учен"), noun.Tokens[0].Analysis!.Readings.ToArray());
+        Assert.AreEqual(JsonSerializer.Serialize(finite), JsonSerializer.Serialize(auto));
+        Assert.IsTrue(auto.Continuation!.Available, auto.Continuation.UnavailableReason);
+        Assert.AreEqual(TextContinuationTarget.Finite, auto.Continuation.Target);
+        Assert.IsNull(auto.Continuation.NominalExpectations);
+        CollectionAssert.AreEqual(new[] { new TextReadingReference(0, 2) },
+            auto.Continuation.Expectations.Single().Supports.Single().Readings.ToArray());
+        Assert.IsTrue(noun.Continuation!.Available, noun.Continuation.UnavailableReason);
+        Assert.AreEqual(TextContinuationTarget.Noun, noun.Continuation.Target);
+        Assert.IsEmpty(noun.Continuation.Expectations);
+        CollectionAssert.AreEqual(new[] { new TextReadingReference(0, 1) },
+            noun.Continuation.NominalExpectations!.Single().Attributes.Single().Readings.ToArray());
+        TextContinuationSuggestion city = noun.Continuation.Suggestions.Single(s => s.Form == "град");
+        CollectionAssert.AreEqual(NominalPinnedRows("град"), city.Readings.ToArray());
+        NominalAssertAllMatches(noun.Continuation);
+        NominalOriginalAnalysisUnchanged(noun);
+    }
+
+    [TestMethod]
+    [DataRow("Нова книга", 6, 5, 5, "Нова книга")]
+    [DataRow("Нова книга лежат.", 6, 5, 5, "Нова книга лежат.")]
+    [DataRow("😀. Нова кXYZ лежат.", 10, 9, 4, "😀. Нова книга лежат.")]
+    public void Nominal_midword_completion_replaces_the_entire_original_word_and_preserves_unassessed_right_text(
+        string text, int caret, int start, int length, string replaced)
+    {
+        TextAnalysis analysis = NominalContinue(text, caret);
+        TextContinuationEvidence evidence = analysis.Continuation!;
+        Assert.IsTrue(evidence.Available, evidence.UnavailableReason);
+        Assert.AreEqual(TextContinuationTarget.Noun, evidence.Target);
+        Assert.AreEqual(caret, evidence.Caret); Assert.AreEqual(start, evidence.Start);
+        Assert.AreEqual(length, evidence.Length); Assert.AreEqual("к", evidence.Prefix);
+        Assert.IsNotEmpty(evidence.Suggestions);
+        // Keep the original one-letter edit case; a separate narrow prefix locates the fixed
+        // книга witness without assuming that it ranks within the API's 256-form bound for к.
+        string narrowedText = text[..caret] + "ни" + text[caret..];
+        TextAnalysis narrowed = NominalContinue(narrowedText, caret + 2);
+        TextContinuationEvidence witness = narrowed.Continuation!;
+        Assert.IsTrue(witness.Available, witness.UnavailableReason);
+        Assert.AreEqual(start, witness.Start); Assert.AreEqual(length + 2, witness.Length);
+        Assert.AreEqual("кни", witness.Prefix);
+        TextContinuationSuggestion book = witness.Suggestions.Single(s => s.Form == "книга");
+        CollectionAssert.AreEqual(NominalPinnedRows("книга"), book.Readings.ToArray());
+        CollectionAssert.AreEqual(new[] { 0 }, book.Matches.Select(m => m.ReadingIndex).ToArray());
+        Assert.AreEqual(replaced, text[..start] + book.Form + text[(start + length)..]);
+        Assert.AreEqual(replaced, narrowedText[..witness.Start] + book.Form + narrowedText[(witness.Start + witness.Length)..]);
+        Assert.AreEqual(text, analysis.Text);
+        NominalAssertAllMatches(evidence);
+        NominalOriginalAnalysisUnchanged(analysis);
+        NominalAssertAllMatches(witness);
+        NominalOriginalAnalysisUnchanged(narrowed);
+    }
+
+    [TestMethod]
+    public void Nominal_valid_combining_grapheme_caret_keeps_original_prefix_and_whole_word_span()
+    {
+        const string text = "Нова кнѝга";
+        TextAnalysis analysis = NominalContinue(text, 9);
+        TextContinuationEvidence evidence = analysis.Continuation!;
+        Assert.IsTrue(evidence.Available, evidence.UnavailableReason);
+        Assert.AreEqual(TextContinuationTarget.Noun, evidence.Target);
+        Assert.AreEqual(9, evidence.Caret); Assert.AreEqual(5, evidence.Start);
+        Assert.AreEqual(6, evidence.Length); Assert.AreEqual("кнѝ", evidence.Prefix);
+        Assert.AreEqual(text, analysis.Text);
+        NominalOriginalAnalysisUnchanged(analysis);
+    }
+
+    [TestMethod]
+    [DataRow("😀. Нова к", 1)]
+    [DataRow("Нова кнѝга", 8)]
+    [DataRow("Нова к", 7)]
+    public void Nominal_target_reuses_original_grapheme_and_range_rejection(string text, int caret)
+        => Assert.Throws<ArgumentException>(() => NominalContinue(text, caret));
+
+    [TestMethod]
+    public void Nominal_cancellation_keeps_the_original_token_and_allows_session_reuse()
+    {
+        const string text = "Нова к";
+        using var canceled = new CancellationTokenSource(); canceled.Cancel();
+        Assert.AreEqual(canceled.Token, Assert.Throws<OperationCanceledException>(() => session.AnalyzeText(text, false,
+            new() { Continuation = new(text.Length, 256) { Target = TextContinuationTarget.Noun } }, canceled.Token)).CancellationToken);
+        TextAnalysis reused = NominalContinue(text);
+        Assert.IsTrue(reused.Continuation!.Available, reused.Continuation.UnavailableReason);
+        Assert.IsNotEmpty(reused.Continuation.Suggestions); NominalAssertAllMatches(reused.Continuation);
+        TextAnalysis witness = NominalContinue(text + "ни");
+        Assert.IsTrue(witness.Continuation!.Available, witness.Continuation.UnavailableReason);
+        Assert.IsTrue(witness.Continuation.Suggestions.Any(s => s.Form == "книга"));
+    }
+
+
 }

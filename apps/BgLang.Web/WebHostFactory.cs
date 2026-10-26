@@ -30,7 +30,8 @@ internal static class WebHostFactory
             builder.Configuration["BgLang:ManifestPath"] ?? "",
             builder.Configuration["BgLang:ManifestSha256"] ?? "", open));
         builder.Services.AddHostedService(provider => provider.GetRequiredService<SessionHost>());
-        builder.Services.AddSingleton(new ClientRateLimit(rateTime));
+        builder.Services.AddSingleton(new ClientRateLimit(rateTime,
+            builder.Configuration.GetValue<int>("BgLang:RequestsPerMinute", HttpContract.RequestsPerMinute)));
         builder.Services.AddSingleton(new ResponseWriter(
             builder.Configuration.GetValue<long?>("BgLang:ResponseByteLimit") ?? HttpContract.DefaultResponseBytes));
 
@@ -56,7 +57,7 @@ internal static class WebHostFactory
             Results.Json(new { status = host.Ready ? "ready" : "stopping" }, statusCode: host.Ready ? 200 : 503));
         foreach (string version in new[] { "1", "2" })
         {
-            app.MapGet($"/api/v{version}/", (SessionHost host, ResponseWriter writer) => Results.Json(new
+            app.MapGet($"/api/v{version}/", (SessionHost host, ResponseWriter writer, ClientRateLimit rate) => Results.Json(new
             {
                 apiVersion = version, versions = host.Versions, package = host.Provenance,
                 defaultEvidenceFormat = version == "2" ? SharedDonorResponse.AnalysisFormat : HttpContract.RawFormat,
@@ -72,11 +73,11 @@ internal static class WebHostFactory
                     queueWaitMilliseconds = HttpContract.QueueWait.TotalMilliseconds,
                     responseTimeoutMilliseconds = HttpContract.ResponseTimeout.TotalMilliseconds,
                     responseDeadline = "cooperative language success; includes body, kernel, projection, serialization and transfer; protocol errors use request cancellation",
-                    requestsPerMinutePerIp = HttpContract.RequestsPerMinute,
+                    requestsPerMinutePerIp = rate.RequestsPerMinute,
                     retainedIpMaximum = HttpContract.ClientCapacity },
                 forwardedHeadersTrusted = false
             }, HttpContract.Json));
-            foreach (string operation in new[] { "lookup", "lookup-lexical-entries", "lexical-entry", "word-constructions", "stress", "generate-stress-forms", "derivational-stress", "analyze-word", "analyze-text", "generate-forms", "derive-words", "decompose-word", "find-forms-in-text" })
+            foreach (string operation in new[] { "lookup", "lookup-prefix", "lookup-lexical-entries", "lexical-entry", "word-constructions", "stress", "generate-stress-forms", "derivational-stress", "analyze-word", "analyze-text", "generate-forms", "derive-words", "decompose-word", "find-forms-in-text" })
                 app.MapPost($"/api/v{version}/" + operation,
                     (HttpContext context, SessionHost host, ClientRateLimit rate, ResponseWriter writer) =>
                         HandleAsync(context, host, rate, writer, operation, version));

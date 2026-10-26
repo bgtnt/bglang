@@ -59,23 +59,68 @@ internal sealed class BlockRankedRangeSelector
         return true;
     }
 
-    private int Best(int start, int end)
+    // Enumerates retained payload positions in dictionary order. Equal readings keep
+    // original payload order; unlike TrySelect this path never falls back or drops ties.
+    internal IEnumerable<int> EnumeratePositions(int start, int end,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (start < 0 || end < start || end > _readings.Length)
+            throw new ArgumentOutOfRangeException(nameof(start));
+        PriorityQueue<(int Start, int End, int Winner), int> queue = new(
+            Comparer<int>.Create((left, right) =>
+            {
+                int order = WordReadingOrder.Comparer.Compare(_readings[left], _readings[right]);
+                return order != 0 ? order : left.CompareTo(right);
+            }));
+        void Add(int left, int right)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (left >= right) return;
+            int winner = Best(left, right, cancellationToken);
+            queue.Enqueue((left, right, winner), winner);
+        }
+        Add(start, end);
+        while (queue.TryDequeue(out var interval, out _))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Add(interval.Start, interval.Winner);
+            Add(interval.Winner + 1, interval.End);
+            yield return interval.Winner;
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private int Best(int start, int end, CancellationToken cancellationToken = default)
     {
         int firstFullBlock = start / BlockSize + (start % BlockSize == 0 ? 0 : 1);
         int lastFullBlock = end / BlockSize;
         int leftEnd = Math.Min(end, firstFullBlock * BlockSize);
         int best = -1;
-        for (int index = start; index < leftEnd; index++) best = Better(best, index);
+        for (int index = start; index < leftEnd; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            best = Better(best, index);
+        }
         for (int left = firstFullBlock + _leafCount, right = lastFullBlock + _leafCount; left < right; left /= 2, right /= 2)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if ((left & 1) != 0) best = Better(best, _tree[left++]);
             if ((right & 1) != 0) best = Better(best, _tree[--right]);
         }
         for (int index = Math.Max(leftEnd, lastFullBlock * BlockSize); index < end; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             best = Better(best, index);
+        }
         return best;
     }
 
-    private int Better(int left, int right) => left < 0 ? right : right < 0 ? left :
-        WordReadingOrder.Comparer.Compare(_readings[left], _readings[right]) <= 0 ? left : right;
+    private int Better(int left, int right)
+    {
+        if (left < 0) return right;
+        if (right < 0) return left;
+        int order = WordReadingOrder.Comparer.Compare(_readings[left], _readings[right]);
+        return order < 0 || order == 0 && left < right ? left : right;
+    }
 }

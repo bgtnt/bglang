@@ -12,11 +12,20 @@ internal static class ContextLanes
 {
     // Exact source Category, NOT a cast from current MorphologicalPartOfSpeech.
     internal enum Category { Unknown, Other, Noun, Pronoun, Verb, Adjective, Number, Adposition, Particle }
-    internal sealed record ReadingView(WordReading Reading, MorphologicalFeatures Features,
+    internal sealed record ReadingView(string Lemma, MorphologicalFeatures Features,
         Category Category, bool SourceAdverb, bool SourceTransparentAdverb, bool SourceConjunction, bool SourcePersonalPronoun,
-        bool SourceGenericUnknown);
+        bool SourceGenericUnknown)
+    {
+        internal WordReading? Reading { get; init; }
+        internal ReadingView(WordReading reading, MorphologicalFeatures features, Category category, bool adverb,
+            bool transparentAdverb, bool conjunction, bool personalPronoun, bool genericUnknown)
+            : this(reading.Lemma, features, category, adverb, transparentAdverb, conjunction, personalPronoun, genericUnknown) { Reading = reading; }
+    }
     internal sealed record TokenView(int OriginalIndex, TokenAnalysis Token, string CanonicalText,
-        IReadOnlyList<ReadingView> Readings, bool Complete);
+        IReadOnlyList<ReadingView> Readings, bool Complete)
+    {
+        internal bool UsesGraph { get; init; }
+    }
     private sealed record Group(int Token, Category Category, MorphologicalPerson? Person,
         MorphologicalNumber? Number, int[] Members);
     private sealed record ClosedClause(bool Adverb, int? Marker, bool Clitic);
@@ -42,6 +51,74 @@ internal static class ContextLanes
         Validate(text, sentence, words, cancellationToken);
         var state = new Calculation(text, sentence, words, sourceCanonicalKey, cancellationToken);
         return state.Run();
+    }
+
+    internal const string ProductiveGraphLane = "productive_subject_predicate_graph.v1";
+    internal const string ProductiveGraphMismatch = "productive_morphology_agreement_mismatch";
+    internal const string ProductiveNominalLane = "productive_nominal_phrase_graph.v1";
+    internal const string ProductiveAttributeMismatch = "productive_attribute_agreement_mismatch";
+    internal static ContextOverlayInput? CalculateProductive(string text, SentenceSpan sentence,
+        IReadOnlyList<TokenView> words, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey,
+        CancellationToken ct, out string? unavailableReason)
+    {
+        ct.ThrowIfCancellationRequested();
+        Validate(text, sentence, words, ct);
+        return new Calculation(text, sentence, words, sourceKey, ct).Productive(out unavailableReason);
+    }
+
+    internal sealed record NominalHead(MorphologicalNumber Number, MorphologicalGender? Gender,
+        int[] Members, int[][] Attributes);
+    internal sealed record NominalPhrase(int[] NounMembers, int[][] AttributeMembers,
+        IReadOnlyList<NominalHead> Heads, bool[] AnyAttributeMatch);
+
+    // Shared closed/open phrase agreement: each group uses one actual noun tuple.
+    internal static NominalPhrase? NominalMembers(IReadOnlyList<TokenView> words, int head, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (head < 0 || head >= words.Count) return null;
+        int[]? Members(int token, Category category)
+        {
+            TokenView word = words[token];
+            if (!word.Complete || word.Readings.Count == 0 || word.Readings.Any(r => r.Features.HasConflictingFeatures)) return null;
+            List<int> found = [];
+            for (int i = 0; i < word.Readings.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                ReadingView row = word.Readings[i];
+                if (row.Category != category) { if (word.UsesGraph) return null; continue; }
+                if (row.Features.PartOfSpeech != (category == Category.Noun
+                    ? MorphologicalPartOfSpeech.Noun : MorphologicalPartOfSpeech.Adjective) || !Guard.HasNominalAxes(row.Features)) return null;
+                found.Add(i);
+            }
+            return found.Count == 0 ? null : found.ToArray();
+        }
+        int[]? noun = Members(head, Category.Noun);
+        if (noun is null) return null;
+        var attributes = new int[head][];
+        for (int a = 0; a < head; a++)
+        {
+            int[]? members = Members(a, Category.Adjective);
+            if (members is null) return null;
+            attributes[a] = members;
+        }
+        List<NominalHead> heads = [];
+        bool[] anyAttributeMatch = new bool[head];
+        foreach (var group in noun.Select(i => { ct.ThrowIfCancellationRequested(); return i; }).GroupBy(i => (Number: words[head].Readings[i].Features.Number!.Value,
+            Gender: words[head].Readings[i].Features.Number == MorphologicalNumber.Singular
+                ? words[head].Readings[i].Features.Gender : null)))
+        {
+            ct.ThrowIfCancellationRequested();
+            int[] members = group.ToArray();
+            var matching = new int[head][];
+            for (int a = 0; a < head; a++)
+            {
+                matching[a] = attributes[a].Where(i => { ct.ThrowIfCancellationRequested(); return Guard.AttributeAgreement(
+                    words[a].Readings[i].Features, words[head].Readings[members[0]].Features); }).ToArray();
+                anyAttributeMatch[a] |= matching[a].Length > 0;
+            }
+            heads.Add(new(group.Key.Number, group.Key.Gender, members, matching));
+        }
+        return new(noun, attributes, heads.AsReadOnly(), anyAttributeMatch);
     }
 
     private sealed class Calculation(string text, SentenceSpan sentence, IReadOnlyList<TokenView> words,
@@ -165,6 +242,148 @@ internal static class ContextLanes
             return new(true, false, null, candidates.ToArray(), local.ToArray(), ambiguous);
         }
 
+        internal ContextOverlayInput? Productive(out string? reason)
+        {
+            reason = null;
+            Check();
+            if (!words.Any(word => word.UsesGraph)) return null;
+            if (words.Count != 2) return ProductiveNominal(out reason);
+            if (!Closed()) { reason = "graph_subject_predicate_topology_unsupported"; return null; }
+            if (!Ready(0) || !Ready(1)) { reason = "graph_agreement_features_unmeasured"; return null; }
+            bool SubjectFeature(ReadingView row) => !row.Features.HasUnrecognizedFeatures && row.Category is Category.Noun or Category.Pronoun &&
+                IsNumber(row.Features.Number) && (row.Category == Category.Noun || row.Features.Person is not null);
+            bool PredicateFeature(ReadingView row) => !row.Features.HasUnrecognizedFeatures && row.Category == Category.Verb &&
+                Guard.IsPersonalPredicate(row.Features) && row.Features.VerbForm == MorphologicalVerbForm.Finite;
+            // Unknown/conflicting graph alternatives cannot disappear while claiming a resolved conclusion.
+            if (T(0).UsesGraph && T(0).Readings.Any(row => !SubjectFeature(row)) ||
+                T(1).UsesGraph && T(1).Readings.Any(row => !PredicateFeature(row)))
+            { reason = "graph_agreement_features_unmeasured"; return null; }
+            Group[] subjects = Groups(0, false);
+            Group[] predicates = Groups(1, true).Select(group => group with
+            {
+                Members = group.Members.Where(index => PredicateFeature(T(1).Readings[index])).ToArray()
+            }).Where(group => group.Members.Length > 0).ToArray();
+            if (subjects.Length == 0 || predicates.Length == 0)
+            { reason = "graph_agreement_features_unmeasured"; return null; }
+            var pairs = subjects.SelectMany(subject => predicates.Select(predicate =>
+                (Subject: subject, Predicate: predicate, Agreement: Agreement(subject, predicate)))).ToArray();
+            if (pairs.Any(pair => pair.Agreement == Guard.Agreement.Unmeasured))
+            { reason = "graph_agreement_features_unmeasured"; return null; }
+            bool compatible = pairs.Any(pair => pair.Agreement == Guard.Agreement.Compatible);
+            foreach (var pair in pairs.Where(pair => !compatible || pair.Agreement == Guard.Agreement.Compatible))
+            {
+                Check();
+                ContextOverlayRoleSelection[] roles =
+                [
+                    Role(ContextOverlayRole.Predicate, 1, pair.Predicate.Members,
+                        T(1).UsesGraph ? "licensed_graph_morphology" : "complete_exact_reading"),
+                    Role(ContextOverlayRole.Subject, 0, pair.Subject.Members,
+                        T(0).UsesGraph ? "licensed_graph_morphology" : "complete_exact_reading")
+                ];
+                bool allGraphMembers = (!T(0).UsesGraph || pair.Subject.Members.Length == T(0).Readings.Count) &&
+                    (!T(1).UsesGraph || pair.Predicate.Members.Length == T(1).Readings.Count);
+                List<string> evidence = ["licensed_graph_morphology", compatible
+                    ? "subject_predicate_agreement_compatible" : ProductiveGraphMismatch];
+                if (!allGraphMembers) evidence.Add("graph_morphology_alternatives_preserved");
+                if (T(0).UsesGraph && T(0).Readings.Count > 1 || T(1).UsesGraph && T(1).Readings.Count > 1)
+                    evidence.Add("multiple_graph_supports_not_unique_morphology");
+                candidates.Add(new(T(1).OriginalIndex, compatible && allGraphMembers, ProductiveGraphLane,
+                    80, sourceKey(roles), roles, evidence.ToArray()));
+            }
+            return new(true, false, null, candidates.ToArray(), [],
+                words.Where(word => word.UsesGraph && word.Readings.Count > 1).Select(word => word.OriginalIndex).ToArray());
+        }
+
+        // One head tuple supports the entire phrase. Lists retain source occurrences;
+        // no Cartesian product of modifier readings and no modifier-count ceiling.
+        private ContextOverlayInput? ProductiveNominal(out string? reason)
+        {
+            reason = "graph_nominal_phrase_topology_unsupported";
+            if (words.Count < 3 || !Closed()) return null;
+            int head = words.Count - 2, predicate = words.Count - 1;
+            NominalPhrase? phrase = NominalMembers(words, head, cancel);
+            int[]? FiniteMembers()
+            {
+                if (!Ready(predicate)) return null;
+                List<int> result = [];
+                for (int i = 0; i < T(predicate).Readings.Count; i++)
+                {
+                    Check();
+                    ReadingView row = T(predicate).Readings[i];
+                    if (row.Category != Category.Verb || row.Features.VerbForm != MorphologicalVerbForm.Finite)
+                    { if (T(predicate).UsesGraph || row.Category == Category.Verb && row.Features.VerbForm is null) return null; continue; }
+                    if (row.Features.HasUnrecognizedFeatures || !Guard.IsPersonalPredicate(row.Features)) return null;
+                    result.Add(i);
+                }
+                return result.ToArray();
+            }
+            int[]? finite = FiniteMembers();
+            if (phrase is null || finite is null || finite.Length == 0)
+            { reason = "graph_nominal_features_unmeasured"; return null; }
+            int[] noun = phrase.NounMembers;
+            int[][] attributes = phrase.AttributeMembers;
+            Group[] heads = phrase.Heads.Select(h => new Group(head, Category.Noun, null, h.Number, h.Members)).ToArray();
+            Group[] predicates = finite.GroupBy(i => (T(predicate).Readings[i].Features.Person, T(predicate).Readings[i].Features.Number))
+                .Select(g => new Group(predicate, Category.Verb, g.Key.Person, g.Key.Number, g.ToArray())).ToArray();
+            var coherent = phrase.Heads.Where(h => h.Attributes.All(m => m.Length > 0))
+                .Select(h => (Head: new Group(head, Category.Noun, null, h.Number, h.Members), Attributes: h.Attributes)).ToList();
+            bool[] anyAttributeMatch = phrase.AnyAttributeMatch;
+            var pairs = coherent.SelectMany(h => predicates.Select(p =>
+                (h.Head, h.Attributes, Predicate: p, Agreement: Agreement(h.Head, p)))).ToArray();
+            bool compatible = pairs.Any(pair => pair.Agreement == Guard.Agreement.Compatible);
+            bool finiteMismatch = heads.All(h => predicates.All(p => Agreement(h, p) == Guard.Agreement.Mismatch));
+            if (compatible || coherent.Count > 0 && finiteMismatch && (T(head).UsesGraph || T(predicate).UsesGraph))
+            {
+                foreach (var pair in pairs.Where(pair => !compatible || pair.Agreement == Guard.Agreement.Compatible))
+                {
+                    Check();
+                    AddNominal(pair.Head.Members, pair.Predicate.Members, pair.Attributes, compatible,
+                        compatible ? null : ProductiveGraphMismatch, null);
+                }
+            }
+            else
+            {
+                // Only a completely disjoint measured relation licenses a mismatch.
+                // Pairwise matches to different heads do not identify a blamed modifier.
+                int[] compatibleFinite = finite.Where(i => { Check(); return heads.Any(h =>
+                    T(predicate).Readings[i].Features.Person == MorphologicalPerson.Third &&
+                    T(predicate).Readings[i].Features.Number == h.Number); }).ToArray();
+                for (int a = 0; a < head; a++)
+                {
+                    Check();
+                    if (!anyAttributeMatch[a] && (T(a).UsesGraph || T(head).UsesGraph))
+                        AddNominal(noun, compatibleFinite.Length > 0 ? compatibleFinite : finite,
+                            attributes, false, ProductiveAttributeMismatch, a);
+                }
+            }
+            if (candidates.Count == 0) { reason = "graph_nominal_coherent_head_unavailable"; return null; }
+            reason = null;
+            return new(true, false, null, candidates.ToArray(), [],
+                words.Where(word => word.UsesGraph && word.Readings.Count > 1).Select(word => word.OriginalIndex).ToArray());
+
+            void AddNominal(int[] headMembers, int[] predicateMembers, int[][] attributeMembers,
+                bool agrees, string? mismatch, int? mismatchingAttribute)
+            {
+                List<ContextOverlayRoleSelection> roles =
+                [
+                    Role(ContextOverlayRole.Predicate, predicate, predicateMembers, Source(predicate)),
+                    Role(ContextOverlayRole.Subject, head, headMembers, Source(head))
+                ];
+                for (int a = 0; a < head; a++) { Check(); roles.Add(Role(ContextOverlayRole.Attribute, a, attributeMembers[a], Source(a))); }
+                bool allGraphMembers = (!T(head).UsesGraph || headMembers.Length == T(head).Readings.Count) &&
+                    (!T(predicate).UsesGraph || predicateMembers.Length == T(predicate).Readings.Count);
+                for (int a = 0; a < head; a++)
+                { Check(); allGraphMembers &= !T(a).UsesGraph || attributeMembers[a].Length == T(a).Readings.Count; }
+                List<string> evidence = ["licensed_graph_morphology", "single_coherent_nominal_head", agrees
+                    ? "subject_predicate_agreement_compatible" : mismatch!];
+                if (mismatchingAttribute is int bad) evidence.Add("attribute_mismatch_token=" + T(bad).OriginalIndex);
+                if (!allGraphMembers) evidence.Add("graph_morphology_alternatives_preserved");
+                candidates.Add(new(T(predicate).OriginalIndex, agrees && allGraphMembers, ProductiveNominalLane,
+                    80, sourceKey(roles), roles.ToArray(), evidence.ToArray()));
+            }
+            string Source(int i) => T(i).UsesGraph ? "licensed_graph_morphology" : "complete_exact_reading";
+        }
+
         // Six joint authority lanes; PREP is calculated by LocalRoles below.
         private string? Authority(Group s, Group p, Guard.Agreement agreement,
             bool sa, bool pa, bool marked, bool post, ClosedClause? closed)
@@ -219,7 +438,7 @@ internal static class ContextLanes
             Norm(T(s.Token).CanonicalText) is "той" or "тя" or "то" or "те" &&
             s.Members.Length == T(s.Token).Readings.Count && Ready(s.Token) && T(s.Token).Readings.All(r =>
                 r.Category == Category.Pronoun && r.SourcePersonalPronoun &&
-                Norm(r.Reading.Lemma) is "той" or "тя" or "то" or "те" &&
+                Norm(r.Lemma) is "той" or "тя" or "то" or "те" &&
                 r.Features.Person == s.Person && r.Features.Number == s.Number);
         private bool Competition(Group p, Group s)
         {
@@ -250,7 +469,7 @@ internal static class ContextLanes
                 if (selected.Contains(i))
                 {
                     if (r.Category != Category.Pronoun || !r.SourcePersonalPronoun ||
-                        Norm(r.Reading.Lemma) is not ("аз" or "ти" or "ние" or "вие") ||
+                        Norm(r.Lemma) is not ("аз" or "ти" or "ние" or "вие") ||
                         r.Features.Person != s.Person || r.Features.Number != s.Number) return false;
                 }
                 else
@@ -294,7 +513,7 @@ internal static class ContextLanes
                 { typed = true; continue; }
                 if (r.Category == Category.Pronoun && (r.SourcePersonalPronoun || r.Features.IsShortForm == true) ||
                     r.Category == Category.Particle || r.SourceConjunction ||
-                    r.SourceGenericUnknown && Norm(r.Reading.Lemma) == Norm(T(i).CanonicalText)) continue;
+                    r.SourceGenericUnknown && Norm(r.Lemma) == Norm(T(i).CanonicalText)) continue;
                 return false;
             }
             return typed;

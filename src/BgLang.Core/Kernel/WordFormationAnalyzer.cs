@@ -128,12 +128,16 @@ internal sealed class WordFormationAnalyzer
         internal WordDerivation[] Candidates { get; private set; } = [];
         internal bool Incomplete { get; set; }
         internal bool Truncated { get; private set; }
+        private bool _exactRootRetentionComplete;
+        internal bool GraphExactRootCandidatesComplete => !Incomplete && _exactRootRetentionComplete;
 
         internal void Complete(IEnumerable<WordDerivation> ordered, bool incomplete)
         {
             Incomplete |= incomplete;
             WordDerivation[] retained = ordered.Take(limit + 1).ToArray();
             Truncated = retained.Length > limit;
+            // Inverse ranking places every exact-root path before the conditional tail.
+            _exactRootRetentionComplete = retained.Length <= limit || retained[limit].IsConditional;
             Candidates = retained.Take(limit).ToArray();
         }
 
@@ -142,6 +146,7 @@ internal sealed class WordFormationAnalyzer
             Candidates = [];
             Incomplete = true;
             Truncated = false;
+            _exactRootRetentionComplete = false;
         }
     }
 

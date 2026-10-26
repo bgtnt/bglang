@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BgLang.Contracts;
 
 public enum TextSyntaxRole { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive }
@@ -13,6 +15,11 @@ public sealed record TextSyntaxSentence(int Start, int Length, string Status, st
 public sealed record TextSyntaxCandidate(TextSyntaxRole Role, string RuleId, int Start, int Length,
     IReadOnlyList<TextSyntaxSupport> Targets, IReadOnlyList<TextSyntaxSupport> Context);
 
-public sealed record TextSyntaxSupport(int TokenIndex, string Basis, IReadOnlyList<TextReadingReference> Readings);
+public sealed record TextSyntaxSupport(int TokenIndex, string Basis, IReadOnlyList<TextReadingReference> Readings)
+{
+    /// <summary>Original graph candidate/tag supports; exact supports remain in Readings.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TextGraphReadingReference>? GraphReadings { get; init; }
+}
 /// <summary>Count of emitted candidate records assigned to this rule group; each record is counted once, and suppressed output contributes zero.</summary>
 public sealed record TextSyntaxGroupStatus(string GroupId, bool Available, string? UnavailableReason, int CandidateCount);

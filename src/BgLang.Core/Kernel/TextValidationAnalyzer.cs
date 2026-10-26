@@ -5,7 +5,7 @@ namespace BgLang.Core;
 /// <summary>Source-bound advice over complete exact acquisition; never a grammatical verdict.</summary>
 internal static class TextValidationAnalyzer
 {
-    internal const string Version = "bounded-validation.v1";
+    internal const string Version = "bounded-validation.v2";
     private const string ArticleCode = "full_article_expected_for_subject_candidate";
     private const string IntensifierCode = "contextual_morphology_reading_evidence";
     private const string CommaCode = "missing_comma_before_subordinate_conjunction";
@@ -49,7 +49,7 @@ internal static class TextValidationAnalyzer
         }
 
         Dictionary<int, Word> words = Bind(analysis, cancellationToken);
-        ValidateReferences(context, syntax, words, cancellationToken);
+        ValidateReferences(analysis, context, syntax, words, cancellationToken);
         if (!context.Available) unavailable.Add("article.context:" + (context.UnavailableReason ?? "unavailable"));
         if (!syntax.Available) unavailable.Add("article.syntax:" + (syntax.UnavailableReason ?? "unavailable"));
         if (exactLookup is null) unavailable.Add("article.coordinated:exact_counterpart_lookup_unavailable");
@@ -127,9 +127,10 @@ internal static class TextValidationAnalyzer
         return result;
     }
 
-    private static void ValidateReferences(TextContextEvidence context, TextSyntaxEvidence syntax,
+    private static void ValidateReferences(TextAnalysis analysis, TextContextEvidence context, TextSyntaxEvidence syntax,
         Dictionary<int, Word> words, CancellationToken ct)
     {
+        var graphFeatures = new Dictionary<TextGraphReadingReference, MorphologicalFeatures>();
         void Check(IEnumerable<TextReadingReference> refs, int owner)
         {
             foreach (TextReadingReference reference in refs)
@@ -140,15 +141,205 @@ internal static class TextValidationAnalyzer
                     throw new ArgumentException("Context/syntax support is outside the complete original inventory.");
             }
         }
+        void CheckGraph(IReadOnlyList<TextGraphReadingReference>? refs, int owner, int start, int length,
+            IReadOnlyList<TextReadingReference> exact, TextContextRole? role = null)
+        {
+            if (refs is null || refs.Count == 0) return;
+            if (exact.Count != 0 || !words.TryGetValue(owner, out Word? word) ||
+                !Within(start, length, word.Token.Start, word.Token.Length))
+                throw new ArgumentException("Graph support has mixed exact authority or a foreign sentence span.");
+            foreach (TextGraphReadingReference reference in refs)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!graphFeatures.TryGetValue(reference, out MorphologicalFeatures features))
+                {
+                    features = MorphologyEvidenceProjection.RequireGraphSupport(word.Token, reference, owner, word.Rows.Count, ct);
+                    graphFeatures.Add(reference, features);
+                }
+                if (reference.TokenIndex != owner || role == TextContextRole.Predicate &&
+                    (!ContextEvidenceGuards.IsPersonalPredicate(features) || features.VerbForm != MorphologicalVerbForm.Finite) ||
+                    role == TextContextRole.Attribute && (features.PartOfSpeech != MorphologicalPartOfSpeech.Adjective ||
+                        !ContextEvidenceGuards.HasNominalAxes(features)) ||
+                    role == TextContextRole.Subject && (features.Number is null ||
+                        features.PartOfSpeech is not (MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.ProperNoun or
+                            MorphologicalPartOfSpeech.PersonalPronoun or MorphologicalPartOfSpeech.Pronoun) ||
+                        features.PartOfSpeech is MorphologicalPartOfSpeech.PersonalPronoun or MorphologicalPartOfSpeech.Pronoun && features.Person is null))
+                    throw new ArgumentException("Graph support does not license the requested typed role.");
+            }
+        }
+        MorphologicalFeatures[] Features(IReadOnlyList<TextReadingReference> exact, IReadOnlyList<TextGraphReadingReference>? graph) =>
+            graph is { Count: > 0 } ? graph.Select(r => graphFeatures[r]).ToArray() :
+                exact.Select(r => words[r.TokenIndex].Rows[r.CompleteReadingIndex].Features).ToArray();
+        void AttributeHead(TextContextRoleSelection attribute, TextContextRoleSelection head, bool compatible)
+        {
+            MorphologicalFeatures[] a = Features(attribute.Readings, attribute.GraphReadings), n = Features(head.Readings, head.GraphReadings);
+            if (a.Length == 0 || n.Length == 0 || a.Any(f => f.PartOfSpeech != MorphologicalPartOfSpeech.Adjective || !ContextEvidenceGuards.HasNominalAxes(f)) ||
+                n.Any(f => f.PartOfSpeech != MorphologicalPartOfSpeech.Noun || !ContextEvidenceGuards.HasNominalAxes(f)))
+                throw new ArgumentException("Attribute needs explicit morphology and its actual noun anchor.");
+            if (compatible)
+            {
+                foreach (MorphologicalFeatures noun in n)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (noun.Number != n[0].Number || noun.Number == MorphologicalNumber.Singular && noun.Gender != n[0].Gender)
+                        throw new ArgumentException("Nominal supports must share one coherent head tuple.");
+                }
+                foreach (MorphologicalFeatures adj in a)
+                { ct.ThrowIfCancellationRequested(); if (!ContextEvidenceGuards.AttributeAgreement(adj, n[0])) throw new ArgumentException("Accepted attribute disagrees with noun anchor."); }
+            }
+        }
+        void NominalRoles(TextContextSentence sentence, IReadOnlyList<TextContextRoleSelection> roles, bool compatible, bool finiteCompatible = false)
+        {
+            Word[] original = words.Values.Where(w => Within(sentence.Start, sentence.Length, w.Token.Start, w.Token.Length)).OrderBy(w => w.Token.Start).ToArray();
+            if (!analysis.Sentences.Any(s => s.Start == sentence.Start && s.Length == sentence.Length) || original.Length < 3 || roles.Count != original.Length)
+                throw new ArgumentException("Nominal roles do not cover one original sentence.");
+            TextContextRoleSelection[] heads = roles.Where(r => r.Role == TextContextRole.Subject).ToArray();
+            TextContextRoleSelection[] predicates = roles.Where(r => r.Role == TextContextRole.Predicate).ToArray();
+            if (heads.Length != 1 || predicates.Length != 1 || heads[0].TokenIndex != original[^2].Index || predicates[0].TokenIndex != original[^1].Index)
+                throw new ArgumentException("Foreign nominal head or predicate occurrence.");
+            MorphologicalFeatures[] predicateFeatures = Features(predicates[0].Readings, predicates[0].GraphReadings);
+            if (predicateFeatures.Length == 0 || predicateFeatures.Any(f => f.HasUnrecognizedFeatures ||
+                !ContextEvidenceGuards.IsPersonalPredicate(f) || f.VerbForm != MorphologicalVerbForm.Finite))
+                throw new ArgumentException("Nominal phrase predicate needs original finite support.");
+            if (finiteCompatible)
+            {
+                MorphologicalFeatures[] nounFeatures = Features(heads[0].Readings, heads[0].GraphReadings);
+                if (nounFeatures.Length == 0 || predicateFeatures.Any(f => f.Person != MorphologicalPerson.Third ||
+                    nounFeatures.Any(n => n.Number != f.Number)))
+                    throw new ArgumentException("Compatible nominal phrase needs one measured finite relation.");
+            }
+            var byToken = new Dictionary<int, TextContextRoleSelection>();
+            foreach (TextContextRoleSelection role in roles)
+            { ct.ThrowIfCancellationRequested(); if (!byToken.TryAdd(role.TokenIndex, role)) throw new ArgumentException("Duplicate nominal token role."); }
+            for (int i = 0; i < original.Length; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!byToken.TryGetValue(original[i].Index, out TextContextRoleSelection? at) ||
+                    at.Start != original[i].Token.Start || at.Length != original[i].Token.Length ||
+                    i < original.Length - 2 && at.Role != TextContextRole.Attribute)
+                    throw new ArgumentException("Nominal phrase roles must retain every original token span.");
+                if (i < original.Length - 2) AttributeHead(at, heads[0], compatible);
+            }
+        }
+        void RequireAllGraphCells(TextContextRoleSelection role, TextContextSentence sentence)
+        {
+            if (role.GraphReadings is not { Count: > 0 }) return;
+            WordAnalysis word = words[role.TokenIndex].Token.Analysis!;
+            List<TextGraphReadingReference> expected = [];
+            for (int c = 0; c < word.GraphCandidates.Count; c++)
+            {
+                ct.ThrowIfCancellationRequested();
+                WordDerivation path = word.GraphCandidates[c];
+                if (path.IsConditional) continue;
+                if (path.FullTags is not { Count: > 0 }) throw new ArgumentException("Selected graph scope has an unbound path.");
+                for (int t = 0; t < path.FullTags.Count; t++) { ct.ThrowIfCancellationRequested(); expected.Add(new(role.TokenIndex, c, t)); }
+            }
+            CheckGraph(expected, role.TokenIndex, sentence.Start, sentence.Length, role.Readings, role.Role);
+            if (!expected.SequenceEqual(role.GraphReadings)) throw new ArgumentException("Selected nominal role excludes graph alternatives.");
+        }
+        var nominalAttributes = new Dictionary<int, List<(TextContextRoleSelection Attribute, TextContextRoleSelection Head, bool Compatible)>>();
         foreach (TextContextSentence sentence in context.Sentences)
         {
-            foreach (TextContextRoleSelection role in sentence.LocalRoles.Concat(sentence.SelectedRoles)) Check(role.Readings, role.TokenIndex);
+            foreach (TextContextRoleSelection role in sentence.LocalRoles.Concat(sentence.SelectedRoles)
+                .Concat(sentence.Candidates.SelectMany(candidate => candidate.Roles)))
+            {
+                Check(role.Readings, role.TokenIndex);
+                if (role.GraphReadings is { Count: > 0 } && (!words.TryGetValue(role.TokenIndex, out Word? word) ||
+                    role.Start != word.Token.Start || role.Length != word.Token.Length))
+                    throw new ArgumentException("Graph role is not the original token span.");
+                CheckGraph(role.GraphReadings, role.TokenIndex, sentence.Start, sentence.Length, role.Readings, role.Role);
+            }
             foreach (TextContextCandidate candidate in sentence.Candidates)
-                foreach (TextContextRoleSelection role in candidate.Roles) Check(role.Readings, role.TokenIndex);
+            {
+                if (candidate.AuthorityLane == ContextLanes.ProductiveNominalLane)
+                {
+                    bool compatible = !candidate.EvidenceCodes.Contains(ContextLanes.ProductiveAttributeMismatch, StringComparer.Ordinal);
+                    NominalRoles(sentence, candidate.Roles, compatible,
+                        candidate.EvidenceCodes.Contains("subject_predicate_agreement_compatible", StringComparer.Ordinal));
+                    if (candidate.Selectable) foreach (TextContextRoleSelection role in candidate.Roles) RequireAllGraphCells(role, sentence);
+                    TextContextRoleSelection head = candidate.Roles.Single(r => r.Role == TextContextRole.Subject);
+                    foreach (TextContextRoleSelection attribute in candidate.Roles.Where(r => r.Role == TextContextRole.Attribute))
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        if (!nominalAttributes.TryGetValue(attribute.TokenIndex, out var bindings))
+                            nominalAttributes.Add(attribute.TokenIndex, bindings = []);
+                        bindings.Add((attribute, head, compatible));
+                    }
+                }
+                else if (candidate.Roles.Any(r => r.Role == TextContextRole.Attribute && r.GraphReadings is { Count: > 0 }))
+                    throw new ArgumentException("Graph Attribute needs its explicit nominal head topology.");
+            }
+            if (sentence.EvidenceCodes.Contains("accepted_authority_lane=" + ContextLanes.ProductiveNominalLane, StringComparer.Ordinal))
+            {
+                NominalRoles(sentence, sentence.SelectedRoles, true, true);
+                foreach (TextContextRoleSelection role in sentence.SelectedRoles) RequireAllGraphCells(role, sentence);
+            }
+            else if (sentence.SelectedRoles.Any(r => r.Role == TextContextRole.Attribute && r.GraphReadings is { Count: > 0 }))
+                throw new ArgumentException("Selected graph Attribute lacks nominal authority.");
+            if (sentence.LocalRoles.Any(r => r.Role == TextContextRole.Attribute && r.GraphReadings is { Count: > 0 }))
+                throw new ArgumentException("Local graph Attribute lacks its noun anchor.");
         }
+        bool SameSupport(TextContextRoleSelection role, TextSyntaxSupport support) => role.TokenIndex == support.TokenIndex &&
+            role.Readings.SequenceEqual(support.Readings) && (role.GraphReadings ?? []).SequenceEqual(support.GraphReadings ?? []);
         foreach (TextSyntaxSentence sentence in syntax.Sentences)
+        {
             foreach (TextSyntaxCandidate candidate in sentence.Candidates)
-                foreach (TextSyntaxSupport support in candidate.Targets.Concat(candidate.Context)) Check(support.Readings, support.TokenIndex);
+            {
+                foreach (TextSyntaxSupport support in candidate.Targets.Concat(candidate.Context))
+                {
+                    Check(support.Readings, support.TokenIndex);
+                    if (support.GraphReadings is { Count: > 0 } && support.Basis != "LicensedGraphMorphology")
+                        throw new ArgumentException("Graph syntax support cannot claim exact category authority.");
+                    if (support.Basis == "LicensedGraphMorphology" && support.GraphReadings is not { Count: > 0 })
+                        throw new ArgumentException("Graph syntax basis needs its original graph references.");
+                    CheckGraph(support.GraphReadings, support.TokenIndex, sentence.Start, sentence.Length, support.Readings);
+                }
+                if (candidate.Role != TextSyntaxRole.Attribute) continue;
+                bool graphRelation = candidate.Targets.Concat(candidate.Context).Any(s => s.GraphReadings is { Count: > 0 });
+                if (candidate.RuleId != "ProductiveNominalPhraseAttribute")
+                { if (graphRelation) throw new ArgumentException("Graph Attribute needs its bound nominal rule."); continue; }
+                if (candidate.Targets.Count != 1 || candidate.Context.Count != 1)
+                    throw new ArgumentException("Attribute needs one target and one noun anchor.");
+                TextSyntaxSupport target = candidate.Targets[0], anchor = candidate.Context[0];
+                if (!words.TryGetValue(target.TokenIndex, out Word? attribute) || candidate.Start != attribute.Token.Start || candidate.Length != attribute.Token.Length)
+                    throw new ArgumentException("Attribute target has a stale original span.");
+                bool found = false;
+                if (nominalAttributes.TryGetValue(target.TokenIndex, out var bindings))
+                    foreach (var bound in bindings)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        if (!SameSupport(bound.Attribute, target) || !SameSupport(bound.Head, anchor)) continue;
+                        AttributeHead(bound.Attribute, bound.Head, bound.Compatible); found = true; break;
+                    }
+                if (!found) throw new ArgumentException("Syntax Attribute does not bind the actual same-candidate noun head.");
+            }
+        }
+        foreach (TextDiagnostic diagnostic in analysis.Diagnostics.Where(d => d.GraphReadings is { Count: > 0 }))
+        {
+            RequireSpan(analysis.Text, diagnostic.Start, diagnostic.Length);
+            SentenceSpan? sentence = analysis.Sentences.SingleOrDefault(s => Within(s.Start, s.Length, diagnostic.Start, diagnostic.Length));
+            if (diagnostic.Code == ContextLanes.ProductiveAttributeMismatch && !TextContextAnalyzer.GraphAgreementDiagnostics(context, ct).Any(d =>
+                d.Code == diagnostic.Code && d.RuleId == diagnostic.RuleId && d.Start == diagnostic.Start && d.Length == diagnostic.Length &&
+                (d.Readings ?? []).SequenceEqual(diagnostic.Readings ?? []) && (d.GraphReadings ?? []).SequenceEqual(diagnostic.GraphReadings ?? [])))
+                throw new ArgumentException("Attribute mismatch does not bind its original attribute/head relation.");
+            if (sentence is null || !diagnostic.GraphReadings!.Any(reference => words.TryGetValue(reference.TokenIndex, out Word? word) &&
+                diagnostic.Start == word.Token.Start && diagnostic.Length == word.Token.Length))
+                throw new ArgumentException("Graph diagnostic is not an original graph-supported Word span.");
+            foreach (TextReadingReference reference in diagnostic.Readings ?? [])
+            {
+                Check([reference], reference.TokenIndex);
+                Word word = words[reference.TokenIndex];
+                if (!Within(sentence.Start, sentence.Length, word.Token.Start, word.Token.Length))
+                    throw new ArgumentException("Graph diagnostic exact support belongs to another sentence.");
+            }
+            foreach (TextGraphReadingReference reference in diagnostic.GraphReadings!)
+            {
+                if (!words.TryGetValue(reference.TokenIndex, out Word? word) ||
+                    !Within(sentence.Start, sentence.Length, word.Token.Start, word.Token.Length))
+                    throw new ArgumentException("Graph diagnostic support belongs to another sentence.");
+                MorphologyEvidenceProjection.RequireGraphSupport(word.Token, reference, reference.TokenIndex, word.Rows.Count, ct);
+            }
+        }
     }
 
     private static void AddCoordinatedArticle(string text, SentenceSpan sentence, Word[] words,
@@ -160,7 +351,8 @@ internal static class TextValidationAnalyzer
         TextSyntaxSentence[] syntaxSentences = syntax.Sentences.Where(s => s.Start == sentence.Start && s.Length == sentence.Length).ToArray();
         if (syntaxSentences.Length != 1) return;
         TextSyntaxCandidate[] predicates = syntaxSentences[0].Candidates.Where(c => c.Role == TextSyntaxRole.Predicate).ToArray();
-        if (predicates.Length != 1 || predicates[0].Targets.Count != 1 || predicates[0].Targets[0].Readings.Count == 0) return;
+        if (predicates.Length != 1 || predicates[0].Targets.Count != 1 || predicates[0].Targets[0].Readings.Count == 0 ||
+            predicates[0].Targets[0].GraphReadings is { Count: > 0 }) return;
         int predicateIndex = predicates[0].Targets[0].TokenIndex;
         Word? predicate = words.SingleOrDefault(w => w.Index == predicateIndex);
         if (predicate is null || !All(predicate, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Verb &&
@@ -172,6 +364,7 @@ internal static class TextValidationAnalyzer
             s.SelectedRoles.Any(r => r.Role == TextContextRole.Predicate && r.TokenIndex == predicateIndex && r.Readings.Count > 0)).ToArray() : [];
         TextContextRoleSelection[] anchors = selections.Length == 1 ? selections[0].SelectedRoles.Where(r => r.Role == TextContextRole.Subject &&
             r.Start > words[0].Token.Start && r.Start + r.Length <= predicate.Token.Start && r.Readings.Count > 0 &&
+            r.GraphReadings is not { Count: > 0 } &&
             r.EvidenceCodes.Any(c => c is "preverbal_nominal_reading" or "postverbal_nominal_reading")).ToArray() : [];
         string anchorBasis = "accepted_context_subject_anchor";
         if (anchors.Length == 0)
@@ -184,7 +377,7 @@ internal static class TextValidationAnalyzer
             if (basic.Length != 1) return;
             TextSyntaxSupport support = basic[0].Targets[0];
             Word? target = words.SingleOrDefault(w => w.Index == support.TokenIndex);
-            if (target is null || support.Readings.Count == 0 || target.Token.Start <= words[0].Token.Start ||
+            if (target is null || support.Readings.Count == 0 || support.GraphReadings is { Count: > 0 } || target.Token.Start <= words[0].Token.Start ||
                 target.Token.Start + target.Token.Length > predicate.Token.Start ||
                 basic[0].Start != target.Token.Start || basic[0].Length != target.Token.Length ||
                 !All(target, f => !f.HasConflictingFeatures && f.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&

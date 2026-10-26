@@ -306,7 +306,7 @@ try {
         Assert-Bool (Get-Field $readingProfile 'AllWordAssessmentsCompleteForProjection') $true 'empty complete projection'; Assert-Bool (Get-Field $readingProfile 'ExactReadingEvidencePresent') $false 'empty exact evidence'
         Assert-Count (Get-Field $names 'Candidates') 0 'empty name candidates'
     } else {
-        foreach ($pair in @(@('Context','bounded-context.v1'),@('Syntax','bounded-syntax-roles.v1'),@('Validation','bounded-validation.v1'))) {
+        foreach ($pair in @(@('Context','bounded-context.v2'),@('Syntax','bounded-syntax-roles.v2'),@('Validation','bounded-validation.v2'))) {
             $evidence = Get-Field $result $pair[0]
             Assert-String (Get-Field $evidence 'Version') $pair[1] ($pair[0] + '.Version')
             Assert-Bool (Get-Field $evidence 'Available') $true ($pair[0] + '.Available')

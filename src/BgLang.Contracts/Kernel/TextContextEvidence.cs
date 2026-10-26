@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BgLang.Contracts;
 
 public enum TextContextRole { Adposition, Attribute, NominalContext, Predicate, Subject }
@@ -16,4 +18,9 @@ public sealed record TextContextCandidate(int PredicateTokenIndex, bool Selectab
     int Score, string CanonicalKey, IReadOnlyList<TextContextRoleSelection> Roles, IReadOnlyList<string> EvidenceCodes);
 
 public sealed record TextContextRoleSelection(TextContextRole Role, int TokenIndex, int Start, int Length,
-    IReadOnlyList<TextReadingReference> Readings, IReadOnlyList<string> EvidenceCodes);
+    IReadOnlyList<TextReadingReference> Readings, IReadOnlyList<string> EvidenceCodes)
+{
+    /// <summary>Original graph candidate/tag supports; exact supports remain in Readings.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TextGraphReadingReference>? GraphReadings { get; init; }
+}

@@ -16,6 +16,7 @@
 <tbody>
 <tr><td>find-forms-in-text</td><td>AnalyzeWord(query, 32) + AnalyzeText(text), следвани от join на върнатите леми</td><td>text до 4096 UTF-16; отделно задължително query до 256, дума/лема без интервали. Без входен limit. 32 важи за query/word analysis; всички tokens/diagnostics/текстови попадения остават.</td></tr>
 <tr><td>lookup</td><td>Lookup(text, Exact, limit)</td><td>Точните readings; HTTP default 32.</td></tr>
+<tr><td>lookup-prefix</td><td>Lookup(text, Prefix, limit)</td><td>Prefix прочити; default 32. Лимитът е за прочити, групите по форма може да са непълни. Детерминистичен ред, не вероятност за следваща дума.</td></tr>
 <tr><td>lookup-lexical-entries</td><td>LookupLexicalEntries(text, limit)</td><td>Exact owners преди presentation limit; default 32, максимум 256. MetadataAvailable и Truncated са явни.</td></tr>
 <tr><td>lexical-entry</td><td>FindLexicalEntry(text)</td><td>Точен opaque entryId до 256 UTF-16, без trim/нормализация и без входен limit. Scalar result с MetadataAvailable и nullable Entry.</td></tr>
 <tr><td>word-constructions</td><td>GetWordConstructionCandidates(text)</td><td>Точен opaque entryId от lookup-lexical-entries, до 256 UTF-16. Без входен limit/query/non-null context/name flag; всички accepted own forms и кандидати остават.</td></tr>
@@ -52,7 +53,7 @@ POST /api/v2/lexical-entry
 <tr><th>200</th><td>Успешно public извикване; може да съдържа ограничено/непълно evidence.</td></tr>
 <tr><th>400</th><td>Невалиден JSON, поле, text, UTF-16 дължина или limit.</td></tr>
 <tr><th>413 / 415</th><td>Прекалено голям request body или <code>response-too-large</code> при byte preflight / неподдържан Content-Type.</td></tr>
-<tr><th>429</th><td>Над 30 POST заявки за една минута от IP; има Retry-After.</td></tr>
+<tr><th>429</th><td>Над effective POST/min/IP бюджета (default 30); има Retry-After. Положителният BgLang:RequestsPerMinute се отразява в GET metadata.</td></tr>
 <tr><th>503</th><td>Не е ready, shutdown, пълна/изтекла опашка или запълнен ограничен IP регистър; има Retry-After.</td></tr>
 <tr><th>504</th><td>Изтекъл 10-секунден cooperative deadline преди headers. Синхронната CPU работа не може да бъде preempt-ната и може да отложи връщането на 504 до действителния си край.</td></tr>
 <tr><th>500</th><td>Неочакван execution failure; без входен текст или stack trace в отговора.</td></tr>

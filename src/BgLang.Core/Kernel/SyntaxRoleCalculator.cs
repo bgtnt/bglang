@@ -12,8 +12,8 @@ internal static class SyntaxRoleCalculator
     // Syntax rule categories; current-to-syntax mapping below is an explicit prospective contract.
     internal enum SourcePos { Other, Noun, Adjective, Numeral, ProperNoun, Pronoun, Verb, Adverb, Particle, Preposition, Conjunction }
     internal enum Role { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive }
-    internal enum Basis { ExactCategory, SurfaceRule, WeakTitleCase, CompleteUnknown, TypedFeatures }
-    internal enum Route { SourceScan, Selected, ClosedThirdPersonMismatchPreview, Abstained }
+    internal enum Basis { ExactCategory, SurfaceRule, WeakTitleCase, CompleteUnknown, TypedFeatures, LicensedGraphMorphology }
+    internal enum Route { SourceScan, Selected, ClosedThirdPersonMismatchPreview, Abstained, ProductiveGraph, ProductiveGraphPreview, ProductiveGraphMismatch }
     internal enum Status { Calculated, IncompleteInventory, UnsupportedSelectedPredicate }
     internal enum Rule
     {
@@ -21,15 +21,23 @@ internal static class SyntaxRoleCalculator
         BasicPrepositionalObject, UnknownAttributeShape, RegisterTitle, NominalPossessive,
         FutureClitic, DaClitic, ReflexiveClitic, ImmediateClitic, ImpersonalDoshya,
         DaSubpredicate, PostverbalChaka, DativeSpeech,
-        Zadneshkom, KrivoLyavo, KadeKade, Directional, Zamalko
+        Zadneshkom, KrivoLyavo, KadeKade, Directional, Zamalko, ProductiveGraphPredicate, ProductiveGraphSubject,
+        ProductiveNominalPhrasePredicate, ProductiveNominalPhraseSubject, ProductiveNominalPhraseAttribute
     }
     // Projection is created once from the same immutable row by the shared adapter.
     // CanonicalLemma uses the existing lookup normalizer; this calculator never normalizes.
     internal sealed record Projection(SourcePos Pos, MorphologicalFeatures Features, string CanonicalLemma);
     internal sealed record Word(int TokenIndex, int Start, int Length, string Canonical,
-        ImmutableArray<WordReading> Readings, ImmutableArray<Projection> Projection, bool Complete);
+        ImmutableArray<WordReading> Readings, ImmutableArray<Projection> Projection, bool Complete)
+    {
+        internal ImmutableArray<string> GraphTags { get; init; } = [];
+        internal bool UsesGraph => !GraphTags.IsDefaultOrEmpty;
+    }
     internal sealed record Support(int TokenIndex, ImmutableArray<int> ReadingIndices, Basis Basis);
-    internal sealed record Resolution(Route Route, int PredicateWordIndex, ImmutableArray<Support> Provenance);
+    internal sealed record Resolution(Route Route, int PredicateWordIndex, ImmutableArray<Support> Provenance)
+    {
+        internal int SubjectWordIndex { get; init; } = -1;
+    }
     internal sealed record Candidate(Role Role, Rule Rule, int Start, int Length,
         ImmutableArray<Support> Targets, ImmutableArray<Support> Context);
     internal sealed record Result(Status Status, ImmutableArray<Word> OriginalWords,
@@ -73,16 +81,16 @@ internal static class SyntaxRoleCalculator
                 word.Start < previousEnd || word.Length <= 0 || word.Length > sentenceLength ||
                 word.Start - sentenceStart > sentenceLength - word.Length ||
                 word.Readings.IsDefault || word.Projection.IsDefault ||
-                word.Readings.Length != word.Projection.Length || word.Canonical is null)
+                (word.UsesGraph ? word.GraphTags.Length : word.Readings.Length) != word.Projection.Length || word.Canonical is null)
                 throw new ArgumentException("Invalid original token/projection binding.");
             previousEnd = word.Start + word.Length;
             complete &= word.Complete;
-            for (int j = 0; j < word.Readings.Length; j++)
+            for (int j = 0; j < word.Projection.Length; j++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (word.Readings[j] is null || word.Projection[j] is null ||
+                if (!word.UsesGraph && word.Readings[j] is null || word.Projection[j] is null ||
                     word.Projection[j].CanonicalLemma is null ||
-                    !StringComparer.Ordinal.Equals(word.Readings[j].PartOfSpeech, word.Projection[j].Features.RawTag))
+                    !StringComparer.Ordinal.Equals(word.UsesGraph ? word.GraphTags[j] : word.Readings[j].PartOfSpeech, word.Projection[j].Features.RawTag))
                     throw new ArgumentException("Projection must retain the exact row's raw tag.");
             }
         }
@@ -92,6 +100,22 @@ internal static class SyntaxRoleCalculator
             throw new ArgumentException("Selected predicate is outside this sentence.");
         if (!complete)
             return new(Status.IncompleteInventory, words, [], resolution);
+        if (resolution.Route is Route.ProductiveGraph or Route.ProductiveGraphPreview or Route.ProductiveGraphMismatch)
+        {
+            if (words.Length > 2) return ProductiveNominal();
+            if (words.Length != 2 || !words.Any(word => word.UsesGraph) || resolution.PredicateWordIndex != 1)
+                throw new ArgumentException("Unsupported graph subject/predicate topology.");
+            Support[] graphPredicate = resolution.Provenance.Where(s => s.TokenIndex == words[1].TokenIndex).ToArray();
+            Support[] graphSubject = resolution.Provenance.Where(s => s.TokenIndex == words[0].TokenIndex).ToArray();
+            if (graphPredicate.Length != 1 || graphSubject.Length != 1 || graphPredicate[0].ReadingIndices.Length == 0 || graphSubject[0].ReadingIndices.Length == 0)
+                throw new ArgumentException("Graph topology needs both bound morphology supports.");
+            return new(Status.Calculated, words,
+            [
+                new(Role.Predicate, Rule.ProductiveGraphPredicate, words[1].Start, words[1].Length, [graphPredicate[0]], [graphSubject[0]]),
+                new(Role.Subject, Rule.ProductiveGraphSubject, words[0].Start, words[0].Length, [graphSubject[0]], [graphPredicate[0]])
+            ], resolution);
+        }
+        if (words.Any(word => word.UsesGraph)) throw new ArgumentException("Graph morphology requires its bounded explicit route.");
         var output = ImmutableArray.CreateBuilder<Candidate>();
         bool opt = includeContextualHints;
 
@@ -429,6 +453,41 @@ internal static class SyntaxRoleCalculator
             output.Add(new(role, rule, words[first].Start,
                 words[last].Start + words[last].Length - words[first].Start, targets, context));
         }
+        Result ProductiveNominal()
+        {
+            int head = resolution.SubjectWordIndex, predicate = resolution.PredicateWordIndex;
+            if (head < 1 || predicate != words.Length - 1 || head != predicate - 1 || !words.Any(w => w.UsesGraph) ||
+                resolution.Provenance.Length != words.Length)
+                throw new ArgumentException("Unsupported bound nominal phrase topology.");
+            var bound = new Dictionary<int, Support>();
+            foreach (Support support in resolution.Provenance)
+            { cancellationToken.ThrowIfCancellationRequested(); if (!bound.TryAdd(support.TokenIndex, support)) throw new ArgumentException("Duplicate nominal support."); }
+            Support Bound(int index)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!bound.TryGetValue(words[index].TokenIndex, out Support? support) || support.ReadingIndices.Length == 0)
+                    throw new ArgumentException("Nominal phrase needs every original bound support.");
+                return support;
+            }
+            Support headSupport = Bound(head), predicateSupport = Bound(predicate);
+            var attributes = ImmutableArray.CreateBuilder<Support>();
+            var roles = ImmutableArray.CreateBuilder<Candidate>();
+            for (int a = 0; a < head; a++)
+            {
+                Support attribute = Bound(a);
+                attributes.Add(attribute);
+                roles.Add(new(Role.Attribute, Rule.ProductiveNominalPhraseAttribute, words[a].Start, words[a].Length,
+                    [attribute], [headSupport]));
+            }
+            roles.Insert(0, new(Role.Predicate, Rule.ProductiveNominalPhrasePredicate, words[predicate].Start,
+                words[predicate].Length, [predicateSupport], [headSupport]));
+            // Subject span covers the contiguous nominal phrase; target remains its one noun head.
+            roles.Insert(1, new(Role.Subject, Rule.ProductiveNominalPhraseSubject, words[0].Start,
+                words[head].Start + words[head].Length - words[0].Start, [headSupport],
+                attributes.ToImmutable().Add(predicateSupport)));
+            return new(Status.Calculated, words, roles.ToImmutable(), resolution);
+        }
+
         void ValidateReferences(ImmutableArray<Support> refs)
         {
             if (refs.IsDefault) throw new ArgumentException("Unbound resolution evidence.");
@@ -441,7 +500,7 @@ internal static class SyntaxRoleCalculator
                 int previous = -1;
                 foreach (int index in support.ReadingIndices)
                 {
-                    if (index <= previous || index >= words[found].Readings.Length)
+                    if (index <= previous || index >= words[found].Projection.Length)
                         throw new ArgumentException("Invalid original reading ordinal.");
                     previous = index;
                 }

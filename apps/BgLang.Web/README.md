@@ -1,3 +1,41 @@
+# BgLang Live — езикова лаборатория
+
+## Текущият Web интерфейс
+
+Това е Web интерфейсът от [Preview9](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9). Source/runtime distribution и public hosting имат отделен статус. /demo е жив редактор: анализ на целия оригинален текст, инспектор при движение на курсора, typed части на речта, речникова многозначност и кандидатни проверки. Всички текстови слоеве идват с една analyze-text заявка с явни opt-ins; няма frontend езиков engine. Старият API explorer, word actions, donor/JSON evidence и търсенето по лема остават в „Разширена работилница“. /docs остава HTTP справката.
+
+Оцветяването изисква съгласие между върнатите typed POS, а не frontend разчитане на raw tags. Пълните прочити се адресират през occurrence/readingSetIndex и supportReadings ?? canonicalReadings; празен support не преминава към canonical. Unknown, непълнота и многозначност не са червени езикови грешки. Null изключено, изпълнен празен списък и unavailable са различни състояния. Евристичните роли, имена и конструкции не са общ dependency parser или нормативно решение.
+
+Контекстните finite и noun продължения в Live от Preview9 идват чрез `context.continuation` в същата `analyze-text` заявка. Selector „Авто / Глаголи / Съществителни“ използва `Auto` по подразбиране; API default остава `Finite`. Typed person/number съвместимостта за finite или coherent number/gender/article tuple за noun се проверява преди лимита за показани форми (1–256), включително при празен prefix след whitespace и при частично въведена дума. Контекстът използва същия оригинален inventory и exact/graph опори; всяка предложена форма пази пълната exact група прочити и matching reading indices. При изричен избор се заменя целият captured Word span (или се вмъква при празен span) само ако заснетите text/caret/revision и режим още съвпадат, без range selection или IME composition. Десният текст се запазва, без гаранция за неговата граматика. Редът е детерминистичен dictionary rank, не probability.
+
+`POST /api/v2/lookup-prefix` остава отделен обикновен речников endpoint с `text` и optional `limit` (1–256, default32), тънък adapter към съществуващия `Lookup(Prefix)`; `lookup` остава Exact. Неговият лимит е за прочити, така че surface група може да е отрязана. Той не се използва за контекстните finite предложения в Live.
+
+Има една обща POST лента за Live, prefix, refresh, word actions и старите форми. Debounce150ms и максимум600ms за непрекъснат typing coalesce-ват към последната версия; IME composition не изпраща междинни текстове. Стара успешна/неуспешна заявка не променя текущия изглед. Следващ POST започва едва след прочетения/parsed body и текущия host бюджет. Retry-After при429/503 важи и за stale/невалиден JSON отговор. HTTP ms включва целия body; отделният DOM ms не е kernel време или обещание за latency.
+
+BgLang:RequestsPerMinute е положителна целочислена host настройка с default30. GET /api/v1/ и /api/v2/ връщат effective requestsPerMinutePerIp; клиентът ползва тази стойност. Няма loopback exemption или trusted forwarded headers; един serialized lane, queue4 и deadline10s се запазват. За изрично локално интерактивно демо може да изберете по-висок rate след измерване на конкретния host; public deployment запазва default30, ако не е конфигуриран другояче.
+
+Светла/тъмна тема се сменя с бутон и е единствената localStorage настройка. Входният текст не се запомня. prefers-reduced-motion изключва pulse/transitions; pulse се показва само при активна HTTP работа. Ударенията/owner alternatives са отделно действие; изборът ползва точните tokenIndex/entryId/form/nullable fullTag от rich stress отговора. Няма измислено capture или merge на mutually exclusive marks.
+
+### Независими client проверки
+
+Допълнителният test harness изисква Node22+ само за development проверката, без npm/framework зависимости:
+
+~~~powershell
+node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs
+node --check apps/BgLang.Web/wwwroot/live-client.js
+node --check apps/BgLang.Web/wwwroot/live-demo.js
+~~~
+
+Той проверява actual fetch timestamps/body settlement, latest/stale/IME, Retry-After, UTF-16 offsets, shared references и safe DOM със злонамерен markup. Web package tests отделно проверяват C# adapters, protections и served assets; GET200 не е JS/browser verification. Реален browser smoke и независимото review са отделни acceptance evidence.
+
+Приетият локален source има48 client PASS и две syntax PASS. Exported client се проверява изрично и отделно от C# recipe; съществуващите recipe и hosted CI не изпълняват JS тестовете. Hosted JS coverage не се твърди.
+
+Реалният локален browser smoke от26 октомври е приет при exact API/assets binding: B1–B5 PASS, B6–B8 PASS_SCOPED. Проверени са whole-text интерфейсът, finite/Noun режимите, noun agreement и negative conflict, graph subject, UTF-16 replacement/range guard, бързо писане, теми/mobile и word actions. Реален IME и injected delayed races не са упражнявани; responsive проверката е при една тясна ширина. Host-ът е graceful затворен. Това е local smoke с изричен rate240, без exported-runtime, public hosting или hosted CI claim; production default30 не е променен.
+
+Следващите Preview6 checkpoints/публикационни твърдения и hashes са исторически snapshots; текущият matching complete runtime е bglang-neutral:36b0b69685d6d3e9, manifest SHA-256451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7. Не ползвайте стария hash за текущото демо.
+
+---
+
 # BgLang Web: минимален public API consumer
 
 Кандидатът обслужва `/demo`, `/docs`, `/api/v2/`, съвместимия `/api/v1/`, `/health/live` и
@@ -137,7 +175,8 @@ query-independent registry. Непознат `evidenceFormat` връща 400 `in
 JSON използва UTF-8 кирилица със запазено HTML-sensitive/control escaping;
 decoded стойностите и UTF-16 source positions са непроменени.
 
-Демото изпраща всички POST към `/api/v2` без format opt-in. Подробното evidence
+Старият API explorer изпраща POST към `/api/v2` без format opt-in; Live редакторът
+изпраща явен `shared-analyses-v1`. Подробното evidence
 и JSON се създават при поискване. Избраният текстов
 токен използва първоначалния AnalyzeText резултат и неговите UTF-16 offsets;
 отварянето на evidence не изпълнява нов AnalyzeWord. JSON disclosure показва
@@ -302,8 +341,10 @@ AnalyzeText запазва досегашните доказателства и 
 Еднакви презентационни редове се обединяват само при еднакви лема, вид,
 условност, подредени тагове и източник; суровите анализи остават цели.
 
-POST rate limit: 30 заявки/минута/непосредствен IP, включително невалидните.
-31-вата дава 429 с Retry-After. Registry <=1024 IP entries; неизтекли entries
+POST rate limit по подразбиране: 30 заявки/минута/непосредствен IP, включително
+невалидните; при тази default конфигурация 31-вата дава 429 с Retry-After.
+`BgLang:RequestsPerMinute` задава положителен целочислен rate, а metadata връща
+ефективната стойност. Registry <=1024 IP entries; неизтекли entries
 не се изхвърлят, за да се заобиколи rate limit. При capacity за нов peer — 503;
 изтеклите windows се възстановяват без фонов timer/cache. Kestrel: <=64
 connections, headers timeout 10 s, keepalive 30 s, без upgraded connections.
@@ -530,3 +571,39 @@ Disabled `TextAnalysis.WordConstructions`/`data.wordConstructions` е null и н
 Всеки кандидат има `acceptedWordForm:false` и `grammarAuthority:false`: template/match не установява lexical compatibility, граматическа правилност или corpus precision. `WordConstructionResult` отчита `productiveReplayAvailable:false` и `productiveReplayUnavailableReason:"OriginalGenerationSeedNotRetained"` означават, че оригиналният generation seed не е запазен; това не е отчет за неуспешна нова генерация. TextAnalysis вече има 15 сериализирани полета, като `wordConstructions` е additive nullable поле; старият positional constructor/deconstruction се запазва.
 
 Публикуваният [preview 4](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.4) е от 19 октомври и не включва тази текуща source партида. Този раздел описва consumer договора; не заявява acceptance, review или test резултат за нея.
+
+
+### Графова опора в основния Context/Syntax
+
+Default AnalyzeText използва доказани nonconditional exact-root графови форми в старите двусловни nominal/pronominal Subject+finite Predicate клаузи и в затворено `ADJECTIVE* + един noun head + финален finite predicate`, без нов word-count cap. Всички определения споделят един и същ head tuple; number и singular gender трябва да съвпадат, plural gender може да липсва, а article equality не се изисква. Context ролите и Syntax supports имат optional `graphReadings` с `tokenIndex`, `graphCandidateIndex`, `fullTagIndex`; това са позиции в оригиналния отговор, различни от complete exact `readings`. `isKnown`, display32, inventory, редът и дубликатите не се променят. Nullable нови полета се пропускат, когато не се използват.
+
+Expanded Context lane е `productive_nominal_phrase_graph.v1`. Syntax rules са `ProductiveNominalPhraseAttribute`, `ProductiveNominalPhraseSubject`, `ProductiveNominalPhrasePredicate`. Attribute target е original adjective token, а неговият Context support е действителният noun head. Subject target остава този head; Subject span покрива цялата contiguous nominal phrase. `Суперхубав супертрактор работи.` има непразни Attribute/head/predicate witnesses. Вътрешна пунктуация, няколко noun heads, coordination, pronoun+adjective chains и open input остават извън разширената структура.
+
+`graphExactRootCandidatesComplete` се сериализира само при true и удостоверява точния root обхват. Глобалните `graphSearchIncomplete`/`graphCandidatesTruncated` запазват значението си: отрязана условна опашка не е загуба на exact-root кандидат, а incomplete или изгубен exact-root кандидат изключва graph selection. Външните graph/analogy/known-base хипотези остават отделни. Не се извежда вероятност от Confidence или ranking score.
+
+Subject–predicate несъгласуването `productive_morphology_agreement_mismatch` и отделното attribute–head `productive_attribute_agreement_mismatch` пазят original UTF-16 span на засегната graph дума, optional exact `readings` и `graphReadings`, с `projectedText:null`. Diagnostic refs са само от действителното отношение; graph другаде не дава authority. `Суперхубав суперкнига работи.` няма predicate person/number mismatch. Демото обозначава такава опора като „Графова опора (хипотеза)“. При „Ти чете.“ съвместимият preview не избира единствена морфология и запазва трите лицензирани full tags. Article/construction проверките пазят exact-only authority.
+
+Версиите са `bounded-context.v2`, `bounded-syntax-roles.v2`, `bounded-validation.v2`. v1 default raw, v2 default shared-analyses-v1 и explicit raw/shared-donors/shared-analyses запазват целия отговор при реконструкция.
+
+## Finite продължения в Live
+
+Live включва `{ "context": { "continuation": { "caret": 30, "limit": 12, "target": "Auto" } } }` в същия `analyze-text` request. Caret е действителната оригинална UTF-16 позиция, не примерна константа за всички входове. Единният queue/rate budget се запазва; отделната `lookup-prefix` заявка не се използва за контекстните предложения. След whitespace се показват реални форми от избрания lane, а частичният prefix ги стеснява. UI обозначава действителния lane, подкрепената person/number или number/gender/article интерпретация, exact/graph опорите, dictionary score и coverage.
+
+При избор се заменя целият captured token. Text/caret/revision и избраният режим трябва още да съвпадат; range selection, IME composition, небезопасна surrogate/combining граница и out-of-order отговор не прилагат предложение. Смяната на режима обезсилва изчакващия snapshot и старите отговори. Документът и source-aligned анализът споделят един snapshot; десният текст се запазва, без claim за неговата граматика.
+
+Nested limit използва текущия HTTP bound1–256. Невалидните опции връщат `invalid-continuation-limit` или `invalid-continuation-caret`; context за друга операция остава `option-not-applicable`. Старият top-level `limit` не се използва за `analyze-text`. Raw/shared-donors/shared-analyses връщат същия whole-envelope evidence, а без opt-in continuation полето липсва. Общо article-placement и граматика вдясно остават извън този локален договор.
+
+### Локални Noun/Auto продължения в Live
+
+Noun/Auto е включено в Preview9; точните public source/tag, активи и CI/readback резултати са на [release страницата](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.9). Omitted `context.continuation.target` запазва API default `Finite`, съществуващия finite отговор и C# constructor/deconstruction. Live изпраща избрания `Auto`, `Finite` или `Noun` в същата caret-aware заявка; няма второ lookup или frontend tag grammar. Примерът е вход към Preview9 source, не записан резултат:
+
+```http
+POST /api/v2/analyze-text
+{"text":"Нова ","context":{"continuation":{"caret":5,"limit":12,"target":"Noun"}}}
+```
+
+`Noun` допуска само `ADJECTIVE+` в същия whitespace-only ляв sentence fragment преди празен или частичен noun prefix. Всички определения трябва да подкрепят един `Number`/singular `Gender` tuple; plural gender може да липсва. Първото пази лицензирано `Indefinite`, generic `Definite` или masculine-singular `Full`/`Short`, като generic `Definite` не става `Full`/`Short`. Следващите определения и candidate common noun са `Indefinite`. Count, неподдържани Case/short-form markers и неизвестни или конфликтни axes не дават support. Няма нов word-count cap, inferred Subject или обща article/construction authority.
+
+`Auto` избира finite, когато има лицензиран finite контекст, преди да започне dictionary discovery. Само при неподдържан finite контекст може да избере подкрепения noun контекст. Zero results, unavailable source, error, truncation и cancellation не са причина за второ търсене в друг lane. Изричният „Съществителни“ дава достъп до други adjective интерпретации в многозначен контекст; finite-first приоритетът не е unique parse.
+
+Действителният noun отговор има `target:"Noun"`, `version:"nominal_continuation.v1"`, `candidateSource:"exact_package_nominal_vocabulary"`, `expectations:[]` и `nominalExpectations` с `number`, nullable `gender`, `firstAttributeArticle`, `nounArticle` и оригинални `attributes` refs. UI показва тези полета и exact/graph refs през DTO, без да повишава опорите в Context roles. `matches[].expectationIndices` адресира само активния nominal списък; пълните readings, duplicates и останалите homographs се пазят. Finite version/source/expectations са същите, default `target` и null `nominalExpectations` се пропускат. `available`, `truncated` и `searchComplete` остават отделни, ограничени до избрания vocabulary scope; cancellation не става complete-empty.

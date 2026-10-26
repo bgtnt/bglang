@@ -41,6 +41,16 @@ internal interface IRuntimeLexicon : IDisposable
         return any ? null : new ReadOnlyDictionary<int, IReadOnlyList<WordReading>?>(
             new Dictionary<int, IReadOnlyList<WordReading>?>());
     }
+    // Unsupported backends must not manufacture a complete empty dictionary search.
+    PrefixDiscoveryResult DiscoverByPrefix(string prefix, int formLimit,
+        Func<WordReading, bool> compatible, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(prefix);
+        ArgumentNullException.ThrowIfNull(compatible);
+        if (formLimit <= 0) throw new ArgumentOutOfRangeException(nameof(formLimit));
+        return new(false, false, false, 0, []);
+    }
     IReadOnlyList<WordReading> FindByPrefix(string prefix, int limit);
     IReadOnlyList<WordReading> FindBySuffix(string suffix, int limit, IReadOnlySet<string>? tags = null);
     // A legacy implementation cannot promise a metered scan by materializing

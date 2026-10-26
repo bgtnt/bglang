@@ -85,6 +85,63 @@ internal sealed class InMemoryRuntimeLexicon : IRuntimeLexicon
             .ToArray();
     }
 
+    public PrefixDiscoveryResult DiscoverByPrefix(string prefix, int formLimit,
+        Func<WordReading, bool> compatible, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(prefix);
+        ArgumentNullException.ThrowIfNull(compatible);
+        if (formLimit <= 0) throw new ArgumentOutOfRangeException(nameof(formLimit));
+        string normalizedPrefix = BulgarianTextNormalizer.NormalizeKey(prefix);
+        using IEnumerator<WordReading> ordinary = _forward
+            .EnumeratePrefixByRank(normalizedPrefix, cancellationToken).GetEnumerator();
+        using IEnumerator<WordReading>? routed = _routed is null ? null :
+            _routed.EnumeratePrefixByRank(normalizedPrefix, cancellationToken).GetEnumerator();
+        bool ordinaryReady = ordinary.MoveNext();
+        bool routedReady = routed?.MoveNext() == true;
+        HashSet<string> selectedKeys = new(StringComparer.Ordinal);
+        List<(string Key, WordReading Best)> selected = [];
+        long examinedReadings = 0;
+        bool truncated = false;
+        while (ordinaryReady || routedReady)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // The existing reading order is primary; source and payload order break ties.
+            bool fromOrdinary = ordinaryReady && (!routedReady ||
+                WordReadingOrder.Comparer.Compare(ordinary.Current, routed!.Current) <= 0);
+            WordReading reading = fromOrdinary ? ordinary.Current : routed!.Current;
+            if (fromOrdinary) ordinaryReady = ordinary.MoveNext();
+            else routedReady = routed!.MoveNext();
+            examinedReadings++;
+            string key = BulgarianTextNormalizer.NormalizeKey(reading.Form);
+            if (selectedKeys.Contains(key)) continue;
+            // Exact lookup selects the whole ordinary group whenever that key exists.
+            // A routed-only compatible row may not qualify an incompatible ordinary group.
+            if (!fromOrdinary && _forward.HasExactNormalized(key, cancellationToken)) continue;
+            if (!compatible(reading)) continue;
+            cancellationToken.ThrowIfCancellationRequested();
+            // One extra distinct eligible key proves truncation; no scan cap is used.
+            if (selected.Count == formLimit)
+            {
+                truncated = true;
+                break;
+            }
+            selectedKeys.Add(key);
+            selected.Add((key, reading));
+        }
+        List<PrefixDiscoveryForm> forms = new(selected.Count);
+        foreach (var item in selected)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Acquire the complete exact group once. Preserve every retained row and ordinal.
+            IReadOnlyList<WordReading> rows = LookupExactPairedNormalized(
+                item.Key, int.MaxValue, cancellationToken).Readings;
+            forms.Add(new(item.Key, item.Best, rows));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(true, !truncated, truncated, examinedReadings, Array.AsReadOnly(forms.ToArray()));
+    }
+
     public IReadOnlyList<WordReading> FindBySuffix(string suffix, int limit, IReadOnlySet<string>? tags = null) =>
         _suffix.FindBySuffix(suffix, limit, tags);
 

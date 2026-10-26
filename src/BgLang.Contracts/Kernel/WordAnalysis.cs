@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BgLang.Contracts;
 
 /// <summary>Exact readings and optional graph-backed base/state evidence for one word.</summary>
@@ -20,6 +22,14 @@ public sealed record WordAnalysis(
 
     /// <summary>The requested output count omitted otherwise verified graph hypotheses; independent of search completeness.</summary>
     public bool GraphCandidatesTruncated { get; init; }
+
+    /// <summary>
+    /// True when graph discovery and proof finished and every licensed exact-root candidate is retained.
+    /// An omitted conditional tail may still make GraphCandidatesTruncated true. False also covers an unsearched
+    /// or refused graph lane; this flag never establishes an exact dictionary reading.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool GraphExactRootCandidatesComplete { get; init; }
 
     /// <summary>Bounded, ranked morphology hypotheses for an exact-unknown input; never accepted readings.</summary>
     public IReadOnlyList<MorphologyCandidate> Candidates { get; init; } = [];

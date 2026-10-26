@@ -1,15 +1,13 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using BgLang.Contracts;
+using Rows = BgLang.Core.MorphologyEvidenceProjection.Rows;
 
 namespace BgLang.Core;
 
 /// <summary>One request-local binding of the context and role calculators to complete response snapshots.</summary>
 internal static class TextContextAnalyzer
 {
-    private sealed record Rows(IReadOnlyList<ContextLanes.ReadingView> Lanes,
-        ImmutableArray<WordReading> Raw, ImmutableArray<SyntaxRoleCalculator.Projection> Syntax,
-        IReadOnlyList<string> Identities, string Canonical);
     private static readonly string[] AdditionalGroupIds =
     [
         "unknown-preverbal-attribute", "closed-register-title-attribute", "closed-adverbials",
@@ -18,49 +16,15 @@ internal static class TextContextAnalyzer
     ];
 
     internal static (TextContextEvidence Context, TextSyntaxEvidence Syntax) Calculate(
-        TextAnalysis analysis, TextContextOptions options, CancellationToken cancellationToken)
+        TextAnalysis analysis, TextContextOptions options, CancellationToken cancellationToken,
+        MorphologyEvidenceProjection.View? sharedMorphology = null)
     {
         ArgumentNullException.ThrowIfNull(analysis);
         cancellationToken.ThrowIfCancellationRequested();
-        if (analysis.ReadingInventory is not { } inventory) return Unavailable("reading-inventory-unavailable", options);
-        var occurrences = inventory.Occurrences.ToDictionary(x => x.TokenIndex);
-        var sets = new Dictionary<int, Rows>();
-        var byToken = new Dictionary<int, Rows>();
-        var orderedTokens = new List<(int Index, Rows Rows)>();
-        for (int i = 0; i < analysis.Tokens.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            TokenAnalysis token = analysis.Tokens[i];
-            if (token.Kind != TokenKind.Word) continue;
-            if (!occurrences.TryGetValue(i, out TextReadingOccurrence occurrence))
-                return Unavailable("word-reading-occurrence-missing", options);
-            if (occurrence.Start != token.Start || occurrence.Length != token.Length ||
-                !StringComparer.Ordinal.Equals(occurrence.Text, token.Text) || token.Start < 0 || token.Length < 1 ||
-                (long)token.Start + token.Length > analysis.Text.Length ||
-                !analysis.Text.AsSpan(token.Start, token.Length).SequenceEqual(token.Text))
-                throw new ArgumentException("Context occurrence is not the original Word span.", nameof(analysis));
-            if (!sets.TryGetValue(occurrence.ReadingSetIndex, out Rows? rows))
-            {
-                TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
-                string canonical = set.SupportReadings is { Count: > 0 } ? set.SupportKey! : set.CanonicalKey;
-                if (string.IsNullOrWhiteSpace(canonical)) return Unavailable("word-canonical-key-empty", options);
-                var projections = new List<ContextReadingProjection>();
-                foreach (TextReadingSnapshot snapshot in set.ResolvedReadings)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    projections.Add(ContextReadingProjection.Create(snapshot, canonical));
-                }
-                rows = new(Array.AsReadOnly(projections.Select(x => x.Lane).ToArray()),
-                    projections.Select(x => x.Lane.Reading).ToImmutableArray(),
-                    projections.Select(x => x.Syntax).ToImmutableArray(),
-                    Array.AsReadOnly(projections.Select(x => x.Identity).ToArray()), canonical);
-                sets.Add(occurrence.ReadingSetIndex, rows);
-            }
-            byToken.Add(i, rows);
-            orderedTokens.Add((i, rows));
-        }
-        if (occurrences.Count != byToken.Count)
-            throw new ArgumentException("Inventory contains a non-Word or absent occurrence.", nameof(analysis));
+        MorphologyEvidenceProjection.View morphology = sharedMorphology ?? MorphologyEvidenceProjection.Create(analysis, cancellationToken);
+        if (morphology.UnavailableReason is { } unavailable) return Unavailable(unavailable, options);
+        var byToken = morphology.ByToken;
+        var orderedTokens = morphology.OrderedTokens;
         var contextSentences = new List<TextContextSentence>();
         var syntaxSentences = new List<TextSyntaxSentence>();
         int[] groupCounts = new int[AdditionalGroupIds.Length];
@@ -68,6 +32,8 @@ internal static class TextContextAnalyzer
         {
             cancellationToken.ThrowIfCancellationRequested();
             var laneWords = new List<ContextLanes.TokenView>();
+            var exactLaneWords = new List<ContextLanes.TokenView>();
+            var scopeEvidence = new List<string>();
             var roleWords = ImmutableArray.CreateBuilder<SyntaxRoleCalculator.Word>();
             foreach (var entry in orderedTokens)
             {
@@ -75,13 +41,21 @@ internal static class TextContextAnalyzer
                 TokenAnalysis token = analysis.Tokens[entry.Index];
                 if (token.Start < sentence.Start || (long)token.Start + token.Length > (long)sentence.Start + sentence.Length) continue;
                 Rows r = entry.Rows;
-                laneWords.Add(new(entry.Index, token, r.Canonical, r.Lanes, true));
-                roleWords.Add(new(entry.Index, token.Start, token.Length, r.Canonical, r.Raw, r.Syntax, true));
+                laneWords.Add(new(entry.Index, token, r.Canonical, r.Lanes, true) { UsesGraph = r.UsesGraph });
+                exactLaneWords.Add(new(entry.Index, token, r.Canonical, r.UsesGraph ? [] : r.Lanes, true));
+                if (r.GraphUnavailableReason is { } reason) scopeEvidence.Add("graph_token=" + entry.Index + ":" + reason);
+                roleWords.Add(new(entry.Index, token.Start, token.Length, r.Canonical, r.Raw, r.Syntax, true)
+                { GraphTags = r.UsesGraph ? r.Syntax.Select(x => x.Features.RawTag!).ToImmutableArray() : [] });
             }
-            ContextOverlayInput input = ContextLanes.Calculate(analysis.Text, sentence, laneWords, CanonicalKey, cancellationToken);
+            ContextOverlayInput input = ContextLanes.Calculate(analysis.Text, sentence, exactLaneWords, CanonicalKey, cancellationToken);
+            ContextOverlayInput? productive = ContextLanes.CalculateProductive(analysis.Text, sentence, laneWords,
+                CanonicalKey, cancellationToken, out string? graphReason);
+            if (productive is not null) input = productive;
+            if (graphReason is not null) scopeEvidence.Add(graphReason);
             ContextSelectionOverlay? selected = ContextJointSelection.Select(input, cancellationToken);
             TextContextRoleSelection MapRole(ContextOverlayRoleSelection role) => new((TextContextRole)role.Role,
-                role.TokenIndex, role.Start, role.Length, References(role.TokenIndex, role.AlternativeIndices), Freeze(role.EvidenceCodes));
+                role.TokenIndex, role.Start, role.Length, References(role.TokenIndex, role.AlternativeIndices), Freeze(role.EvidenceCodes))
+                { GraphReadings = GraphReferences(role.TokenIndex, role.AlternativeIndices) };
             var candidates = input.Candidates.Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
                 candidate.Selectable, candidate.AuthorityLane, candidate.Score, candidate.CanonicalKey,
                 Freeze(candidate.Roles.Select(MapRole)), Freeze(candidate.EvidenceCodes)));
@@ -89,22 +63,59 @@ internal static class TextContextAnalyzer
                 selected is null ? null : (TextContextSelectionStatus)selected.Status,
                 selected?.SelectedPredicateTokenIndex, selected?.DiagnosticPredicateTokenIndex,
                 Freeze(candidates), Freeze(input.LocalRoleCandidates.Select(MapRole)),
-                selected is null ? [] : Freeze(selected.Roles.Select(MapRole)), selected is null ? [] : Freeze(selected.EvidenceCodes)));
+                selected is null ? [] : Freeze(selected.Roles.Select(MapRole)),
+                Freeze((selected?.EvidenceCodes ?? []).Concat(scopeEvidence))));
             ImmutableArray<SyntaxRoleCalculator.Word> words = roleWords.ToImmutable();
-            SyntaxRoleCalculator.Route route = selected is null ? SyntaxRoleCalculator.Route.SourceScan :
-                selected.SelectedPredicateTokenIndex is not null ? SyntaxRoleCalculator.Route.Selected :
-                selected.DiagnosticPredicateTokenIndex is not null ? SyntaxRoleCalculator.Route.ClosedThirdPersonMismatchPreview :
-                SyntaxRoleCalculator.Route.Abstained;
-            int? predicateToken = selected?.SelectedPredicateTokenIndex ?? selected?.DiagnosticPredicateTokenIndex;
-            int predicateWord = -1;
-            for (int i = 0; i < words.Length; i++) if (words[i].TokenIndex == predicateToken) predicateWord = i;
-            var provenance = selected is null ? ImmutableArray<SyntaxRoleCalculator.Support>.Empty : selected.Roles
-                .Select(role => new SyntaxRoleCalculator.Support(role.TokenIndex, role.AlternativeIndices.ToImmutableArray(),
-                    SyntaxRoleCalculator.Basis.TypedFeatures)).ToImmutableArray();
-            SyntaxRoleCalculator.Result result = SyntaxRoleCalculator.Calculate(analysis.Text, sentence.Start, sentence.Length,
-                words, options.IncludeAdditionalRoleHeuristics, new(route, predicateWord, provenance), cancellationToken);
+            SyntaxRoleCalculator.Result result;
+            if (productive is not null)
+            {
+                var results = new List<SyntaxRoleCalculator.Result>();
+                foreach (ContextOverlayCandidate candidate in productive.Candidates)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var route = (candidate.EvidenceCodes.Contains(ContextLanes.ProductiveGraphMismatch, StringComparer.Ordinal) ||
+                        candidate.EvidenceCodes.Contains(ContextLanes.ProductiveAttributeMismatch, StringComparer.Ordinal))
+                        ? SyntaxRoleCalculator.Route.ProductiveGraphMismatch : candidate.Selectable
+                            ? SyntaxRoleCalculator.Route.ProductiveGraph : SyntaxRoleCalculator.Route.ProductiveGraphPreview;
+                    var provenance = candidate.Roles.Select(role => new SyntaxRoleCalculator.Support(role.TokenIndex,
+                        role.AlternativeIndices.ToImmutableArray(), byToken[role.TokenIndex].UsesGraph
+                            ? SyntaxRoleCalculator.Basis.LicensedGraphMorphology : SyntaxRoleCalculator.Basis.TypedFeatures)).ToImmutableArray();
+                    int predicateWord = -1, subjectWord = -1;
+                    int subjectToken = candidate.Roles.Single(role => role.Role == ContextOverlayRole.Subject).TokenIndex;
+                    for (int i = 0; i < words.Length; i++)
+                    {
+                        if (words[i].TokenIndex == candidate.PredicateTokenIndex) predicateWord = i;
+                        if (words[i].TokenIndex == subjectToken) subjectWord = i;
+                    }
+                    results.Add(SyntaxRoleCalculator.Calculate(analysis.Text, sentence.Start, sentence.Length, words,
+                        options.IncludeAdditionalRoleHeuristics, new(route, predicateWord, provenance)
+                        { SubjectWordIndex = subjectWord }, cancellationToken));
+                }
+                result = new(SyntaxRoleCalculator.Status.Calculated, words,
+                    results.SelectMany(x => x.Candidates).ToImmutableArray(),
+                    results.Count == 0 ? new(SyntaxRoleCalculator.Route.Abstained, -1, []) : results[0].Resolution);
+            }
+            else
+            {
+                // Unsupported graph topology retains the old exact-only source scan, not a broader graph parser.
+                words = words.Select(word => word.UsesGraph ? word with { Projection = [], GraphTags = [] } : word).ToImmutableArray();
+                SyntaxRoleCalculator.Route route = selected is null ? SyntaxRoleCalculator.Route.SourceScan :
+                    selected.SelectedPredicateTokenIndex is not null ? SyntaxRoleCalculator.Route.Selected :
+                    selected.DiagnosticPredicateTokenIndex is not null ? SyntaxRoleCalculator.Route.ClosedThirdPersonMismatchPreview :
+                    SyntaxRoleCalculator.Route.Abstained;
+                int? predicateToken = selected?.SelectedPredicateTokenIndex ?? selected?.DiagnosticPredicateTokenIndex;
+                int predicateWord = -1;
+                for (int i = 0; i < words.Length; i++) if (words[i].TokenIndex == predicateToken) predicateWord = i;
+                var provenance = selected is null ? ImmutableArray<SyntaxRoleCalculator.Support>.Empty : selected.Roles
+                    .Select(role => new SyntaxRoleCalculator.Support(role.TokenIndex, role.AlternativeIndices.ToImmutableArray(),
+                        SyntaxRoleCalculator.Basis.TypedFeatures)).ToImmutableArray();
+                result = SyntaxRoleCalculator.Calculate(analysis.Text, sentence.Start, sentence.Length,
+                    words, options.IncludeAdditionalRoleHeuristics, new(route, predicateWord, provenance), cancellationToken);
+            }
             TextSyntaxSupport MapSupport(SyntaxRoleCalculator.Support support) => new(support.TokenIndex,
-                support.Basis.ToString(), References(support.TokenIndex, support.ReadingIndices));
+                support.Basis.ToString(), References(support.TokenIndex, support.ReadingIndices))
+                { GraphReadings = support.Basis == SyntaxRoleCalculator.Basis.LicensedGraphMorphology
+                    ? GraphReferences(support.TokenIndex, support.ReadingIndices) : null };
             var roles = new List<TextSyntaxCandidate>();
             foreach (SyntaxRoleCalculator.Candidate candidate in result.Candidates)
             {
@@ -119,13 +130,14 @@ internal static class TextContextAnalyzer
                 resultPredicate, Freeze(roles)));
         }
         cancellationToken.ThrowIfCancellationRequested();
-        return (new("bounded-context.v1", true, null, Freeze(contextSentences)),
-            new("bounded-syntax-roles.v1", true, null, Freeze(syntaxSentences), options.IncludeAdditionalRoleHeuristics ?
+        return (new("bounded-context.v2", true, null, Freeze(contextSentences)),
+            new("bounded-syntax-roles.v2", true, null, Freeze(syntaxSentences), options.IncludeAdditionalRoleHeuristics ?
                 Freeze(AdditionalGroupIds.Select((id, i) => new TextSyntaxGroupStatus(id, true, null, groupCounts[i]))) : null));
 
         IReadOnlyList<TextReadingReference> References(int token, IEnumerable<int> members)
         {
             if (!byToken.TryGetValue(token, out Rows? bound)) throw new InvalidOperationException("Support token is absent.");
+            if (bound.UsesGraph) return [];
             var refs = new List<TextReadingReference>();
             foreach (int member in members)
             {
@@ -135,9 +147,54 @@ internal static class TextContextAnalyzer
             }
             return Freeze(refs);
         }
+        IReadOnlyList<TextGraphReadingReference>? GraphReferences(int token, IEnumerable<int> members)
+        {
+            if (!byToken.TryGetValue(token, out Rows? bound) || !bound.UsesGraph) return null;
+            var refs = new List<TextGraphReadingReference>();
+            foreach (int member in members)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((uint)member >= (uint)bound.Graph.Count) throw new InvalidOperationException("Graph support is outside original cells.");
+                var cell = bound.Graph[member];
+                refs.Add(new(token, cell.CandidateIndex, cell.FullTagIndex));
+            }
+            return refs.Count == 0 ? null : Freeze(refs);
+        }
         string CanonicalKey(IReadOnlyList<ContextOverlayRoleSelection> roles) => string.Join('|', roles.Select(role =>
             RoleName(role.Role) + ":" + role.Start.ToString(CultureInfo.InvariantCulture) + ":" +
             string.Join(',', role.AlternativeIndices.Select(index => byToken[role.TokenIndex].Identities[index]))));
+    }
+
+    internal static IReadOnlyList<TextDiagnostic> GraphAgreementDiagnostics(TextContextEvidence context, CancellationToken ct)
+    {
+        var output = new List<TextDiagnostic>();
+        foreach (TextContextSentence sentence in context.Sentences)
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var group in sentence.Candidates.Where(candidate =>
+                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane &&
+                candidate.EvidenceCodes.Any(code => code is ContextLanes.ProductiveGraphMismatch or ContextLanes.ProductiveAttributeMismatch))
+                .GroupBy(candidate => (candidate.PredicateTokenIndex, candidate.AuthorityLane,
+                    Attribute: candidate.EvidenceCodes.FirstOrDefault(code => code.StartsWith("attribute_mismatch_token=", StringComparison.Ordinal)))))
+            {
+                TextContextRoleSelection[] roles = group.SelectMany(candidate => candidate.Roles).ToArray();
+                bool attributeMismatch = group.Key.Attribute is not null;
+                int attributeToken = attributeMismatch ? int.Parse(group.Key.Attribute!.AsSpan("attribute_mismatch_token=".Length), CultureInfo.InvariantCulture) : -1;
+                TextContextRoleSelection[] relation = roles.Where(role => role.Role == TextContextRole.Subject ||
+                    (attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken : role.Role == TextContextRole.Predicate)).ToArray();
+                TextContextRoleSelection? target = relation.Where(role => role.GraphReadings is { Count: > 0 }).OrderBy(role => role.Start).FirstOrDefault();
+                if (target is null) throw new InvalidOperationException("Productive mismatch needs graph support in its actual relation.");
+                output.Add(new(attributeMismatch ? ContextLanes.ProductiveAttributeMismatch : ContextLanes.ProductiveGraphMismatch,
+                    target.Start, target.Length, group.Key.AuthorityLane!)
+                {
+                    Readings = Freeze(relation.SelectMany(role => role.Readings).Distinct()
+                        .OrderBy(reference => reference.TokenIndex).ThenBy(reference => reference.CompleteReadingIndex)),
+                    GraphReadings = Freeze(relation.SelectMany(role => role.GraphReadings ?? []).Distinct()
+                        .OrderBy(reference => reference.TokenIndex).ThenBy(reference => reference.GraphCandidateIndex).ThenBy(reference => reference.FullTagIndex))
+                });
+            }
+        }
+        return Freeze(output);
     }
 
     private static string RoleName(ContextOverlayRole role) => role switch
@@ -158,7 +215,7 @@ internal static class TextContextAnalyzer
         SyntaxRoleCalculator.Rule.PostverbalChaka => 7, SyntaxRoleCalculator.Rule.DativeSpeech => 8, _ => null
     };
     private static (TextContextEvidence, TextSyntaxEvidence) Unavailable(string reason, TextContextOptions options) =>
-        (new("bounded-context.v1", false, reason, []), new("bounded-syntax-roles.v1", false, reason, [],
+        (new("bounded-context.v2", false, reason, []), new("bounded-syntax-roles.v2", false, reason, [],
             options.IncludeAdditionalRoleHeuristics ? Freeze(AdditionalGroupIds.Select(id => new TextSyntaxGroupStatus(id, false, reason, 0))) : null));
     private static IReadOnlyList<T> Freeze<T>(IEnumerable<T> values) => Array.AsReadOnly(values.ToArray());
 }

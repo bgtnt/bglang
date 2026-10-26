@@ -161,6 +161,7 @@ public sealed class BulgarianLanguageSession : IDisposable
             GraphCandidates = graphSearch?.Candidates ?? [],
             GraphSearchIncomplete = graphSearch?.Incomplete ?? false,
             GraphCandidatesTruncated = graphSearch?.Truncated ?? false,
+            GraphExactRootCandidatesComplete = graphSearch?.GraphExactRootCandidatesComplete ?? false,
             Candidates = hypotheses.Candidates,
             CandidateSearchLimited = hypotheses.WorkLimited,
             CandidateEvidenceLimited = hypotheses.EvidenceLimited,
@@ -258,6 +259,13 @@ public sealed class BulgarianLanguageSession : IDisposable
         ArgumentNullException.ThrowIfNull(text);
         if (text.Length > MaximumTextLength)
             throw new ArgumentException($"Input must not exceed {MaximumTextLength} UTF-16 characters.", nameof(text));
+        if (contextOptions.Continuation is { } continuationRequest)
+        {
+            ValidateBound(continuationRequest.Limit, nameof(continuationRequest.Limit));
+            if (!Enum.IsDefined(continuationRequest.Target))
+                throw new ArgumentOutOfRangeException(nameof(continuationRequest.Target));
+            TextContinuationAnalyzer.ValidateCaret(text, continuationRequest.Caret, cancellationToken);
+        }
         Dictionary<string, (WordAnalysis Display, BulgarianStressLookup.ExactInventory Exact)> memo =
             new(StringComparer.Ordinal);
         RuntimePackageState package = GetPackage();
@@ -341,8 +349,17 @@ public sealed class BulgarianLanguageSession : IDisposable
                 text, tokens, package.Lexicon, package.WordFormation, package.LexicalStress, cancellationToken),
             Diagnostics = diagnostics
         };
+        MorphologyEvidenceProjection.View morphology = MorphologyEvidenceProjection.Create(analysis, cancellationToken);
         (TextContextEvidence context, TextSyntaxEvidence syntax) =
-            TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken);
+            TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken, morphology);
+        TextContinuationEvidence? continuation = contextOptions.Continuation is { } requested
+            ? TextContinuationAnalyzer.Calculate(analysis, morphology, package.Lexicon, requested, cancellationToken) : null;
+        IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(context, cancellationToken);
+        if (graphDiagnostics.Count > 0) analysis = analysis with
+        {
+            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(graphDiagnostics).OrderBy(d => d.Start)
+                .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
+        };
         Dictionary<string, IReadOnlyList<TextReadingSnapshot>> counterpartMemo = new(StringComparer.Ordinal);
         IReadOnlyList<TextReadingSnapshot> ExactCounterpart(string surface)
         {
@@ -374,7 +391,7 @@ public sealed class BulgarianLanguageSession : IDisposable
                     throw new InvalidOperationException("Construction acquisition is outside the actual text memo."), cancellationToken)
             : null;
         cancellationToken.ThrowIfCancellationRequested();
-        return analysis with { Context = context, Syntax = syntax, Validation = validation, WordConstructions = constructions };
+        return analysis with { Context = context, Syntax = syntax, Validation = validation, WordConstructions = constructions, Continuation = continuation };
     }
 
     /// <summary>Returns reviewed typed graph segmentation evidence for a surface.</summary>

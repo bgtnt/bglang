@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BgLang.Contracts;
 
 /// <summary>A stable source-aligned diagnostic from one explicitly supported text rule.</summary>
@@ -13,4 +15,12 @@ public sealed record TextDiagnostic(
 {
     /// <summary>A deterministic evidence projection; never an automatic source-text correction.</summary>
     public string? ProjectedText { get; init; }
+
+    /// <summary>Original complete exact-reading supports for a qualified diagnostic; omitted when unused.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TextReadingReference>? Readings { get; init; }
+
+    /// <summary>Original graph candidate/tag supports for a qualified diagnostic; never exact dictionary readings.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TextGraphReadingReference>? GraphReadings { get; init; }
 }

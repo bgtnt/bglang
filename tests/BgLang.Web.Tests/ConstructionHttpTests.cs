@@ -49,8 +49,14 @@ public sealed class ConstructionHttpTests
     {
         string[] fields = ["IncludeAdditionalRoleHeuristics", "IncludeSubordinateCommaDiagnostics",
             "IncludeFragmentDiagnostics", "IncludeSpacingDiagnostics", "IncludeWordConstructions"];
-        CollectionAssert.AreEquivalent(fields, typeof(TextContextOptions).GetProperties().Select(property => property.Name).ToArray());
-        Assert.IsTrue(typeof(TextContextOptions).GetProperties().All(property => property.PropertyType == typeof(bool)));
+        var properties = typeof(TextContextOptions).GetProperties();
+        CollectionAssert.AreEquivalent(fields.Append(nameof(TextContextOptions.Continuation)).ToArray(),
+            properties.Select(property => property.Name).ToArray());
+        Assert.IsTrue(properties.Where(property => property.Name != nameof(TextContextOptions.Continuation))
+            .All(property => property.PropertyType == typeof(bool)));
+        Assert.AreEqual(typeof(TextContinuationRequest), properties.Single(property =>
+            property.Name == nameof(TextContextOptions.Continuation)).PropertyType);
+        Assert.IsNull(default(TextContextOptions).Continuation);
         foreach (string context in new[] { "null", "{}", "{\"includeWordConstructions\":false}" })
         {
             WebInput input = JsonSerializer.Deserialize<WebInput>("{\"text\":\"знаме.\",\"context\":" + context + "}", HttpContract.Json)!;

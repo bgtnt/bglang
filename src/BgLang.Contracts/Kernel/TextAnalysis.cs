@@ -44,4 +44,8 @@ public sealed record TextAnalysis(
 
     /// <summary>Opt-in candidate constructions over exact owner-bound readings; null means not requested.</summary>
     public TextWordConstructionEvidence? WordConstructions { get; init; }
+
+    /// <summary>Opt-in finite vocabulary supported by original left-context morphology; null means not requested.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TextContinuationEvidence? Continuation { get; init; }
 }

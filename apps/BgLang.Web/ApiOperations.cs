@@ -33,6 +33,16 @@ internal static class ApiOperations
             throw new ApiRequestException(400, "text-required", "Въведи непразен текст.");
         if (input.Text.Length > maximum)
             throw new ApiRequestException(400, "text-too-long", $"Лимитът е {maximum} UTF-16 символа.");
+        if (input.Context?.Continuation is { } continuation)
+        {
+            if (!Enum.IsDefined(continuation.Target))
+                throw new ApiRequestException(400, "invalid-continuation-target", "Неподдържан вид продължение.");
+            if (continuation.Limit is < 1 or > HttpContract.MaximumResultLimit)
+                throw new ApiRequestException(400, "invalid-continuation-limit", $"Лимитът за finite предложения е между 1 и {HttpContract.MaximumResultLimit}.");
+            if ((uint)continuation.Caret > (uint)input.Text.Length || continuation.Caret != input.Text.Length &&
+                Array.BinarySearch(System.Globalization.StringInfo.ParseCombiningCharacters(input.Text), continuation.Caret) < 0)
+                throw new ApiRequestException(400, "invalid-continuation-caret", "Позицията трябва да е граница на оригинален текстов знак в UTF-16 текста.");
+        }
         if (input.Text.Any(character => char.IsControl(character) &&
             (!textOperation || character is not ('\r' or '\n' or '\t'))))
             throw new ApiRequestException(400, "invalid-control-character", "Текстът съдържа недопустим контролен символ.");
@@ -60,6 +70,7 @@ internal static class ApiOperations
         object data = operation switch
         {
             "lookup" => session.Lookup(input.Text!, LookupMode.Exact, effective),
+            "lookup-prefix" => session.Lookup(input.Text!, LookupMode.Prefix, effective),
             "lookup-lexical-entries" => session.LookupLexicalEntries(input.Text!, effective, cancellationToken),
             "lexical-entry" => session.FindLexicalEntry(input.Text!, cancellationToken),
             "word-constructions" => session.GetWordConstructionCandidates(input.Text!, cancellationToken),
@@ -81,7 +92,7 @@ internal static class ApiOperations
         {
             WordAnalysis word => ReachedLimit(word, effective),
             LexicalEntryLookup owners => owners.Truncated,
-            TextAnalysis text => LexicalTruncated(text) || text.Tokens.Any(token => token.Analysis is { } word &&
+            TextAnalysis text => text.Continuation?.Truncated == true || LexicalTruncated(text) || text.Tokens.Any(token => token.Analysis is { } word &&
                 ReachedLimit(word, HttpContract.TextWordAnalysisLimit)),
             TextMatchResult result => LexicalTruncated(result.TextAnalysis) || ReachedLimit(result.QueryAnalysis, HttpContract.QueryAnalysisLimit) ||
                 result.TextAnalysis.Tokens.Any(token => token.Analysis is { } word && ReachedLimit(word, HttpContract.TextWordAnalysisLimit)),

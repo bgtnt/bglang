@@ -160,6 +160,34 @@ internal sealed class DawgIndex
         return FindByNormalizedPrefix(BulgarianTextNormalizer.NormalizeKey(prefix), limit);
     }
 
+    // Empty normalized prefix intentionally means the retained dictionary root here.
+    // Existing FindByPrefix keeps its historical empty-prefix behavior.
+    internal IEnumerable<WordReading> EnumeratePrefixByRank(string normalizedPrefix,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(normalizedPrefix);
+        TraversalResult result = Traverse(normalizedPrefix, cancellationToken);
+        if (result.NodeIndex < 0) yield break;
+        int start = _payloadStarts[result.Rank];
+        int end = _payloadStarts[result.Rank + _nodes[result.NodeIndex].TerminalCount];
+        // Small indexes already fit below the existing shared selector threshold.
+        BlockRankedRangeSelector selector = _rangeSelector ?? new(_payloads);
+        foreach (int position in selector.EnumeratePositions(start, end, cancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return _payloads[position];
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    internal bool HasExactNormalized(string normalizedForm, CancellationToken cancellationToken)
+    {
+        TraversalResult result = Traverse(normalizedForm, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.NodeIndex >= 0 && _nodes[result.NodeIndex].IsTerminal;
+    }
+
     internal IReadOnlyList<WordReading> FindBySuffix(string suffix, int limit, IReadOnlySet<string>? tags = null)
     {
         if (string.IsNullOrWhiteSpace(suffix) || limit <= 0)

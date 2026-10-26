@@ -59,7 +59,7 @@ public sealed class FullPackageHttpTests
             Assert.AreEqual(32, hostLimits.GetProperty("queryAnalysisLimit").GetInt32());
             Assert.AreEqual(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
             Assert.AreEqual(HttpStatusCode.OK, (await client.GetAsync("/health/live")).StatusCode);
-            foreach (string path in new[] { "/demo", "/docs", "/demo.js", "/site.css" })
+            foreach (string path in new[] { "/demo", "/docs", "/demo.js", "/site.css", "/live-client.js", "/live-demo.js", "/live-demo.css" })
                 Assert.AreEqual(HttpStatusCode.OK, (await client.GetAsync(path)).StatusCode, path);
 
             int posted = 0;

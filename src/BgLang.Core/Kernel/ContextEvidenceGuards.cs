@@ -59,6 +59,15 @@ internal static class ContextEvidenceGuards
 
 
 
+    internal static bool HasNominalAxes(MorphologicalFeatures f) =>
+        !f.HasUnrecognizedFeatures && ExplicitNominalTuple(f);
+
+    internal static bool AttributeAgreement(MorphologicalFeatures attribute, MorphologicalFeatures noun) =>
+        attribute.PartOfSpeech == MorphologicalPartOfSpeech.Adjective &&
+        noun.PartOfSpeech == MorphologicalPartOfSpeech.Noun && HasNominalAxes(attribute) && HasNominalAxes(noun) &&
+        attribute.Number == noun.Number &&
+        (noun.Number == MorphologicalNumber.Plural || attribute.Gender == noun.Gender);
+
     private static bool ExplicitNominalTuple(MorphologicalFeatures f) =>
         !f.HasConflictingFeatures && IsNumber(f.Number) &&
         (f.Number == MorphologicalNumber.Plural || f.Gender is
