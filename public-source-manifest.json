@@ -35,12 +35,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -213,12 +213,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -344,12 +344,12 @@
         "ProjectReference|src/BgLang.Core/BgLang.Core.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -524,12 +524,12 @@
         "Project|src/BgLang.Contracts/BgLang.Contracts.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -735,12 +735,12 @@
         "ProjectReference|src/BgLang.Contracts/BgLang.Contracts.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -870,12 +870,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -1019,12 +1019,12 @@
         "ProjectReference|apps/BgLang.Web/BgLang.Web.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -1159,12 +1159,12 @@
         "ProjectReference|src/BgLang.Core/BgLang.Core.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.113/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.113/WorkloadManifest.targets",
@@ -1309,8 +1309,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 48871,
-      "sha256": "266575c5be4a16b2da6d0a24dfcb5e23f027993dc448fe404229980521ca15e1"
+      "bytes": 54066,
+      "sha256": "ca642a5f5cb1a151234c007d528bd10bada580c74d42af93dbb1306aa4e48b6d"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1344,8 +1344,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 78986,
-      "sha256": "d8947ca4bb223a101b4379d59101aac46d80404ede6495ec42c6269871ef5068"
+      "bytes": 84167,
+      "sha256": "c6eb731fd72036d49bb88d2c44f13e5c710fb22e141b0c296382a39e32c65524"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1409,8 +1409,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
-      "bytes": 46675,
-      "sha256": "0fedf6a84b47bf20a91bbe4f298ce6e4b594321acf75bac94fd0ffaeae89e165"
+      "bytes": 48490,
+      "sha256": "6b9304a45e8f4d46ae7c23fe4c3f279a1ff1f33e73036e41e9086c86f4e3779e"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.css",
@@ -2294,8 +2294,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 108489,
-      "sha256": "c85f7e3cfb3c0161f9d1f3ccefc7c3501ab62eef134e95c6093f123f7433510f"
+      "bytes": 122033,
+      "sha256": "14d6511e0953a65832eb612e3261e60c5e46337356f0032104f1a6c41a03ed2e"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
@@ -2424,8 +2424,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/ClosedAgreementPackageTests.cs",
-      "bytes": 22052,
-      "sha256": "f98e46b470f8548ffad081624fb67470422a25ab8041392e3504930ea49fea78"
+      "bytes": 35121,
+      "sha256": "b11dbb8a476bd5044b76ecd49fbfbaffd809e4190ca215383d9ad73b50cd6338"
     },
     {
       "path": "tests/BgLang.Web.Tests/AgreementHttpTests.cs",

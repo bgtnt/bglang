@@ -1502,3 +1502,159 @@ test('actual Live spelling replacement preserves earlier UTF16 spans after emoji
     assert.ok(f.editor.value.endsWith('друга дума'));assert.equal(f.doc.created.includes('img'),false);
   },{text:row.raw,caret:row.caret});
 });
+
+// Opaque UI presentation cases; no package availability, edit-distance or tokenizer oracle.
+const SPELLING_CASE_LITERAL_ROWS = [
+  {"id":"lower","source":"друфа","candidate":"друга","expected":"друга"},
+  {"id":"title","source":"Друфа","candidate":"друга","expected":"Друга"},
+  {"id":"caps","source":"ДРУФА","candidate":"друга","expected":"ДРУГА"},
+  {"id":"mixed-source","source":"ДрУфа","candidate":"друга","expected":"друга"},
+  {"id":"proper-dictionary-case","source":"ДРУФА","candidate":"Аруба","expected":"Аруба"},
+  {"id":"mixed-dictionary-case","source":"ДРУФА","candidate":"дРуга","expected":"дРуга"},
+  {"id":"already-caps-candidate","source":"Друфа","candidate":"БАН","expected":"БАН"},
+  {"id":"unsupported-latin-source","source":"Drufa","candidate":"друга","expected":"друга"},
+  {"id":"unsupported-latin-candidate","source":"ДРУФА","candidate":"other","expected":"other"},
+  {"id":"unsupported-source-digit","source":"Друфа2","candidate":"друга","expected":"друга"},
+  {"id":"unsupported-hyphen-candidate","source":"ДРУФА","candidate":"по-друга","expected":"по-друга"},
+  {"id":"ambiguous-single-upper","source":"Д","candidate":"друга","expected":"друга"},
+  {"id":"internal-mark-title","source":"Др̀уфа","candidate":"др̀уга","expected":"Др̀уга"},
+  {"id":"internal-mark-caps","source":"ДР̀УФА","candidate":"др̀уга","expected":"ДР̀УГА"},
+  {"id":"NFD-not-composed","source":"Ѝскра","candidate":"ѝскра","expected":"Ѝскра"},
+  {"id":"cased-mark-copied-not-uppercased","source":"ДРУФА","candidate":"дрͅуга","expected":"ДРͅУГА"},
+  {"id":"leading-mark-source-unsupported","source":"̀Друфа","candidate":"друга","expected":"друга"},
+  {"id":"lower-source-preserves-candidate-mark","source":"друфа","candidate":"дру́га","expected":"дру́га"}
+];
+
+const SPELLING_CASE_INTEGRATION_ROWS = [
+  {"id":"title-middle-caret","raw":"Това е Друфа дума","targetTokenText":"Друфа","candidate":"друга","expectedButtonReplacement":"Друга","expectedWholeText":"Това е Друга дума","start":7,"end":12,"initialSelection":[9,9],"expectedSelection":[7,12],"mode":"preserve","tokenIndex":2},
+  {"id":"caps-middle-caret","raw":"Това е ДРУФА дума","targetTokenText":"ДРУФА","candidate":"друга","expectedButtonReplacement":"ДРУГА","expectedWholeText":"Това е ДРУГА дума","start":7,"end":12,"initialSelection":[9,9],"expectedSelection":[7,12],"mode":"preserve","tokenIndex":2},
+  {"id":"emoji-NFD-prefix-internal-mark-second-occurrence","raw":"😀 ѝ. Дру́фа дума\r\nДру́фа дом.","targetTokenText":"Дру́фа","occurrenceOrdinal":2,"candidate":"дру́га","expectedButtonReplacement":"Дру́га","expectedWholeText":"😀 ѝ. Дру́фа дума\r\nДру́га дом.","start":20,"end":26,"initialSelection":[24,24],"expectedSelection":[20,26],"mode":"preserve","tokenIndex":3},
+  {"id":"emoji-NFD-prefix-caps-internal-mark-second-occurrence","raw":"😀 ѝ. ДРУ́ФА дума\r\nДРУ́ФА дом.","targetTokenText":"ДРУ́ФА","occurrenceOrdinal":2,"candidate":"дру́га","expectedButtonReplacement":"ДРУ́ГА","expectedWholeText":"😀 ѝ. ДРУ́ФА дума\r\nДРУ́ГА дом.","start":20,"end":26,"initialSelection":[31,31],"expectedSelection":[31,31],"mode":"preserve","tokenIndex":3}
+];
+
+const SPELLING_CASE_BAD_RANGES = [
+  {"id":"low-surrogate-start","raw":"😀 Друфа","start":1,"end":2,"expected":"no replacement"},
+  {"id":"high-surrogate-only-end","raw":"😀 Друфа","start":0,"end":1,"expected":"no replacement"},
+  {"id":"start-on-combining-mark","raw":"Др̀уфа","start":2,"end":6,"expected":"no replacement"},
+  {"id":"end-before-combining-mark","raw":"Друфа́","start":0,"end":5,"expected":"no replacement"},
+  {"id":"fractional-range","raw":"Друфа","start":0.5,"end":5,"expected":"no replacement"},
+  {"id":"negative-range","raw":"Друфа","start":-1,"end":5,"expected":"no replacement"},
+  {"id":"out-of-bounds","raw":"Друфа","start":0,"end":6,"expected":"no replacement"},
+  {"id":"zero-reversed-range","raw":"Друфа","start":3,"end":2,"expected":"no replacement"},
+  {"id":"token-slice-mismatch","raw":"Друфа","start":0,"end":5,"tokenText":"Другx","expected":"no replacement"}
+];
+
+
+// Assemble original wire positions only. This helper does not classify or transform case.
+// singleWord deliberately supplies one opaque complete Word span, including unsupported
+// case patterns; it does not claim that the server tokenizer emits such a Word.
+function lifecycleSpellingCaseReply(text, {start=0,end=text.length,tokenText=text,candidate}, {singleWord=false}={}) {
+  const reply=lifecycleReply(text);
+  let tokenIndex;
+  if(singleWord){
+    tokenIndex=0;
+    reply.data.tokens=[{kind:'Word',text:tokenText,start,length:end-start,analysis:{isKnown:false}}];
+    reply.data.readingInventory={occurrences:[{tokenIndex:0,readingSetIndex:0}],sets:[{canonicalReadings:[],supportReadings:null}]};
+    reply.data.profile.words=[{tokenIndex:0,fullReadingCount:0,observedProjectedAmbiguity:false,actualDisplayTruncated:false,issues:[]}];
+    reply.data.spelling.words=[{tokenIndex:0,search:'Completed',alternatives:[]}];
+  }else{
+    tokenIndex=reply.data.tokens.findIndex(token=>token.start===start&&token.length===end-start&&token.text===tokenText);
+    assert.ok(tokenIndex>=0,'The explicit target occurrence must exist in the wire fixture.');
+    reply.data.tokens[tokenIndex].analysis={isKnown:false};
+    const occurrence=reply.data.readingInventory.occurrences.find(row=>row.tokenIndex===tokenIndex);
+    reply.data.readingInventory.sets[occurrence.readingSetIndex].canonicalReadings=[];
+    reply.data.profile.words.find(row=>row.tokenIndex===tokenIndex).fullReadingCount=0;
+  }
+  const token=reply.data.tokens[tokenIndex],word=reply.data.spelling.words.find(row=>row.tokenIndex===tokenIndex);
+  Object.assign(word,{text:token.text,start:token.start,length:token.length,normalizedQuery:'opaque-case-query',search:'Completed',reason:null,
+    alternatives:[{form:candidate,distance:1,readings:[{form:candidate,lemma:'opaque-lemma',partOfSpeech:'opaque-case-tag',score:0.375,
+      legacyTypeId:null,legacyBaseId:null,legacyWordId:null,source:'opaque-ui-wire'}]}]});
+  return {reply,tokenIndex};
+}
+
+function onlySpellingCaseButton(f) {
+  const buttons=Array.from(f.spelling.querySelectorAll('button'));
+  assert.equal(buttons.length,1,'Only the explicitly supplied target has an alternative.');
+  return buttons[0];
+}
+
+function assertSpellingCaseLabel(button,expected) {
+  assert.equal(button.textContent.split(' · ')[0],expected);
+  assert.ok(button.textContent.includes(' · разстояние 1 · '),'Raw server distance is still visible.');
+}
+
+test('actual Live spelling presentation applies eighteen literal case policies without changing raw wire evidence', {concurrency:false}, async()=>{
+  for(const row of SPELLING_CASE_LITERAL_ROWS)await withLiveLifecycle(async f=>{
+    const {reply}=lifecycleSpellingCaseReply(row.source,{candidate:row.candidate},{singleWord:true}),before=structuredClone(reply);
+    await f.first(reply);
+    if (row.id === 'leading-mark-source-unsupported') {
+      assert.equal(f.spelling.querySelectorAll('button').length,0,'A leading mark is an invalid Word start, so no action is offered.');
+      assert.equal(f.editor.value,row.source);assert.equal(f.editor.setRangeTextCalls.length,0);assert.deepEqual(reply,before);return;
+    }
+    const button=onlySpellingCaseButton(f);assertSpellingCaseLabel(button,row.expected);
+    assert.equal(f.editor.value,row.source,row.id);assert.equal(f.editor.setRangeTextCalls.length,0,'Showing a form never edits the source.');
+    assert.deepEqual(reply,before,'Raw alternative form, distance, reading score and all source evidence stay immutable.');
+    button.click();
+    assert.equal(f.editor.value,row.expected,row.id);
+    assert.deepEqual(f.editor.setRangeTextCalls,[{form:row.expected,start:0,end:row.source.length,mode:'preserve'}],row.id);
+    assert.equal(f.editor.selectionStart,0);assert.equal(f.editor.selectionEnd,0);assert.strictEqual(f.doc.activeElement,f.editor);
+    assert.deepEqual(reply,before,'Case presentation must not be written back into candidate/readings data.');
+  },{text:row.source,caret:0});
+});
+
+test('actual Live spelling keeps four literal original Unicode occurrence ranges and native preserve selections', {concurrency:false}, async()=>{
+  for(const row of SPELLING_CASE_INTEGRATION_ROWS)await withLiveLifecycle(async f=>{
+    const {reply,tokenIndex}=lifecycleSpellingCaseReply(row.raw,{start:row.start,end:row.end,tokenText:row.targetTokenText,candidate:row.candidate});
+    assert.equal(tokenIndex,row.tokenIndex);assert.equal(row.raw.slice(row.start,row.end),row.targetTokenText);
+    const before=structuredClone(reply);await f.first(reply);
+    const button=onlySpellingCaseButton(f);assertSpellingCaseLabel(button,row.expectedButtonReplacement);
+    assert.equal(f.editor.value,row.raw);assert.equal(f.editor.setRangeTextCalls.length,0);
+    button.click();
+    assert.equal(f.editor.value,row.expectedWholeText);
+    assert.deepEqual(f.editor.setRangeTextCalls,[{form:row.expectedButtonReplacement,start:row.start,end:row.end,mode:'preserve'}]);
+    assert.deepEqual([f.editor.selectionStart,f.editor.selectionEnd],row.expectedSelection);
+    assert.strictEqual(f.doc.activeElement,f.editor);assert.deepEqual(reply,before);
+    f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,1,'The captured old action cannot apply twice.');
+    await f.clock.advance(2025);assert.equal(f.net.calls.length,2);
+    assert.equal(posted(f.net.calls[1]).text,row.expectedWholeText,'The next actual request preserves case, marks, first occurrence and CRLF/suffix.');
+  },{text:row.raw,caret:row.initialSelection[0]});
+});
+
+test('actual Live spelling rejects nine malformed original ranges and keeps forced prior callbacks inert', {concurrency:false}, async()=>{
+  const previous='Предишна Друфа дума.';
+  for(const row of SPELLING_CASE_BAD_RANGES)await withLiveLifecycle(async f=>{
+    const good=lifecycleSpellingCaseReply(previous,{start:9,end:14,tokenText:'Друфа',candidate:'друга'});
+    await f.first(good.reply);const old=onlySpellingCaseButton(f);
+    f.type(row.raw,0);await f.clock.advance(2025);assert.equal(f.net.calls.length,2);
+    const bad=lifecycleSpellingCaseReply(row.raw,{start:row.start,end:row.end,tokenText:row.tokenText??row.raw.slice(row.start,row.end),candidate:'друга'},{singleWord:true});
+    await f.accept(1,bad.reply);
+    assert.equal(f.editor.value,row.raw,row.id);assert.equal(f.editor.setRangeTextCalls.length,0);
+    // Full-frame validation may reject first, or spelling may omit the invalid action.
+    // Neither route permits the malformed span or retained old controls to splice text.
+    f.forceClick(old);
+    for(const button of f.spelling.querySelectorAll('button'))f.forceClick(button);
+    assert.equal(f.editor.value,row.raw,row.id);assert.equal(f.editor.setRangeTextCalls.length,0,row.id);
+  },{text:previous,caret:0});
+});
+
+test('actual Live case-presented spelling keeps selection revision IME and forced stale callback guards', {concurrency:false}, async()=>{
+  const raw='Това е Друфа дума',changed='Това е Друфа дума сега';
+  await withLiveLifecycle(async f=>{
+    const first=lifecycleSpellingCaseReply(raw,{start:7,end:12,tokenText:'Друфа',candidate:'друга'});
+    await f.first(first.reply);const old=onlySpellingCaseButton(f);assertSpellingCaseLabel(old,'Друга');
+    f.editor.setSelectionRange(13,13);f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.setSelectionRange(9,9);f.editor.value='Това е ДрУфа дума';f.forceClick(old);
+    assert.equal(f.editor.setRangeTextCalls.length,0,'A pre-event raw edit cannot pass the captured source guard.');
+    f.editor.value=raw;f.editor.dispatch('compositionstart');f.forceClick(old);await f.clock.advance(5000);
+    assert.equal(f.net.calls.length,1);assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.editor.value,raw);
+    f.editor.dispatch('compositionend');f.type(changed,9);f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0);
+    await f.clock.advance(2025);assert.equal(f.net.calls.length,2);
+    const fresh=lifecycleSpellingCaseReply(changed,{start:7,end:12,tokenText:'Друфа',candidate:'друга'}),before=structuredClone(fresh.reply);
+    await f.accept(1,fresh.reply);const button=onlySpellingCaseButton(f);assertSpellingCaseLabel(button,'Друга');
+    f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0,'The same typo occurrence in a new response does not revive the old binding.');
+    button.click();assert.equal(f.editor.value,'Това е Друга дума сега');
+    assert.deepEqual(f.editor.setRangeTextCalls,[{form:'Друга',start:7,end:12,mode:'preserve'}]);
+    assert.deepEqual([f.editor.selectionStart,f.editor.selectionEnd],[7,12]);assert.strictEqual(f.doc.activeElement,f.editor);
+    f.forceClick(old);f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,1);assert.deepEqual(fresh.reply,before);
+  },{text:raw,caret:9});
+});

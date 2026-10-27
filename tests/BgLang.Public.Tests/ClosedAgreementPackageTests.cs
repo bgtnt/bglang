@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using BgLang.Contracts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -261,5 +262,203 @@ public sealed partial class PublicPackageTests
             Assert.AreEqual(new TextReadingReference(nounToken, 0), candidate.Matches[0].FollowingNounReading);
             AssertNoun(analysis, nounToken); AssertNoUnique(analysis);
         }
+    }
+
+    // Exact six-case ranks measured against the identified complete package; no runtime ranking change.
+    private sealed record RankingPoolCase(string Id, string Text, string Typo, string Noun,
+        string Target, MorphologicalGender Gender, int RawRank, int ContextualRank);
+    private sealed record RankingPoolCapture(RankingPoolCase Case, TextAnalysis Analysis,
+        SpellingWordEvidence Word);
+
+    [TestMethod]
+    public void Predeclared_spelling_pool_demonstrates_equal_distance_promotion_without_raw_changes()
+    {
+        Assert.AreEqual("bglang-neutral:36b0b69685d6d3e9", session.Provenance.PackageId);
+        Assert.AreEqual("451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7",
+            session.Provenance.ManifestSha256.ToLowerInvariant());
+        RankingPoolCase[] pool =
+        [
+            new("new-neuter", "Това е новз дете.", "новз", "дете", "ново", MorphologicalGender.Neuter, 4, 1),
+            new("new-feminine", "Това е новз книга.", "новз", "книга", "нова", MorphologicalGender.Feminine, 2, 1),
+            new("pretty-neuter", "Това е хубавз дете.", "хубавз", "дете", "хубаво", MorphologicalGender.Neuter, 4, 1),
+            new("pretty-masculine", "Това е хубавз дом.", "хубавз", "дом", "хубав", MorphologicalGender.Masculine, 1, 1),
+            new("old-feminine", "Това е старз къща.", "старз", "къща", "стара", MorphologicalGender.Feminine, 2, 1),
+            new("old-masculine", "Това е старз дом.", "старз", "дом", "стар", MorphologicalGender.Masculine, 1, 1)
+        ];
+        var raw = pool.Select(c => c.Typo).Distinct(StringComparer.Ordinal)
+            .ToDictionary(q => q, q => session.FindSimilar(q, 2, 10), StringComparer.Ordinal);
+        string rawBefore = JsonSerializer.Serialize(raw);
+        RankingPoolCapture[] captured = pool.Select(CaptureRankingPoolCase).ToArray();
+
+        // Emit every declared outcome before assertions: absent/bounded/nonpromoting cases stay visible.
+        Console.WriteLine(JsonSerializer.Serialize(captured.Select(c =>
+        {
+            int before = RawTargetIndex(c), after = ContextTargetIndex(c);
+            return new { c.Case.Id, c.Case.Text, c.Case.Target,
+                rawRank = before < 0 ? (int?)null : before + 1,
+                contextualRank = after < 0 ? (int?)null : after + 1,
+                assessment = after < 0 ? null : c.Word.ContextualCandidates![after].Assessment.ToString(),
+                distance = before < 0 ? (int?)null : c.Word.Alternatives[before].Distance,
+                demonstratedPromotion = IsMeasuredPromotion(c) };
+        })));
+
+        int promotions = 0;
+        foreach (RankingPoolCapture c in captured)
+        {
+            Assert.AreEqual(c.Case.RawRank, RawTargetIndex(c) + 1, c.Case.Id);
+            Assert.AreEqual(c.Case.ContextualRank, ContextTargetIndex(c) + 1, c.Case.Id);
+            Assert.IsTrue(c.Word.ContextualCandidates![ContextTargetIndex(c)].Matches.Any(m =>
+                HasExpectedRankingWitness(c, RawTargetIndex(c), m)), c.Case.Id);
+            Assert.AreEqual(SpellingSearchDisposition.Completed, c.Word.Search);
+            Assert.AreEqual(c.Case.Typo, c.Word.NormalizedQuery);
+            Assert.AreEqual(c.Word.Text, c.Analysis.Text.Substring(c.Word.Start, c.Word.Length));
+            AssertRankingRaw(raw[c.Case.Typo], c.Word.Alternatives);
+            int nounToken = c.Word.TokenIndex + 1;
+            Assert.AreEqual(c.Case.Noun, c.Analysis.Tokens[nounToken].Text);
+            Assert.IsTrue(RankingRows(c.Analysis, nounToken).Any(r =>
+                r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
+                r.Features.Number == MorphologicalNumber.Singular && r.Features.Gender == c.Case.Gender));
+
+            AssertRankingOverlay(c); // original refs, coherent axes, distance primary and stable ties
+            if (IsMeasuredPromotion(c)) promotions++;
+            // Existing uniqueness is independent. Two distance-one raw forms cannot become unique
+            // merely because this overlay supports one; do not reject a legitimate old unique diagnostic.
+            if (c.Word.Alternatives.Count(a => a.Distance == 1) >= 2)
+                Assert.IsFalse(c.Analysis.Diagnostics.Any(d =>
+                    d.Code == "spelling_unknown_word_unique_distance_one_candidate" &&
+                    d.Start == c.Word.Start && d.Length == c.Word.Length));
+        }
+
+        for (int pair = 0; pair < captured.Length; pair += 2)
+        {
+            RankingPoolCapture first = captured[pair], contrast = captured[pair + 1];
+            AssertRankingRaw(first.Word.Alternatives, contrast.Word.Alternatives);
+            AssertFormerGenderCannotUseContrastTuple(first, contrast);
+            // A/B/A requests use only the same six declared texts; no occurrence-local support leaks.
+            string retained = JsonSerializer.Serialize(first.Word);
+            RankingPoolCapture replay = CaptureRankingPoolCase(first.Case);
+            AssertRankingRaw(first.Word.Alternatives, replay.Word.Alternatives);
+            Assert.AreEqual(retained, JsonSerializer.Serialize(first.Word), "A later request cannot mutate A.");
+            Assert.AreEqual(retained, JsonSerializer.Serialize(replay.Word), "A/B/A context is request-local.");
+        }
+        foreach (var entry in raw) AssertRankingRaw(entry.Value, session.FindSimilar(entry.Key, 2, 10));
+        Assert.AreEqual(rawBefore, JsonSerializer.Serialize(raw));
+
+        Assert.IsTrue(promotions > 0,
+            "The six-case pool did not demonstrate a non-first equal-distance promotion. " +
+            "Retain every pool outcome and report the benefit-evidence gap; do not change runtime to force it.");
+
+        RankingPoolCapture CaptureRankingPoolCase(RankingPoolCase c)
+        {
+            TextAnalysis a = session.AnalyzeText(c.Text, true,
+                new TextContextOptions { IncludeAdditionalRoleHeuristics = true }, CancellationToken.None);
+            return new(c, a, a.Spelling!.Words.Single(w => w.Text == c.Typo));
+        }
+    }
+
+    private static int RawTargetIndex(RankingPoolCapture c) =>
+        Enumerable.Range(0, c.Word.Alternatives.Count)
+            .FirstOrDefault(i => StringComparer.Ordinal.Equals(c.Word.Alternatives[i].Form, c.Case.Target), -1);
+    private static int ContextTargetIndex(RankingPoolCapture c)
+    {
+        int original = RawTargetIndex(c);
+        return original < 0 || c.Word.ContextualCandidates is null ? -1 :
+            Enumerable.Range(0, c.Word.ContextualCandidates.Count)
+                .FirstOrDefault(i => c.Word.ContextualCandidates[i].AlternativeIndex == original, -1);
+    }
+    private static bool IsMeasuredPromotion(RankingPoolCapture c)
+    {
+        int before = RawTargetIndex(c), after = ContextTargetIndex(c);
+        if (before <= 0 || after < 0 || after >= before) return false;
+        SpellingContextCandidate target = c.Word.ContextualCandidates![after];
+        if (target.Assessment != SpellingContextAssessment.Supported ||
+            !target.Matches.Any(m => HasExpectedRankingWitness(c, before, m))) return false;
+        return c.Word.ContextualCandidates.Skip(after + 1).Any(o => o.AlternativeIndex < before &&
+            c.Word.Alternatives[o.AlternativeIndex].Distance == c.Word.Alternatives[before].Distance &&
+            o.Assessment != SpellingContextAssessment.Supported);
+    }
+    private static bool HasExpectedRankingWitness(RankingPoolCapture c, int alternative,
+        SpellingContextMatch match)
+    {
+        MorphologicalFeatures a = c.Word.Alternatives[alternative].Readings[match.CandidateReadingIndex].Features;
+        MorphologicalFeatures n = RankingRows(c.Analysis, match.FollowingNounReading.TokenIndex)
+            [match.FollowingNounReading.CompleteReadingIndex].Features;
+        return a.PartOfSpeech == MorphologicalPartOfSpeech.Adjective &&
+            n.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
+            a.Number == MorphologicalNumber.Singular && n.Number == MorphologicalNumber.Singular &&
+            a.Gender == c.Case.Gender && n.Gender == c.Case.Gender;
+    }
+    private static void AssertRankingRaw(IReadOnlyList<FuzzyMatch> expected, IReadOnlyList<FuzzyMatch> actual)
+    {
+        // Exact Form equality also protects meaningful dictionary case. WordReading record equality
+        // includes Form/Lemma/PartOfSpeech/Score/Legacy IDs/Source and original reading order.
+        CollectionAssert.AreEqual(expected.Select(a => (a.Form, a.Distance)).ToArray(),
+            actual.Select(a => (a.Form, a.Distance)).ToArray());
+        for (int i = 0; i < expected.Count; i++)
+            CollectionAssert.AreEqual(expected[i].Readings.ToArray(), actual[i].Readings.ToArray());
+    }
+    private static IReadOnlyList<TextReadingSnapshot> RankingRows(TextAnalysis a, int token)
+    {
+        TextReadingInventory inventory = a.ReadingInventory!;
+        return inventory.Sets[inventory.Occurrences.Single(o => o.TokenIndex == token).ReadingSetIndex].ResolvedReadings;
+    }
+    private static void AssertRankingOverlay(RankingPoolCapture c)
+    {
+        if (c.Word.ContextualCandidates is not { } overlay) return; // retained as a measured gap
+        CollectionAssert.AreEquivalent(Enumerable.Range(0, c.Word.Alternatives.Count).ToArray(),
+            overlay.Select(o => o.AlternativeIndex).ToArray());
+        for (int i = 0; i < overlay.Count; i++)
+        {
+            var current = overlay[i];
+            Assert.AreEqual(current.Assessment == SpellingContextAssessment.Supported, current.Matches.Count > 0);
+            foreach (var m in current.Matches)
+            {
+                Assert.AreEqual(c.Word.TokenIndex + 1, m.FollowingNounReading.TokenIndex);
+                Assert.IsTrue(m.CandidateReadingIndex >= 0 &&
+                    m.CandidateReadingIndex < c.Word.Alternatives[current.AlternativeIndex].Readings.Count);
+                var nounRows = RankingRows(c.Analysis, m.FollowingNounReading.TokenIndex);
+                Assert.IsTrue(m.FollowingNounReading.CompleteReadingIndex >= 0 &&
+                    m.FollowingNounReading.CompleteReadingIndex < nounRows.Count);
+                var adjective = c.Word.Alternatives[current.AlternativeIndex].Readings[m.CandidateReadingIndex].Features;
+                var noun = nounRows[m.FollowingNounReading.CompleteReadingIndex].Features;
+                Assert.AreEqual(MorphologicalPartOfSpeech.Adjective, adjective.PartOfSpeech);
+                Assert.AreEqual(MorphologicalPartOfSpeech.Noun, noun.PartOfSpeech);
+                Assert.IsTrue(adjective.Number.HasValue && noun.Number.HasValue);
+                Assert.AreEqual(adjective.Number, noun.Number);
+                if (noun.Number == MorphologicalNumber.Singular)
+                {
+                    Assert.IsTrue(adjective.Gender.HasValue && noun.Gender.HasValue);
+                    Assert.AreEqual(adjective.Gender, noun.Gender);
+                }
+            }
+            for (int j = i + 1; j < overlay.Count; j++)
+            {
+                var later = overlay[j];
+                int a = c.Word.Alternatives[current.AlternativeIndex].Distance;
+                int b = c.Word.Alternatives[later.AlternativeIndex].Distance;
+                Assert.IsTrue(a <= b, "Greater distance cannot outrank smaller distance through support.");
+                if (a != b) continue;
+                bool s = current.Assessment == SpellingContextAssessment.Supported;
+                bool t = later.Assessment == SpellingContextAssessment.Supported;
+                Assert.IsFalse(!s && t, "Supported precedes unsupported only within a distance level.");
+                if (s == t) Assert.IsTrue(current.AlternativeIndex < later.AlternativeIndex, "Stable original ties.");
+            }
+        }
+    }
+    private static void AssertFormerGenderCannotUseContrastTuple(RankingPoolCapture first, RankingPoolCapture contrast)
+    {
+        int a = RawTargetIndex(first);
+        if (a < 0 || contrast.Word.ContextualCandidates is null || first.Case.Gender == contrast.Case.Gender) return;
+        var former = contrast.Word.ContextualCandidates.Single(c => c.AlternativeIndex == a);
+        foreach (var m in former.Matches)
+        {
+            var adjective = contrast.Word.Alternatives[a].Readings[m.CandidateReadingIndex].Features;
+            var noun = RankingRows(contrast.Analysis, m.FollowingNounReading.TokenIndex)
+                [m.FollowingNounReading.CompleteReadingIndex].Features;
+            Assert.IsFalse(adjective.Number == MorphologicalNumber.Singular &&
+                adjective.Gender == first.Case.Gender && noun.Number == MorphologicalNumber.Singular &&
+                noun.Gender == contrast.Case.Gender, "The former gender cannot borrow the new incompatible noun tuple.");
+        }
+        // Other legitimate readings may still support this same alternative; no blanket NotSupported gold.
     }
 }

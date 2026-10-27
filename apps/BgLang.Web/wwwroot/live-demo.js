@@ -343,6 +343,42 @@ export function initLiveDemo({
     document.querySelector('#live-stress').disabled = !fresh || actionBusy;
   }
 
+  function spellingReplacement(original, form) {
+    const letters = text => {
+      const result = [];
+      for (const char of text) {
+        if (/^\p{M}$/u.test(char) && result.length) continue;
+        if (!/^\p{Script=Cyrillic}$/u.test(char) || !/^[\p{Ll}\p{Lu}]$/u.test(char)) return null;
+        result.push(char);
+      }
+      return result;
+    };
+    const source = letters(original), candidate = letters(form);
+    if (!source || source.length < 2 || !candidate?.length || !candidate.every(char => /^\p{Ll}$/u.test(char))) return form;
+    const caps = source.every(char => /^\p{Lu}$/u.test(char));
+    const title = /^\p{Lu}$/u.test(source[0]) && source.slice(1).every(char => /^\p{Ll}$/u.test(char));
+    if (!caps && !title) return form;
+    let index = 0, replacement = '';
+    for (const char of form) {
+      if (/^\p{M}$/u.test(char)) { replacement += char; continue; }
+      const proposed = caps || index === 0 ? char.toUpperCase() : char;
+      if (!/^\p{Script=Cyrillic}$/u.test(proposed) || !/^[\p{Ll}\p{Lu}]$/u.test(proposed)) return form;
+      replacement += proposed;
+      index++;
+    }
+    return replacement;
+  }
+
+  function spellingRange(text, token) {
+    const start = token.start, end = start + token.length;
+    if (!Number.isInteger(start) || !Number.isInteger(token.length) || start < 0 || end <= start || end > text.length
+      || token.text !== text.slice(start, end)) return null;
+    const splitsSurrogate = offset => offset > 0 && offset < text.length
+      && /[\uD800-\uDBFF]/u.test(text[offset - 1]) && /[\uDC00-\uDFFF]/u.test(text[offset]);
+    if (splitsSurrogate(start) || splitsSurrogate(end) || /^\p{M}/u.test(text.slice(start)) || /^\p{M}/u.test(text.slice(end))) return null;
+    return {start, end};
+  }
+
   function renderSpellings() {
     const data = response.data;
     const binding = {response, revision: controller.revision, start: editor.selectionStart, end: editor.selectionEnd};
@@ -351,8 +387,9 @@ export function initLiveDemo({
     for (const word of data.spelling?.words || []) {
       const token = data.tokens[word.tokenIndex], alternatives = word.alternatives || [];
       if (!token || token.kind !== 'Word' || !alternatives.length) continue;
-      const original = data.text.slice(token.start, token.start + token.length);
-      if (!original) continue;
+      const range = spellingRange(data.text, token);
+      if (!range) continue;
+      const {start, end} = range, original = data.text.slice(start, end);
       const heading = el('p', 'За „' + original + '“ · ' + token.start + '+' + token.length, 'word-meta');
       rows.push(heading);
       const contextual = Array.isArray(word.contextualCandidates) ? word.contextualCandidates : [];
@@ -369,6 +406,7 @@ export function initLiveDemo({
       for (const alternativeIndex of order) {
         const alternative = alternatives[alternativeIndex];
         if (typeof alternative.form !== 'string' || !alternative.form.length) continue;
+        const replacement = spellingReplacement(original, alternative.form);
         const candidate = contextual.find(row => row.alternativeIndex === alternativeIndex);
         const kind = typeof candidate?.assessment === 'string' ? candidate.assessment.toLowerCase() : '';
         const supported = kind === 'supported' && Array.isArray(candidate.matches) && candidate.matches.length > 0;
@@ -376,12 +414,12 @@ export function initLiveDemo({
           .filter(text => typeof text === 'string' && text.length))] : [];
         const assessment = supported && following.length ? 'съвместим прочит с „' + following.join('“, „') + '“'
           : kind === 'nocompatiblepair' ? 'няма съвместима измерена двойка' : 'контекст: неоценен';
-        const button = el('button', alternative.form + ' · разстояние ' + alternative.distance + ' · ' + assessment);
+        const button = el('button', replacement + ' · разстояние ' + alternative.distance + ' · ' + assessment);
         button.type = 'button';
         button.addEventListener('click', () => {
           if (!currentSpelling(binding) || response.data !== data
-            || editor.value.slice(token.start, token.start + token.length) !== original) return;
-          editor.setRangeText(alternative.form, token.start, token.start + token.length, 'preserve');
+            || editor.value.slice(start, end) !== original) return;
+          editor.setRangeText(replacement, start, end, 'preserve');
           editor.focus({preventScroll: true});
           onInput();
         });

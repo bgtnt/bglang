@@ -2,6 +2,38 @@
 
 BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
+## Preview11 — source/runtime distribution
+
+Този source snapshot подготвя [v0.1.0-preview.11](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.11). Release страницата е authority за публикуваните source/tag, actual main/tag CI и all11 anonymous bytes/hash readback; source текстът предхожда окончателната публикация. Preview10 остава отделен immutable release.
+
+## Бърз старт с Preview11
+
+Вземете matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.11/bglang-v0.1.0-preview.11-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.11/bglang-v0.1.0-preview.11-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.11/SHA256SUMS). Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`, с `runtime/manifest.json`. Използвайте .NET 10 SDK от същия `global.json`. От source папката:
+
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj `
+    -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+Complete runtime е `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. Authoring input не е нужен за API. За offline възпроизвеждане използвайте [Preview11 inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.11/bglang-v0.1.0-preview.11-inputs.zip) и [guide от същия tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.11/packaging/RELEASE-CANDIDATE.md); source, recipe, lock и inputs трябва да съвпадат. [Web README](apps/BgLang.Web/README.md) описва локалния HTTP host, а [release guide](packaging/RELEASE-CANDIDATE.md) — verification договора.
+
+## Промени в Preview11 source
+
+Измерен пример със същия complete package: в „Това е новз дете.“ предложението „ново“ се премества от сурова позиция 4 на контекстна позиция 1; при „Това е новз книга.“ „нова“ се премества от 2 на 1. Distance остава първият критерий, а raw Alternatives, пълните readings и Score са непроменени. Това е подкрепа за преглед, без обещание за единствена правилна поправка.
+
+При изричен правописен избор Live запазва простия кирилски регистър: „друфа“→„друга“, „Друфа“→„Друга“, „ДРУФА“→„ДРУГА“. Mixed/неподдържан source и смислено главни dictionary форми запазват raw предложението. Combining marks не се нормализират; заменя се само оригиналният проверен UTF-16 диапазон. Невалидни surrogate/mark граници не предлагат действие.
+
+Корекцията на позната, но неподходяща дума още не е реализирана. В „Рисувам сипя река.“ „сипя“ е exact-known (`NotRequestedKnown`) и няма такава диагностична поправка. Отделно `FindSimilar("сипя", 1, 10)` намира „синя“ на позиция 5, без доказателство за намерението или единствена корекция. Context остава Ambiguous и Syntax се въздържа и при поправения вариант и правилните контроли; това въздържане не е диагноза за грешка.
+
+Локалната проверка е Release PASS, Public203/Web174/client84 PASS без failures/skips и syntax2 PASS. Product141, public signatures и трите inward dependency edges са непроменени. Реалният browser сценарий запазва emoji/NFD prefix, guarded manual replacements и stale actions при забавен стар отговор; индивидуалните времена и ограничения са в [Web guide](apps/BgLang.Web/README.md). Това не е общ grammar repair или latency гаранция.
+
+## Исторически snapshot — Preview10 и предходни версии
+
+Цялото съдържание по-долу пази предишните dated source snapshots, версии, линкове и доказателства; техните „текущ“, „pending“ и validation формулировки не описват Preview11.
+
 ## Preview10 — source/runtime distribution
 
 [`v0.1.0-preview.10`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.10) е целевата версия на този guide. Това е **snapshot от подготовката преди окончателната публикация**: връзките по-долу задават release имената и стават достъпни след публикуване. За актуалния статус, точния public source/tag, действителните main/tag CI резултати и окончателната анонимна bytes/hash сверка на всичките 11 assets проверявайте release страницата. Този source текст не удостоверява завършването им или public hosting.

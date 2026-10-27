@@ -1,5 +1,28 @@
 # BgLang Live — езикова лаборатория
 
+## Preview11 — текущ source snapshot
+
+[Preview11 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.11) е authority за окончателния publication/CI/readback статус. Този source snapshot е преди финалната публикация. Matching source и runtime използват същия complete package `bglang-neutral:36b0b69685d6d3e9`; [quickstart](../../README.md) задава точните download имена. Default local host остава `http://127.0.0.1:5070/demo`.
+
+Измерен пример със същия complete package: в „Това е новз дете.“ предложението „ново“ се премества от сурова позиция 4 на контекстна позиция 1; при „Това е новз книга.“ „нова“ се премества от 2 на 1. Distance остава първият критерий, а raw Alternatives, пълните readings и Score са непроменени. Това е подкрепа за преглед, без обещание за единствена правилна поправка.
+
+При изричен правописен избор Live запазва простия кирилски регистър: „друфа“→„друга“, „Друфа“→„Друга“, „ДРУФА“→„ДРУГА“. Mixed/неподдържан source и смислено главни dictionary форми запазват raw предложението. Combining marks не се нормализират; заменя се само оригиналният проверен UTF-16 диапазон. Невалидни surrogate/mark граници не предлагат действие.
+
+Корекцията на позната, но неподходяща дума още не е реализирана. В „Рисувам сипя река.“ „сипя“ е exact-known (`NotRequestedKnown`) и няма такава диагностична поправка. Отделно `FindSimilar("сипя", 1, 10)` намира „синя“ на позиция 5, без доказателство за намерението или единствена корекция. Context остава Ambiguous и Syntax се въздържа и при поправения вариант и правилните контроли; това въздържане не е диагноза за грешка.
+
+### Проверен локален browser сценарий — 27 октомври 2026
+
+Оригиналните Live JS/CSS и complete package са проверени с Chrome156 върху Windows, видим viewport375×1061, default budget30POST/min и една serial POST лента. Краткият текст „😀 ѝ. Аз чете. Това е Друфа дума. ДРУФА дом.“ показва затвореното предупреждение за „Аз чете.“ и ръчните „Друга“/„ДРУГА“ замени на original UTF-16 spans23+5/35+5. Реална редакция на средния span23..33 запазва prefix/suffix. При задържан parsed стар response и по-нов input старите spelling/stress действия се обезсилват; старият отговор не става свеж, после „нова“ е първото съвместимо предложение пред „книга“.
+
+Измерени са отделни warmed browser input samples: 259,20ms до първия exact fresh DOM и 369,50ms до double-rAF rendering opportunity; след middle edit — 2081,60ms/2148,50ms, включително cadence/queue при30POST/min. Ръчно задържаният стар body е задържан22,02s общо; по-късният последен input достига свежия DOM за12949,20ms и double-rAF за13003,90ms. Последният actual HTTP parsed body е97,50ms. Това са три отделни наблюдения с debounce, queue, network и render; не percentiles, физическо pixel време или обща latency гаранция. Сценарият има9POST/max1 active body, всички200. Native IME не е упражнен; composition/stale callback controls са отделни client tests. Временният observer е извън Product и не се публикува; първият capture-microtask observer запис е запазен, а поправеният повторен run е без freshness mismatches.
+
+Локално: exact Release build, focused1, Public203/Web174 и Node22.15 client84/syntax2 са PASS, без failures/skips. Node24 hosted validation се удостоверява от действителните CI logs на release страницата.
+
+## Исторически snapshot — Preview10 и предходни версии
+
+Следващият текст пази предходните version/status/results snapshots; старите „текущ“, client80 и pending формулировки не описват Preview11.
+
+
 ## Preview10 — локален Web consumer
 
 Този guide описва [Preview10](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.10) source/runtime distribution. **Текстът е snapshot преди окончателната публикация**; целевите download връзки в [Preview10 quickstart](../../README.md) стават достъпни след release. Release страницата е authority за текущия статус, exact public source/tag, действителните main/tag CI и all11 anonymous bytes/hash readback. Тук няма предварителен hosted PASS или public hosting claim. Използвайте matching source и четирифайлов runtime от една версия. От source папката с runtime в `./runtime`:
