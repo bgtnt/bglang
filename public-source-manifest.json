@@ -1309,8 +1309,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 54066,
-      "sha256": "ca642a5f5cb1a151234c007d528bd10bada580c74d42af93dbb1306aa4e48b6d"
+      "bytes": 57135,
+      "sha256": "79d06040b313d7892b4c2d8d81f537c2afe3bb09175db2b1e3808a1f7c1c08fd"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1344,8 +1344,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 84167,
-      "sha256": "c6eb731fd72036d49bb88d2c44f13e5c710fb22e141b0c296382a39e32c65524"
+      "bytes": 86789,
+      "sha256": "5c7b6d5c50f0d9f13e9e25bae968c4b80102df51420b4ee7129facd2d064a920"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1844,8 +1844,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
-      "bytes": 5490,
-      "sha256": "d95743888ea959ed726cf102cfb3b025306b34758590129adf02d1fd10b8f59c"
+      "bytes": 6134,
+      "sha256": "820ff13cb65d64bb451930fa2abfe6f5266a32a26f7f3ad23953a1ba9aee9fd2"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextJointSelection.cs",
@@ -1854,8 +1854,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextLanes.cs",
-      "bytes": 48191,
-      "sha256": "464695097ea5218908a406f056427341f4472a7920b97895d536010d7deed66a"
+      "bytes": 48271,
+      "sha256": "dec0b4422930b41dd7260208efdf2418b853d55c8d31b620767e8be64206e195"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextReadingProjection.cs",
@@ -2119,8 +2119,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 45822,
-      "sha256": "94e35cd799a6eb9c1c2bfccbb91b282021e5a54cfee202e826d12364ae29eb4c"
+      "bytes": 45864,
+      "sha256": "54bae8e9fe05e4b32b432248494773011f0118a311b693f16ba9a1140462a075"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2414,8 +2414,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContinuationAnalyzer.cs",
-      "bytes": 14913,
-      "sha256": "cc8a011ae1ec593cdc0ed9db5c075269a86ac4d044877e71169f2dfb2d8742a6"
+      "bytes": 14969,
+      "sha256": "e2e5967986114ca0e8e4ba59c89612f6d83a35abe55461896e9e84c14f561477"
     },
     {
       "path": "src/BgLang.Core/Kernel/PrefixDiscoveryResult.cs",

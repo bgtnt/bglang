@@ -1,5 +1,29 @@
 # BgLang Live — езикова лаборатория
 
+## Preview12 — обща typed agreement основа
+
+Локалният Web consumer използва общите typed tuple сравнения на Context, Continuation, Spelling и Validation. HTTP contract, guarded editor actions, eligibility и evidence authority се пазят.
+
+Fresh Release/complete-package validation е PASS: Full4472P/0F/13 historical NE, Public203/Web174/client84 и syntax2; fresh CLI3 също е PASS. Това е maintenance партида със запазено поведение.
+
+Локалната final validation и едното независимо review са PASS, без blocking findings; accepted=true, published=false към този source snapshot. Следват разрешените scoped commit и publication. Release страницата удостоверява действителните source/tag, main/tag CI и окончателната all11 bytes/SHA сверка след публикацията.
+
+## Локален Web старт с Preview12
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/SHA256SUMS) от [Preview12 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.12). Това са бъдещите release targets към snapshot-а; release страницата е окончателната publication authority. След hash verification поставете четирите runtime файла в `./runtime`. Canonical SDK е **10.0.402** от matching source `global.json`. От source папката:
+
+~~~powershell
+$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7'
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+~~~
+
+Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`. [Root quickstart](../../README.md) и [release guide](../../packaging/RELEASE-CANDIDATE.md) описват matching source/runtime verification.
+
+## Исторически snapshot — Preview11 и предходни версии
+
+Следващите browser/latency/client и publication наблюдения пазят оригиналните си версии и дати; те не са нов browser/IME или hosted result за foundation партидата.
+
 ## Preview11 — текущ source snapshot
 
 [Preview11 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.11) е authority за окончателния publication/CI/readback статус. Този source snapshot е преди финалната публикация. Matching source и runtime използват същия complete package `bglang-neutral:36b0b69685d6d3e9`; [quickstart](../../README.md) задава точните download имена. Default local host остава `http://127.0.0.1:5070/demo`.

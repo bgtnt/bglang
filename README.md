@@ -2,6 +2,31 @@
 
 BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
+## Preview12 — обща typed agreement основа
+
+Maintenance партидата споделя tuple сравненията между Context, Continuation, Spelling и Validation. Съществуващите eligibility/aggregation guards, original reading refs, scores и order се пазят; public API/schema и grammar scope са непроменени.
+
+Fresh Release/complete-package validation е PASS: Full4472P/0F/13 historical NE (4485 exact leaves), Public203/Web174/client84/syntax2 и fresh CLI3. Runtime цената е +822 bytes/+13 LOC; public signatures и трите inward dependency edges са запазени.
+
+Локалната final validation и едното независимо review са PASS, без blocking findings; accepted=true, published=false към този source snapshot. Следват разрешените scoped commit и publication. Release страницата удостоверява действителните source/tag, main/tag CI и окончателната all11 bytes/SHA сверка след публикацията.
+
+## Бърз старт с Preview12
+
+Целевите matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/SHA256SUMS) са за [избраната Preview12 release страница](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.12). Връзките са бъдещи release targets към този source snapshot и стават достъпни след публикуване. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`, с `runtime/manifest.json`. Използвайте canonical .NET SDK **10.0.402** от `global.json` в matching source ZIP. От source папката:
+
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+Complete runtime остава `bglang-neutral:36b0b69685d6d3e9`, manifest SHA-256 `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7`. [Web guide](apps/BgLang.Web/README.md) описва локалния HTTP host, а [release guide](packaging/RELEASE-CANDIDATE.md) — source/package verification.
+
+## Исторически snapshot — Preview11 и предходни версии
+
+Следващите version/status/results и quickstart тела пазят оригиналния си контекст; те не удостоверяват новата foundation партида.
+
 ## Preview11 — source/runtime distribution
 
 Този source snapshot подготвя [v0.1.0-preview.11](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.11). Release страницата е authority за публикуваните source/tag, actual main/tag CI и all11 anonymous bytes/hash readback; source текстът предхожда окончателната публикация. Preview10 остава отделен immutable release.

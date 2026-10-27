@@ -438,8 +438,8 @@ internal static class ContextLanes
                 // Only a completely disjoint measured relation licenses a mismatch.
                 // Pairwise matches to different heads do not identify a blamed modifier.
                 int[] compatibleFinite = finite.Where(i => { Check(); return heads.Any(h =>
-                    T(predicate).Readings[i].Features.Person == MorphologicalPerson.Third &&
-                    T(predicate).Readings[i].Features.Number == h.Number); }).ToArray();
+                    Guard.PersonNumberTupleMatches((MorphologicalPerson.Third, h.Number),
+                        (T(predicate).Readings[i].Features.Person, T(predicate).Readings[i].Features.Number))); }).ToArray();
                 for (int a = 0; a < head; a++)
                 {
                     Check();
@@ -517,7 +517,8 @@ internal static class ContextLanes
                 return Guard.Agreement.Unmeasured;
             if (s.Category == Category.Pronoun && s.Person is null) return Guard.Agreement.Unmeasured;
             MorphologicalPerson? person = s.Category == Category.Noun ? MorphologicalPerson.Third : s.Person;
-            return person == p.Person && s.Number == p.Number ? Guard.Agreement.Compatible : Guard.Agreement.Mismatch;
+            return Guard.PersonNumberTupleMatches((person, s.Number), (p.Person, p.Number))
+                ? Guard.Agreement.Compatible : Guard.Agreement.Mismatch;
         }
         private bool PersonalGroup(Group p) => p.Members.Length > 0 && p.Members.All(i =>
             Guard.IsPersonalPredicate(T(p.Token).Readings[i].Features) &&

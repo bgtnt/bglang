@@ -181,7 +181,7 @@ internal static class TextValidationAnalyzer
                 foreach (MorphologicalFeatures noun in n)
                 {
                     ct.ThrowIfCancellationRequested();
-                    if (noun.Number != n[0].Number || noun.Number == MorphologicalNumber.Singular && noun.Gender != n[0].Gender)
+                    if (!ContextEvidenceGuards.NominalTupleMatches((noun.Number, noun.Gender), (n[0].Number, n[0].Gender)))
                         throw new ArgumentException("Nominal supports must share one coherent head tuple.");
                 }
                 foreach (MorphologicalFeatures adj in a)
@@ -204,8 +204,8 @@ internal static class TextValidationAnalyzer
             if (finiteCompatible)
             {
                 MorphologicalFeatures[] nounFeatures = Features(heads[0].Readings, heads[0].GraphReadings);
-                if (nounFeatures.Length == 0 || predicateFeatures.Any(f => f.Person != MorphologicalPerson.Third ||
-                    nounFeatures.Any(n => n.Number != f.Number)))
+                if (nounFeatures.Length == 0 || predicateFeatures.Any(f => nounFeatures.Any(n =>
+                    !ContextEvidenceGuards.PersonNumberTupleMatches((MorphologicalPerson.Third, n.Number), (f.Person, f.Number)))))
                     throw new ArgumentException("Compatible nominal phrase needs one measured finite relation.");
             }
             var byToken = new Dictionary<int, TextContextRoleSelection>();

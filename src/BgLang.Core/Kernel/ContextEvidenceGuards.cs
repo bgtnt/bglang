@@ -10,6 +10,19 @@ internal static class ContextEvidenceGuards
 {
     internal enum Agreement { Unmeasured, Compatible, Mismatch }
 
+    // Compare already measured tuples only. Callers retain category, feature,
+    // topology and completeness policy; equality alone does not establish support.
+    internal static bool NominalTupleMatches(
+        (MorphologicalNumber? Number, MorphologicalGender? Gender) left,
+        (MorphologicalNumber? Number, MorphologicalGender? Gender) right) =>
+        left.Number == right.Number &&
+        (left.Number == MorphologicalNumber.Plural || left.Gender == right.Gender);
+
+    internal static bool PersonNumberTupleMatches(
+        (MorphologicalPerson? Person, MorphologicalNumber? Number) left,
+        (MorphologicalPerson? Person, MorphologicalNumber? Number) right) =>
+        left.Person == right.Person && left.Number == right.Number;
+
     internal static bool IsPersonalPredicate(MorphologicalFeatures f) =>
         !f.HasConflictingFeatures && f.PartOfSpeech == MorphologicalPartOfSpeech.Verb &&
         f.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative &&
@@ -45,8 +58,7 @@ internal static class ContextEvidenceGuards
             cancellationToken.ThrowIfCancellationRequested();
             MorphologicalFeatures reading = attribute[i];
             if (reading.PartOfSpeech != MorphologicalPartOfSpeech.Adjective || !ExplicitNominalTuple(reading) ||
-                reading.Number != nounTuple.Number ||
-                reading.Number == MorphologicalNumber.Singular && reading.Gender != nounTuple.Gender)
+                !NominalTupleMatches((reading.Number, reading.Gender), nounTuple))
                 continue;
             var tuple = (reading.Number, reading.Gender);
             if (selectedTuple is { } previous && previous != tuple) return [];
@@ -65,8 +77,7 @@ internal static class ContextEvidenceGuards
     internal static bool AttributeAgreement(MorphologicalFeatures attribute, MorphologicalFeatures noun) =>
         attribute.PartOfSpeech == MorphologicalPartOfSpeech.Adjective &&
         noun.PartOfSpeech == MorphologicalPartOfSpeech.Noun && HasNominalAxes(attribute) && HasNominalAxes(noun) &&
-        attribute.Number == noun.Number &&
-        (noun.Number == MorphologicalNumber.Plural || attribute.Gender == noun.Gender);
+        NominalTupleMatches((attribute.Number, attribute.Gender), (noun.Number, noun.Gender));
 
     private static bool ExplicitNominalTuple(MorphologicalFeatures f) =>
         !f.HasConflictingFeatures && IsNumber(f.Number) &&

@@ -86,9 +86,10 @@ internal static class TextContinuationAnalyzer
         bool Eligible(MorphologicalFeatures f) => target == TextContinuationTarget.Noun
             ? IsNominal(f, MorphologicalPartOfSpeech.Noun) && f.Article == MorphologicalArticle.Indefinite : IsFinite(f);
         bool Matches(MorphologicalFeatures f, int index) => target == TextContinuationTarget.Noun
-            ? f.Number == nominal![index].Number &&
-                (f.Number == MorphologicalNumber.Plural || f.Gender == nominal[index].Gender)
-            : f.Person == finite[index].Person && f.Number == finite[index].Number;
+            ? ContextEvidenceGuards.NominalTupleMatches((f.Number, f.Gender),
+                (nominal![index].Number, nominal[index].Gender))
+            : ContextEvidenceGuards.PersonNumberTupleMatches((f.Person, f.Number),
+                (finite[index].Person, finite[index].Number));
         bool Compatible(WordReading reading)
         {
             ct.ThrowIfCancellationRequested();
@@ -188,8 +189,8 @@ internal static class TextContinuationAnalyzer
                     ct.ThrowIfCancellationRequested();
                     var row = word.Readings[i];
                     return row.Category == ContextLanes.Category.Adjective && IsNominal(row.Features, MorphologicalPartOfSpeech.Adjective) &&
-                        row.Features.Number == tuple.Number && row.Features.Article == article &&
-                        (tuple.Number == MorphologicalNumber.Plural || row.Features.Gender == tuple.Gender);
+                        ContextEvidenceGuards.NominalTupleMatches((row.Features.Number, row.Features.Gender),
+                            (tuple.Number, tuple.Gender)) && row.Features.Article == article;
                 }).ToArray();
                 if (members.Length == 0) break;
                 attributes.Add(Support(word, TextContextRole.Attribute, members, morphology, ct, "nominal_attribute_interpretation"));
