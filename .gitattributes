@@ -167,3 +167,9 @@ tests/BgLang.Tests/Kernel/Fixtures/preview6-repair-consumer-pins.v1.json text eo
 data/dictionary/public-input-lock.v1.json -text
 data/dictionary/current-editorial-reproduction.v1.json -text
 data/dictionary/cheta-editorial-stress-overlay.v1.json -text
+
+# Preserve independent package acceptance fixture bytes.
+tests/Shared/Fixtures/editorial-stress-acceptance.v1.json -text
+tests/BgLang.Public.Tests/Fixtures/article-seeds.development.v1.json -text
+tests/BgLang.Public.Tests/Fixtures/article-controls.v1.json -text
+tests/BgLang.Public.Tests/Fixtures/article-projection.v1.json -text

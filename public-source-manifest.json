@@ -1304,8 +1304,8 @@
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 12249,
-      "sha256": "09c32bb7e7f03b4aeedf81251a3129909c1ec340ca7e07eca652c02db592375a"
+      "bytes": 12580,
+      "sha256": "590efa87b6a51dd89426a3a69098c0535d68bacaa47fa17cb9c3278a4b2e31db"
     },
     {
       "path": ".github/workflows/windows-public.yml",
