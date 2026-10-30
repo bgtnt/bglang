@@ -10,6 +10,7 @@ internal static class Program
         Console.OutputEncoding = new UTF8Encoding(false);
         bool build = args.Length == 4 && args[0] == "build";
         bool export = args.Length == 3 && args[0] == "export";
+        bool stressOverlay = args.Length == 5 && args[0] == "apply-stress-overlay";
         bool retainLemmas = args.Length == 4 && args[0] == "retain-lemmas";
         bool promoteNative = args.Length == 4 && args[0] == "promote-native";
         bool correctStored = args.Length == 4 && args[0] == "correct-stored";
@@ -20,10 +21,11 @@ internal static class Program
             (args.Length == 4 || args[4] == "--replace-form-stress");
         bool compactStress = args.Length == 4 && args[0] == "compact-stress";
         bool importStress = args.Length == 7 && args[0] == "import-legacy-stress";
-        if (!build && !export && !remove && !carryStress && !retainLemmas && !promoteNative && !correctStored && !measureOpen && !importStress && !compactStress)
+        if (!build && !export && !remove && !carryStress && !retainLemmas && !promoteNative && !correctStored && !measureOpen && !importStress && !compactStress && !stressOverlay)
         {
             Console.Error.WriteLine("Употреба: build <lexemes.source.jsonl> <reviewed-graph.json> <new-output-directory>");
             Console.Error.WriteLine("Или: export <manifest.json> <new-source-directory>");
+            Console.Error.WriteLine("Или: apply-stress-overlay <authoring.json> <graph.json> <overlay.json> <new-source-directory>");
             Console.Error.WriteLine("Или: retain-lemmas <manifest.json> <source-bound-selection.json> <new-package-directory>");
             Console.Error.WriteLine("Или: promote-native <manifest.json> <current-graph.json> <new-package-directory>");
             Console.Error.WriteLine("Или: correct-stored <manifest.json> <source-bound-replacements.json> <new-package-directory>");
@@ -37,7 +39,7 @@ internal static class Program
         }
         try
         {
-            object result = compactStress ? LegacyStressCompactor.Compact(args[1], args[2], args[3]) : importStress ? LegacyStressImporter.Import(args[1], args[2], args[3], args[4], args[5], args[6]) :
+            object result = stressOverlay ? AuthoringStressOverlay.Apply(args[1], args[2], args[3], args[4]) : compactStress ? LegacyStressCompactor.Compact(args[1], args[2], args[3]) : importStress ? LegacyStressImporter.Import(args[1], args[2], args[3], args[4], args[5], args[6]) :
                 correctStored ? StoredSourceCorrection.Correct(args[1], args[2], args[3]) : measureOpen ? PackageOpenMeasurement.Run(args[1]) : promoteNative
                 ? NativeSourcePromotion.Promote(args[1], args[2], args[3]) : retainLemmas ? StoredLemmaMigration.RetainLemmas(args[1], args[2], args[3]) : build ? NeutralSourceBuilder.Build(args[1], args[2], args[3]) : export
                 ? NeutralSourceEditor.Export(args[1], args[2])

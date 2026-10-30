@@ -58,7 +58,10 @@ internal static class TextContextAnalyzer
             TextContextRoleSelection MapRole(ContextOverlayRoleSelection role) => new((TextContextRole)role.Role,
                 role.TokenIndex, role.Start, role.Length, References(role.TokenIndex, role.AlternativeIndices), Freeze(role.EvidenceCodes))
                 { GraphReadings = GraphReferences(role.TokenIndex, role.AlternativeIndices) };
-            var candidates = input.Candidates.Concat(exactDiagnostics?.Candidates ?? []).Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
+            ContextOverlayInput? prefixDiagnostics = productive is null
+                ? ContextLanes.CalculateExactPronounPrefix(analysis.Text, sentence, laneWords, CanonicalKey, cancellationToken) : null;
+            var candidates = input.Candidates.Concat(exactDiagnostics?.Candidates ?? [])
+                .Concat(prefixDiagnostics?.Candidates ?? []).Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
                 candidate.Selectable, candidate.AuthorityLane, candidate.Score, candidate.CanonicalKey,
                 Freeze(candidate.Roles.Select(MapRole)), Freeze(candidate.EvidenceCodes)));
             contextSentences.Add(new(sentence.Start, sentence.Length, !input.Truncated,
@@ -176,7 +179,7 @@ internal static class TextContextAnalyzer
         {
             ct.ThrowIfCancellationRequested();
             foreach (var group in sentence.Candidates.Where(candidate =>
-                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane or ContextLanes.ExactAgreementLane &&
+                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane or ContextLanes.ExactAgreementLane or ContextLanes.ExactPronounPrefixLane &&
                 candidate.EvidenceCodes.Any(code => code is ContextLanes.ProductiveGraphMismatch or ContextLanes.ProductiveAttributeMismatch))
                 .GroupBy(candidate => (candidate.PredicateTokenIndex, candidate.AuthorityLane,
                     Attribute: candidate.EvidenceCodes.FirstOrDefault(code => code.StartsWith("attribute_mismatch_token=", StringComparison.Ordinal)))))
@@ -186,7 +189,8 @@ internal static class TextContextAnalyzer
                 int attributeToken = attributeMismatch ? int.Parse(group.Key.Attribute!.AsSpan("attribute_mismatch_token=".Length), CultureInfo.InvariantCulture) : -1;
                 TextContextRoleSelection[] relation = roles.Where(role => role.Role == TextContextRole.Subject ||
                     (attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken : role.Role == TextContextRole.Predicate)).ToArray();
-                bool exact = group.Key.AuthorityLane == ContextLanes.ExactAgreementLane;
+                bool prefix = group.Key.AuthorityLane == ContextLanes.ExactPronounPrefixLane;
+                bool exact = prefix || group.Key.AuthorityLane == ContextLanes.ExactAgreementLane;
                 TextContextRoleSelection? target = exact
                     ? relation.FirstOrDefault(role => attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken
                         : role.Role == TextContextRole.Predicate)
@@ -195,6 +199,10 @@ internal static class TextContextAnalyzer
                     throw new InvalidOperationException("Agreement mismatch needs original support in its actual relation.");
                 if (exact && !attributeMismatch && existingDiagnostics is not null && existingDiagnostics.Any(old =>
                     old.Code == "pronoun_verb_agreement_mismatch" && old.Start == target.Start && old.Length == target.Length)) continue;
+                if (prefix && (output.Any(old => old.Code == ContextLanes.ProductiveGraphMismatch &&
+                    old.Start == target.Start && old.Length == target.Length) || existingDiagnostics is not null &&
+                    existingDiagnostics.Any(old => old.RuleId != ContextLanes.ExactPronounPrefixLane &&
+                        old.Code == ContextLanes.ProductiveGraphMismatch && old.Start == target.Start && old.Length == target.Length))) continue;
                 output.Add(new(attributeMismatch ? ContextLanes.ProductiveAttributeMismatch : ContextLanes.ProductiveGraphMismatch,
                     target.Start, target.Length, group.Key.AuthorityLane!)
                 {
@@ -205,6 +213,112 @@ internal static class TextContextAnalyzer
                 });
             }
         }
+        return Freeze(output);
+    }
+
+    internal const string LocalAttributeAgreementRule = "local_exact_attribute_agreement.v1";
+
+    // Local exact modifier/head evidence; no subject or predicate role is inferred.
+    internal static IReadOnlyList<TextDiagnostic> LocalAttributeAgreementDiagnostics(TextAnalysis analysis,
+        CancellationToken ct, MorphologyEvidenceProjection.View? sharedMorphology = null)
+    {
+        ArgumentNullException.ThrowIfNull(analysis);
+        ct.ThrowIfCancellationRequested();
+        MorphologyEvidenceProjection.View morphology = sharedMorphology ?? MorphologyEvidenceProjection.Create(analysis, ct);
+        if (morphology.UnavailableReason is not null) return [];
+        List<TextDiagnostic> output = [];
+        int cursor = 0, previousEnd = 0;
+        foreach (SentenceSpan sentence in analysis.Sentences)
+        {
+            ct.ThrowIfCancellationRequested();
+            long end = (long)sentence.Start + sentence.Length;
+            if (sentence.Start < previousEnd || sentence.Length < 0 || end > analysis.Text.Length)
+                throw new ArgumentException("Local attribute sentences must be ordered original spans.", nameof(analysis));
+            previousEnd = (int)end;
+            while (cursor < morphology.OrderedTokens.Count &&
+                analysis.Tokens[morphology.OrderedTokens[cursor].Index].Start < sentence.Start)
+            { ct.ThrowIfCancellationRequested(); cursor++; }
+            List<ContextLanes.TokenView> words = [];
+            while (cursor < morphology.OrderedTokens.Count)
+            {
+                ct.ThrowIfCancellationRequested();
+                var entry = morphology.OrderedTokens[cursor];
+                TokenAnalysis token = analysis.Tokens[entry.Index];
+                if (token.Start >= end) break;
+                if ((long)token.Start + token.Length > end)
+                    throw new ArgumentException("Local attribute Word straddles its original sentence.", nameof(analysis));
+                Rows rows = entry.Rows;
+                words.Add(new(entry.Index, token, rows.Canonical, rows.UsesGraph ? [] : rows.Lanes, true)
+                    { UsesGraph = rows.UsesGraph });
+                cursor++;
+            }
+            if (words.Count == 0 || !TerminalTail(words[^1].Token)) continue;
+            bool Pure(int i, ContextLanes.Category category, MorphologicalPartOfSpeech pos)
+            {
+                ContextLanes.TokenView word = words[i];
+                if (!word.Complete || word.UsesGraph || word.Readings.Count == 0) return false;
+                foreach (ContextLanes.ReadingView row in word.Readings)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (row.Category != category || row.Features.PartOfSpeech != pos ||
+                        !ContextEvidenceGuards.HasNominalAxes(row.Features)) return false;
+                }
+                return true;
+            }
+            bool Bridge(int a, int b)
+            {
+                if (b != a + 1 || words[b].OriginalIndex != words[a].OriginalIndex + 1) return false;
+                int from = words[a].Token.Start + words[a].Token.Length, to = words[b].Token.Start;
+                if (from >= to) return false;
+                for (int p = from; p < to; p++)
+                { ct.ThrowIfCancellationRequested(); if (!char.IsWhiteSpace(analysis.Text[p])) return false; }
+                return true;
+            }
+            bool TerminalTail(TokenAnalysis last)
+            {
+                ReadOnlySpan<char> tail = analysis.Text.AsSpan(last.Start + last.Length,
+                    (int)end - last.Start - last.Length).Trim();
+                bool terminator = false;
+                foreach (char c in tail)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (SentenceBoundaryDetector.IsSentenceTerminator(c)) terminator = true;
+                    else if (!SentenceBoundaryDetector.IsSentenceClosingWrapper(c) && c != '}') return false;
+                }
+                return terminator;
+            }
+            for (int first = 0; first < words.Count;)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!Pure(first, ContextLanes.Category.Adjective, MorphologicalPartOfSpeech.Adjective)) { first++; continue; }
+                int last = first;
+                while (last + 1 < words.Count && Bridge(last, last + 1) &&
+                    Pure(last + 1, ContextLanes.Category.Adjective, MorphologicalPartOfSpeech.Adjective)) last++;
+                int head = last + 1;
+                if (head < words.Count && Bridge(last, head) &&
+                    Pure(head, ContextLanes.Category.Noun, MorphologicalPartOfSpeech.Noun))
+                {
+                    List<ContextLanes.TokenView> local = words.GetRange(first, head - first + 1);
+                    ContextLanes.NominalPhrase? phrase = ContextLanes.NominalMembers(local, local.Count - 1, ct);
+                    if (phrase is not null)
+                        for (int a = 0; a < phrase.AttributeMembers.Length; a++)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            if (phrase.AnyAttributeMatch[a]) continue;
+                            ContextLanes.TokenView target = local[a], noun = local[^1];
+                            output.Add(new(ContextLanes.ProductiveAttributeMismatch, target.Token.Start,
+                                target.Token.Length, LocalAttributeAgreementRule)
+                            {
+                                Readings = Freeze(phrase.AttributeMembers[a].Select(r => new TextReadingReference(target.OriginalIndex, r))
+                                    .Concat(phrase.NounMembers.Select(r => new TextReadingReference(noun.OriginalIndex, r)))
+                                    .OrderBy(r => r.TokenIndex).ThenBy(r => r.CompleteReadingIndex))
+                            });
+                        }
+                }
+                first = last + 1;
+            }
+        }
+        ct.ThrowIfCancellationRequested();
         return Freeze(output);
     }
 

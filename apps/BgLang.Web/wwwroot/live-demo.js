@@ -107,9 +107,11 @@ const diagnosticWarningCodes = new Set([
   "digit_shape_ocr_known_candidate",
   "accent_sensitive_i_grave",
   "spelling_unknown_word_unique_distance_one_candidate",
+  "joined_verb_negation_should_be_separate",
   "pronoun_verb_agreement_mismatch",
   "preposition_missing_complement",
   "full_article_expected_for_subject_candidate",
+  "short_article_expected_after_preposition_candidate",
   "productive_morphology_agreement_mismatch",
   "productive_attribute_agreement_mismatch"
 ]);
@@ -121,13 +123,23 @@ const diagnosticLabels = {
 
 export function diagnosticPresentation(data, token = null) {
   const validation = data?.validation;
+  const original = data?.diagnostics || [];
+  const mirroredArticle = diagnostic => original.some(old =>
+    old.code === diagnostic.code && old.start === diagnostic.start && old.length === diagnostic.length
+    && diagnostic.basis === 'existing_diagnostic=' + old.ruleId + ';bounded_article_advice');
+  const seen = new Set();
   const messages = [
-    ...(data?.diagnostics || []),
-    ...(validation?.diagnostics || []),
+    ...original,
+    ...(validation?.diagnostics || []).filter(diagnostic => !mirroredArticle(diagnostic)),
     ...(validation?.spacingDiagnostics || []),
     ...(validation?.subordinateCommaDiagnostics || []),
     ...(validation?.fragmentDiagnostics || [])
-  ].map(diagnostic => {
+  ].filter(diagnostic => {
+    const key = JSON.stringify(diagnostic);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(diagnostic => {
     const classification = diagnostic.code === 'full_short_article_check_not_ready'
       ? 'unsupported-check' : diagnosticWarningCodes.has(diagnostic.code) ? 'warning' : 'information';
     const label = diagnosticLabels[classification];

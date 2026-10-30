@@ -7,4 +7,5 @@
   <Folder Name="/tests/">
     <Project Path="tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj" />
   </Folder>
+  <Project Path="apps/BgLang.Web/BgLang.Web.csproj" />
 </Solution>

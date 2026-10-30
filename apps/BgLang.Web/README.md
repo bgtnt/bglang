@@ -1,4 +1,30 @@
+# BgLang Live — Preview13: актуален локален старт
+
+[Preview13 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13) е окончателният източник за публикационния статус, наличните файлове и действителните CI/readback резултати. Следващите връзки са целеви адреси до публикуването: [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.13/packaging/RELEASE-CANDIDATE.md). Този текст не удостоверява предварително публикация или успешен hosted run.
+
+Използвайте matching source/runtime след проверка на SHA256SUMS. SDK е **10.0.403** от `global.json`. Готовият runtime не изисква authoring inputs: поставете четирите му файла в `./runtime`. Current е `bglang-neutral:90bea7c5c799f04d` с manifest SHA-256 `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7`; Baseline `bglang-neutral:36b0b69685d6d3e9` е отделен изричен reproduction профил. От source папката:
+
+~~~powershell
+$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = 'c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7'
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+~~~
+
+Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`; експерименталната лаборатория е `/demo-lab/index.html`. Командата и manifest bindings са съществуващият Web старт с Current pin. [Root quickstart](../../README.md) и [release guide](../../packaging/RELEASE-CANDIDATE.md) описват проверката и отделното възпроизвеждане на пакета.
+
+Актуалният ограничен обхват включва prepositional article проверки с независими опори, guarded literal предложения за joined negation и корекции на lexical/stress данните; inferred stress evidence не е нормативна сигурност. При `"context":{"includeNominalConstructions":true}` в `POST /api/v1/analyze-text` и `/api/v2/analyze-text` се включват съществуващите ограничени NP и finite+NP advisory предложения; по подразбиране opt-in е false. Алтернативите и оригиналните UTF-16 refs се запазват, а редакцията изисква изрично действие. Бъдещият nominal→finite continuation successor е извън тази версия. Това не означава, че всички 33 рапортувани въпроса са решени, или че липсата на предупреждение доказва обща граматична правилност.
+
+## Исторически source snapshots — запазен оригинален текст
+
+Следващият текст е запазен RAW и пази предходните версии, статуси и измервания; старите „непубликуван“, SDK402 и Preview12 quickstart формулировки не заменят актуалния старт по-горе.
+
 # BgLang Live — езикова лаборатория
+
+## Непубликуван API opt-in — именни ядра
+
+Текущият source приема `"context":{"includeNominalConstructions":true}` в `POST /api/v1/analyze-text` и `/api/v2/analyze-text`. Новото поле `nominalConstructions` се запазва в `raw-v1`, `shared-donors-v1` и `shared-analyses-v1`; без opt-in то липсва. [Договорът и примерът](../../README.md#непубликуван-source--именни-ядра-и-контекстни-предложения) описват максималните `NP` ядра, оригиналните refs и отделните advisory варианти с видим no-change. Кандидатните `replacementReadings` адресират само `alternative.readings`, никога оригиналния токен.
+
+Тази API възможност е отделна от публикувания Preview12 и няма автоматично редактиране. [Central evidence](../../Docs/NOMINAL-FUSION-EVIDENCE-2026-10-29.json) описва функционалния Source1 Full и отделната allowlisted source closure; consumer gate е PASS228/177 и заключителният независим review е успешен. Dated резултатите по-долу са исторически.
 
 ## Preview12 — обща typed agreement основа
 

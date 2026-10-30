@@ -15,4 +15,8 @@
     <PackageReference Include="MSTest.TestAdapter" Version="4.2.3" />
     <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/EditorialStressAcceptance.cs" Link="EditorialStressAcceptance.cs" />
+    <Content Include="../Shared/Fixtures/editorial-stress-acceptance.v1.json" Link="data/editorial-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

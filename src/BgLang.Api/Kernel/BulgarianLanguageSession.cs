@@ -320,10 +320,10 @@ public sealed class BulgarianLanguageSession : IDisposable
         }
         AddDiagnostics(() => BasicSentenceShapeAnalyzer.Analyze(text, sentences));
         TextSpellingEvidence spelling = TextSpellingAnalyzer.Analyze(tokens, spellingCache, cancellationToken);
-        AddDiagnostics(() => SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon, cancellationToken, spellingCache));
+        AddDiagnostics(() => SpellingProjectionAnalyzer.Analyze(tokens, package.Lexicon, cancellationToken, spellingCache, sentences));
         AddDiagnostics(() => WordFormationEvidenceAnalyzer.Analyze(tokens));
         AddDiagnostics(() => PronounVerbAgreementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
-        AddDiagnostics(() => PrepositionComplementAnalyzer.Analyze(tokens, sentences, package.Lexicon));
+        AddDiagnostics(() => PrepositionComplementAnalyzer.Analyze(tokens, sentences, package.Lexicon, cancellationToken));
         AddDiagnostics(() => ArticleCoverageEvidenceAnalyzer.Analyze(text, tokens, sentences, package.Lexicon));
         AddDiagnostics(() => HyphenatedDegreeEvidenceAnalyzer.Analyze(tokens, package.Lexicon));
         AddDiagnostics(() => ProperNameEvidenceAnalyzer.Analyze(text, tokens, package.Lexicon));
@@ -350,6 +350,10 @@ public sealed class BulgarianLanguageSession : IDisposable
             Diagnostics = diagnostics
         };
         MorphologyEvidenceProjection.View morphology = MorphologyEvidenceProjection.Create(analysis, cancellationToken);
+        if (contextOptions.IncludeNominalConstructions) analysis = analysis with
+        {
+            NominalConstructions = TextNominalConstructionAnalyzer.Calculate(analysis, morphology, spellingCache, cancellationToken)
+        };
         analysis = analysis with { Spelling = TextSpellingAnalyzer.WithContext(analysis, morphology, cancellationToken) };
         (TextContextEvidence context, TextSyntaxEvidence syntax) =
             TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken, morphology);
@@ -357,9 +361,15 @@ public sealed class BulgarianLanguageSession : IDisposable
             ? TextContinuationAnalyzer.Calculate(analysis, morphology, package.Lexicon, requested, cancellationToken) : null;
         IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(
             context, cancellationToken, analysis.Diagnostics);
-        if (graphDiagnostics.Count > 0) analysis = analysis with
+        IReadOnlyList<TextDiagnostic> localAttributeDiagnostics =
+            TextContextAnalyzer.LocalAttributeAgreementDiagnostics(analysis, cancellationToken, morphology);
+        var existingTargets = analysis.Diagnostics.Concat(graphDiagnostics)
+            .Select(d => (d.Code, d.Start, d.Length)).ToHashSet();
+        TextDiagnostic[] relationDiagnostics = graphDiagnostics.Concat(localAttributeDiagnostics.Where(d =>
+            !existingTargets.Contains((d.Code, d.Start, d.Length)))).ToArray();
+        if (relationDiagnostics.Length > 0) analysis = analysis with
         {
-            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(graphDiagnostics).OrderBy(d => d.Start)
+            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(relationDiagnostics).OrderBy(d => d.Start)
                 .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
         };
         Dictionary<string, IReadOnlyList<TextReadingSnapshot>> counterpartMemo = new(StringComparer.Ordinal);
@@ -385,8 +395,10 @@ public sealed class BulgarianLanguageSession : IDisposable
             counterpartMemo.Add(surface, captured);
             return captured;
         }
+        var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, syntax, ExactCounterpart, cancellationToken, morphology);
+        analysis = article.Analysis;
         TextValidationEvidence validation = TextValidationAnalyzer.Analyze(analysis, context, syntax,
-            contextOptions, cancellationToken, ExactCounterpart);
+            contextOptions, cancellationToken, ExactCounterpart, localArticleFacts: article.LocalFacts);
         TextWordConstructionEvidence? constructions = contextOptions.IncludeWordConstructions
             ? WordConstructionAnalyzer.AnalyzeText(analysis, package.Lexicon, package.LexicalCatalog,
                 lookupText => memo.TryGetValue(lookupText, out var acquired) ? acquired.Exact :

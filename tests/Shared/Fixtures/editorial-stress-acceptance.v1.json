@@ -1,0 +1,715 @@
+{
+  "schema": "bglang.editorial-stress-acceptance.v1",
+  "independentOracle": {
+    "path": "independent-literal-controls-1.json",
+    "sha256": "33263b5ad703fa8d207b1fca1eb18fe8acfe355a3eaefefdb505f4f93de52adc",
+    "source": {
+      "url": "https://beron.mon.bg/leksema/dc124c19c02740916713840c35358911",
+      "title": "Чета (глагол) • БЕРОН",
+      "retrievedDate": "2026-10-27",
+      "qualification": "Only the word forms listed by this exact official entry are normative gold. Raw fullTag strings bind existing source readings and retain Legacy boilerplate."
+    }
+  },
+  "scope": "Only52 BERON rows are normative. Five Legacy cells and Baseline assertions preserve captured source behavior, without endorsing normative correctness.",
+  "owner": "legacy-base:6332288",
+  "nounOwner": "legacy-base:1465984",
+  "nounTag": "Съществително:41,Женски",
+  "legacySourceId": "legacy-stress-v1:ae70252c3e252d8e568cfa16cfde94a47c95f10553cfe72c567413bc4c9286ec",
+  "baselineModelSourceId": "legacy-pattern-fit-v1:ae70252c3e252d8e568cfa16cfde94a47c95f10553cfe72c567413bc4c9286ec",
+  "currentModelSourceId": "https://beron.mon.bg/leksema/dc124c19c02740916713840c35358911#forms",
+  "baseFullTag": "Глагол:145ti,1л.,Сегашно",
+  "packages": {
+    "Baseline": {
+      "packageId": "bglang-neutral:36b0b69685d6d3e9",
+      "sourceId": "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
+      "annotationsSourceId": "neutral-annotations-v4:f8f04b61cc9cf7e8ae03a19aa2b72ec85601689b89a30689f67a4483d8c23865",
+      "files": [
+        {
+          "name": "lexeme-annotations.v1.json",
+          "bytes": 129258517,
+          "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5"
+        },
+        {
+          "name": "lexicon.v3.jsonl",
+          "bytes": 47335883,
+          "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 797,
+          "sha256": "451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7"
+        },
+        {
+          "name": "word-formation.v0.json",
+          "bytes": 2109799,
+          "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
+        }
+      ]
+    },
+    "Current": {
+      "packageId": "bglang-neutral:90bea7c5c799f04d",
+      "sourceId": "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
+      "annotationsSourceId": "neutral-annotations-v4:15bcdb035d35bcf2fa2196f80723db955acf131c77aa1a1a85af0bd1d012be08",
+      "files": [
+        {
+          "name": "lexeme-annotations.v1.json",
+          "bytes": 129266618,
+          "sha256": "1a4975434655674872196e210e4b09c60aba799f006932a0db51755a2281bea4"
+        },
+        {
+          "name": "lexicon.v3.jsonl",
+          "bytes": 47335883,
+          "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 797,
+          "sha256": "c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7"
+        },
+        {
+          "name": "word-formation.v0.json",
+          "bytes": 2109799,
+          "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "index": 0,
+      "form": "чел",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Мъжки,1л.,Сегашно",
+      "originalWordId": 6332308,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐл"
+    },
+    {
+      "index": 1,
+      "form": "чела",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Женски,1л.,Сегашно",
+      "originalWordId": 6332311,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐла"
+    },
+    {
+      "index": 2,
+      "form": "челата",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Женски,1л.,Сегашно,Членуван",
+      "originalWordId": 6332312,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐлата"
+    },
+    {
+      "index": 3,
+      "form": "чели",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,1л.,Сегашно,мн.ч.",
+      "originalWordId": 6332315,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐли"
+    },
+    {
+      "index": 4,
+      "form": "челите",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,1л.,Сегашно,мн.ч.,Членуван",
+      "originalWordId": 6332316,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐлите"
+    },
+    {
+      "index": 5,
+      "form": "челия",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Мъжки,1л.,Сегашно,Членуван",
+      "originalWordId": 6332309,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐлия"
+    },
+    {
+      "index": 6,
+      "form": "челият",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Мъжки,1л.,Сегашно,Пълен",
+      "originalWordId": 6332310,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐлият"
+    },
+    {
+      "index": 7,
+      "form": "чело",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Среден,1л.,Сегашно",
+      "originalWordId": 6332313,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐло"
+    },
+    {
+      "index": 8,
+      "form": "челото",
+      "fullTag": "Глагол:145ti,Минало_свършено_деятелно,Среден,1л.,Сегашно,Членуван",
+      "originalWordId": 6332314,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐлото"
+    },
+    {
+      "index": 9,
+      "form": "чета",
+      "fullTag": "Глагол:145ti,1л.,Сегашно",
+      "originalWordId": 6332288,
+      "legacyCaptureKind": "Stored",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "чета̀"
+    },
+    {
+      "index": 10,
+      "form": "четат",
+      "fullTag": "Глагол:145ti,3л.,Сегашно,мн.ч.",
+      "originalWordId": 6332293,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "чета̀т"
+    },
+    {
+      "index": 11,
+      "form": "чете",
+      "fullTag": "Глагол:145ti,2л.,Минало_свършено",
+      "originalWordId": 6332295,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐте"
+    },
+    {
+      "index": 12,
+      "form": "чете",
+      "fullTag": "Глагол:145ti,3л.,Минало_свършено",
+      "originalWordId": 6332296,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐте"
+    },
+    {
+      "index": 13,
+      "form": "чете",
+      "fullTag": "Глагол:145ti,3л.,Сегашно",
+      "originalWordId": 6332290,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐ"
+    },
+    {
+      "index": 14,
+      "form": "четейки",
+      "fullTag": "Глагол:145ti,Деепричастие,1л.,Сегашно",
+      "originalWordId": 6332344,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐйки"
+    },
+    {
+      "index": 15,
+      "form": "четели",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,1л.,Сегашно,мн.ч.",
+      "originalWordId": 6332324,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐли"
+    },
+    {
+      "index": 16,
+      "form": "четелите",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,1л.,Сегашно,мн.ч.,Членуван",
+      "originalWordId": 6332325,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": null,
+      "normativeUtf16Position": null,
+      "normativeRendered": null
+    },
+    {
+      "index": 17,
+      "form": "четем",
+      "fullTag": "Глагол:145ti,1л.,Сегашно,мн.ч.",
+      "originalWordId": 6332291,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐм"
+    },
+    {
+      "index": 18,
+      "form": "четен",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Мъжки,1л.,Сегашно",
+      "originalWordId": 6332326,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтен"
+    },
+    {
+      "index": 19,
+      "form": "четена",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Женски,1л.,Сегашно",
+      "originalWordId": 6332329,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтена"
+    },
+    {
+      "index": 20,
+      "form": "четената",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Женски,1л.,Сегашно,Членуван",
+      "originalWordId": 6332330,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтената"
+    },
+    {
+      "index": 21,
+      "form": "четени",
+      "fullTag": "Глагол:145ti,Минало_страдателно,1л.,Сегашно,мн.ч.",
+      "originalWordId": 6332333,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтени"
+    },
+    {
+      "index": 22,
+      "form": "четените",
+      "fullTag": "Глагол:145ti,Минало_страдателно,1л.,Сегашно,мн.ч.,Членуван",
+      "originalWordId": 6332334,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтените"
+    },
+    {
+      "index": 23,
+      "form": "четения",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Мъжки,1л.,Сегашно,Членуван",
+      "originalWordId": 6332327,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтения"
+    },
+    {
+      "index": 24,
+      "form": "четеният",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Мъжки,1л.,Сегашно,Пълен",
+      "originalWordId": 6332328,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтеният"
+    },
+    {
+      "index": 25,
+      "form": "четено",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Среден,1л.,Сегашно",
+      "originalWordId": 6332331,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтено"
+    },
+    {
+      "index": 26,
+      "form": "четеното",
+      "fullTag": "Глагол:145ti,Минало_страдателно,Среден,1л.,Сегашно,Членуван",
+      "originalWordId": 6332332,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтеното"
+    },
+    {
+      "index": 27,
+      "form": "четете",
+      "fullTag": "Глагол:145ti,1л.,Сегашно,Повелително,мн.ч.",
+      "originalWordId": 6332307,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐте"
+    },
+    {
+      "index": 28,
+      "form": "четете",
+      "fullTag": "Глагол:145ti,2л.,Сегашно,мн.ч.",
+      "originalWordId": 6332292,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐте"
+    },
+    {
+      "index": 29,
+      "form": "четеш",
+      "fullTag": "Глагол:145ti,2л.,Сегашно",
+      "originalWordId": 6332289,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐш"
+    },
+    {
+      "index": 30,
+      "form": "четеше",
+      "fullTag": "Глагол:145ti,2л.,Минало_несвършено",
+      "originalWordId": 6332301,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐше"
+    },
+    {
+      "index": 31,
+      "form": "четеше",
+      "fullTag": "Глагол:145ti,3л.,Минало_несвършено",
+      "originalWordId": 6332302,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѐше"
+    },
+    {
+      "index": 32,
+      "form": "чети",
+      "fullTag": "Глагол:145ti,1л.,Сегашно,Повелително",
+      "originalWordId": 6332306,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четѝ"
+    },
+    {
+      "index": 33,
+      "form": "четох",
+      "fullTag": "Глагол:145ti,1л.,Минало_свършено",
+      "originalWordId": 6332294,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтох"
+    },
+    {
+      "index": 34,
+      "form": "четоха",
+      "fullTag": "Глагол:145ti,3л.,Минало_свършено,мн.ч.",
+      "originalWordId": 6332299,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтоха"
+    },
+    {
+      "index": 35,
+      "form": "четохме",
+      "fullTag": "Глагол:145ti,1л.,Минало_свършено,мн.ч.",
+      "originalWordId": 6332297,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтохме"
+    },
+    {
+      "index": 36,
+      "form": "четохте",
+      "fullTag": "Глагол:145ti,2л.,Минало_свършено,мн.ч.",
+      "originalWordId": 6332298,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 0,
+      "normativeUtf16Position": 1,
+      "normativeRendered": "чѐтохте"
+    },
+    {
+      "index": 37,
+      "form": "четял",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно",
+      "originalWordId": 6332317,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀л"
+    },
+    {
+      "index": 38,
+      "form": "четяла",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Женски,1л.,Сегашно",
+      "originalWordId": 6332320,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀ла"
+    },
+    {
+      "index": 39,
+      "form": "четялата",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Женски,1л.,Сегашно,Членуван",
+      "originalWordId": 6332321,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": null,
+      "normativeUtf16Position": null,
+      "normativeRendered": null
+    },
+    {
+      "index": 40,
+      "form": "четялия",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно,Членуван",
+      "originalWordId": 6332318,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": null,
+      "normativeUtf16Position": null,
+      "normativeRendered": null
+    },
+    {
+      "index": 41,
+      "form": "четялият",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Мъжки,1л.,Сегашно,Пълен",
+      "originalWordId": 6332319,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": null,
+      "normativeUtf16Position": null,
+      "normativeRendered": null
+    },
+    {
+      "index": 42,
+      "form": "четяло",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Среден,1л.,Сегашно",
+      "originalWordId": 6332322,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀ло"
+    },
+    {
+      "index": 43,
+      "form": "четялото",
+      "fullTag": "Глагол:145ti,Минало_несвършено_деятелно,Среден,1л.,Сегашно,Членуван",
+      "originalWordId": 6332323,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": null,
+      "normativeUtf16Position": null,
+      "normativeRendered": null
+    },
+    {
+      "index": 44,
+      "form": "четях",
+      "fullTag": "Глагол:145ti,1л.,Минало_несвършено",
+      "originalWordId": 6332300,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀х"
+    },
+    {
+      "index": 45,
+      "form": "четяха",
+      "fullTag": "Глагол:145ti,3л.,Минало_несвършено,мн.ч.",
+      "originalWordId": 6332305,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀ха"
+    },
+    {
+      "index": 46,
+      "form": "четяхме",
+      "fullTag": "Глагол:145ti,1л.,Минало_несвършено,мн.ч.",
+      "originalWordId": 6332303,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀хме"
+    },
+    {
+      "index": 47,
+      "form": "четяхте",
+      "fullTag": "Глагол:145ti,2л.,Минало_несвършено,мн.ч.",
+      "originalWordId": 6332304,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀хте"
+    },
+    {
+      "index": 48,
+      "form": "четящ",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Мъжки,1л.,Сегашно",
+      "originalWordId": 6332335,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щ"
+    },
+    {
+      "index": 49,
+      "form": "четяща",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Женски,1л.,Сегашно",
+      "originalWordId": 6332338,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀ща"
+    },
+    {
+      "index": 50,
+      "form": "четящата",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Женски,1л.,Сегашно,Членуван",
+      "originalWordId": 6332339,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щата"
+    },
+    {
+      "index": 51,
+      "form": "четящи",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,1л.,Сегашно,мн.ч.",
+      "originalWordId": 6332342,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щи"
+    },
+    {
+      "index": 52,
+      "form": "четящите",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,1л.,Сегашно,мн.ч.,Членуван",
+      "originalWordId": 6332343,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щите"
+    },
+    {
+      "index": 53,
+      "form": "четящия",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Мъжки,1л.,Сегашно,Членуван",
+      "originalWordId": 6332336,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щия"
+    },
+    {
+      "index": 54,
+      "form": "четящият",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Мъжки,1л.,Сегашно,Пълен",
+      "originalWordId": 6332337,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щият"
+    },
+    {
+      "index": 55,
+      "form": "четящо",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Среден,1л.,Сегашно",
+      "originalWordId": 6332340,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀що"
+    },
+    {
+      "index": 56,
+      "form": "четящото",
+      "fullTag": "Глагол:145ti,Сегашно_деятелно,Среден,1л.,Сегашно,Членуван",
+      "originalWordId": 6332341,
+      "legacyCaptureKind": "Carried",
+      "legacyVowelOrdinal": 0,
+      "normativeVowelOrdinal": 1,
+      "normativeUtf16Position": 3,
+      "normativeRendered": "четя̀щото"
+    }
+  ],
+  "generatedUnreviewedPolicy": {
+    "kind": "preserved-retained-base-inference",
+    "ruleId": "productive.verb.type145ti.full_mini_forms.v0",
+    "baseVowelFromEnd": 1,
+    "expectedVowelOrdinal": 0,
+    "status": "Inferred",
+    "normative": false,
+    "qualification": "The five missing explicit model cells retain inherited rule145 base-vowel inference; they are not BERON gold. Do not assert only52 marked forms or silently change candidate90bea."
+  }
+}

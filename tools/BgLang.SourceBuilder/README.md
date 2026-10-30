@@ -1,9 +1,19 @@
 # Изграждане на neutral source пакет
 
-Този отделен инструмент за Windows/.NET 10 превръща редактируем v1 JSONL или v2 JSON документ
+Този отделен инструмент за Windows/.NET 10 превръща редактируем neutral authoring source
 и изрично подаден reviewed graph в пакет, който се отваря с
 `BulgarianLanguageSession.Open`. Той използва съществуващия graph и strict loader.
 Няма автоматично одобрение на лингвистичните данни или зависимост от Legacy.
+
+## Current: default public reproduction профил
+
+The public recipe defaults to Current: the unchanged locked public authoring input plus the committed editorial stress overlay is materialized to a fresh source directory, then the existing build command produces the exact measured current four-file candidate. No new large authoring download is required. -Profile Baseline selects the old four-file pins explicitly. Both are new SDK 10.0.403 reproduction runs; the immutable root SDK 10.0.402 field and receipts remain historical factory provenance. global.json selects 10.0.403 with rollForward patch.
+
+apply-stress-overlay <authoring.json> <graph.json> <overlay.json> <new-source-directory> uses existing AuthoringDocument/Entry with/Serialize to change only stress/accentParadigm/stressPattern on one preimage-bound owner. Publication requires both owner and whole derived-input predeclared SHA, so any serializer change to an unselected byte fails before publication; pins must not be refreshed to hide it. Its output is source preparation (NativeBindingVerified=false); existing build remains the complete-package binding/identity authority. Stale bindings are never recalculated.
+
+packaging/Test-EditorialReproduction.ps1 declares required Current/Baseline Full/SourceOnly reconstruction checks. Current -Test reproduces an explicit strict Baseline for the preserved legacy Public/Web assertions; separate required editorial Public/Web gates and the example validate the primary Current output. The private Full data profile separately requires strict Current M1 row16 style, both row19 bodies and the new editorial semantic controls, alongside the unchanged Baseline controls. BGLANG_EDITORIAL_STRESS_MANIFEST, BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST=1 and canonical BGLANG_EDITORIAL_STRESS_PROFILE identify the editorial target. Exact output equality alone is not linguistic acceptance; all requested gates must pass before accepting this data batch.
+
+## Директен low-level build
 
 От корена на repository, с нова изходна директория и съществуващ родител:
 
@@ -293,3 +303,4 @@ foreign-owner unions/route, RAW/order preservation, reproducible twins,
 Release recipe използва exact locked `bglang-neutral-authoring.v5` source с required `stressPattern.bindingId` и qualified `accentParadigm`. Подайте `lexemes.source.json` и exact locked graph към съществуващия `build`. Runtime annotations source е v4, а manifest schema е v2; тези версии имат различни роли.
 
 `export` пази bindingId. Редакция на complete form/full-tag inventory, owner/source, captured reading index или WordId с остарял binding се отказва при build/open; physical reorder се канонизира. Не пресмятайте нов binding върху променени данни, за да прехвърлите стар sparse capture. Липсващ capture остава Unknown. Legacy import/compact-stress са offline authoring операции и не са нужни за публичното reproduction на вече подготвения input. Qualified fit не е нормативна гаранция за нова дума.
+

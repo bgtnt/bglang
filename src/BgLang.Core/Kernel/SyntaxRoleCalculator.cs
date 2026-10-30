@@ -198,16 +198,19 @@ internal static class SyntaxRoleCalculator
         else if ((C(p - 1) == "ще" && Has(p - 1, SourcePos.Particle)) || Has(p - 1, SourcePos.Adverb)) end = p - 2;
         while (end >= 0 && Preposition(C(end))) end--;
         bool subjectBefore = false;
-        if (end >= 0 && Nominal(end))
+        if (end >= 0 && Nominal(end) && Chain(end, p))
         {
             int first = end;
-            while (first > 0 && Nominal(first - 1)) first--;
-            ImmutableArray<Support> nominal = NominalRefs(first, end);
-            var modifiers = ShortMasculineRefs(first, end);
-            bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
-            Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
-                first, end, nominal, BoundaryContext(end, p).AddRange(modifiers));
-            subjectBefore = !divert;
+            while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
+            if (first == 0 || !Has(first - 1, SourcePos.Preposition) || !Bridge(first - 1, first))
+            {
+                ImmutableArray<Support> nominal = NominalRefs(first, end);
+                var modifiers = ShortMasculineRefs(first, end);
+                bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
+                Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
+                    first, end, nominal, BoundaryContext(end, p).AddRange(modifiers));
+                subjectBefore = !divert;
+            }
         }
 
         // The closed neuter frame suppresses se; the closed impersonal emits BOTH objects.
@@ -234,26 +237,28 @@ internal static class SyntaxRoleCalculator
         if (opt && !subjectBefore && p == 0 && C(p) == "чака" && C(p + 1) == "ни" &&
             Valid(p + 2) && !Preposition(C(p + 2)) && Nominal(p + 2) && Chain(p, p + 2))
         {
-            int last = ExtendNominal(p + 2, whitespaceOnly: true);
+            int last = ExtendNominal(p + 2);
             Emit(Role.Object, Rule.PostverbalChaka, p + 1, p + 1, [Surface(p + 1)],
                 ImmutableArray.Create(PredicateRef(p)).AddRange(NominalRefs(p + 2, last)));
             Emit(Role.Subject, Rule.PostverbalChaka, p + 2, last, NominalRefs(p + 2, last),
                 [PredicateRef(p), Surface(p + 1)]);
             postSubject = true;
         }
-        if (!postSubject && Valid(p + 1) && !Preposition(C(p + 1)) && Nominal(p + 1))
+        if (!postSubject && Valid(p + 1) && Bridge(p, p + 1) && !Preposition(C(p + 1)) && Nominal(p + 1))
         {
-            int last = ExtendNominal(p + 1, whitespaceOnly: false);
+            int last = ExtendNominal(p + 1);
             bool copula = Copula(C(p));
-            Emit(copula ? Role.Complement : Role.Object, copula ? Rule.BasicComplement : Rule.BasicObject,
-                p + 1, last, NominalRefs(p + 1, last), [PredicateRef(p)]);
+            if (copula || !FullMasculineNominal(p + 1, last) &&
+                (resolution.Route != Route.SourceScan || subjectBefore || !PossiblePostposedSubject(last)))
+                Emit(copula ? Role.Complement : Role.Object, copula ? Rule.BasicComplement : Rule.BasicObject,
+                    p + 1, last, NominalRefs(p + 1, last), [PredicateRef(p)]);
         }
         if (opt) AddAdverbials(p);
         for (int i = p + 1; i + 1 < words.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!Preposition(C(i)) || !Nominal(i + 1)) continue;
-            int last = ExtendNominal(i + 1, whitespaceOnly: false);
+            if (!Preposition(C(i)) || !Nominal(i + 1) || !Bridge(i, i + 1)) continue;
+            int last = ExtendNominal(i + 1);
             Emit(Role.PrepositionalObject, Rule.BasicPrepositionalObject, i, last,
                 ImmutableArray.Create(Ref(i, SourcePos.Preposition)).AddRange(NominalRefs(i + 1, last)), [PredicateRef(p)]);
             break;
@@ -312,14 +317,61 @@ internal static class SyntaxRoleCalculator
             for (int i = first; i <= last; i++) refs.Add(NominalRef(i));
             return refs.ToImmutable();
         }
-        int ExtendNominal(int first, bool whitespaceOnly)
+        bool FullMasculineNominal(int first, int last)
+        {
+            for (int i = first; i <= last; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (Indices(i, row => IsNominal(row.Pos) && !row.Features.HasConflictingFeatures &&
+                    !row.Features.HasUnrecognizedFeatures && row.Features.Article == MorphologicalArticle.Full &&
+                    row.Features.Gender == MorphologicalGender.Masculine &&
+                    row.Features.Number == MorphologicalNumber.Singular).Length > 0) return true;
+            }
+            return false;
+        }
+        // This is an abstention guard, never authority for a Subject candidate.
+        bool PossiblePostposedSubject(int head)
+        {
+            bool thirdSingular = false, thirdPlural = false;
+            foreach (Projection predicateRow in words[p].Projection)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                MorphologicalFeatures f = predicateRow.Features;
+                if (predicateRow.Pos != SourcePos.Verb || f.HasUnrecognizedFeatures ||
+                    !ContextEvidenceGuards.IsPersonalPredicate(f)) return true;
+                if (f.VerbForm != MorphologicalVerbForm.Finite || f.Person != MorphologicalPerson.Third) continue;
+                thirdSingular |= f.Number == MorphologicalNumber.Singular;
+                thirdPlural |= f.Number == MorphologicalNumber.Plural;
+            }
+            if (!thirdSingular && !thirdPlural) return false;
+            if (words[head].Projection.Length == 0) return true;
+            foreach (Projection nominalRow in words[head].Projection)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                MorphologicalFeatures f = nominalRow.Features;
+                if (nominalRow.Pos == SourcePos.Pronoun && !f.HasConflictingFeatures &&
+                    (f.Case is MorphologicalCase.Accusative or MorphologicalCase.Dative or MorphologicalCase.PrepositionalDative ||
+                     f.IsShortForm is true)) continue;
+                MorphologicalPerson? person = nominalRow.Pos is SourcePos.Noun or SourcePos.ProperNoun
+                    ? MorphologicalPerson.Third : f.Person;
+                if (nominalRow.Pos is not (SourcePos.Noun or SourcePos.ProperNoun or SourcePos.Pronoun) ||
+                    f.HasUnrecognizedFeatures || f.HasConflictingFeatures || person is null ||
+                    f.Number is not (MorphologicalNumber.Singular or MorphologicalNumber.Plural)) return true;
+                if (thirdSingular && ContextEvidenceGuards.PersonNumberTupleMatches((person, f.Number),
+                        (MorphologicalPerson.Third, MorphologicalNumber.Singular)) ||
+                    thirdPlural && ContextEvidenceGuards.PersonNumberTupleMatches((person, f.Number),
+                        (MorphologicalPerson.Third, MorphologicalNumber.Plural))) return true;
+            }
+            return false;
+        }
+        int ExtendNominal(int first)
         {
             int last = first;
             while (Valid(last + 1) && !Preposition(C(last + 1)) && Nominal(last + 1) &&
-                (!whitespaceOnly || Bridge(last, last + 1))) last++;
+                Bridge(last, last + 1)) last++;
             return last;
         }
-        // Explicit handoff2 delta only for contiguous contextual patterns, not all basic chunks.
+        // Original literal whitespace also bounds the basic nominal spans.
         bool Bridge(int a, int b)
         {
             if (!Valid(a) || b != a + 1 || !Valid(b)) return false;
@@ -511,7 +563,7 @@ internal static class SyntaxRoleCalculator
     private static bool IsNominal(SourcePos pos) => pos is SourcePos.Adjective or SourcePos.Noun or SourcePos.Numeral or SourcePos.ProperNoun or SourcePos.Pronoun;
     private static bool Cyrillic(char c) => c is >= 'Ѐ' and <= 'ӿ' or >= 'Ԁ' and <= 'ԯ';
     private static bool Copula(string c) => c is "съм" or "си" or "е" or "сме" or "сте" or "са" or "бях" or "беше" or "бяха" or "бъда" or "бъде";
-    private static bool Preposition(string c) => c is "в" or "във" or "до" or "за" or "из" or "към" or "на" or "над" or "от" or "по" or "под" or "пред" or "през" or "при" or "с" or "със" or "след";
+    private static bool Preposition(string c) => c is "без" or "в" or "във" or "до" or "за" or "из" or "към" or "на" or "над" or "от" or "по" or "под" or "пред" or "през" or "при" or "с" or "със" or "след";
     private static bool FutureClitic(string c) => c is "го" or "я" or "ги" or "ме" or "те" or "ни";
     private static bool DaShort(string c) => c is "ти" or "си" or "ми" or "му" or "ви" or "им" or "ни";
     private static bool Possessive(string c) => c is "си" or "ми" or "му" or "ви" or "им" or "ни";

@@ -1,8 +1,64 @@
+# BgLang — Preview13: актуален quickstart
+
+Това е source подготовката за [Preview13](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13). Връзките са бъдещи targets за тази версия; release страницата удостоверява достъпността, публикувания source/tag и окончателните CI/readback резултати. Тук няма предварително заявен publication или hosted PASS.
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-inputs.zip) и [guide от същия tag](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.13/packaging/RELEASE-CANDIDATE.md).
+
+SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Целевият **Current** е `bglang-neutral:90bea7c5c799f04d`, manifest SHA-256 `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7`. **Baseline** `bglang-neutral:36b0b69685d6d3e9` остава отделният explicit reproduction профил. Готовият runtime се използва без authoring input. От source папката:
+
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+[Web guide](apps/BgLang.Web/README.md) описва optional локалния HTTP host. Public reproduction recipe избира Current по подразбиране; `-Profile Baseline` избира Baseline изрично.
+
+Source включва prior FUSION opt-in `TextContextOptions.IncludeNominalConstructions` (default `false`): локални `NP` ядра и bounded `finite+NP` spelling advisory с original readings/UTF-16 refs. Трите текущи допълнения са ограничени article/preposition проверки, guarded предложения при лицензирани слети отрицателни literal форми и stress/lexical data корекции с отделени normative/inferred evidence. Предложенията изискват изричен избор; ambiguity и abstention остават видими.
+
+Този bounded обхват не заявява отстраняване на всичките 33 рапортувани въпроса. Бъдещият nominal→finite continuation successor е изключен от Preview13.
+
+## Исторически source snapshots и договори
+
+Оригиналното тяло по-долу е запазено RAW. Неговите „непубликуван“, Preview12/по-стари URLs, SDK, counts и status формулировки описват съответните snapshots; актуалният quickstart е горе.
+
 # BgLang
+
+## Непубликуван source — именни ядра и контекстни предложения
+
+Текущата разработка добавя отделен opt-in `TextContextOptions.IncludeNominalConstructions` с default `false`. При включване `TextAnalysis.NominalConstructions` показва максимални локални именни ядра в оригиналния ред. „Стара къща“ и „стара, изоставена, порутена, синя къща“ имат еднакъв външен ключ `NP`; вътрешните членове, локалните запетаи/„и“ и оригиналните token/UTF-16 позиции се пазят. Това е проекция на локални ядра, без избор на пълен синтактичен разбор или роля на подлог/допълнение.
+
+`Assessment` измерва само number/gender: един действителен noun reading трябва да подкрепя всички определения. Миналото страдателно причастие пази оригиналния Verb POS; другите прочити не се заличават. `Unassessed` с празни `HeadSupports` означава недостъпно общо измерване, като структурните членове остават видими. Налични условни или непълни graph tags могат да опишат само възможна структура, без да стават съгласувателно доказателство.
+
+~~~csharp
+TextAnalysis review = language.AnalyzeText("Рисувам сипя река.", false,
+    new TextContextOptions { IncludeNominalConstructions = true }, CancellationToken.None);
+~~~
+
+Тесният advisory сценарий `finite+NP` проверява позната finite дума след друг finite predicate и пред локално именно ядро. „Синя“ може да получи подкрепа като вариант на „сипя“; прочитите на кандидата и цялото целево ядро се оценяват повторно. `Reviews` пази оригинала чрез `NoChangeRetained`, суровия distance-one списък до 10 форми и отделните кандидатни reading indices. Това не е изчерпателно търсене, единствено намерение, граматично предупреждение или автоматична замяна. `Spelling` и всички стари Context/Syntax/Validation резултати запазват значението си. Без opt-in новото поле липсва от JSON. HTTP поддържа същия switch във `context` и трите съществуващи evidence формата.
+
+Тази способност още не е публикувана. Точните функционални проверки, отделната source-only metadata closure и успешните consumer gates и независимия преглед са в [central evidence](Docs/NOMINAL-FUSION-EVIDENCE-2026-10-29.json) и [machine metrics](Docs/NOMINAL-FUSION-METRICS-2026-10-29.json). Следващите dated раздели пазят историческите договори и измервания; Preview12 остава отделният публикуван snapshot.
 
 BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
-## Preview12 — обща typed agreement основа
+## Текущ локален профил: Current
+
+Public reproduction recipe избира **Current по подразбиране**, с .NET SDK **10.0.403** от `global.json`. Current е `bglang-neutral:90bea7c5c799f04d`, manifest SHA-256 `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7`. `-Profile Baseline` избира изрично `bglang-neutral:36b0b69685d6d3e9`; старият input lock и release receipts пазят собствената си историческа provenance.
+
+Current използва същия immutable locked authoring input, малкия committed editorial overlay и съществуващия SourceBuilder `build`. Не е нужен нов голям download. Подайте exact стария `lexemes.source.json` в `./authoring-input`; след зададени process TEMP/TMP и от source папката, с нови output/results директории:
+
+~~~powershell
+./packaging/Build-PublicPackage.ps1 -InputDirectory ./authoring-input -OutputDirectory ./current-package -ResultsDirectory ./current-results -Test -TestWeb
+~~~
+
+Article consumer проверките винаги използват strict Current. При default Current recipe selector-ът се задава към собствения output. За самостоятелно `-Profile Baseline -Test` подайте `-ArticleCurrentManifest ./current-package/manifest.json` от вече построен и проверен Current package; primary Baseline остава отделен. Четирите маршрута на `Test-EditorialReproduction.ps1 -TestConsumers:$true` предават тази зависимост автоматично.
+
+При Current старите literal Public/Web контроли използват отделно възпроизведен strict Baseline. Задължителните editorial gates и примерът използват primary Current output. Private Full проверява отделно Current M1 row16 style, двата row19 assertion bodies, новите stress семантични контроли и строгите capture-payload negatives, наред със запазените Baseline контроли. Това не означава, че всички legacy тестове са изпълнени върху Current.
+
+Приемането на data партидата изисква собствени required Release/focused/private Full, default Full/SourceOnly reproduction, Public/Web/example, strict package gates и независимо review. Точният typed `apply-stress-overlay` произвежда source preparation с `NativeBindingVerified=false`; само последващият съществуващ `build` и complete strict open проверяват пакета. Старите release резултати по-долу не приемат този профил. Нови release/download URLs не се въвеждат.
+
+## Исторически source snapshot — Preview12: обща typed agreement основа
 
 Maintenance партидата споделя tuple сравненията между Context, Continuation, Spelling и Validation. Съществуващите eligibility/aggregation guards, original reading refs, scores и order се пазят; public API/schema и grammar scope са непроменени.
 
@@ -10,7 +66,7 @@ Fresh Release/complete-package validation е PASS: Full4472P/0F/13 historical NE
 
 Локалната final validation и едното независимо review са PASS, без blocking findings; accepted=true, published=false към този source snapshot. Следват разрешените scoped commit и publication. Release страницата удостоверява действителните source/tag, main/tag CI и окончателната all11 bytes/SHA сверка след публикацията.
 
-## Бърз старт с Preview12
+## Исторически бърз старт с Preview12
 
 Целевите matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/bglang-v0.1.0-preview.12-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.12/SHA256SUMS) са за [избраната Preview12 release страница](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.12). Връзките са бъдещи release targets към този source snapshot и стават достъпни след публикуване. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`, с `runtime/manifest.json`. Използвайте canonical .NET SDK **10.0.402** от `global.json` в matching source ZIP. От source папката:
 

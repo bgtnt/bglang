@@ -48,4 +48,8 @@ public sealed record TextAnalysis(
     /// <summary>Opt-in finite vocabulary supported by original left-context morphology; null means not requested.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public TextContinuationEvidence? Continuation { get; init; }
+
+    /// <summary>Opt-in nominal cores and conditional known-word alternatives; null means not requested.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TextNominalConstructionEvidence? NominalConstructions { get; init; }
 }

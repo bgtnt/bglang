@@ -14,5 +14,12 @@
     <Content Include="Fixtures/preview6-repair-package.v1.json" Link="data/preview6-repair-package.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures/stress-annotated-package.v1.json" Link="data/stress-annotated-package.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../data/dictionary/public-input-lock.v1.json" Link="data/public-input-lock.v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/article-seeds.development.v1.json" Link="data/article-seeds.development.v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/article-controls.v1.json" Link="data/article-controls.v1.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/article-projection.v1.json" Link="data/article-projection.v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/EditorialStressAcceptance.cs" Link="EditorialStressAcceptance.cs" />
+    <Content Include="../Shared/Fixtures/editorial-stress-acceptance.v1.json" Link="data/editorial-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

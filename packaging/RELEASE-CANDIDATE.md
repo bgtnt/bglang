@@ -1,4 +1,38 @@
-# Preview10 — source/runtime distribution guide
+# Preview13 — matching source/runtime и reproduction
+
+Този source guide подготвя [Preview13](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13). Download връзките са бъдещи targets за тази версия; release страницата удостоверява действителната публикация, source/tag, CI и окончателния anonymous readback. Не се заявява предварителен PASS.
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/SHA256SUMS) и при rebuild — [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-inputs.zip). [Tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.13/packaging/RELEASE-CANDIDATE.md) и [README quickstart](../README.md) пазят версията на recipe/lock/source.
+
+SDK е **10.0.403** от `global.json`. Default Current е `bglang-neutral:90bea7c5c799f04d` с manifest SHA-256 `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7`; `-Profile Baseline` избира отделно `bglang-neutral:36b0b69685d6d3e9`. Готовият runtime не изисква authoring input. За reproduction сложете exact locked `lexemes.source.json` в `./authoring-input` и използвайте нови output/results папки:
+
+~~~powershell
+./packaging/Build-PublicPackage.ps1 -InputDirectory ./authoring-input -OutputDirectory ./current-package -ResultsDirectory ./current-results -Test -TestWeb
+~~~
+
+При standalone Baseline consumer run existing `-ArticleCurrentManifest` сочи вече проверения Current package; четиримаршрутната recipe предава тази зависимост автоматично. Baseline input lock и Current runtime запазват отделните си identities.
+
+Preview13 source включва prior bounded opt-in `NP`/`finite+NP` advisory (default `false`), article/preposition проверки, guarded joined-negation предложения и stress/lexical data корекции. Ambiguity, original refs, explicit action и normative/inferred границите се запазват. Не се заявява, че всички 33 рапортувани въпроса са решени; бъдещият nominal→finite continuation successor е изключен.
+
+## Исторически reproduction договори и receipts
+
+Оригиналният guide по-долу е запазен RAW. Неговите стари версии, links, SDK/counts и publication статуси остават исторически; за Preview13 използвайте горните matching targets и release страницата.
+
+# Current и Baseline — source/runtime reproduction
+
+Default `Build-PublicPackage.ps1` профилът е **Current** (`bglang-neutral:90bea7c5c799f04d`), SDK **10.0.403**. `-Profile Baseline` запазва изрично стария `bglang-neutral:36b0b69685d6d3e9`. Нужни са същият locked authoring input от непроменения public input lock и exact source graph; малкият committed overlay се прилага само за Current. Няма нов asset URL или runtime-as-input път.
+
+`Test-EditorialReproduction.ps1` изисква Current Full с пропуснат Profile, Current SourceOnly с lowercase `current`, Baseline Full и Baseline SourceOnly с lowercase `baseline`. Двете стойности се канонизират веднъж; receipts и exact4 pins трябва да съответстват. Full и SourceOnly output се сравняват byte-for-byte; всеки requested consumer gate трябва да е PASS без skip. SourceOnly доставя overlay/profile/producer кода и изисква само отделния exact стар authoring input.
+
+Article consumer контролите използват Current и в двата recipe профила. Current bind-ва собствения actual manifest; Baseline consumer run изисква explicit `-ArticleCurrentManifest` към вече построен strict Current package. `Test-EditorialReproduction.ps1 -TestConsumers:$true` изпълнява първо двата Current маршрута и предава проверения Current Full manifest към двата Baseline маршрута. Ambient selector не замества този аргумент; primary Baseline не се преименува Current.
+
+При Current `-Test` existing producer възпроизвежда strict Baseline за непроменените legacy Public/Web literal assertions. Отделни задължителни editorial Public/Web gates и CLI примерът използват primary Current. Private Full добавя strict Current selectors към запазените Baseline package bindings; M1 row16 style и двата row19 assertion bodies остават задължителни. Няма all-legacy-on-Current claim.
+
+Exact complete Current4 file pins свързват и всичките29 retained Legacy capture payloads, включително полета, скрити от neutral public DTO. Native inventory binding не е payload checksum. Задължителният Current negative променя валидно retained vowel payload със същия SourceId/binding и изисква profile rejection; отделен same-size stress control упражнява SHA guard. Само52 официални реда са нормативни; петте source-bound Legacy реда запазват inference, без нов normative статус. Данните не са приети до пълните package/default/source delivery gates и независимо review.
+
+Следващият текст пази историческия Preview10 guide и по-старите му receipts, SDK/identity/selector/count формулировки. Те се отнасят към собствените matching release sources, а не към активния Current профил.
+
+## Исторически distribution guide — Preview10
 
 Този guide е **snapshot от подготовката преди окончателната публикация** на [`v0.1.0-preview.10`](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.10). Download връзките са целеви release имена и стават достъпни след публикуване. За актуалния статус, exact public source/tag, действителните main/tag CI и окончателната анонимна bytes/hash сверка на всичките 11 assets проверявайте release страницата и final release body. Тук не се твърди предварително наблюдаван published/hosted PASS или public hosting.
 

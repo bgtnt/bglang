@@ -1,0 +1,432 @@
+{
+  "schema": "bglang.article-test-controls.v1",
+  "status": "PROSPECTIVE_NOT_API_EXECUTED",
+  "surface": [
+    {
+      "id": "s01",
+      "text": "Говоря с учителят.",
+      "expectation": "MUST_WARN",
+      "replacement": "учителя",
+      "target": "учителят",
+      "scope": "REQUIRED_BASIC",
+      "utf16": {
+        "start": 9,
+        "length": 8
+      },
+      "expectedTextAfterRepair": "Говоря с учителя."
+    },
+    {
+      "id": "s02",
+      "text": "Говоря с учителя.",
+      "expectation": "MUST_ACCEPT_LOCALLY",
+      "scope": "REQUIRED_BASIC",
+      "protectedRanges": [
+        {
+          "start": 9,
+          "length": 7,
+          "surface": "учителя",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": true,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s03",
+      "text": "Говоря с добрият учител.",
+      "expectation": "MUST_WARN",
+      "replacement": "добрия",
+      "target": "добрият",
+      "scope": "REQUIRED_BASIC",
+      "utf16": {
+        "start": 9,
+        "length": 7
+      },
+      "expectedTextAfterRepair": "Говоря с добрия учител."
+    },
+    {
+      "id": "s04",
+      "text": "Говоря с добрия учител.",
+      "expectation": "MUST_ACCEPT_LOCALLY",
+      "scope": "REQUIRED_BASIC",
+      "protectedRanges": [
+        {
+          "start": 9,
+          "length": 6,
+          "surface": "добрия",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": true,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s05",
+      "text": "Помагам на ученикът.",
+      "expectation": "MUST_WARN",
+      "replacement": "ученика",
+      "target": "ученикът",
+      "scope": "REQUIRED_BASIC",
+      "utf16": {
+        "start": 11,
+        "length": 8
+      },
+      "expectedTextAfterRepair": "Помагам на ученика."
+    },
+    {
+      "id": "s06",
+      "text": "Помагам на ученика.",
+      "expectation": "MUST_ACCEPT_LOCALLY",
+      "scope": "REQUIRED_BASIC",
+      "protectedRanges": [
+        {
+          "start": 11,
+          "length": 7,
+          "surface": "ученика",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": true,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s07",
+      "text": "Два стола стоят.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Count form is not automatically Short article.",
+      "protectedRanges": [
+        {
+          "start": 4,
+          "length": 5,
+          "surface": "стола",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s08",
+      "text": "Търся учител.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Do not add definiteness.",
+      "protectedRanges": [
+        {
+          "start": 6,
+          "length": 6,
+          "surface": "учител",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s09",
+      "text": "Говоря с него.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "No article-bearing nominal token.",
+      "protectedRanges": [
+        {
+          "start": 9,
+          "length": 4,
+          "surface": "него",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "text": "Малкият, ела тук!",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Articulated form of address; no blanket non-subject -> Short.",
+      "protectedRanges": [
+        {
+          "start": 0,
+          "length": 7,
+          "surface": "Малкият",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "text": "Апостола пристигна.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Nickname/possible name exception; no forced Full.",
+      "protectedRanges": [
+        {
+          "start": 0,
+          "length": 8,
+          "surface": "Апостола",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "text": "Надписът „Говоря с учителят“ е преписан дословно.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Protected verbatim quote; preservation is not claimed detection.",
+      "protectedRanges": [
+        {
+          "start": 9,
+          "length": 19,
+          "surface": "„Говоря с учителят“",
+          "policy": "QUOTE_ADVISORY_ONLY",
+          "forbidCategoricalArticleAccusation": false,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Non-actionable advisory explicitly attributed to quoted source; no alteration of the verbatim quote."
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "text": "Говоря с него. Учителят пристигна.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Do not attach across clause/sentence boundary.",
+      "protectedRanges": [
+        {
+          "start": 15,
+          "length": 8,
+          "surface": "Учителят",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "text": "Говоря с учителя, а ученикът пише.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Second head is not part of preceding prepositional NP.",
+      "protectedRanges": [
+        {
+          "start": 9,
+          "length": 7,
+          "surface": "учителя",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        },
+        {
+          "start": 20,
+          "length": 8,
+          "surface": "ученикът",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s15",
+      "text": "Говоря с",
+      "expectation": "MUST_ABSTAIN",
+      "reason": "Incomplete input; no categorical article decision.",
+      "protectedRanges": [
+        {
+          "start": 0,
+          "length": 8,
+          "surface": "Говоря с",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s16",
+      "text": "Учителя го видях.",
+      "expectation": "PRESERVE_ONLY",
+      "reason": "Preverbal position alone is not subject evidence.",
+      "protectedRanges": [
+        {
+          "start": 0,
+          "length": 7,
+          "surface": "Учителя",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s17",
+      "text": "🙂 Говоря с учителят. После говоря с учителя.",
+      "expectation": "MUST_WARN",
+      "replacement": "учителя",
+      "target": "учителят",
+      "scope": "REQUIRED_BASIC",
+      "reason": "Only the wrong occurrence; preserve emoji/other sentence.",
+      "utf16": {
+        "start": 12,
+        "length": 8
+      },
+      "expectedTextAfterRepair": "🙂 Говоря с учителя. После говоря с учителя.",
+      "protectedRanges": [
+        {
+          "start": 37,
+          "length": 7,
+          "surface": "учителя",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s18",
+      "text": "Тук учителят е познат. Говоря с учителят.",
+      "expectation": "MUST_WARN",
+      "replacement": "учителя",
+      "target": "учителят",
+      "occurrence": 2,
+      "scope": "REQUIRED_BASIC",
+      "reason": "Identical full surface in two different roles; only second is wrong.",
+      "utf16": {
+        "start": 32,
+        "length": 8
+      },
+      "expectedTextAfterRepair": "Тук учителят е познат. Говоря с учителя.",
+      "protectedRanges": [
+        {
+          "start": 4,
+          "length": 8,
+          "surface": "учителят",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    },
+    {
+      "id": "s19",
+      "text": "Той е учителя.",
+      "expectation": "MUST_WARN",
+      "replacement": "учителят",
+      "target": "учителя",
+      "scope": "DECLARE_EXISTING_OR_EXTENDED_FULL_ROLE_BEFORE_RUN",
+      "utf16": {
+        "start": 6,
+        "length": 7
+      },
+      "expectedTextAfterRepair": "Той е учителят."
+    },
+    {
+      "id": "s20",
+      "text": "Ученикът и учителя влязоха.",
+      "expectation": "MUST_WARN",
+      "replacement": "учителят",
+      "target": "учителя",
+      "scope": "DECLARE_EXISTING_COORDINATION_SCOPE_BEFORE_RUN",
+      "utf16": {
+        "start": 11,
+        "length": 7
+      },
+      "expectedTextAfterRepair": "Ученикът и учителят влязоха.",
+      "protectedRanges": [
+        {
+          "start": 0,
+          "length": 8,
+          "surface": "Ученикът",
+          "policy": "NO_CATEGORICAL_ARTICLE_ERROR",
+          "forbidCategoricalArticleAccusation": true,
+          "forbidActionableArticleReplacement": true,
+          "requireAssessedValid": false,
+          "allowed": "Independent unrelated diagnostics and honest capability notices; no categorical article accusation on this range."
+        }
+      ]
+    }
+  ],
+  "typed": [
+    {
+      "id": "t01",
+      "setup": "Article=Definite only, no explicit Full/Short",
+      "expectation": "MUST_ABSTAIN",
+      "forbid": "Infer Short solely from -а/-я surface."
+    },
+    {
+      "id": "t02",
+      "setup": "Conflicting article/number/gender fields",
+      "expectation": "MUST_ABSTAIN",
+      "forbid": "Select the convenient conflicting field."
+    },
+    {
+      "id": "t03",
+      "setup": "Complete competing interpretations with opposite article-role implications",
+      "expectation": "MUST_ABSTAIN",
+      "forbid": "Take first reading or silently drop viable alternative."
+    },
+    {
+      "id": "t04",
+      "setup": "Only subject/object role proof depends on Article of the same target",
+      "expectation": "MUST_ABSTAIN",
+      "forbid": "Circular Article -> Role -> Article validation."
+    },
+    {
+      "id": "t05",
+      "setup": "Independent complete prepositional relation held fixed; swap only Full/Short source form",
+      "expectation": "PAIR_TRANSITION_WARN_TO_ACCEPT",
+      "invariant": "Independent relation persists; original reading refs may legitimately change."
+    },
+    {
+      "id": "t06",
+      "setup": "Candidate replacement exists only under different lemma/paradigm",
+      "expectation": "NO_REPLACEMENT",
+      "note": "Independent warning may remain; fabricated edit is forbidden."
+    },
+    {
+      "id": "t07",
+      "setup": "Replacement missing or exact lookup truncated/incomplete",
+      "expectation": "NO_REPLACEMENT",
+      "note": "Report missing support separately; do not turn missing evidence into success."
+    },
+    {
+      "id": "t08",
+      "setup": "Each modifier pairs with a different head reading but no common coherent head reading supports all",
+      "expectation": "MUST_ABSTAIN_FROM_COMPATIBLE_GROUP",
+      "forbid": "Cartesian union of unrelated readings."
+    }
+  ],
+  "qualification": "Surface expected labels are local and independent; typed controls require explicit fixture/contract support. No generated/control case has been run against the product by Root.",
+  "negativeOracle": "A categorical article accusation or actionable article replacement anchored to a forbidden protected range fails even when the API never edits text. Other diagnostic categories are not globally forbidden. Protected ranges do not imply assessed-valid except explicit MUST_ACCEPT_LOCALLY controls."
+}

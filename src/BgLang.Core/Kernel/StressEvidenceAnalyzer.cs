@@ -44,10 +44,18 @@ internal static class StressEvidenceAnalyzer
                 Array.AsReadOnly(new[] { new StressRealization(StressOrigin.SingleVowelInference, StressStatus.Inferred,
                     Array.AsReadOnly(new[] { new StressMark(0, token.Start + vowels[0], StressMarkKind.Unspecified) }), null) }) : [];
             List<StressReadingEvidence> readings = [];
+            bool hasUnstressedAlternative = false;
             for (int i = 0; i < exact.ResolvedReadings.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 WordReading reading = exact.ResolvedReadings[i];
+                if (vowels.Length == 1)
+                {
+                    MorphologicalFeatures features = MorphologicalFeatures.FromTag(reading.PartOfSpeech);
+                    hasUnstressedAlternative |= features.PartOfSpeech is MorphologicalPartOfSpeech.Preposition or
+                        MorphologicalPartOfSpeech.Conjunction or MorphologicalPartOfSpeech.Particle ||
+                        features.PartOfSpeech == MorphologicalPartOfSpeech.PersonalPronoun && features.IsShortForm is true;
+                }
                 int? ownerOrdinal = exact.RequireOwnerOrdinal(i, reading, cancellationToken);
                 IReadOnlyList<LexicalEntry> owners = ownerOrdinal is { } ordinal && catalog is not null
                     ? catalog.GetOwners(ordinal, cancellationToken) : [];
@@ -86,7 +94,8 @@ internal static class StressEvidenceAnalyzer
             {
                 if (observed.Any(mark => mark.VowelOrdinal != chosenOrdinal))
                     status = StressStatus.Conflict;
-                else if (observed.Length == 0)
+                else if (observed.Length == 0 &&
+                    (vowels.Length != 1 || selectedOwner is not null || !hasUnstressedAlternative))
                     rendered = token.Text.Insert(vowels[chosenOrdinal] + 1, "\u0300");
             }
             results.Add(new(tokenIndex, token.Text, token.Start, token.Length, status,

@@ -74,8 +74,20 @@ internal static class ContextEvidenceGuards
     internal static bool HasNominalAxes(MorphologicalFeatures f) =>
         !f.HasUnrecognizedFeatures && ExplicitNominalTuple(f);
 
+    // A partial typed passive shape remains structurally inspectable; only measured axes can support agreement.
+    internal static bool IsPassiveAttributeShape(MorphologicalFeatures f) =>
+        f.PartOfSpeech == MorphologicalPartOfSpeech.Verb && f.ParticipleKind == MorphologicalParticipleKind.PastPassive &&
+        f.VerbForm is null or MorphologicalVerbForm.Participle;
+
+    internal static bool IsMeasuredPassiveAttribute(MorphologicalFeatures f) =>
+        IsPassiveAttributeShape(f) && f.VerbForm == MorphologicalVerbForm.Participle && HasNominalAxes(f);
+
     internal static bool AttributeAgreement(MorphologicalFeatures attribute, MorphologicalFeatures noun) =>
-        attribute.PartOfSpeech == MorphologicalPartOfSpeech.Adjective &&
+        AttributeAgreement(attribute, noun, includePassiveParticiples: false);
+
+    internal static bool AttributeAgreement(MorphologicalFeatures attribute, MorphologicalFeatures noun, bool includePassiveParticiples) =>
+        (attribute.PartOfSpeech == MorphologicalPartOfSpeech.Adjective ||
+            includePassiveParticiples && IsMeasuredPassiveAttribute(attribute)) &&
         noun.PartOfSpeech == MorphologicalPartOfSpeech.Noun && HasNominalAxes(attribute) && HasNominalAxes(noun) &&
         NominalTupleMatches((attribute.Number, attribute.Gender), (noun.Number, noun.Gender));
 

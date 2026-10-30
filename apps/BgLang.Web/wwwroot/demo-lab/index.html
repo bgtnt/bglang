@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>BgLang Lab · анализ на текст</title>
+  <link rel="stylesheet" href="demo.css">
+  <script type="module" src="demo.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">бг</span> BgLang <span class="brand-lab">Lab</span></a>
+  <p class="tagline">Пиши. Анализът следва текста, дума по дума.</p>
+  <nav aria-label="Навигация">
+    <a href="/demo">Класическо демо</a>
+    <a href="/docs">API справка</a>
+    <button id="lab-theme" type="button">Тема</button>
+  </nav>
+</header>
+<main>
+  <div class="workspace">
+    <section class="editor-card" aria-labelledby="lab-editor-label">
+      <div class="toolbar">
+        <label id="lab-editor-label" for="lab-editor">Текст</label>
+        <div class="layers" role="radiogroup" aria-label="Оцветяване на текста">
+          <button type="button" role="radio" data-layer="pos" aria-checked="true">Части на речта</button>
+          <button type="button" role="radio" data-layer="dictionary" aria-checked="false" tabindex="-1">Речник</button>
+          <button type="button" role="radio" data-layer="none" aria-checked="false" tabindex="-1">Без цвят</button>
+        </div>
+        <span class="toolbar-end">
+          <label class="switch"><input id="lab-live" type="checkbox" checked> Жив анализ</label>
+          <button id="lab-refresh" type="button" class="icon" aria-label="Анализирай отново" title="Анализирай отново">↻</button>
+        </span>
+      </div>
+      <div class="editor-shell">
+        <div id="lab-backdrop" class="editor-surface backdrop" aria-hidden="true"></div>
+        <textarea id="lab-editor" class="editor-surface" maxlength="4096" rows="9" spellcheck="false" autocomplete="off" aria-describedby="lab-help lab-state">Малката книга 📚 пътува с мен.
+Децата играе. Чорбанова чете на пейката.</textarea>
+        <div id="lab-menu" class="menu" hidden></div>
+      </div>
+      <div class="continuation-bar">
+        <label for="lab-target">Продължения</label>
+        <select id="lab-target"><option value="Auto" selected>Авто</option><option value="Finite">Глаголи</option><option value="Noun">Съществителни</option></select>
+        <button id="lab-continue" type="button" class="action" aria-keyshortcuts="Control+Space">Покажи съвместими форми</button>
+        <span class="note">или Ctrl+Space в текста · ред по речников score, не вероятност</span>
+      </div>
+      <div id="lab-legend" class="legend" aria-label="Легенда на цветовете"></div>
+      <p class="status"><span id="lab-state" role="status" aria-live="polite">Подготовка…</span> <span id="lab-counts"></span> <span id="lab-length" class="length">0 / 4096</span></p>
+      <p id="lab-help" class="help">Цветовете под текста показват върнатия анализ. Вълнообразната линия отбелязва предупреждение; всички предупреждения са изброени в „Проверки“. Постави курсора в дума, за да видиш прочитите ѝ.</p>
+      <div class="examples" aria-label="Примерни текстове">
+        <span>Примери:</span>
+        <button type="button" data-example="Децата играе. Малкото дете плачат. Аз чете.">Съгласуване</button>
+        <button type="button" data-example="Това е друфа дума.">Непозната дума</button>
+        <button type="button" data-example="Тя пила вода. До нея имало пила.">Омографи</button>
+        <button type="button" data-example="Суперработниците работи. Новата суперработник работи.">Нови думи</button>
+        <button type="button" data-example="Процесът срещу Евгения Чорбанова приключи.">Имена</button>
+      </div>
+    </section>
+    <aside class="word-card" aria-labelledby="lab-word-title">
+      <p class="kicker">Думата при курсора</p>
+      <h2 id="lab-word-title">Дума</h2>
+      <p id="lab-stale-word" class="stale" hidden>Текстът е променен; показан е предишният анализ.</p>
+      <div id="lab-word"></div>
+    </aside>
+  </div>
+  <section class="checks-card" aria-labelledby="lab-checks-title">
+    <h2 id="lab-checks-title">Проверки</h2>
+    <p class="note">Съгласуването по лице и число засега се проверява само в кратки изречения като „Децата играе.“ или „Аз чете.“: подлог и веднага след него сказуемо, без други думи или знаци в изречението. В по-дълги изречения несъгласуване още не се открива.</p>
+    <p id="lab-stale-checks" class="stale" hidden>Текстът е променен; списъкът е от предишния анализ и действията са неактивни.</p>
+    <div id="lab-checks"></div>
+  </section>
+  <section class="sentences-card" aria-labelledby="lab-sentences-title">
+    <h2 id="lab-sentences-title">Изречения</h2>
+    <p id="lab-stale-sentences" class="stale" hidden>Текстът е променен; ролите са от предишния анализ.</p>
+    <div id="lab-sentences"></div>
+  </section>
+  <section class="reading-card" aria-labelledby="lab-reading-title">
+    <div class="card-head">
+      <h2 id="lab-reading-title">Прочит с ударения</h2>
+      <button id="lab-read" type="button" class="action">Прочети текста с ударения</button>
+    </div>
+    <p class="note">Отделен текст само за четене. Не променя редактора и позициите му не се прилагат към него.</p>
+    <div id="lab-reading"></div>
+  </section>
+  <details class="developer">
+    <summary>За разработчици</summary>
+    <p id="lab-dev-metrics">Изпратени заявки към API: 0</p>
+    <p id="lab-identity">Свързване с хоста…</p>
+    <p><label><input id="lab-heuristics" type="checkbox" checked> Допълнителни евристики и проверки (същите като в класическото демо)</label></p>
+    <p>Страницата използва същия HTTP API и същия клиент за заявки като <a href="/demo">класическото демо</a>. Договорът е в <a href="/docs">API справката</a>.</p>
+    <details><summary>Последният отговор (JSON)</summary><pre id="lab-raw">Все още няма отговор.</pre></details>
+  </details>
+</main>
+<footer>
+  <p>Текстът се изпраща само към този хост. Браузърът пази единствено избраната тема.</p>
+</footer>
+</body>
+</html>

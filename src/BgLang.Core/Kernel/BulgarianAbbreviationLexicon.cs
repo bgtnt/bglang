@@ -27,7 +27,16 @@ internal static class BulgarianAbbreviationLexicon
         new("гр."),
         new("бул."),
         new("ул."),
-        new("вж.")
+        new("вж."),
+        new("обл."),
+        new("общ."),
+        new("пл."),
+        new("ген."),
+        new("арх."),
+        new("млн."),
+        new("млрд."),
+        new("г."),
+        new("с.")
     ];
 
     private static readonly SearchValues<char> FirstCharacters = BuildFirstCharacters();
@@ -46,6 +55,8 @@ internal static class BulgarianAbbreviationLexicon
         {
             if (!Matches(text, index, entry.Surface.AsSpan()))
                 continue;
+            if (entry.Surface == "с." && !HasVillageContext(text, index, index + entry.Surface.Length))
+                continue;
 
             tokenText = entry.TokenText;
             nextIndex = index + entry.Surface.Length;
@@ -55,6 +66,25 @@ internal static class BulgarianAbbreviationLexicon
         tokenText = string.Empty;
         nextIndex = index;
         return false;
+    }
+
+    private static bool HasVillageContext(ReadOnlySpan<char> text, int start, int end)
+    {
+        int next = end;
+        while (next < text.Length && char.IsWhiteSpace(text[next])) next++;
+        if (next == end || next == text.Length || !char.IsUpper(text[next])) return false;
+        int previousEnd = start;
+        while (previousEnd > 0 && char.IsWhiteSpace(text[previousEnd - 1])) previousEnd--;
+        if (previousEnd == 0) return true;
+        if (previousEnd == start) return false;
+        int previousStart = previousEnd;
+        while (previousStart > 0 && char.IsLetter(text[previousStart - 1])) previousStart--;
+        if (previousStart > 0 && !char.IsWhiteSpace(text[previousStart - 1])) return false;
+        ReadOnlySpan<char> previous = text[previousStart..previousEnd];
+        return previous.Equals("в", StringComparison.OrdinalIgnoreCase) ||
+            previous.Equals("във", StringComparison.OrdinalIgnoreCase) ||
+            previous.Equals("от", StringComparison.OrdinalIgnoreCase) ||
+            previous.Equals("до", StringComparison.OrdinalIgnoreCase);
     }
 
     internal static bool TryNormalizeExact(ReadOnlySpan<char> surface, out string tokenText)

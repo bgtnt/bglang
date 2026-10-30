@@ -898,15 +898,27 @@ const CHECK_TOKEN = {kind:'Word',start:3,length:4};
 const CHECK_WARNING = {code:'pronoun_verb_agreement_mismatch',start:3,length:4,ruleId:'literal-agreement'};
 const CHECK_UNSUPPORTED = {code:'full_short_article_check_not_ready',start:3,length:4,ruleId:null};
 const CHECK_INFORMATION = {code:'reviewed_word_formation_evidence',start:3,length:4,ruleId:'literal-morphology'};
+test('copied article advice appears once while independent support remains visible',()=>{
+  const original={code:'full_short_article_check_not_ready',start:3,length:4,ruleId:'article.exact.v1'};
+  const mirror={code:original.code,start:3,length:4,basis:'existing_diagnostic=article.exact.v1;bounded_article_advice',supports:[]};
+  const independent={...mirror,basis:'independent-article-evidence',supports:[{tokenIndex:0,completeReadingIndex:32}]};
+  const data={diagnostics:[original],validation:{available:true,diagnostics:[mirror,independent]}};
+  const actual=diagnosticPresentation(data);
+  assert.equal(actual.messages.length,2);
+  assert.strictEqual(actual.messages[0].diagnostic,original);
+  assert.strictEqual(actual.messages[1].diagnostic,independent);
+  assert.equal(diagnosticPresentation({diagnostics:[],validation:{diagnostics:[mirror]}}).messages.length,1);
+});
 function checksWire(diagnostics = [], validation = {available:true,diagnostics:[]}) {
   return {text:'Аз чете.',tokens:[{kind:'Word',start:0,length:2},CHECK_TOKEN,{kind:'Punctuation',start:7,length:1}],diagnostics,validation};
 }
 
-test('diagnostic presentation warns only for the eleven explicit supported warning codes',()=>{
+test('diagnostic presentation warns only for the explicit supported warning codes',()=>{
   const codes=['missing_terminal_punctuation','sentence_initial_lowercase','mixed_script_ocr_known_candidate',
     'digit_shape_ocr_known_candidate','accent_sensitive_i_grave','spelling_unknown_word_unique_distance_one_candidate',
     'pronoun_verb_agreement_mismatch','preposition_missing_complement','full_article_expected_for_subject_candidate',
-    'productive_morphology_agreement_mismatch','productive_attribute_agreement_mismatch'];
+    'productive_morphology_agreement_mismatch','productive_attribute_agreement_mismatch',
+    'short_article_expected_after_preposition_candidate'];
   for(const code of codes){
     const diagnostic=Object.freeze({...CHECK_WARNING,code});
     const actual=diagnosticPresentation(checksWire([diagnostic]),CHECK_TOKEN);
@@ -915,6 +927,15 @@ test('diagnostic presentation warns only for the eleven explicit supported warni
     assert.equal(actual.messages[0].label,'Предупреждение',code);
     assert.strictEqual(actual.messages[0].diagnostic,diagnostic,'Original diagnostic identity is preserved.');
   }
+});
+
+test('prepositional article warning retains one source record and its replacement projection',()=>{
+  const original={code:'short_article_expected_after_preposition_candidate',start:9,length:8,
+    ruleId:'grammar.short_article.exact_prepositional_group.v1',projectedText:'учителя'};
+  const mirror={code:original.code,start:9,length:8,basis:'existing_diagnostic='+original.ruleId+';bounded_article_advice'};
+  const actual=diagnosticPresentation({diagnostics:[original],validation:{available:true,diagnostics:[mirror]}});
+  assert.equal(actual.messages.length,1); assert.equal(actual.messages[0].classification,'warning');
+  assert.strictEqual(actual.messages[0].diagnostic,original); assert.equal(original.projectedText,'учителя');
 });
 
 test('not-ready article check is unsupported coverage rather than an agreement warning',()=>{
@@ -1657,4 +1678,16 @@ test('actual Live case-presented spelling keeps selection revision IME and force
     assert.deepEqual([f.editor.selectionStart,f.editor.selectionEnd],[7,12]);assert.strictEqual(f.doc.activeElement,f.editor);
     f.forceClick(old);f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,1);assert.deepEqual(fresh.reply,before);
   },{text:raw,caret:9});
+});
+
+
+test('reviewed joined verb negation is a warning while its original phrase projection stays literal', () => {
+  const diagnostic = Object.freeze({code: 'joined_verb_negation_should_be_separate', start: 4, length: 6,
+    ruleId: 'spelling.joined_verb_negation.reviewed_forms.v1', projectedText: 'не може'});
+  const result = diagnosticPresentation({diagnostics: [diagnostic], validation: {available: true, diagnostics: []}},
+    {kind: 'Word', start: 4, length: 6});
+  assert.equal(result.tokenClass, 'check-warning'); assert.equal(result.messages.length, 1);
+  assert.equal(result.messages[0].classification, 'warning');
+  assert.strictEqual(result.messages[0].diagnostic, diagnostic);
+  assert.equal(result.messages[0].diagnostic.projectedText, 'не може');
 });

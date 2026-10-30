@@ -8,5 +8,6 @@ public readonly record struct TextContextOptions
     public bool IncludeFragmentDiagnostics { get; init; }
     public bool IncludeSpacingDiagnostics { get; init; }
     public bool IncludeWordConstructions { get; init; }
+    public bool IncludeNominalConstructions { get; init; }
     public TextContinuationRequest? Continuation { get; init; }
 }

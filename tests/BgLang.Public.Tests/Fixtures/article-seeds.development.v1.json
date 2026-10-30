@@ -1,0 +1,54 @@
+{
+  "schema": "bglang.article-test-seeds.v1",
+  "partition": "development",
+  "nouns": [
+    {
+      "id": "stazhant",
+      "lemma": "стажант",
+      "full": "стажантът",
+      "short": "стажанта",
+      "paradigm": "hard-regular",
+      "authority": "https://beron.mon.bg/rechnik/288"
+    },
+    {
+      "id": "hotel",
+      "lemma": "хотел",
+      "full": "хотелът",
+      "short": "хотела",
+      "paradigm": "hard-tel-not-suffix",
+      "authority": "https://beron.mon.bg/rechnik/288"
+    },
+    {
+      "id": "lekar",
+      "lemma": "лекар",
+      "full": "лекарят",
+      "short": "лекаря",
+      "paradigm": "soft-ar-suffix",
+      "authority": "https://beron.mon.bg/rechnik/300"
+    },
+    {
+      "id": "sluzhitel",
+      "lemma": "служител",
+      "full": "служителят",
+      "short": "служителя",
+      "paradigm": "soft-tel-suffix",
+      "authority": "https://beron.mon.bg/rechnik/300"
+    }
+  ],
+  "adjectives": [
+    {
+      "id": "nov",
+      "lemma": "нов",
+      "full": "новият",
+      "short": "новия",
+      "authority": "https://beron.mon.bg/rechnik/300"
+    },
+    {
+      "id": "dobar",
+      "lemma": "добър",
+      "full": "добрият",
+      "short": "добрия",
+      "authority": "https://beron.mon.bg/leksema/7fb96e3d345fc2ed07ea159848fffb35"
+    }
+  ]
+}

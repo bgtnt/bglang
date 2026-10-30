@@ -48,7 +48,7 @@ public sealed class ConstructionHttpTests
     public void Construction_switch_is_a_fifth_strict_boolean_with_all_defaults_disabled()
     {
         string[] fields = ["IncludeAdditionalRoleHeuristics", "IncludeSubordinateCommaDiagnostics",
-            "IncludeFragmentDiagnostics", "IncludeSpacingDiagnostics", "IncludeWordConstructions"];
+            "IncludeFragmentDiagnostics", "IncludeSpacingDiagnostics", "IncludeWordConstructions", "IncludeNominalConstructions"];
         var properties = typeof(TextContextOptions).GetProperties();
         CollectionAssert.AreEquivalent(fields.Append(nameof(TextContextOptions.Continuation)).ToArray(),
             properties.Select(property => property.Name).ToArray());
@@ -57,6 +57,7 @@ public sealed class ConstructionHttpTests
         Assert.AreEqual(typeof(TextContinuationRequest), properties.Single(property =>
             property.Name == nameof(TextContextOptions.Continuation)).PropertyType);
         Assert.IsNull(default(TextContextOptions).Continuation);
+        Assert.IsFalse(default(TextContextOptions).IncludeNominalConstructions);
         foreach (string context in new[] { "null", "{}", "{\"includeWordConstructions\":false}" })
         {
             WebInput input = JsonSerializer.Deserialize<WebInput>("{\"text\":\"знаме.\",\"context\":" + context + "}", HttpContract.Json)!;

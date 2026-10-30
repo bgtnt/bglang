@@ -1,0 +1,34 @@
+{
+  "schema": "bglang.article-acceptance-projection.v1",
+  "state": "FROZEN_FOR_ARTICLE_VALIDATION",
+  "manifestSha256": "c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7",
+  "requiredScope": "REQUIRED_BASIC",
+  "declaredExtensionIds": [],
+  "categoricalArticleCodes": [
+    "full_article_expected_for_subject_candidate",
+    "short_article_expected_after_preposition_candidate"
+  ],
+  "expectedShortWarningCode": "short_article_expected_after_preposition_candidate",
+  "expectedShortRule": "grammar.short_article.exact_prepositional_group.v1",
+  "expectedFullWarningCode": "full_article_expected_for_subject_candidate",
+  "availabilityCodes": [
+    "full_short_article_check_not_ready"
+  ],
+  "assessedValidCode": "article_prepositional_group_locally_assessed",
+  "assessedValidBasisPrefix": "independent_preposition;",
+  "quoteAdvisoryCodes": [],
+  "independentPrepositionalRule": "BasicPrepositionalObject",
+  "options": {
+    "includeUnknownContextProperNames": false,
+    "includeAdditionalRoleHeuristics": false,
+    "includeSubordinateCommaDiagnostics": false,
+    "includeFragmentDiagnostics": false,
+    "includeSpacingDiagnostics": false,
+    "includeWordConstructions": false,
+    "includeNominalConstructions": false,
+    "continuation": null
+  },
+  "withheldPolicy": "Read neither withheld seed nor case content until source/rules/acceptance/options freeze. Runtime fixture override requires matching loaded module/profile/options/package pins from prior frozen receipt.",
+  "qualification": "Предварително amended proof profile: global BasicPP или exact LocalRole.Adposition + finite hypothesis с независимо complete OriginalCoverage. RoleSupports са actual eligible original ordinals; whole raw NP veto пази mixed POS. Local hint не е whole-NP/Article certificate и не филтрира head Article. Naked-head условието на реалния article consumer остава отделно. Gold384/combined768, old negatives, exact repairs и all original supports са запазени. Root замразява actual source/modules/profile преди measurement; config не е PASS.",
+  "independentPrepositionProofPolicy": "candidate_pp_or_exact_local_adposition_with_finite_hypothesis.v2"
+}

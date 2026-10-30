@@ -2,8 +2,10 @@
 param(
     [Parameter(Mandatory=$true)][string]$InputJsonPath,
     [Parameter(Mandatory=$true)][ValidateSet('known-repeat','empty','context-default')][string]$SampleId,
-    [Parameter(Mandatory=$true)][string]$SamplePath
+    [Parameter(Mandatory=$true)][string]$SamplePath,
+    [ValidateSet('Current','Baseline')][string]$Profile = 'Baseline'
 )
+$Profile = if ($Profile -ieq 'Current') { 'Current' } else { 'Baseline' }
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 # Parser only: caller owns sample creation, held native invocation and stdout/provider evidence.
@@ -89,8 +91,13 @@ try {
     Assert-Fields $root @('schema','Provenance','environment','startup','measurementNote','observations') 'outer envelope'
     Assert-String (Get-Field $root 'schema') 'bglang-public-example.v1' 'schema'
     $provenance = Get-Field $root 'Provenance'
-    Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:36b0b69685d6d3e9' 'package identity'
-    Assert-String (Get-Field $provenance 'ManifestSha256') '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7' 'matching accepted manifest'
+    if ($Profile -ceq 'Current') {
+        Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:90bea7c5c799f04d' 'package identity'
+        Assert-String (Get-Field $provenance 'ManifestSha256') 'c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7' 'matching current manifest'
+    } else {
+        Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:36b0b69685d6d3e9' 'package identity'
+        Assert-String (Get-Field $provenance 'ManifestSha256') '451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7' 'matching accepted manifest'
+    }
     $observations = Get-Field $root 'observations'
     Assert-Kind $observations 'Array' 'observations'
     # Prospective literals from the accepted Public/Full/HTTP stress controls, never derived from this output.
