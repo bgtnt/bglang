@@ -15,6 +15,7 @@ const WARNING_CODES = new Set([
   'spelling_unknown_word_unique_distance_one_candidate',
   'joined_verb_negation_should_be_separate',
   'pronoun_verb_agreement_mismatch',
+  'unseparated_finite_predications',
   'preposition_missing_complement',
   'full_article_expected_for_subject_candidate',
   'short_article_expected_after_preposition_candidate',
@@ -37,6 +38,7 @@ const REPLACEABLE_CODES = new Set([
 ]);
 
 export const MESSAGES = {
+  unseparated_finite_predications: 'Две лични глаголни форми в проверената конструкция изискват свързване или пунктуационно разделяне.',
   productive_morphology_agreement_mismatch: 'Несъгласуване по лице/число в поддържаната конструкция.',
   pronoun_verb_agreement_mismatch: 'Несъгласуване по лице/число между местоимение и глагол в поддържаната конструкция.',
   productive_attribute_agreement_mismatch: 'Несъгласуване по род/число между определение и съществително в поддържаната конструкция.',

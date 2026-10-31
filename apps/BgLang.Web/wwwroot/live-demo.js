@@ -109,6 +109,7 @@ const diagnosticWarningCodes = new Set([
   "spelling_unknown_word_unique_distance_one_candidate",
   "joined_verb_negation_should_be_separate",
   "pronoun_verb_agreement_mismatch",
+  "unseparated_finite_predications",
   "preposition_missing_complement",
   "full_article_expected_for_subject_candidate",
   "short_article_expected_after_preposition_candidate",

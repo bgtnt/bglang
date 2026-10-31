@@ -42,6 +42,10 @@ public sealed record TextAnalysis(
     /// <summary>Bounded diagnostics with explicit disabled and unavailable checks.</summary>
     public TextValidationEvidence? Validation { get; init; }
 
+    /// <summary>All acquired predicate alternatives and supported local links; never a full parse.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TextPredicateLinkEvidence? PredicateLinks { get; init; }
+
     /// <summary>Opt-in candidate constructions over exact owner-bound readings; null means not requested.</summary>
     public TextWordConstructionEvidence? WordConstructions { get; init; }
 

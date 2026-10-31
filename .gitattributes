@@ -178,3 +178,4 @@ tests/BgLang.Public.Tests/Fixtures/article-projection.v1.json -text
 data/word-formation/automatic-graph-stress-ist.v1.json -text
 data/dictionary/current-graph-stress-reproduction.v1.json -text
 tests/Shared/Fixtures/graph-stress-acceptance.v1.json -text
+tests/Shared/Fixtures/finite-predicate-links-independent.v1.json -text

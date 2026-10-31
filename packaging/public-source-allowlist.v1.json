@@ -289,7 +289,13 @@
     "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",
     "packaging/GRAPH-STRESS.md",
     "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",
-    "tests/BgLang.Web.Tests/InverseSpellingHttpTests.cs"
+    "tests/BgLang.Web.Tests/InverseSpellingHttpTests.cs",
+    "src/BgLang.Contracts/Kernel/TextPredicateLinkEvidence.cs",
+    "src/BgLang.Core/Kernel/TextPredicateLinkAnalyzer.cs",
+    "tests/Shared/FinitePredicateAcceptance.cs",
+    "tests/Shared/Fixtures/finite-predicate-links-independent.v1.json",
+    "tests/BgLang.Public.Tests/FinitePredicatePackageTests.cs",
+    "tests/BgLang.Web.Tests/FinitePredicateHttpTests.cs"
   ],
   "inputDirectory": "public-inputs/preview7-auxiliary-repair-authoring-v5",
   "inputFiles": [

@@ -10,7 +10,7 @@ internal static class TextCompositionHttpFixture
 {
     internal static readonly JsonElement Root = Load();
     internal static readonly string[] TextFields = Root.GetProperty("expected").GetProperty("textFields")
-        .EnumerateArray().Select(value => value.GetString()!).Concat(new[] { "context", "syntax", "validation", "wordConstructions" }).ToArray();
+        .EnumerateArray().Select(value => value.GetString()!).Concat(new[] { "context", "syntax", "validation", "predicateLinks", "wordConstructions" }).ToArray();
 
     private static JsonElement Load()
     {
@@ -42,6 +42,8 @@ internal static class TextCompositionHttpFixture
             Sentences = [new(0, 17)], Phonetics = new([], [], []),
             Diagnostics = [new("literal", 3, 6, "literal.rule")], Lexical = new(false, [], []),
             ReadingInventory = inventory,
+            PredicateLinks = new("local-predicate-links.v1", true, null,
+                [new(0, 17, [], [], ["closed_conflict_check_not_applicable"], false)]),
             Metrics = Root.GetProperty("metrics").Deserialize<TextMetrics>(HttpContract.Json)!,
             Profile = Root.GetProperty("profile").Deserialize<DocumentReadingProfile>(HttpContract.Json)!,
             Spelling = new(2, 3, [new(1, "Светла", 3, 6, "светла", SpellingSearchDisposition.NotRequestedKnown, "exact-known", []),

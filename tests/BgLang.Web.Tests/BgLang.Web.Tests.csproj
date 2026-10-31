@@ -21,4 +21,8 @@
     <Content Include="../Shared/Fixtures/graph-stress-acceptance.v1.json" Link="data/graph-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Fixtures/editorial-stress-acceptance.v1.json" Link="data/editorial-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/FinitePredicateAcceptance.cs" Link="FinitePredicateAcceptance.cs" />
+    <Content Include="../Shared/Fixtures/finite-predicate-links-independent.v1.json" Link="data/finite-predicate-links-independent.v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

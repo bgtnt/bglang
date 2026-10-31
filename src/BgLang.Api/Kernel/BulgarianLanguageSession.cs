@@ -359,6 +359,14 @@ public sealed class BulgarianLanguageSession : IDisposable
             Diagnostics = diagnostics
         };
         MorphologyEvidenceProjection.View morphology = MorphologyEvidenceProjection.Create(analysis, cancellationToken);
+        var predicates = TextPredicateLinkAnalyzer.Calculate(analysis, morphology, cancellationToken);
+        analysis = analysis with
+        {
+            PredicateLinks = predicates.Evidence,
+            Diagnostics = predicates.Diagnostics.Count == 0 ? analysis.Diagnostics : Array.AsReadOnly(
+                analysis.Diagnostics.Concat(predicates.Diagnostics).OrderBy(d => d.Start).ThenBy(d => d.Length)
+                    .ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
+        };
         if (contextOptions.IncludeNominalConstructions) analysis = analysis with
         {
             NominalConstructions = TextNominalConstructionAnalyzer.Calculate(analysis, morphology, spellingCache, cancellationToken)

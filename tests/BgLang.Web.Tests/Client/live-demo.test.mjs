@@ -1824,3 +1824,24 @@ test('actual Live requires coherent compatible head evidence for the structural 
     assert.equal(f.editor.setRangeTextCalls.length,0);
   },{text:'Спирам пред сипя къща.',caret:22});
 });
+
+// Portable projection of recorded FP01 diagnostics; runtime/package correctness is checked separately.
+test('finite predicate diagnostic is a Live warning with its original evidence', () => {
+  const diagnostic = {
+    code: 'unseparated_finite_predications', start: 7, length: 7,
+    ruleId: 'grammar.closed_pronoun_two_present_predications.v1', projectedText: null,
+    readings: [{tokenIndex: 0, completeReadingIndex: 0}, {tokenIndex: 1, completeReadingIndex: 0},
+      {tokenIndex: 1, completeReadingIndex: 1}, {tokenIndex: 2, completeReadingIndex: 0}]
+  };
+  const data = {text: 'Аз пея пътувам.', diagnostics: [diagnostic], validation: {available: true, diagnostics: []}};
+  const result = diagnosticPresentation(data);
+  assert.equal(result.messages.length, 1);
+  assert.equal(result.messages[0].classification, 'warning');
+  assert.strictEqual(result.messages[0].diagnostic, diagnostic);
+  assert.equal(result.messages[0].diagnostic.projectedText, null);
+});
+
+test('unknown diagnostic remains Live information after finite predicate catalog support', () => {
+  const data = {text: 'а', diagnostics: [{code: 'test_unknown_code', start: 0, length: 1}], validation: {available: true}};
+  assert.equal(diagnosticPresentation(data).messages[0].classification, 'information');
+});

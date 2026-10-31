@@ -1605,3 +1605,28 @@ test('new phrase replacement codes cannot detach combining marks or split surrog
     assert.equal(check.replaceable, false);
   }
 });
+
+// Portable projection of recorded FP01 diagnostics; runtime/package correctness is checked separately.
+test('finite predicate diagnostic is a known Lab warning without a replacement', () => {
+  const diagnostic = {
+    code: 'unseparated_finite_predications', start: 7, length: 7,
+    ruleId: 'grammar.closed_pronoun_two_present_predications.v1', projectedText: null,
+    readings: [{tokenIndex: 0, completeReadingIndex: 0}, {tokenIndex: 1, completeReadingIndex: 0},
+      {tokenIndex: 1, completeReadingIndex: 1}, {tokenIndex: 2, completeReadingIndex: 0}]
+  };
+  const data = {text: 'Аз пея пътувам.', diagnostics: [diagnostic], validation: {available: true, diagnostics: []}};
+  const check = collectChecks(data).find(row => row.code === diagnostic.code);
+  assert.equal(check.severity, 'warning');
+  assert.equal(check.known, true);
+  assert.equal(check.replaceable, false);
+  assert.equal(check.projected, null);
+  assert.equal(check.replacement, null);
+  assert.equal(check.original, 'пътувам');
+  assert.equal(check.message, 'Две лични глаголни форми в проверената конструкция изискват свързване или пунктуационно разделяне.');
+  assert.strictEqual(check.records[0].record, diagnostic);
+});
+
+test('unknown diagnostic remains Lab information after finite predicate catalog support', () => {
+  const data = {text: 'а', diagnostics: [{code: 'test_unknown_code', start: 0, length: 1}], validation: {available: true}};
+  assert.equal(collectChecks(data)[0].severity, 'information');
+});

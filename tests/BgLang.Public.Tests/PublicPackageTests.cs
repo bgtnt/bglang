@@ -150,7 +150,7 @@ public sealed partial class PublicPackageTests
         TextAnalysis text = session.AnalyzeText(source, default);
         Assert.AreEqual(source, text.Text);
         CollectionAssert.AreEqual(new[] { "Text", "Tokens", "Sentences", "Phonetics", "Diagnostics", "Lexical",
-            "ReadingInventory", "Metrics", "Spelling", "Profile", "ProperNames", "Context", "Syntax", "Validation", "WordConstructions" },
+            "ReadingInventory", "Metrics", "Spelling", "Profile", "ProperNames", "Context", "Syntax", "Validation", "PredicateLinks", "WordConstructions" },
             JsonSerializer.SerializeToElement(text).EnumerateObject().Select(property => property.Name).ToArray());
         Assert.AreEqual(new TextMetrics(3, 2, 1, 2, 5, .5, 1, 1, 0), text.Metrics);
         TextReadingInventory inventory = text.ReadingInventory!;

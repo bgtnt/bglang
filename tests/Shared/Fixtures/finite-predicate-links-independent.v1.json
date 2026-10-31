@@ -1,0 +1,124 @@
+{
+  "schema": "bglang.finite-predicate-links.regressions.v1",
+  "sourceGoldSha256": "c7dfbeb76b38f1b43da28416c744c2ae743d4eaf5a90bc4edc33117f068297b2",
+  "legend": {
+    "P": "Independent positive error expectation in ordinary standard declarative prose. The implementation must positively establish the supported structure and complete relevant reading evidence before emitting the diagnostic.",
+    "N": "No new extra-finite/link-conflict diagnostic. This is not a certificate of full grammatical correctness or full parse coverage.",
+    "U": "Retain explicit ambiguity/incompleteness or uncovered status; no affirmative diagnosis by this slice."
+  },
+  "cases": [
+    {
+      "id": "FP01",
+      "text": "Аз пея пътувам.",
+      "expected": "P",
+      "reason": "Two ordinary finite predications lack the applicable linking/separation; account for both without automatic repair."
+    },
+    {
+      "id": "FP02",
+      "text": "Ние четем пишем.",
+      "expected": "P",
+      "reason": "Lexically different plural instance of the same structural principle; no sentence whitelist."
+    },
+    {
+      "id": "FP03",
+      "text": "Аз пея и пътувам.",
+      "expected": "N",
+      "reason": "Preserve coordination evidence; existing Context ambiguity alone is not a conflict."
+    },
+    {
+      "id": "FP04",
+      "text": "Аз пея, пътувам.",
+      "expected": "N",
+      "reason": "Preserve comma separation; an overt и is not mandatory."
+    },
+    {
+      "id": "FP05",
+      "text": "Искам да пея.",
+      "expected": "N",
+      "reason": "Retain both finite readings and the observed да link independently of legacy main-predicate selection."
+    },
+    {
+      "id": "FP06",
+      "text": "Мога да пея и да пътувам.",
+      "expected": "N",
+      "reason": "Combined да linking and coordination; not one hardcoded lexical triple."
+    },
+    {
+      "id": "FP07",
+      "text": "Аз съм пял и ще пътувам.",
+      "expected": "N",
+      "reason": "Auxiliary, participle and future construction must not be counted as a list of independent Verb POS predicates."
+    },
+    {
+      "id": "FP08",
+      "text": "Иди гледай хората в очите сега!",
+      "expected": "N",
+      "reason": "Attested imperative construction. If not supported, retain Uncovered without this warning."
+    },
+    {
+      "id": "FP09",
+      "text": "Той носи коси.",
+      "expected": "U",
+      "reason": "Preserve noun interpretation of коси and verb alternatives; a possible verb reading does not establish an extra predicate.",
+      "packageQualification": "Verify actual complete package rows; linguistic expectation is not an assertion that every required row already exists."
+    },
+    {
+      "id": "FP10",
+      "text": "Тя каза: „Пея.“",
+      "expected": "N",
+      "reason": "Quoted predicate and author speech must not be mechanically joined into an unseparated pair."
+    },
+    {
+      "id": "FP11",
+      "text": "Аз пея пътувам.",
+      "inventoryVariant": "incomplete inventory OR missing required finite-form feature",
+      "expected": "U",
+      "reason": "Uncertainty blocks affirmative warning while retained readings remain accounted for."
+    },
+    {
+      "id": "FP12",
+      "text": "Малкият пея пътува с мен.",
+      "expected": "U",
+      "reason": "For this slice, do not force nominalized subject, unique error cause or lexical repair; retain the independently observed need for further analysis."
+    },
+    {
+      "id": "FP13",
+      "text": "Малкият пътува с мен.",
+      "expected": "N",
+      "reason": "Legitimate nominalized adjective control; preserve morphology alternatives."
+    },
+    {
+      "id": "FP14",
+      "text": "Малкият пее и пътува с мен.",
+      "expected": "N",
+      "reason": "Separate valid coordination control; not evidence of intended correction for FP12."
+    },
+    {
+      "id": "FP15",
+      "text": "Малкият певец пътува с мен.",
+      "expected": "N",
+      "reason": "Separate lexical control; never authorizes automatically replacing пея with певец."
+    }
+  ],
+  "invariants": [
+    "Every relevant occurrence and complete reading remains traceable even if the legacy main route picks only the first predicate.",
+    "Reading-row permutation preserves semantic result after reference indices are correctly remapped; raw numeric indices need not stay equal.",
+    "Grouping a nominal phrase must not erase competing finite readings.",
+    "Adding uncertainty or a viable nonfinite/homographic alternative must not create a new categorical warning.",
+    "No feature union may manufacture a coherent reading path from incompatible rows.",
+    "Graph support requires existing strict licensing/provenance; no guessed features or second lookup engine.",
+    "Original UTF16 spans, negation/link/quote/punctuation boundaries and cancellations remain correct.",
+    "No-change and original morphology/Context alternatives remain; no automatic rewrite."
+  ],
+  "warningSpans": {
+    "FP02": {
+      "length": 5,
+      "start": 10
+    },
+    "FP01": {
+      "length": 7,
+      "start": 7
+    }
+  },
+  "qualification": "Independent semantic gold. Original15 case objects retained; artifact-local assignment/run paths omitted. Synthetic FP11 uncertainty is covered by Full S01/S02; real graph productive coverage remains unmeasured."
+}
