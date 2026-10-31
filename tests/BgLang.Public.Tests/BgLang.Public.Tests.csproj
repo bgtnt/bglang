@@ -20,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/EditorialStressAcceptance.cs" Link="EditorialStressAcceptance.cs" />
+    <Compile Include="../Shared/GraphStressAcceptance.cs" Link="GraphStressAcceptance.cs" />
+    <Content Include="../Shared/Fixtures/graph-stress-acceptance.v1.json" Link="data/graph-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Fixtures/editorial-stress-acceptance.v1.json" Link="data/editorial-stress-acceptance.v1.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

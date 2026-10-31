@@ -84,6 +84,9 @@ internal sealed class PackageLexicalCatalog
         return null;
     }
 
+    internal LexemeAccentParadigm? FindAccentParadigm(string entryId) =>
+        _accentParadigms.GetValueOrDefault(entryId);
+
     internal bool TryGetOwnerOrdinal(string entryId, out int lexemeOrdinal, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

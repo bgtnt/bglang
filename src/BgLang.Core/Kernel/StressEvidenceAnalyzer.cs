@@ -174,7 +174,7 @@ internal static class StressEvidenceAnalyzer
             (StressStatus.Unknown, null);
     }
 
-    private static (int[] Vowels, StressMark[] Observed) ReadMarks(string text, int start)
+    internal static (int[] Vowels, StressMark[] Observed) ReadMarks(string text, int start)
     {
         List<int> vowels = [];
         List<StressMark> marks = [];

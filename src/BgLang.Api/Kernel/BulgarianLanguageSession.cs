@@ -133,8 +133,15 @@ public sealed class BulgarianLanguageSession : IDisposable
         WordFormationAnalyzer.MorphologySearch? graphSearch = null;
         if (readings.Count == 0)
         {
+            string graphSurface = word;
+            bool graphSupport = package.WordFormation.HasGraphAccentProfiles &&
+                BulgarianStressLookup.TryGetSupportKey(word, normalized, out graphSurface);
+            if (!graphSupport) graphSurface = word;
             (WordDecomposition decomposition, graphSearch) = package.WordFormation.AnalyzePaths(
-                word, package.Lexicon, maxReadings, binaryBudget, graphBudget);
+                graphSurface, package.Lexicon, maxReadings, binaryBudget, graphBudget);
+            if (package.WordFormation.HasGraphAccentProfiles && word != decomposition.NormalizedWord &&
+                BulgarianOrthography.IsWellFormedWord(word.AsSpan().Trim()))
+                decomposition = BulgarianStressLookup.RestoreGraphSource(decomposition, word);
             if (decomposition.HasEvidence)
                 baseEvidence = decomposition;
         }
@@ -156,7 +163,7 @@ public sealed class BulgarianLanguageSession : IDisposable
                 wordLimit: UnknownMorphologyAnalyzer.BaseTypeReplayLimit, cancellationToken: cancellationToken),
             baseOnly: true, donorCache: donorCache);
         cancellationToken.ThrowIfCancellationRequested();
-        return new WordAnalysis(word, normalized, readings, baseEvidence)
+        WordAnalysis result = new(word, normalized, readings, baseEvidence)
         {
             GraphCandidates = graphSearch?.Candidates ?? [],
             GraphSearchIncomplete = graphSearch?.Incomplete ?? false,
@@ -171,6 +178,8 @@ public sealed class BulgarianLanguageSession : IDisposable
             BaseTypeSearchLimited = baseTypes.WorkLimited,
             BaseTypeEvidenceLimited = baseTypes.EvidenceLimited
         };
+        return result with { GraphStress = GraphStressProjector.Project(result, package.Lexicon,
+            package.LexicalCatalog, package.WordFormation, cancellationToken) };
     }
 
     /// <summary>Generates qualified accents through an explicitly selected lexical prototype and its guarded graph program.</summary>
@@ -300,7 +309,7 @@ public sealed class BulgarianLanguageSession : IDisposable
         IReadOnlyList<TokenAnalysis> tokens = Array.AsReadOnly(_tokenizer.Tokenize(text, AnalyzeCached).ToArray());
         TextReadingInventory readingInventory = TextReadingInventorySnapshot.Create(text, tokens, memo, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SentenceSpan> sentences = Array.AsReadOnly(SentenceBoundaryDetector.Split(text, tokens).ToArray());
+        IReadOnlyList<SentenceSpan> sentences = Array.AsReadOnly(SentenceBoundaryDetector.Split(text, tokens, readingInventory).ToArray());
         cancellationToken.ThrowIfCancellationRequested();
         SpellingCandidateCache spellingCache = new(package.Lexicon);
         ProperNameEvidence properNames = ProperNameAnalyzer.Analyze(text, tokens, sentences, readingInventory,
@@ -395,10 +404,24 @@ public sealed class BulgarianLanguageSession : IDisposable
             counterpartMemo.Add(surface, captured);
             return captured;
         }
+        IReadOnlyList<TextDiagnostic> countDiagnostics = TextCountConstructionAnalyzer.Calculate(
+            analysis, morphology, ExactCounterpart, cancellationToken);
+        if (countDiagnostics.Count > 0) analysis = analysis with
+        {
+            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(countDiagnostics).OrderBy(d => d.Start)
+                .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
+        };
         var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, syntax, ExactCounterpart, cancellationToken, morphology);
         analysis = article.Analysis;
         TextValidationEvidence validation = TextValidationAnalyzer.Analyze(analysis, context, syntax,
             contextOptions, cancellationToken, ExactCounterpart, localArticleFacts: article.LocalFacts);
+        if (countDiagnostics.Count > 0) validation = validation with
+        {
+            Diagnostics = Array.AsReadOnly(validation.Diagnostics.Concat(countDiagnostics.Select(d => new TextValidationDiagnostic(
+                d.Code, d.Start, d.Length, "reviewed_lexical_quantity;complete_exact_readings;" + d.RuleId +
+                ";known_counterpart=" + d.ProjectedText + ";candidate_only;no_automatic_rewrite", d.Readings!)))
+                .OrderBy(d => d.Start).ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
+        };
         TextWordConstructionEvidence? constructions = contextOptions.IncludeWordConstructions
             ? WordConstructionAnalyzer.AnalyzeText(analysis, package.Lexicon, package.LexicalCatalog,
                 lookupText => memo.TryGetValue(lookupText, out var acquired) ? acquired.Exact :

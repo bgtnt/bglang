@@ -11,6 +11,10 @@ public sealed record WordAnalysis(
 {
     public bool IsKnown => Readings.Count > 0;
 
+    /// <summary>Automatic profile-gated evidence for returned graph paths; null when the lane is unavailable or unsearched.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GraphStressEvidence? GraphStress { get; init; }
+
     /// <summary>
     /// Returned licensed paths with exact dictionary roots precede conditional-root hypotheses.
     /// Both remain hypotheses, never stored readings. Incomplete discovery may omit an exact-root path.

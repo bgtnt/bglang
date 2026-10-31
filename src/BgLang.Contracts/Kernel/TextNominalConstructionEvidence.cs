@@ -34,11 +34,22 @@ public sealed record NominalMemberSupport(int TokenIndex, NominalAgreementAssess
     public IReadOnlyList<int>? ReplacementReadings { get; init; }
 }
 
-/// <summary>Conditional advice for finite + nominal-core hypotheses, without a grammar warning or automatic edit.
+/// <summary>Conditional advice for finite or preposition + nominal-core hypotheses, without a grammar warning or automatic edit.
 /// NoChangeRetained is always true. The distance-one, ten-form pool is not exhaustive or unique intent.</summary>
 public sealed record NominalRepairReview(int TokenIndex, int Start, int Length, string Pattern,
     bool NoChangeRetained, int MaxDistance, int Limit, bool AllPackageAlternativesExamined,
-    IReadOnlyList<NominalRepairAlternative> Alternatives);
+    IReadOnlyList<NominalRepairAlternative> Alternatives)
+{
+    /// <summary>Indices into unchanged Alternatives: letter distance, compatible local construction, then raw index.
+    /// A supported branch repairs one hypothetical participant role; it is not a probability or unique intent.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<int>? ContextualOrder { get; init; }
+
+    /// <summary>Original exact context reading ordinals: all preposition rows, or the finite caller's predicate rows.
+    /// Null when the unchanged finite route has graph context; never replacement or role-filtered ordinals.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TextReadingReference>? ContextReadings { get; init; }
+}
 
 /// <summary>Alternative.Readings owns replacement ordinals; all other phrase references remain original.
 /// Null Phrase means this candidate did not establish the complete supported target construction.</summary>

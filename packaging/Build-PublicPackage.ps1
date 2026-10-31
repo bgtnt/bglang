@@ -6,11 +6,11 @@ param(
     [switch] $TestWeb,
     [string] $ResultsDirectory,
     [string] $CompareWith,
-    [ValidateSet('Current', 'Baseline')] [string] $Profile = 'Current',
+    [ValidateSet('Current', 'Baseline', 'CurrentGraphStress')] [string] $Profile = 'Current',
     [string] $ArticleCurrentManifest
 )
 
-$Profile = if ($Profile -ieq 'Current') { 'Current' } else { 'Baseline' }
+$Profile = switch ($Profile.ToLowerInvariant()) { 'current' { 'Current' } 'baseline' { 'Baseline' } 'currentgraphstress' { 'CurrentGraphStress' } }
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -26,10 +26,10 @@ if ($CompareWith) { $CompareWith = [IO.Path]::GetFullPath($CompareWith, $callerD
 if ($TestWeb -and !$Test) { throw 'TestWeb requires Test.' }
 if ($Test -and !$ResultsDirectory) { throw 'Test requires an explicit ResultsDirectory.' }
 if ($ArticleCurrentManifest) {
-    if (!$Test -or $Profile -cne 'Baseline') { throw 'ArticleCurrentManifest is only an explicit Baseline consumer dependency; Current uses its own primary manifest.' }
+    if (!$Test -or $Profile -ceq 'Current') { throw 'ArticleCurrentManifest is an explicit Baseline/CurrentGraphStress consumer dependency; Current uses its own primary manifest.' }
     $ArticleCurrentManifest = [IO.Path]::GetFullPath($ArticleCurrentManifest, $callerDirectory)
 }
-if ($Test -and $Profile -ceq 'Baseline' -and [string]::IsNullOrWhiteSpace($ArticleCurrentManifest)) { throw 'Baseline consumer checks require explicit ArticleCurrentManifest.' }
+if ($Test -and $Profile -cne 'Current' -and [string]::IsNullOrWhiteSpace($ArticleCurrentManifest)) { throw 'Baseline/CurrentGraphStress consumer checks require explicit ArticleCurrentManifest.' }
 $evidenceDirectory = if ($ResultsDirectory) { $ResultsDirectory } else { $OutputDirectory + '.validation' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'OutputDirectory must be new.' }
 if (Test-Path -LiteralPath $evidenceDirectory) { throw 'The native evidence directory must be new.' }
@@ -104,6 +104,8 @@ if ([IO.Path]::IsPathFullyQualified($lock.graph.releaseRelativePath) -or !$graph
 Assert-NoReparsePath $graph
 $graphPin = File-Pin $graph
 if ($graphPin.bytes -ne $lock.graph.bytes -or $graphPin.sha256 -cne $lock.graph.sha256) { throw 'Current graph RAW bytes/SHA differ.' }
+$baselineGraph = $graph
+$baselineGraphPin = $graphPin
 $currentPath = Join-Path $root 'data/dictionary/current-editorial-reproduction.v1.json'
 Assert-NoReparsePath $currentPath
 $currentProfilePin = File-Pin $currentPath
@@ -118,13 +120,34 @@ $legacyConsumerManifestPin = $null
 $editorialConsumerManifestPin = $null
 $articleCurrentManifestPin = $null
 $sourceAuthoring = Join-Path $InputDirectory $lock.authoringInput.entryFile
-if ($Profile -ceq 'Current') {
+$graphStressProfilePin = $null
+$graphStressConsumerManifestPin = $null
+if ($Profile -in @('Current', 'CurrentGraphStress')) {
     $overlay = [IO.Path]::GetFullPath($current.overlay.relativePath, $root)
     if ([IO.Path]::IsPathFullyQualified($current.overlay.relativePath) -or !$overlay.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Editorial overlay must be inside the source snapshot.' }
     Assert-NoReparsePath $overlay
     $overlayPin = File-Pin $overlay
     if ($overlayPin.bytes -ne $current.overlay.bytes -or $overlayPin.sha256 -cne $current.overlay.sha256 -or $current.derivedAuthoring.name -cne $lock.authoringInput.entryFile) { throw 'Editorial overlay/derived input pin differs.' }
     $candidate = $current.expectedCandidate
+}
+
+if ($Profile -ceq 'CurrentGraphStress') {
+    $graphStressPath = Join-Path $root 'data/dictionary/current-graph-stress-reproduction.v1.json'
+    Assert-NoReparsePath $graphStressPath
+    $graphStressProfilePin = File-Pin $graphStressPath
+    $graphStress = Get-Content -LiteralPath $graphStressPath -Raw | ConvertFrom-Json
+    if ($graphStress.schema -cne 'bglang.public-graph-stress-reproduction.v1' -or
+        $graphStress.profile -cne 'CurrentGraphStress' -or $graphStress.baselineLockSha256 -cne $inputLockPin.sha256 -or
+        $graphStress.editorialProfile.relativePath -cne 'data/dictionary/current-editorial-reproduction.v1.json' -or
+        $graphStress.editorialProfile.bytes -ne $currentProfilePin.bytes -or
+        $graphStress.editorialProfile.sha256 -cne $currentProfilePin.sha256) { throw 'GraphStress reproduction policy/input binding differs.' }
+    $graph = [IO.Path]::GetFullPath($graphStress.graph.releaseRelativePath, $root)
+    if ([IO.Path]::IsPathFullyQualified($graphStress.graph.releaseRelativePath) -or
+        !$graph.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'GraphStress graph must be inside the source snapshot.' }
+    Assert-NoReparsePath $graph
+    $graphPin = File-Pin $graph
+    if ($graphPin.bytes -ne $graphStress.graph.bytes -or $graphPin.sha256 -cne $graphStress.graph.sha256) { throw 'GraphStress graph RAW bytes/SHA differ.' }
+    $candidate = $graphStress.expectedCandidate
 }
 
 function Assert-ArticleCurrentManifest([string] $path) {
@@ -138,7 +161,7 @@ function Assert-ArticleCurrentManifest([string] $path) {
     if ($manifest.schemaVersion -cne 'bglang-neutral-runtime-package.v2' -or $manifest.packageId -cne $current.expectedCandidate.packageId) { throw 'Article Current manifest schema/package identity differs.' }
     return $pin
 }
-if ($Test -and $Profile -ceq 'Baseline') {
+if ($Test -and $Profile -cne 'Current') {
     Assert-Separate (Split-Path $ArticleCurrentManifest -Parent) $OutputDirectory
     Assert-Separate (Split-Path $ArticleCurrentManifest -Parent) $evidenceDirectory
     $articleCurrentManifestPin = Assert-ArticleCurrentManifest $ArticleCurrentManifest
@@ -169,7 +192,7 @@ function Invoke-Dotnet([string] $label, [string[]] $arguments) {
     try {
         $stdout = [IO.File]::Open($prefix + '.stdout.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
         $stderr = [IO.File]::Open($prefix + '.stderr.bin', [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
-        $bindings = @(foreach ($environmentName in @('TEMP','TMP','BGLANG_ARTICLE_CURRENT_MANIFEST','BGLANG_EDITORIAL_STRESS_MANIFEST','BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST','BGLANG_EDITORIAL_STRESS_PROFILE','BGLANG_PUBLIC_PACKAGE_MANIFEST','BGLANG_LEXICAL_MANIFEST','BGLANG_LEXICAL_REQUIRE_MANIFEST','BGLANG_STRESS_MANIFEST','BGLANG_STRESS_REQUIRE_MANIFEST','BGLANG_PREVIEW6_REPAIR_MANIFEST','BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST','BGLANG_WEB_TEST_MANIFEST','BGLANG_WEB_TEST_MANIFEST_SHA256')) {
+        $bindings = @(foreach ($environmentName in @('TEMP','TMP','BGLANG_GRAPH_STRESS_PROFILE','BGLANG_GRAPH_STRESS_SUCCESSOR_MANIFEST','BGLANG_GRAPH_STRESS_BASELINE_MANIFEST','BGLANG_ARTICLE_CURRENT_MANIFEST','BGLANG_EDITORIAL_STRESS_MANIFEST','BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST','BGLANG_EDITORIAL_STRESS_PROFILE','BGLANG_PUBLIC_PACKAGE_MANIFEST','BGLANG_LEXICAL_MANIFEST','BGLANG_LEXICAL_REQUIRE_MANIFEST','BGLANG_STRESS_MANIFEST','BGLANG_STRESS_REQUIRE_MANIFEST','BGLANG_PREVIEW6_REPAIR_MANIFEST','BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST','BGLANG_WEB_TEST_MANIFEST','BGLANG_WEB_TEST_MANIFEST_SHA256')) {
             $present = $start.Environment.ContainsKey($environmentName)
             [ordered]@{ name = $environmentName; present = $present; value = $(if ($present) { $start.Environment[$environmentName] } else { $null }) }
         })
@@ -236,8 +259,21 @@ function Assert-PassedTrx([string] $path, [string] $label) {
         $method = 'Explicit_editorial_target_binds_independent_selected_generation_and_control_evidence_in_all_formats'
         @('1', '2') | ForEach-Object { @{ method = $method; display = $method + ' ("' + $_ + '")' } }
     } else { throw 'Unknown requested test suite.' }
+    $required = @($required | ForEach-Object { @{ className = $class; method = $_.method; display = $_.display } })
+    $graphClass = if ($label -ceq 'public') { 'BgLang.Public.Tests.GraphStressSuccessorPackageTests' } else { 'BgLang.Web.Tests.GraphStressSuccessorHttpTests' }
+    if ($label -ceq 'public') {
+        $method = 'Selected_graph_stress_profile_preserves_unknown_owner_path_and_anchor_only_evidence'
+        $required += @{ className = $graphClass; method = $method; display = $method }
+        $nominalMethod = 'Nominal_opt_in_keeps_plain_and_combining_acute_graph_support_in_original_coordinates'
+        $required += @('GraphStress_nominal_plain', 'GraphStress_nominal_combining_acute') | ForEach-Object {
+            @{ className = $graphClass; method = $nominalMethod; display = $_ }
+        }
+    } else {
+        $method = 'Explicit_graph_stress_successor_keeps_unknown_owner_evidence_in_all_formats'
+        $required += @('1', '2') | ForEach-Object { @{ className = $graphClass; method = $method; display = $method + ' ("' + $_ + '")' } }
+    }
     $definitions = @($document.SelectNodes("//*[local-name()='TestDefinitions']/*[local-name()='UnitTest']"))
-    $targetIds = @($definitions | Where-Object { $_.SelectSingleNode("*[local-name()='TestMethod']").GetAttribute('className') -ceq $class } | ForEach-Object { $_.GetAttribute('id') })
+    $targetIds = @($definitions | Where-Object { $_.SelectSingleNode("*[local-name()='TestMethod']").GetAttribute('className') -cin $required.className } | ForEach-Object { $_.GetAttribute('id') })
     $targetLeaves = @($leaves | Where-Object { $_.GetAttribute('testId') -cin $targetIds })
     $requiredChecks = @(foreach ($key in $required) {
         $matches = @($targetLeaves | Where-Object { $_.GetAttribute('testName') -ceq $key.display })
@@ -249,11 +285,11 @@ function Assert-PassedTrx([string] $path, [string] $label) {
                 $method = @($definition[0].SelectNodes("*[local-name()='TestMethod']")); $execution = @($definition[0].SelectNodes("*[local-name()='Execution']"))
                 $identityExact = ![string]::IsNullOrWhiteSpace($leaf.GetAttribute('testId')) -and ![string]::IsNullOrWhiteSpace($leaf.GetAttribute('executionId')) -and
                     $method.Count -eq 1 -and $execution.Count -eq 1 -and
-                    $method[0].GetAttribute('className') -ceq $class -and $method[0].GetAttribute('name') -ceq $key.method -and
+                    $method[0].GetAttribute('className') -ceq $key.className -and $method[0].GetAttribute('name') -ceq $key.method -and
                     $definition[0].GetAttribute('name') -ceq $key.display -and $execution[0].GetAttribute('id') -ceq $leaf.GetAttribute('executionId')
             }
         }
-        [ordered]@{ fullyQualifiedName = $class + '.' + $key.method; displayName = $key.display; leafCount = $matches.Count; identityExact = [bool]$identityExact }
+        [ordered]@{ fullyQualifiedName = $key.className + '.' + $key.method; displayName = $key.display; leafCount = $matches.Count; identityExact = [bool]$identityExact }
     })
     $requiredPassed = $targetLeaves.Count -eq $required.Count -and @($requiredChecks | Where-Object { $_.leafCount -ne 1 -or !$_.identityExact }).Count -eq 0
     $check = [ordered]@{ label = $label; trx = $pin; leafCount = $leaves.Count; passed = ($leaves.Count - $notPassed.Count);
@@ -266,7 +302,7 @@ function Assert-PassedTrx([string] $path, [string] $label) {
 }
 
 $previousLocation = Get-Location
-$changedSelectors = @('BGLANG_ARTICLE_CURRENT_MANIFEST', 'BGLANG_EDITORIAL_STRESS_MANIFEST', 'BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST', 'BGLANG_EDITORIAL_STRESS_PROFILE', 'BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST', 'BGLANG_STRESS_MANIFEST', 'BGLANG_STRESS_REQUIRE_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST')
+$changedSelectors = @('BGLANG_GRAPH_STRESS_PROFILE', 'BGLANG_GRAPH_STRESS_SUCCESSOR_MANIFEST', 'BGLANG_GRAPH_STRESS_BASELINE_MANIFEST', 'BGLANG_ARTICLE_CURRENT_MANIFEST', 'BGLANG_EDITORIAL_STRESS_MANIFEST', 'BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST', 'BGLANG_EDITORIAL_STRESS_PROFILE', 'BGLANG_PUBLIC_PACKAGE_MANIFEST', 'BGLANG_LEXICAL_MANIFEST', 'BGLANG_LEXICAL_REQUIRE_MANIFEST', 'BGLANG_STRESS_MANIFEST', 'BGLANG_STRESS_REQUIRE_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_MANIFEST', 'BGLANG_PREVIEW6_REPAIR_REQUIRE_MANIFEST')
 if ($TestWeb) { $changedSelectors += @('BGLANG_WEB_TEST_MANIFEST', 'BGLANG_WEB_TEST_MANIFEST_SHA256') }
 $originalEnvironment = [Environment]::GetEnvironmentVariables('Process')
 $consumerChecks = [Collections.Generic.List[object]]::new()
@@ -277,10 +313,10 @@ try {
     $version = [IO.File]::ReadAllText($sdkRun.stdout.path).Trim()
     if ($version -cne $expectedSdk) { throw "Expected SDK $expectedSdk; found $version" }
     $null = Invoke-Dotnet 'sourcebuilder-build' @('build', 'tools/BgLang.SourceBuilder/BgLang.SourceBuilder.csproj', '-c', 'Release', '-nr:false', '-maxCpuCount:1', '-p:UseSharedCompilation=false')
-    if ($Profile -ceq 'Current') {
+    if ($Profile -in @('Current', 'CurrentGraphStress')) {
         $derived = Join-Path $evidenceDirectory 'derived-authoring'
         $null = Invoke-Dotnet 'authoring-stress-overlay' @('tools/BgLang.SourceBuilder/bin/Release/net10.0/BgLang.SourceBuilder.dll', 'apply-stress-overlay',
-            $sourceAuthoring, $graph, $overlay, $derived)
+            $sourceAuthoring, $baselineGraph, $overlay, $derived)
         Assert-Files $derived @($current.derivedAuthoring)
         $sourceAuthoring = Join-Path $derived $current.derivedAuthoring.name
         $derivedAuthoringPin = File-Pin $sourceAuthoring
@@ -296,20 +332,27 @@ try {
     if ($Test) {
         $manifest = Join-Path $OutputDirectory 'manifest.json'
         $legacyManifest = $manifest
-        if ($Profile -ceq 'Current') {
+        if ($Profile -cne 'Baseline') {
             $baselineDirectory = Join-Path $evidenceDirectory 'baseline-package'
             $null = Invoke-Dotnet 'legacy-baseline-package-build' @('tools/BgLang.SourceBuilder/bin/Release/net10.0/BgLang.SourceBuilder.dll', 'build',
-                (Join-Path $InputDirectory $lock.authoringInput.entryFile), $graph, $baselineDirectory)
+                (Join-Path $InputDirectory $lock.authoringInput.entryFile), $baselineGraph, $baselineDirectory)
             Assert-Files $baselineDirectory $lock.expectedCandidate.files
             $legacyManifest = Join-Path $baselineDirectory 'manifest.json'
         }
         $legacyConsumerManifestPin = File-Pin $legacyManifest
-        $editorialConsumerManifestPin = File-Pin $manifest
         if ($Profile -ceq 'Current') { $articleCurrentManifestPin = Assert-ArticleCurrentManifest $manifest }
+        $editorialManifest = if ($Profile -ceq 'CurrentGraphStress') { $articleCurrentManifestPin.path } else { $manifest }
+        $editorialMode = if ($Profile -ceq 'CurrentGraphStress') { 'Current' } else { $Profile }
+        $editorialConsumerManifestPin = File-Pin $editorialManifest
         [Environment]::SetEnvironmentVariable('BGLANG_ARTICLE_CURRENT_MANIFEST', $articleCurrentManifestPin.path, 'Process')
-        [Environment]::SetEnvironmentVariable('BGLANG_EDITORIAL_STRESS_MANIFEST', $manifest, 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_EDITORIAL_STRESS_MANIFEST', $editorialManifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST', '1', 'Process')
-        [Environment]::SetEnvironmentVariable('BGLANG_EDITORIAL_STRESS_PROFILE', $Profile, 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_EDITORIAL_STRESS_PROFILE', $editorialMode, 'Process')
+        $graphStressMode = if ($Profile -ceq 'CurrentGraphStress') { 'CurrentGraphStress' } else { 'Baseline' }
+        [Environment]::SetEnvironmentVariable('BGLANG_GRAPH_STRESS_PROFILE', $graphStressMode, 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_GRAPH_STRESS_SUCCESSOR_MANIFEST', $(if ($Profile -ceq 'CurrentGraphStress') { $manifest } else { [NullString]::Value }), 'Process')
+        [Environment]::SetEnvironmentVariable('BGLANG_GRAPH_STRESS_BASELINE_MANIFEST', $legacyManifest, 'Process')
+        $graphStressConsumerManifestPin = File-Pin $(if ($Profile -ceq 'CurrentGraphStress') { $manifest } else { $legacyManifest })
         [Environment]::SetEnvironmentVariable('BGLANG_PUBLIC_PACKAGE_MANIFEST', $legacyManifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_LEXICAL_MANIFEST', $legacyManifest, 'Process')
         [Environment]::SetEnvironmentVariable('BGLANG_LEXICAL_REQUIRE_MANIFEST', '1', 'Process')
@@ -325,7 +368,9 @@ try {
         $null = Invoke-Dotnet 'example-build' @('build', 'examples/BgLang.PublicExample/BgLang.PublicExample.csproj', '-c', 'Release', '-nr:false', '-maxCpuCount:1', '-p:UseSharedCompilation=false')
         $consumerDirectory = Join-Path $ResultsDirectory 'consumer'
         [IO.Directory]::CreateDirectory($consumerDirectory) | Out-Null
-        foreach ($sample in @(@{ id = 'known-repeat'; text = 'знаме знаме.' }, @{ id = 'empty'; text = '' }, @{ id = 'context-default'; text = 'книга.' })) {
+        $samples = @(@{ id = 'known-repeat'; text = 'знаме знаме.' }, @{ id = 'empty'; text = '' }, @{ id = 'context-default'; text = 'книга.' })
+        if ($Profile -ceq 'CurrentGraphStress') { $samples += @{ id = 'graph-stress-unknown'; text = '😀 колажист!' } }
+        foreach ($sample in $samples) {
             $samplePath = Join-Path $consumerDirectory ($sample.id + '.utf8.txt')
             [IO.File]::WriteAllText($samplePath, $sample.text, [Text.UTF8Encoding]::new($false))
             $run = Invoke-Dotnet ('consumer-' + $sample.id) @('examples/BgLang.PublicExample/bin/Release/net10.0/BgLang.PublicExample.dll', $manifest, '--json', '--text-file', $samplePath)
@@ -348,9 +393,10 @@ try {
     $null = Write-JsonNew (Join-Path $evidenceDirectory 'recipe-receipt.json') ([ordered]@{ schema = 'bglang.public-package-recipe.v3'; status = 'PASS_LOCAL_REPRODUCTION_AND_REQUESTED_CHECKS';
         inputLock = File-Pin (Join-Path $root 'data/dictionary/public-input-lock.v1.json'); graph = $graphPin; expectedPackageId = $candidate.packageId;
         legacyConsumerManifest = $legacyConsumerManifestPin; editorialConsumerManifest = $editorialConsumerManifestPin; articleCurrentManifest = $articleCurrentManifestPin;
-        consumerBindingQualification = 'Legacy Public/Web validate explicit Baseline; editorial consumers and example validate the primary recipe profile. Article controls always validate reviewed Current: the own primary output for Current, or an explicit already-built Current dependency for Baseline. A Baseline primary package is never relabeled Current. Private Full remains a separate parent gate.';
-        reproductionProfile = $Profile; reproductionPolicy = $currentProfilePin; editorialOverlay = $overlayPin; derivedAuthoring = $derivedAuthoringPin;
-        factoryPath = $(if ($Profile -ceq 'Current') { 'locked-base-authoring/editorial-stress-overlay/existing-build' } else { 'locked-base-authoring/existing-build' });
+        consumerBindingQualification = 'Legacy Public/Web stay explicit Baseline36b0. Article controls always use exact editorial Current90bea: own output for Current, explicit dependency for Baseline/CurrentGraphStress. Editorial controls use that90bea dependency under CurrentGraphStress. The example and dedicated GraphStress Public/HTTP controls validate the primary canonical successor only for CurrentGraphStress; other profiles retain Baseline negative controls. Historical825B GraphStress private controls keep their separate original selector. Private combined Full remains a separate Root gate.';
+        reproductionProfile = $Profile; reproductionPolicy = $currentProfilePin; graphStressPolicy = $graphStressProfilePin; baselineGraph = $baselineGraphPin;
+        graphStressConsumerManifest = $graphStressConsumerManifestPin; editorialOverlay = $overlayPin; derivedAuthoring = $derivedAuthoringPin;
+        factoryPath = $(if ($Profile -ceq 'CurrentGraphStress') { 'locked-base-authoring/editorial-stress-overlay/separate-graph-stress/existing-build' } elseif ($Profile -ceq 'Current') { 'locked-base-authoring/editorial-stress-overlay/existing-build' } else { 'locked-base-authoring/existing-build' });
         outputFiles = @($candidate.files | ForEach-Object { File-Pin (Join-Path $OutputDirectory $_.name) }); nativeCommands = $script:nativeCommands.ToArray();
         publicAndConsumerTestsRequested = [bool]$Test; webTestsRequested = [bool]$TestWeb; trxChecks = $script:trxChecks.ToArray(); consumerChecks = $consumerChecks.ToArray(); publication = $false;
         nativeEvidenceQualification = 'Direct held native exits and drained/disposed streams only. Child self-temp requires the external owner startup-hook proof; no descendant exits are inferred.' })

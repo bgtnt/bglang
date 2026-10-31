@@ -1,3 +1,23 @@
+# BgLang Live — Preview14: актуален локален старт
+
+[Preview14 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.14) удостоверява публикационния статус, source/tag, действителните CI и окончателния readback. До публикуването следните връзки са целеви адреси: [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.14/packaging/RELEASE-CANDIDATE.md).
+
+Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Preview14 runtime ZIP е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
+
+~~~powershell
+$env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
+$env:BgLang__ManifestSha256 = '9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853'
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+~~~
+
+Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`; експерименталната лаборатория е `/demo-lab/index.html`. [Root quickstart](../../README.md) и [release guide](../../packaging/RELEASE-CANDIDATE.md) описват готовия runtime и изричното му възпроизвеждане с `-Profile CurrentGraphStress`. Builder default остава отделният **Current** профил.
+
+При `"context":{"includeNominalConstructions":true}` в `POST /api/v1/analyze-text` и `/api/v2/analyze-text` се включват локалните NP/advisory възможности; opt-in остава default `false`. Preview14 включва nominal/finite continuations, guarded preposition+NP и тесни бройни предложения, quote/boundary защити, advisory запетаи при „понеже“/„докато“ и правописна подкрепа от предходен modifier. Alternatives, coherent readings, original UTF-16 refs и видимото въздържане се запазват; редакцията изисква изрично действие. Липсата на предупреждение не доказва обща граматична правилност; няма твърдение за поправени всички 33 въпроса или нов browser smoke резултат.
+
+## Исторически snapshots — Preview13 и по-стари
+
+Предходното тяло по-долу е запазено RAW. Старите версии, Current pins, counts и статуси описват съответните snapshots; текущият локален старт е горе.
+
 # BgLang Live — Preview13: актуален локален старт
 
 [Preview13 release](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13) е окончателният източник за публикационния статус, наличните файлове и действителните CI/readback резултати. Следващите връзки са целеви адреси до публикуването: [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.13/bglang-v0.1.0-preview.13-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.13/packaging/RELEASE-CANDIDATE.md). Този текст не удостоверява предварително публикация или успешен hosted run.

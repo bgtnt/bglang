@@ -140,6 +140,7 @@ export function livePayload(text, heuristics = true, continuation = null) {
       includeFragmentDiagnostics: heuristics,
       includeSpacingDiagnostics: heuristics,
       includeWordConstructions: heuristics,
+      includeNominalConstructions: heuristics,
       ...(continuation ? {continuation: {caret: continuation.caret, limit: continuation.limit,
         ...(continuation.target == null ? {} : {target: continuation.target})}} : {})
     }

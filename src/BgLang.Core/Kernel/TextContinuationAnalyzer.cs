@@ -29,6 +29,7 @@ internal static class TextContinuationAnalyzer
         TextContinuationTarget target = request.Target == TextContinuationTarget.Noun
             ? TextContinuationTarget.Noun : TextContinuationTarget.Finite;
         IReadOnlyList<TextContinuationExpectation> finite = [];
+        MorphologicalTense? finiteTense = null;
         IReadOnlyList<TextNominalContinuationExpectation>? nominal = target == TextContinuationTarget.Noun ? [] : null;
         TextContinuationEvidence Unavailable(string reason) =>
             new(false, reason, request.Caret, start, length, prefix, finite, [], false, false, 0)
@@ -52,24 +53,31 @@ internal static class TextContinuationAnalyzer
         if (sentence is null) return Unavailable(ContextReason("sentence_unavailable"));
         var completed = preceding.Where(entry => analysis.Tokens[entry.Index].Start >= sentence.Start).ToArray();
         int cursor = sentence.Start;
+        string? topologyUnavailable = null;
         var words = new List<ContextLanes.TokenView>();
         foreach (var entry in completed)
         {
             ct.ThrowIfCancellationRequested();
             TokenAnalysis token = analysis.Tokens[entry.Index];
             if (!Space(analysis.Text, cursor, token.Start, words.Count > 0, ct))
-                return Unavailable(ContextReason("topology_unsupported"));
+            {
+                if (request.Target == TextContinuationTarget.Noun || words.Count == 0)
+                    return Unavailable(ContextReason("topology_unsupported"));
+                topologyUnavailable ??= ContextReason("topology_unsupported");
+            }
             Rows rows = entry.Rows;
-            if (rows.GraphUnavailableReason is { } reason) return Unavailable(reason);
+            if (rows.GraphUnavailableReason is { } reason) return Unavailable(topologyUnavailable ?? reason);
             words.Add(new(entry.Index, token, rows.Canonical, rows.Lanes, true) { UsesGraph = rows.UsesGraph });
             cursor = token.Start + token.Length;
         }
-        if (!Space(analysis.Text, cursor, start, true, ct)) return Unavailable(ContextReason("topology_unsupported"));
+        if (!Space(analysis.Text, cursor, start, true, ct))
+            return Unavailable(topologyUnavailable ?? ContextReason("topology_unsupported"));
 
         // Auto resolves a licensed context before touching vocabulary. Empty/unavailable/error
         // candidate results and cancellation cannot change the selected interpretation lane.
         if (request.Target != TextContinuationTarget.Noun)
-            finite = FiniteExpectations(words, morphology, ct).AsReadOnly();
+            finite = FiniteExpectations(analysis, sentence, words, morphology, ct, out finiteTense).AsReadOnly();
+        if (topologyUnavailable is not null && finite.Count == 0) return Unavailable(topologyUnavailable);
         if (request.Target == TextContinuationTarget.Noun || request.Target == TextContinuationTarget.Auto && finite.Count == 0)
         {
             var attributes = NominalExpectations(words, morphology, ct);
@@ -88,8 +96,9 @@ internal static class TextContinuationAnalyzer
         bool Matches(MorphologicalFeatures f, int index) => target == TextContinuationTarget.Noun
             ? ContextEvidenceGuards.NominalTupleMatches((f.Number, f.Gender),
                 (nominal![index].Number, nominal[index].Gender))
-            : ContextEvidenceGuards.PersonNumberTupleMatches((f.Person, f.Number),
-                (finite[index].Person, finite[index].Number));
+            : (finiteTense is null || f.Tense == finiteTense) &&
+                ContextEvidenceGuards.PersonNumberTupleMatches((f.Person, f.Number),
+                    (finite[index].Person, finite[index].Number));
         bool Compatible(WordReading reading)
         {
             ct.ThrowIfCancellationRequested();
@@ -129,10 +138,39 @@ internal static class TextContinuationAnalyzer
         { Target = target, NominalExpectations = nominal };
     }
 
-    private static List<TextContinuationExpectation> FiniteExpectations(List<ContextLanes.TokenView> words,
-        MorphologyEvidenceProjection.View morphology, CancellationToken ct)
+    private static List<TextContinuationExpectation> FiniteExpectations(TextAnalysis analysis, SentenceSpan sentence,
+        List<ContextLanes.TokenView> words, MorphologyEvidenceProjection.View morphology, CancellationToken ct,
+        out MorphologicalTense? requiredTense)
     {
         List<TextContinuationExpectation> expectations = [];
+        requiredTense = null;
+        bool negative = false;
+        TextContextRoleSelection? particleSupport = null;
+        // Closed advisory constructions: exact personal pronoun + не, or a supported
+        // finite context + ще. The particle is a predicate component, not a selected role.
+        if (words.Count > 1 && words[^1].CanonicalText is "не" or "ще")
+        {
+            ContextLanes.TokenView particle = words[^1], previous = words[^2];
+            if (particle.UsesGraph || particle.OriginalIndex != previous.OriginalIndex + 1 ||
+                !Space(analysis.Text, previous.Token.Start + previous.Token.Length, particle.Token.Start, true, ct))
+                return expectations;
+            int[] members = Enumerable.Range(0, particle.Readings.Count).Where(i =>
+            {
+                ct.ThrowIfCancellationRequested();
+                var row = particle.Readings[i];
+                return row.Category == ContextLanes.Category.Particle &&
+                    row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle &&
+                    !row.Features.HasConflictingFeatures && !row.Features.HasUnrecognizedFeatures &&
+                    row.Features.RawTag == "Частица:191" &&
+                    BulgarianTextNormalizer.NormalizeKey(row.Lemma) == particle.CanonicalText;
+            }).ToArray();
+            if (members.Length == 0) return expectations;
+            negative = particle.CanonicalText == "не";
+            requiredTense = negative ? null : MorphologicalTense.Present;
+            particleSupport = Support(particle, TextContextRole.Predicate, members, morphology, ct, negative
+                ? "negative_finite_subject_interpretation" : "simple_future_subject_interpretation");
+            words = words.GetRange(0, words.Count - 1);
+        }
         if (words.Count == 1 && !words[0].UsesGraph)
         {
             int[] subject = Enumerable.Range(0, words[0].Readings.Count).Where(i =>
@@ -147,19 +185,28 @@ internal static class TextContinuationAnalyzer
                     Array.AsReadOnly(new[] { Support(words[0], TextContextRole.Subject, subject, morphology, ct) })));
             }
         }
-        if (expectations.Count == 0 && ContextLanes.NominalMembers(words, words.Count - 1, ct) is { } nominal)
+        if (!negative && expectations.Count == 0 && NominalStructuralProjection.BindHead(analysis.Text, sentence, analysis.Tokens,
+            words, words.Count - 1, ct) is { } binding && binding.Participants[0].WordIndex == 0 &&
+            NominalStructuralProjection.Measure(binding, ct, allowAdnominalReadings: false) is { } nominal)
         {
             foreach (ContextLanes.NominalHead head in nominal.Heads)
             {
                 ct.ThrowIfCancellationRequested();
                 if (head.Attributes.Any(members => members.Length == 0)) continue;
                 List<TextContextRoleSelection> supports =
-                    [Support(words[^1], TextContextRole.Subject, head.Members, morphology, ct)];
+                    [Support(binding.Head.Word, TextContextRole.Subject, head.Members, morphology, ct)];
                 for (int a = 0; a < head.Attributes.Length; a++)
-                    supports.Add(Support(words[a], TextContextRole.Attribute, head.Attributes[a], morphology, ct));
+                    supports.Add(Support(binding.Participants[a].Word, TextContextRole.Attribute, head.Attributes[a], morphology, ct));
                 expectations.Add(new(MorphologicalPerson.Third, head.Number, supports.AsReadOnly()));
             }
         }
+        if (particleSupport is not null)
+            for (int e = 0; e < expectations.Count; e++)
+            {
+                ct.ThrowIfCancellationRequested();
+                expectations[e] = expectations[e] with
+                    { Supports = Array.AsReadOnly(expectations[e].Supports.Append(particleSupport).ToArray()) };
+            }
         return expectations;
     }
 

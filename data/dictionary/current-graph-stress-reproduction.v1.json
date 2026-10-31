@@ -1,0 +1,60 @@
+{
+  "schema": "bglang.public-graph-stress-reproduction.v1",
+  "profile": "CurrentGraphStress",
+  "baselineLockSha256": "7d505ffaf8727955bace067ba632313dd7533aab49a2b11e481924670833e2fb",
+  "editorialProfile": {
+    "relativePath": "data/dictionary/current-editorial-reproduction.v1.json",
+    "bytes": 2882,
+    "sha256": "89b4a69ac4d9aa71ba24a38bf98738ecf78483fb0400be6259436df1e2fc178c"
+  },
+  "graph": {
+    "releaseRelativePath": "data/word-formation/automatic-graph-stress-ist.v1.json",
+    "bytes": 2110678,
+    "sha256": "d588cddd473dba8a6f0932d32da5fba7beda0acb76d9677f59bab7da0dc44650",
+    "sourceId": "bglang-word-formation:automatic-graph-stress-ist.v1"
+  },
+  "policy": {
+    "profileId": "accent-profile:ist:dominant-base.v1",
+    "kind": "dominant_morph_nucleus",
+    "morphVowelOrdinal": 0,
+    "transitionId": "transition|suffix|m:suffix:ист|state:noun:7|stem-transform:identity|state:noun:7a|accepted-lemma-derivational-suffix-ist.v0",
+    "evidenceId": "ev:accent:patseva:5.3.1.1:ist",
+    "qualification": "Only this existing reviewed ist transition receives the declared anchor policy; no complete pronunciation or root model is asserted."
+  },
+  "expectedCandidate": {
+    "profile": "automatic-graph-stress-ist-canonical.v1",
+    "packageId": "bglang-neutral:9e9a4f441f679542",
+    "sourceId": "neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7",
+    "createdAtUtc": "1970-01-01T00:00:00+00:00",
+    "manifestSchema": "bglang-neutral-runtime-package.v2",
+    "files": [
+      {
+        "name": "lexeme-annotations.v1.json",
+        "bytes": 129266618,
+        "sha256": "1a4975434655674872196e210e4b09c60aba799f006932a0db51755a2281bea4"
+      },
+      {
+        "name": "lexicon.v3.jsonl",
+        "bytes": 47335883,
+        "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+      },
+      {
+        "name": "manifest.json",
+        "bytes": 824,
+        "sha256": "9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853"
+      },
+      {
+        "name": "word-formation.v0.json",
+        "bytes": 2110678,
+        "sha256": "d588cddd473dba8a6f0932d32da5fba7beda0acb76d9677f59bab7da0dc44650"
+      }
+    ]
+  },
+  "historicalManifest": {
+    "bytes": 825,
+    "sha256": "3f6d48b051d09a6f99e1065c00e87870c94c2006e6bb80b42b1d48240c9a7c07",
+    "createdAtUtc": "1970-01-01T02:00:00+02:00",
+    "qualification": "Historical bytes and failed Full remain preserved. This prospective canonical successor is not measured producer output."
+  },
+  "factory": "Existing apply-stress-overlay on locked authoring + Baseline0606, then existing build on derived authoring + explicit separate graph. No default graph or Baseline lock change."
+}

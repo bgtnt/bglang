@@ -173,3 +173,8 @@ tests/Shared/Fixtures/editorial-stress-acceptance.v1.json -text
 tests/BgLang.Public.Tests/Fixtures/article-seeds.development.v1.json -text
 tests/BgLang.Public.Tests/Fixtures/article-controls.v1.json -text
 tests/BgLang.Public.Tests/Fixtures/article-projection.v1.json -text
+
+# Exact separate GraphStress successor inputs and independent acceptance fixture.
+data/word-formation/automatic-graph-stress-ist.v1.json -text
+data/dictionary/current-graph-stress-reproduction.v1.json -text
+tests/Shared/Fixtures/graph-stress-acceptance.v1.json -text

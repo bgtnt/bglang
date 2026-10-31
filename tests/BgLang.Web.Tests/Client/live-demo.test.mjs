@@ -85,7 +85,7 @@ function posted(call) {assert.equal(call.init.method,'POST');return JSON.parse(c
 
 test('payload preserves raw Unicode and explicitly carries every independent opt-in',()=>{
   const context={includeAdditionalRoleHeuristics:true,includeSubordinateCommaDiagnostics:true,
-    includeFragmentDiagnostics:true,includeSpacingDiagnostics:true,includeWordConstructions:true};
+    includeFragmentDiagnostics:true,includeSpacingDiagnostics:true,includeWordConstructions:true,includeNominalConstructions:true};
   assert.deepEqual(livePayload(RAW),{text:RAW,evidenceFormat:'shared-analyses-v1',
     includeUnknownContextProperNames:true,context});
   assert.deepEqual(livePayload('  '+RAW+'\t',false),{text:'  '+RAW+'\t',evidenceFormat:'shared-analyses-v1',
@@ -1690,4 +1690,137 @@ test('reviewed joined verb negation is a warning while its original phrase proje
   assert.equal(result.messages[0].classification, 'warning');
   assert.strictEqual(result.messages[0].diagnostic, diagnostic);
   assert.equal(result.messages[0].diagnostic.projectedText, 'не може');
+});
+
+// UI-only wire fixtures: these do not claim a package, morphology or semantic oracle.
+// Literal costs/order are supplied server fields; no language search runs in the client.
+function lifecycleNominalReply(text='Спирам пред сипя къща.', {tokenIndex=2,headIndex=3,pattern='preposition+NP'}={}) {
+  const reply=lifecycleReply(text),token=reply.data.tokens[tokenIndex],head=reply.data.tokens[headIndex];
+  const phrase={constructionKey:'opaque-np',start:token.start,length:head.start+head.length-token.start,
+    headTokenIndex:headIndex,modifierTokenIndices:[tokenIndex],connectorTokenIndices:[],assessment:'Compatible',
+    headSupports:[{reading:{tokenIndex:headIndex,completeReadingIndex:0},graphReading:null,
+      members:[{tokenIndex,assessment:'Compatible',readings:[],graphReadings:[],replacementReadings:[0]}]}]};
+  reply.data.nominalConstructions={version:'opaque-nominal-version',available:true,unavailableReason:null,phrases:[],reviews:[{
+    tokenIndex,start:token.start,length:token.length,pattern,noChangeRetained:true,maxDistance:1,limit:10,
+    allPackageAlternativesExamined:false,contextReadings:[],contextualOrder:[0,2,1],alternatives:[
+      {alternative:{form:'сипя',distance:0,readings:[]},phrase:null},
+      {alternative:{form:'кипя',distance:1,readings:[]},phrase:null},
+      {alternative:{form:'синя',distance:1,readings:[{form:'синя',lemma:'син',partOfSpeech:'opaque-tag'}]},phrase}
+    ]}]};
+  return reply;
+}
+const nominalButtons=f=>Array.from(f.spelling.querySelectorAll('button'));
+const nominalButtonForms=f=>nominalButtons(f).map(button=>button.textContent.split(' · ')[0]);
+const nominalCandidate=f=>nominalButtons(f).find(button=>/^[Сс]иня · /.test(button.textContent));
+
+test('actual Live shows known-word structural advice through the same POST with no automatic edit and retains original', {concurrency:false}, async()=>{
+  for(const row of [
+    {text:'Спирам пред сипя къща.',tokenIndex:2,headIndex:3,pattern:'preposition+NP',head:'къща'},
+    {text:'Рисувам сипя река.',tokenIndex:1,headIndex:2,pattern:'finite+NP',head:'река'}
+  ])await withLiveLifecycle(async f=>{
+    const reply=lifecycleNominalReply(row.text,row),before=structuredClone(reply);
+    assert.equal(reply.data.tokens[row.tokenIndex].analysis.isKnown,true);
+    assert.ok(reply.data.spelling.words.every(word=>word.alternatives.length===0));
+    await f.first(reply);assert.equal(posted(f.net.calls[0]).context.includeNominalConstructions,true);
+    assert.equal(f.net.calls[0].url,'/api/v2/analyze-text');assert.equal(f.spelling.hidden,false);
+    assert.match(f.spelling.textContent,/Структурни предложения за „сипя“/);
+    assert.match(f.spelling.textContent,/Оригиналът „сипя“ остава възможен/);
+    assert.match(f.spelling.textContent,/не доказва грешка или замислен смисъл/);
+    assert.ok(f.spelling.textContent.includes('при замяна: съвместима именна група с „'+row.head+'“'));
+    assert.match(f.spelling.textContent,/сипя · буквено разстояние 0.*без промяна/);
+    assert.deepEqual(nominalButtonForms(f),['синя','кипя'],'Only the contextual tie changes; zero-distance no-change is informational.');
+    assert.deepEqual(reply,before);assert.equal(f.editor.value,row.text);assert.equal(f.editor.setRangeTextCalls.length,0);
+    await f.clock.advance(5000);assert.equal(f.net.calls.length,1,'Rendering and no-change need no additional HTTP request.');
+  },{text:row.text,caret:row.text.length});
+});
+
+test('actual Live nominal opt-in follows heuristics on the existing request and correct-control reviews stay absent', {concurrency:false}, async()=>{
+  const raw='Спирам пред синя къща.';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleReply(raw);reply.data.nominalConstructions={available:true,phrases:[],reviews:[]};
+    await f.first(reply);assert.equal(f.spelling.hidden,true);assert.equal(nominalButtons(f).length,0);
+    f.get('#live-heuristics').checked=false;f.get('#live-heuristics').dispatch('change');await f.clock.advance(2025);
+    assert.equal(f.net.calls.length,2);assert.equal(posted(f.net.calls[1]).context.includeNominalConstructions,false);
+    assert.equal(posted(f.net.calls[1]).context.includeWordConstructions,false);assert.equal(f.net.calls[1].url,'/api/v2/analyze-text');
+    await f.accept(1,lifecycleReply(raw));await f.clock.advance(5000);assert.equal(f.net.calls.length,2);
+    assert.equal(f.editor.value,raw);assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.spelling.hidden,true);
+  },{text:raw,caret:raw.length});
+});
+
+test('actual Live nominal ranking falls back wholly for malformed or distance-inverted permutations without altering raw alternatives', {concurrency:false}, async()=>{
+  for(const order of [undefined,null,{},'0,2,1',[],[0,2],[0,2,1,1],[0,2,2],[-1,2,1],[0,3,1],[0,1.5,2],[0,'2',1],[2,0,1]])
+    await withLiveLifecycle(async f=>{
+      const reply=lifecycleNominalReply();reply.data.nominalConstructions.reviews[0].contextualOrder=order;
+      const before=structuredClone(reply);await f.first(reply);
+      assert.deepEqual(nominalButtonForms(f),['кипя','синя'],'Bad optional order must preserve the full raw identity order: '+JSON.stringify(order));
+      assert.ok(f.spelling.textContent.indexOf('сипя · буквено разстояние 0')<f.spelling.textContent.indexOf('кипя · буквено разстояние 1'));
+      assert.deepEqual(reply,before);assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.net.calls.length,1);
+    },{text:'Спирам пред сипя къща.',caret:22});
+});
+
+test('actual Live nominal advice replaces only the second literal Unicode occurrence once via existing case and selection guards', {concurrency:false}, async()=>{
+  const raw='🙂 а\u0300: сипя. Пред Сипя къща.',expected='🙂 а\u0300: сипя. Пред Синя къща.';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleNominalReply(raw,{tokenIndex:3,headIndex:4}),before=structuredClone(reply);
+    assert.equal(raw.length,28);assert.equal(reply.data.tokens[1].start,7);assert.equal(reply.data.tokens[3].start,18);
+    await f.first(reply);const button=nominalCandidate(f);assert.ok(button);
+    assert.equal(f.editor.value,raw);assert.equal(f.editor.setRangeTextCalls.length,0);
+    button.click();assert.equal(f.editor.value,expected);
+    assert.deepEqual(f.editor.setRangeTextCalls,[{form:'Синя',start:18,end:22,mode:'preserve'}]);
+    assert.deepEqual([f.editor.selectionStart,f.editor.selectionEnd],[28,28]);assert.strictEqual(f.doc.activeElement,f.editor);
+    f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,1);assert.deepEqual(reply,before);
+    await f.clock.advance(2025);assert.equal(f.net.calls.length,2);assert.equal(posted(f.net.calls[1]).text,expected);
+    assert.equal(f.net.calls[1].url,'/api/v2/analyze-text');
+  },{text:raw,caret:28});
+});
+
+test('actual Live nominal callbacks reject pre-event selection raw edits IME and old response even after text returns', {concurrency:false}, async()=>{
+  const raw='Спирам пред сипя къща.';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleNominalReply());const old=nominalCandidate(f);assert.ok(old);
+    f.editor.setSelectionRange(12,12);f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.setSelectionRange(22,22);f.editor.value='Спирам пред Сипя къща.';f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.value=raw;f.editor.dispatch('compositionstart');f.forceClick(old);await f.clock.advance(5000);
+    assert.equal(f.net.calls.length,1);assert.equal(f.editor.setRangeTextCalls.length,0);
+    f.editor.dispatch('compositionend');f.type(raw+' ');f.type(raw);f.forceClick(old);
+    assert.equal(f.editor.value,raw);assert.equal(f.editor.setRangeTextCalls.length,0,'Returning to the same text cannot revive a prior revision.');
+    await f.clock.advance(2025);assert.equal(f.net.calls.length,2);await f.accept(1,lifecycleNominalReply());
+    f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,0,'Same occurrence in a fresh response still has a different binding.');
+    nominalCandidate(f).click();assert.equal(f.editor.value,'Спирам пред синя къща.');assert.equal(f.editor.setRangeTextCalls.length,1);
+    f.forceClick(old);assert.equal(f.editor.setRangeTextCalls.length,1);
+  },{text:raw,caret:22});
+});
+
+test('actual Live malformed nominal reviews do not suppress valid spelling suggestions or create unsafe actions', {concurrency:false}, async()=>{
+  const mutations=[
+    evidence=>{evidence.available=false;},evidence=>{evidence.reviews={};},evidence=>{evidence.reviews=[null];},
+    evidence=>{evidence.reviews[0].noChangeRetained=false;},evidence=>{evidence.reviews[0].tokenIndex='2';},
+    evidence=>{evidence.reviews[0].tokenIndex=-1;},evidence=>{evidence.reviews[0].tokenIndex=99;},
+    evidence=>{evidence.reviews[0].start++;},evidence=>{evidence.reviews[0].length--;},
+    evidence=>{evidence.reviews[0].alternatives={};},evidence=>{evidence.reviews[0].alternatives=[];},
+    evidence=>{evidence.reviews[0].alternatives[1]=null;},evidence=>{evidence.reviews[0].alternatives[1].alternative.form=null;},
+    evidence=>{evidence.reviews[0].alternatives[1].alternative.distance=-1;}
+  ];
+  for(const mutate of mutations)await withLiveLifecycle(async f=>{
+    const reply=lifecycleNominalReply();mutate(reply.data.nominalConstructions);
+    // Existing spelling remains independently usable; this is a wire-only UI fixture.
+    reply.data.spelling.words[2].alternatives=[{form:'сипва',distance:1}];
+    await f.first(reply);assert.deepEqual(nominalButtonForms(f),['сипва']);
+    assert.doesNotMatch(f.spelling.textContent,/Структурни предложения/);
+    assert.equal(f.editor.value,'Спирам пред сипя къща.');assert.equal(f.editor.setRangeTextCalls.length,0);assert.equal(f.net.calls.length,1);
+  },{text:'Спирам пред сипя къща.',caret:22});
+});
+
+test('actual Live requires coherent compatible head evidence for the structural label without deleting raw candidates', {concurrency:false}, async()=>{
+  for(const mutate of [
+    phrase=>{phrase.assessment='Unassessed';},phrase=>{phrase.headTokenIndex=99;},phrase=>{phrase.headSupports=[];},
+    phrase=>{phrase.headSupports=[null];},phrase=>{phrase.headSupports[0].reading.tokenIndex=0;},
+    phrase=>{phrase.headSupports[0].members[0].tokenIndex=0;},phrase=>{phrase.headSupports[0].members[0].replacementReadings=[];},
+    phrase=>{phrase.headSupports[0].members[0].replacementReadings=[1];},phrase=>{phrase.headSupports[0].members[0].replacementReadings=[-1];}
+  ])await withLiveLifecycle(async f=>{
+    const reply=lifecycleNominalReply();mutate(reply.data.nominalConstructions.reviews[0].alternatives[2].phrase);
+    await f.first(reply);assert.deepEqual(nominalButtonForms(f),['синя','кипя']);
+    assert.doesNotMatch(f.spelling.textContent,/при замяна: съвместима/);assert.match(nominalCandidate(f).textContent,/неустановена/);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:'Спирам пред сипя къща.',caret:22});
 });

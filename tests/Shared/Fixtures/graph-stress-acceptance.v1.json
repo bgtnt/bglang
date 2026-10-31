@@ -1,0 +1,99 @@
+{
+  "schema": "bglang.graph-stress-package-acceptance.v1",
+  "packages": {
+    "Baseline": {
+      "packageId": "bglang-neutral:36b0b69685d6d3e9",
+      "files": [
+        {
+          "name": "lexeme-annotations.v1.json",
+          "bytes": 129258517,
+          "sha256": "a9334305068d9f476d48f50b0f80e7ff9518666fa3b26fcbf753b01e4ff4c8d5"
+        },
+        {
+          "name": "lexicon.v3.jsonl",
+          "bytes": 47335883,
+          "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 797,
+          "sha256": "451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7"
+        },
+        {
+          "name": "word-formation.v0.json",
+          "bytes": 2109799,
+          "sha256": "0606a10718c0d99c2e61efc33979d9683c4c3e110895657852d3d069cd98a58b"
+        }
+      ]
+    },
+    "CurrentGraphStress": {
+      "packageId": "bglang-neutral:9e9a4f441f679542",
+      "files": [
+        {
+          "name": "lexeme-annotations.v1.json",
+          "bytes": 129266618,
+          "sha256": "1a4975434655674872196e210e4b09c60aba799f006932a0db51755a2281bea4"
+        },
+        {
+          "name": "lexicon.v3.jsonl",
+          "bytes": 47335883,
+          "sha256": "c4d08bfe1553a35a18e81d2644d1551b63a8c40691bb13a36b2211f946483366"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 824,
+          "sha256": "9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853"
+        },
+        {
+          "name": "word-formation.v0.json",
+          "bytes": 2110678,
+          "sha256": "d588cddd473dba8a6f0932d32da5fba7beda0acb76d9677f59bab7da0dc44650"
+        }
+      ]
+    }
+  },
+  "literal": {
+    "target": "колажист",
+    "root": "колаж",
+    "rootTag": "Съществително:7,Мъжки",
+    "rootState": "state:noun:7",
+    "targetState": "state:noun:7a",
+    "targetTag": "Съществително:7a,Мъжки",
+    "edgeId": "transition|suffix|m:suffix:ист|state:noun:7|stem-transform:identity|state:noun:7a|accepted-lemma-derivational-suffix-ist.v0",
+    "profileId": "accent-profile:ist:dominant-base.v1",
+    "policyEvidenceId": "ev:accent:patseva:5.3.1.1:ist",
+    "ownerEntryId": "legacy-base:2064768",
+    "vowelOrdinal": 2,
+    "utf16Position": 5,
+    "status": "Inferred",
+    "coverage": "profiled_anchor_only_secondary_stress_not_assessed",
+    "completePronunciation": false,
+    "text": "😀 колажист!",
+    "tokenStart": 3,
+    "tokenLength": 8,
+    "fallbackTarget": "тереминист",
+    "fallbackRoot": "теремин"
+  },
+  "sourceQualification": "Independent literal semantics and exact component authorities preserved from original GraphStressPackageTests; canonical manifest successor predeclared before its producer measurement. Old825B/3f6d fixture and failed Full are not rewritten.",
+  "nominalInputs": [
+    {
+      "surface": "колажист",
+      "text": "😀 колажист!",
+      "wordStart": 3,
+      "wordLength": 8,
+      "includeNominalConstructions": true
+    },
+    {
+      "surface": "колажи́ст",
+      "text": "😀 колажи́ст!",
+      "wordStart": 3,
+      "wordLength": 9,
+      "includeNominalConstructions": true,
+      "writtenMark": {
+        "vowelOrdinal": 2,
+        "utf16Position": 5,
+        "kind": "Acute"
+      }
+    }
+  ]
+}

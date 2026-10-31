@@ -130,11 +130,34 @@ internal static class TextValidationAnalyzer
         HashSet<(int Start, int Length)> evaluated = [];
         List<TextDiagnostic> added = [];
         List<TextValidationDiagnostic> facts = [];
+        int quoteCursor = 0;
+        char closingQuote = '\0';
+        bool TouchesQuotedSpan(SentenceSpan sentence)
+        {
+            while (quoteCursor < sentence.Start) ObserveQuote(analysis.Text[quoteCursor++]);
+            bool touches = closingQuote != '\0';
+            int end = sentence.Start + sentence.Length;
+            while (quoteCursor < end) touches |= ObserveQuote(analysis.Text[quoteCursor++]);
+            return touches;
+        }
+        bool ObserveQuote(char value)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (closingQuote != '\0')
+            {
+                if (value == closingQuote) closingQuote = '\0';
+            }
+            else closingQuote = value switch
+            {
+                '"' => '"', '\'' => '\'', '„' => '“', '“' => '”', '«' => '»', '‘' => '’', _ => '\0'
+            };
+            return value is '"' or '\'' or '„' or '“' or '”' or '«' or '»' or '‘' or '’';
+        }
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             ct.ThrowIfCancellationRequested();
             RequireSpan(analysis.Text, sentence.Start, sentence.Length);
-            if (analysis.Text.AsSpan(sentence.Start, sentence.Length).ContainsAny("\"'„“”«»‘’")) continue;
+            if (TouchesQuotedSpan(sentence)) continue;
             bool upperFrame = analysis.Text.AsSpan(sentence.Start, sentence.Length).ToString().All(c => !char.IsLetter(c) || char.IsUpper(c));
             Word[] words = bound.Values.Where(w => Within(sentence.Start, sentence.Length, w.Token.Start, w.Token.Length))
                 .OrderBy(w => w.Token.Start).ToArray();
@@ -353,7 +376,7 @@ internal static class TextValidationAnalyzer
         }
     }
 
-    private sealed record Word(int Index, TokenAnalysis Token, IReadOnlyList<TextReadingSnapshot> Rows);
+    private sealed record Word(int Index, TokenAnalysis Token, IReadOnlyList<TextReadingSnapshot> Rows, bool CanonicalSource);
 
     private static Dictionary<int, Word> Bind(TextAnalysis analysis, CancellationToken ct)
     {
@@ -374,7 +397,8 @@ internal static class TextValidationAnalyzer
             if (occurrence.TokenIndex != index || occurrence.Start != token.Start ||
                 occurrence.Length != token.Length || !string.Equals(occurrence.Text, token.Text, StringComparison.Ordinal))
                 throw new ArgumentException("Complete occurrence does not match the original Word token.", nameof(analysis));
-            result.Add(index, new(index, token, inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings));
+            TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
+            result.Add(index, new(index, token, set.ResolvedReadings, set.CanonicalReadings.Count > 0));
         }
         if (occurrenceIndex != inventory.Occurrences.Count)
             throw new ArgumentException("Unbound complete occurrence.", nameof(analysis));
@@ -839,9 +863,15 @@ internal static class TextValidationAnalyzer
             ct.ThrowIfCancellationRequested();
             Word trigger = words[index];
             string key = Key(trigger.Token.Text);
-            if (key is not ("че" or "защото" or "когато" or "който" or "която" or "което" or "които" or "ако")) continue;
-            bool relative = key != "ако" && trigger.Rows.Any(r => r.Features.PartOfSpeech is MorphologicalPartOfSpeech.Pronoun or MorphologicalPartOfSpeech.PersonalPronoun);
-            bool marker = trigger.Rows.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction);
+            if (key is not ("че" or "защото" or "когато" or "който" or "която" or "което" or "които" or "ако" or "понеже" or "докато")) continue;
+            bool reviewedMarker = key is "понеже" or "докато";
+            if (reviewedMarker && (!CompleteCommaRows(trigger, MorphologicalPartOfSpeech.Conjunction) ||
+                index + 1 == words.Length ||
+                !Bridge(text, words[index - 1].Token.Start + words[index - 1].Token.Length, trigger.Token.Start) ||
+                !Bridge(text, trigger.Token.Start + trigger.Token.Length, words[index + 1].Token.Start)))
+            { AddUnavailable(unavailable, "subordinate_comma:reviewed_marker_authority_unavailable"); continue; }
+            bool relative = !reviewedMarker && key != "ако" && trigger.Rows.Any(r => r.Features.PartOfSpeech is MorphologicalPartOfSpeech.Pronoun or MorphologicalPartOfSpeech.PersonalPronoun);
+            bool marker = reviewedMarker || trigger.Rows.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction);
             if (!relative && !marker) { AddUnavailable(unavailable, "subordinate_comma:trigger_authority_unavailable"); continue; }
             int boundary = index;
             if (Bridge(text, words[index - 1].Token.Start + words[index - 1].Token.Length, trigger.Token.Start))
@@ -854,10 +884,10 @@ internal static class TextValidationAnalyzer
                         words[index - 2].Token.Start + words[index - 2].Token.Length, words[index - 1].Token.Start)) boundary -= 2;
             }
             Word first = words[boundary];
-            if (key == "ако" && boundary > 0 &&
+            if ((key == "ако" || reviewedMarker) && boundary > 0 &&
                 Bridge(text, words[boundary - 1].Token.Start + words[boundary - 1].Token.Length, first.Token.Start))
             {
-                // Explicit rule90 qualifier cells; no global change to adversative само че.
+                // Explicit rule90 qualifier cells for these reviewed markers; no global change to adversative само че.
                 string qualifier = Key(words[boundary - 1].Token.Text);
                 if (qualifier is "не" or "даже" or "дори" or "дълго" or "едва" or "единствено" or "именно" or
                     "много" or "малко" or "особено" or "поне" or "само" or "тъкмо" or "чак" ||
@@ -867,15 +897,33 @@ internal static class TextValidationAnalyzer
             if (HasSeparatorBefore(text, sentence.Start, first.Token.Start) || boundary > 0 &&
                 Key(words[boundary - 1].Token.Text) is "и" or "или" &&
                 Bridge(text, words[boundary - 1].Token.Start + words[boundary - 1].Token.Length, first.Token.Start)) continue;
+            if (reviewedMarker && boundary > 0 && Key(words[boundary - 1].Token.Text) is "а" or "но" or "че" &&
+                Bridge(text, words[boundary - 1].Token.Start + words[boundary - 1].Token.Length, first.Token.Start)) continue;
             Word[] before = words[..boundary].Where(HasVerb).ToArray();
             Word[] after = words[(index + 1)..].Where(HasVerb).ToArray();
             if (after.Length == 0 || (!relative && before.Length == 0)) continue;
+            if (reviewedMarker && before.Concat(after).Any(word => !CompleteCommaRows(word, MorphologicalPartOfSpeech.Verb)))
+            { AddUnavailable(unavailable, "subordinate_comma:reviewed_verb_authority_unavailable"); continue; }
             Word[] introducer = key == "ако" ? words[boundary..(index + 1)] : [trigger];
             output.Add(new(CommaCode, first.Token.Start, trigger.Token.Start + trigger.Token.Length - first.Token.Start,
-                "subordinate_marker;complete_any_verb_topology;source_separator_absent;candidate_only;not_grammar_verdict",
+                reviewedMarker ?
+                    "reviewed_literal_subordinate_marker;possible_finite_verb_topology;complete_context_rows_retained;source_separator_absent;candidate_only;not_grammar_verdict" :
+                    "subordinate_marker;complete_any_verb_topology;source_separator_absent;candidate_only;not_grammar_verdict",
                 Supports(before.Concat(introducer).Concat(after))));
         }
     }
+
+    // Only the two reviewed literal markers call this predicate; raw alternatives remain unchanged.
+    private static bool CompleteCommaRows(Word word, MorphologicalPartOfSpeech category) => word.CanonicalSource &&
+        word.Rows.Count > 0 && word.Rows.All(row => row.Features == row.Raw.Features && !row.Features.HasConflictingFeatures &&
+            !row.Features.HasUnrecognizedFeatures && Key(row.Raw.Form) == Key(word.Token.Text) &&
+            (row.Features.PartOfSpeech == category || category == MorphologicalPartOfSpeech.Conjunction &&
+                row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adverb) &&
+            (category != MorphologicalPartOfSpeech.Verb ||
+                row.Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative)) &&
+        (category != MorphologicalPartOfSpeech.Verb || word.Rows.Any(row =>
+            row.Features.VerbForm == MorphologicalVerbForm.Finite && row.Features.Person is not null &&
+            row.Features.Number is not null && row.Features.Tense is not null));
 
     private static void AddFragment(SentenceSpan sentence, Word[] words, TextSyntaxEvidence syntax,
         List<TextValidationDiagnostic> output, List<string> unavailable, CancellationToken ct)

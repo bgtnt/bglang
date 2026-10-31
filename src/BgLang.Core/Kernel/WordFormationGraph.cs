@@ -35,6 +35,8 @@ internal sealed class WordFormationGraph
     private readonly InputSlot[] _slots;
     private readonly SurfaceOperation[] _operations;
     private readonly Edge[] _edges;
+    private readonly Dictionary<string, int>? _accentEdgeIndex;
+    private readonly Dictionary<string, GraphAccentProfile[]>? _accentProfiles;
     private readonly string[][] _conditionalFullTags;
     private readonly GraphSurfaceOperations _surfaceOperations;
     private readonly ParadigmRuntime _paradigms;
@@ -70,7 +72,8 @@ internal sealed class WordFormationGraph
         IReadOnlyDictionary<int, WordFormationAnalyzer.CompoundBindingNode>? binaryBindings,
         (int Edge, StructuralDecision Decision)[]? structuralDecisions,
         ParadigmRuntime.ProgramCells[]? additionalPrograms = null,
-        LexicalCliticProjection[]? lexicalProjections = null, OrdinaryParadigmAlias[]? ordinaryAliases = null)
+        LexicalCliticProjection[]? lexicalProjections = null, OrdinaryParadigmAlias[]? ordinaryAliases = null,
+        GraphAccentProfile[]? accentProfiles = null)
     {
         _sourceId = sourceId;
         _morphs = morphs;
@@ -79,6 +82,15 @@ internal sealed class WordFormationGraph
         _slots = slots;
         _operations = operations;
         _edges = edges;
+        if (accentProfiles is { Length: > 0 })
+        {
+            _accentEdgeIndex = edges.Select((edge, index) => (edge.Id, index))
+                .ToDictionary(row => row.Id, row => row.index, StringComparer.Ordinal);
+            _accentProfiles = accentProfiles.SelectMany(profile => profile.TransitionIds.Select(id => (id, profile)))
+                .GroupBy(row => row.id, StringComparer.Ordinal).ToDictionary(group => group.Key,
+                    group => group.Select(row => row.profile).OrderBy(row => row.Id, StringComparer.Ordinal).ToArray(),
+                    StringComparer.Ordinal);
+        }
         _conditionalFullTags = edges.Select(edge => edge.AllowedFullTags is { } tags
             ? tags.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() : []).ToArray();
         _surfaceOperations = new(morphs, transforms, literals, operations);
@@ -1568,6 +1580,106 @@ internal sealed class WordFormationGraph
         return morphology.Outcome == MorphPolicy.Outcome.Licensed
             ? result with { DerivedLemma = morphology.Lemma, FullTags = morphology.Tags }
             : result;
+    }
+
+    internal bool HasAccentProfiles => _accentProfiles is not null;
+
+    internal sealed record AccentRoute(string DerivedLemma, string RootState,
+        string? TerminalBaseTag, string? TerminalRuleId, string[] ProfileIds, string[] EvidenceIds,
+        StressMark[]? DominantMarks = null);
+
+    // Validate/replay only the already returned path; never enumerate another graph search.
+    internal AccentRoute? GetAccentRoute(WordDerivation candidate, CancellationToken cancellationToken,
+        out string reason)
+    {
+        reason = "unprofiled_or_unsupported_path";
+        if (_accentProfiles is null || _accentEdgeIndex is null || candidate.Source != _sourceId ||
+            candidate.IsConditional || candidate.FromState is null || candidate.EdgeIds.Count == 0) return null;
+        AccentRoute? dominant = GetDominantBaseRoute(candidate, cancellationToken);
+        if (dominant is not null) { reason = "explicit_dominant_morph_profile"; return dominant; }
+        if (candidate.DerivedLemma is null || candidate.FullTags is not { Count: > 0 }) return null;
+        string current = candidate.Base;
+        string? terminalBase = null, terminalRule = null;
+        string derived = current;
+        int prefixes = 0;
+        HashSet<string> profiles = new(StringComparer.Ordinal), evidence = new(StringComparer.Ordinal);
+        StateConstraint state = StateConstraint.Exact(candidate.FromState);
+        for (int i = 0; i < candidate.EdgeIds.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_accentEdgeIndex.TryGetValue(candidate.EdgeIds[i], out int index)) return null;
+            Edge edge = _edges[index];
+            if (!Approved(edge) || !edge.StateBinding.TryTraverse(TraversalDirection.Forward, state,
+                    out StateConstraint next) || !next.Equals(state)) return null;
+            if (edge.Origin == EdgeOrigin.Paradigm)
+            {
+                if (i != candidate.EdgeIds.Count - 1 || prefixes == 0 ||
+                    edge.RequiredBaseFullTag is null || edge.RuleId is null || edge.AllowedFullTags is null ||
+                    candidate.FullTags.Any(tag => !edge.AllowedFullTags.Contains(tag, StringComparer.Ordinal))) return null;
+                derived = current;
+                terminalBase = edge.RequiredBaseFullTag; terminalRule = edge.RuleId;
+            }
+            else
+            {
+                // Identity is a transport precondition, never the accent-policy authority.
+                if (edge.Origin != EdgeOrigin.Generic || edge.Kind != EdgeKind.Prefix ||
+                    !(edge.StateBinding.PreservesMatchingState || edge.StateBinding.FromStateId == edge.StateBinding.ToStateId) ||
+                    edge.OperationCount != 2 ||
+                    _operations[edge.OperationOffset].Kind != OperationKind.Transform ||
+                    _transforms[_operations[edge.OperationOffset].OperandIndex].Kind != TransformKind.Identity ||
+                    _operations[edge.OperationOffset + 1].Kind != OperationKind.PrependMorph ||
+                    !_accentProfiles.TryGetValue(edge.Id, out GraphAccentProfile[]? bound) ||
+                    bound.Any(profile => profile.Kind != GraphAccentProfile.PreserveLexicalAnchor)) return null;
+                foreach (GraphAccentProfile profile in bound)
+                {
+                    profiles.Add(profile.Id);
+                    evidence.UnionWith(profile.EvidenceIds);
+                }
+                prefixes++;
+            }
+            string[] replay = _surfaceOperations.Apply(current, edge, true, null, null).Take(2).ToArray();
+            if (replay.Length != 1) return null;
+            current = replay[0];
+            if (edge.Origin != EdgeOrigin.Paradigm) derived = current;
+        }
+        if (prefixes == 0 || current != candidate.Word || derived != candidate.DerivedLemma ||
+            candidate.ToState != candidate.FromState) return null;
+        reason = "explicit_profile_path";
+        return new(derived, candidate.FromState, terminalBase, terminalRule,
+            profiles.Order(StringComparer.Ordinal).ToArray(), evidence.Order(StringComparer.Ordinal).ToArray());
+    }
+
+    private AccentRoute? GetDominantBaseRoute(WordDerivation candidate, CancellationToken cancellationToken)
+    {
+        // The first dominant policy is deliberately base-only. A source noun class is not the output class.
+        if (candidate.EdgeIds.Count != 1 || !_accentEdgeIndex!.TryGetValue(candidate.EdgeIds[0], out int index)) return null;
+        Edge edge = _edges[index];
+        if (!Approved(edge) || edge.Origin != EdgeOrigin.Generic || edge.Kind != EdgeKind.Suffix ||
+            edge.StateBinding.FromStateId != candidate.FromState || edge.StateBinding.ToStateId != candidate.ToState ||
+            edge.OperationCount != 2 || _operations[edge.OperationOffset].Kind != OperationKind.Transform ||
+            _transforms[_operations[edge.OperationOffset].OperandIndex].Kind != TransformKind.Identity ||
+            _operations[edge.OperationOffset + 1].Kind != OperationKind.AppendMorph ||
+            !_accentProfiles!.TryGetValue(edge.Id, out GraphAccentProfile[]? profiles) ||
+            profiles.Any(profile => profile.Kind != GraphAccentProfile.DominantMorphNucleus)) return null;
+        cancellationToken.ThrowIfCancellationRequested();
+        string[] replay = _surfaceOperations.Apply(candidate.Base, edge, true, null, null).Take(2).ToArray();
+        if (replay.Length != 1 || replay[0] != candidate.Word) return null;
+        string morph = _morphs[_operations[edge.OperationOffset + 1].OperandIndex].Text;
+        if (candidate.Word != candidate.Base + morph) return null;
+        int[] morphVowels = morph.Select((value, position) => (value, position))
+            .Where(row => BulgarianOrthography.IsVowel(row.value)).Select(row => row.position).ToArray();
+        int baseVowels = candidate.Base.Count(BulgarianOrthography.IsVowel);
+        List<StressMark> marks = [];
+        foreach (GraphAccentProfile profile in profiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (profile.MorphVowelOrdinal is not int ordinal || (uint)ordinal >= (uint)morphVowels.Length) return null;
+            marks.Add(new(baseVowels + ordinal, candidate.Base.Length + morphVowels[ordinal], StressMarkKind.Unspecified));
+        }
+        return new(candidate.Word, candidate.FromState!, null, null,
+            profiles.Select(profile => profile.Id).ToArray(),
+            profiles.SelectMany(profile => profile.EvidenceIds).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+            marks.ToArray());
     }
 
     private MorphPolicy.Result ProjectMorphology(PathCandidate candidate, IRuntimeLexicon lexicon)

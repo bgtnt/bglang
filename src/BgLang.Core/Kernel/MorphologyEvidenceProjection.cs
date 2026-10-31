@@ -146,9 +146,12 @@ internal static class MorphologyEvidenceProjection
             !StringComparer.Ordinal.Equals(normalized, BulgarianTextNormalizer.NormalizeKey(word.Word)))
             throw new ArgumentException("Graph analysis does not belong to the original Word occurrence.");
     }
-    private static void RequirePathWord(WordAnalysis word, WordDerivation path)
+    internal static void RequirePathWord(WordAnalysis word, WordDerivation path)
     {
-        if (!StringComparer.Ordinal.Equals(word.NormalizedWord, BulgarianTextNormalizer.NormalizeKey(path.Word)))
+        string normalizedPath = BulgarianTextNormalizer.NormalizeKey(path.Word);
+        bool supportedStressVariant = BulgarianStressLookup.TryGetSupportKey(word.Word, word.NormalizedWord, out string support) &&
+            StringComparer.Ordinal.Equals(support, normalizedPath);
+        if (!StringComparer.Ordinal.Equals(word.NormalizedWord, normalizedPath) && !supportedStressVariant)
             throw new ArgumentException("Graph path belongs to a foreign normalized word.");
     }
 }

@@ -1,11 +1,11 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$InputJsonPath,
-    [Parameter(Mandatory=$true)][ValidateSet('known-repeat','empty','context-default')][string]$SampleId,
+    [Parameter(Mandatory=$true)][ValidateSet('known-repeat','empty','context-default','graph-stress-unknown')][string]$SampleId,
     [Parameter(Mandatory=$true)][string]$SamplePath,
-    [ValidateSet('Current','Baseline')][string]$Profile = 'Baseline'
+    [ValidateSet('Current','Baseline','CurrentGraphStress')][string]$Profile = 'Baseline'
 )
-$Profile = if ($Profile -ieq 'Current') { 'Current' } else { 'Baseline' }
+$Profile = switch ($Profile.ToLowerInvariant()) { 'current' { 'Current' } 'baseline' { 'Baseline' } 'currentgraphstress' { 'CurrentGraphStress' } }
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 # Parser only: caller owns sample creation, held native invocation and stdout/provider evidence.
@@ -76,6 +76,7 @@ $literalSamples = @{
     'known-repeat' = @{ text='знаме знаме.'; utf16Length=12; bytes=22; sha256='18db9d15a6b5d6914f9806b829928b5d6e7aa278abb47ed18641517c26e50e0a' }
     'empty' = @{ text=''; utf16Length=0; bytes=0; sha256='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
     'context-default' = @{ text='книга.'; utf16Length=6; bytes=11; sha256='8f023a907584645cf4b56ff760086f9fd1c74bf72bfa4b5c5b5a1c676f071d58' }
+    'graph-stress-unknown' = @{ text='😀 колажист!'; utf16Length=12; bytes=22; sha256='86ee60ce8ff8ba6c39b328c62e6f4b772fd5bd6ba321270b961e8b2dd553cd09' }
 }
 $literal = $literalSamples[$SampleId]
 $strictUtf8 = [Text.UTF8Encoding]::new($false,$true)
@@ -91,7 +92,10 @@ try {
     Assert-Fields $root @('schema','Provenance','environment','startup','measurementNote','observations') 'outer envelope'
     Assert-String (Get-Field $root 'schema') 'bglang-public-example.v1' 'schema'
     $provenance = Get-Field $root 'Provenance'
-    if ($Profile -ceq 'Current') {
+    if ($Profile -ceq 'CurrentGraphStress') {
+        Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:9e9a4f441f679542' 'canonical GraphStress package identity'
+        Assert-String (Get-Field $provenance 'ManifestSha256') '9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853' 'prospective canonical manifest'
+    } elseif ($Profile -ceq 'Current') {
         Assert-String (Get-Field $provenance 'PackageId') 'bglang-neutral:90bea7c5c799f04d' 'package identity'
         Assert-String (Get-Field $provenance 'ManifestSha256') 'c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7' 'matching current manifest'
     } else {
@@ -154,7 +158,8 @@ try {
     Assert-String (Get-Field $generated 'PrototypeEntryId') 'legacy-base:64' 'explicit prototype identity'
     Assert-String (Get-Field $generated 'PrototypeLemma') 'аванпост' 'prototype lemma'
     Assert-String (Get-Field $generated 'Lemma') 'космоаванпост' 'novel lemma'
-    Assert-String (Get-Field $generated 'GraphSourceId') 'word-formation-source-v0' 'prototype graph provenance'
+    $expectedGraphSource = if ($Profile -ceq 'CurrentGraphStress') { 'bglang-word-formation:automatic-graph-stress-ist.v1' } else { 'word-formation-source-v0' }
+    Assert-String (Get-Field $generated 'GraphSourceId') $expectedGraphSource 'prototype graph provenance'
     $fitSource = Get-Field $generated 'EvidenceSourceId'; Assert-Kind $fitSource 'String' 'qualified model provenance'
     Assert-Consumer ($fitSource.GetString().StartsWith('legacy-pattern-fit-v1:', [StringComparison]::Ordinal)) 'qualified fit retains provenance'
     $baseForms = @((Get-Field $generated 'Forms').EnumerateArray() | Where-Object { (Get-Field $_ 'Form').GetString() -ceq 'космоаванпост' -and (Get-Field $_ 'FullTag').GetString() -ceq 'Съществително:1,Мъжки' })
@@ -231,9 +236,11 @@ try {
         Assert-String (Get-Field $token 'Text') $literal.text.Substring($start,$length) 'raw token UTF16 slice'
         $analysis = Get-Field $token 'Analysis'
         if ($analysis.ValueKind -ne [System.Text.Json.JsonValueKind]::Null) {
-            Assert-Fields $analysis @('Word','NormalizedWord','IsKnown','GraphSearchIncomplete','GraphCandidatesTruncated',
+            $wordFields = @('Word','NormalizedWord','IsKnown','GraphSearchIncomplete','GraphCandidatesTruncated',
                 'CandidateSearchLimited','CandidateEvidenceLimited','KnownBaseSearchLimited','BaseTypeSearchLimited',
-                'BaseTypeEvidenceLimited','Readings','BaseEvidence','GraphCandidates','Candidates','KnownBaseCandidates','BaseTypeCandidates') 'preserved WordValue enrichment'
+                'BaseTypeEvidenceLimited','Readings','BaseEvidence','GraphCandidates','Candidates','KnownBaseCandidates','BaseTypeCandidates')
+            if ($SampleId -ceq 'graph-stress-unknown' -and (Get-Field $token 'Text').GetString() -ceq 'колажист') { $wordFields += 'GraphStress' }
+            Assert-Fields $analysis $wordFields 'preserved WordValue enrichment'
             $readings = Get-Field $analysis 'Readings'; Assert-Kind $readings 'Array' 'WordValue.Readings'
             foreach ($reading in $readings.EnumerateArray()) {
                 Assert-Fields $reading @('reading','Features') 'preserved ReadingValue enrichment'
@@ -312,6 +319,48 @@ try {
         Assert-Kind (Get-Field $readingProfile 'KnownWordRatio') 'Null' 'empty known ratio'; Assert-Number (Get-Field $readingProfile 'FullReadingOccurrences') 0 'empty full readings'
         Assert-Bool (Get-Field $readingProfile 'AllWordAssessmentsCompleteForProjection') $true 'empty complete projection'; Assert-Bool (Get-Field $readingProfile 'ExactReadingEvidencePresent') $false 'empty exact evidence'
         Assert-Count (Get-Field $names 'Candidates') 0 'empty name candidates'
+    } elseif ($SampleId -ceq 'graph-stress-unknown') {
+        Assert-Consumer ($Profile -ceq 'CurrentGraphStress') 'unknown graph sample requires explicit successor profile'
+        $wordTokens = @($tokens.EnumerateArray() | Where-Object { (Get-Field $_ 'Text').GetString() -ceq 'колажист' })
+        Assert-Consumer ($wordTokens.Count -eq 1) 'one original unknown occurrence'
+        $targetToken = $wordTokens[0]
+        Assert-Number (Get-Field $targetToken 'Start') 3 'unknown original UTF16 start'
+        Assert-Number (Get-Field $targetToken 'Length') 8 'unknown original UTF16 length'
+        $word = Get-Field $targetToken 'Analysis'
+        Assert-Bool (Get-Field $word 'IsKnown') $false 'graph target remains exact-unknown'
+        Assert-Count (Get-Field $word 'Readings') 0 'no fabricated exact readings'
+        $paths = Get-Field $word 'GraphCandidates'
+        $edge = 'transition|suffix|m:suffix:ист|state:noun:7|stem-transform:identity|state:noun:7a|accepted-lemma-derivational-suffix-ist.v0'
+        $matching = @(for ($i = 0; $i -lt $paths.GetArrayLength(); $i++) {
+            $path = $paths[$i]
+            if ((Get-Field $path 'Base').GetString() -ceq 'колаж' -and (Get-Field $path 'FromState').GetString() -ceq 'state:noun:7' -and
+                (Get-Field $path 'ToState').GetString() -ceq 'state:noun:7a' -and
+                (Get-Field $path 'EdgeIds').GetArrayLength() -eq 1 -and (Get-Field $path 'EdgeIds')[0].GetString() -ceq $edge -and
+                @((Get-Field $path 'FullTags').EnumerateArray() | Where-Object { $_.GetString() -ceq 'Съществително:7a,Мъжки' }).Count -gt 0) { $i }
+        })
+        Assert-Consumer ($matching.Count -eq 1) 'one independently named original graph path'
+        $stress = Get-Field $word 'GraphStress'
+        Assert-Bool (Get-Field $stress 'CompletePronunciation') $false 'no complete pronunciation claim'
+        Assert-String (Get-Field $stress 'Coverage') 'profiled_anchor_only_secondary_stress_not_assessed' 'anchor-only evidence'
+        $projected = @((Get-Field $stress 'Candidates').EnumerateArray() | Where-Object { (Get-Field $_ 'CandidateIndex').GetInt32() -eq $matching[0] })
+        Assert-Consumer ($projected.Count -eq 1) 'stress evidence retains original candidate index'
+        Assert-String (Get-Field $projected[0] 'Status') 'Inferred' 'prediction remains inferred'
+        Assert-Count (Get-Field $projected[0] 'ProfileIds') 1 'one declared profile'
+        Assert-String (Get-Field $projected[0] 'ProfileIds')[0] 'accent-profile:ist:dominant-base.v1' 'exact accepted profile'
+        Assert-Consumer (@((Get-Field $projected[0] 'PolicyEvidenceIds').EnumerateArray() | Where-Object { $_.GetString() -ceq 'ev:accent:patseva:5.3.1.1:ist' }).Count -eq 1) 'named policy evidence retained'
+        $ownerRows = @((Get-Field $projected[0] 'Readings').EnumerateArray() | Where-Object {
+            $rootReading = Get-Field $_ 'RootReading'
+            (Get-Field $_ 'OwnerEntryId').GetString() -ceq 'legacy-base:2064768' -and
+            (Get-Field $_ 'FullTag').GetString() -ceq 'Съществително:7a,Мъжки' -and
+            (Get-Field $rootReading 'Form').GetString() -ceq 'колаж' -and (Get-Field $rootReading 'Lemma').GetString() -ceq 'колаж' -and
+            (Get-Field $rootReading 'PartOfSpeech').GetString() -ceq 'Съществително:7,Мъжки'
+        })
+        Assert-Consumer ($ownerRows.Count -gt 0) 'literal exact root owner is retained'
+        foreach ($row in $ownerRows) {
+            Assert-String (Get-Field $row 'Status') 'Inferred' 'owner evidence is not normative pronunciation'
+            Assert-Mark (Get-Field $row 'Marks') 2 5 'Unspecified' 'word-local anchor'
+            Assert-Kind (Get-Field $row 'AccentEvidenceSourceId') 'Null' 'no fabricated root accent model'
+        }
     } else {
         foreach ($pair in @(@('Context','bounded-context.v2'),@('Syntax','bounded-syntax-roles.v2'),@('Validation','bounded-validation.v2'))) {
             $evidence = Get-Field $result $pair[0]

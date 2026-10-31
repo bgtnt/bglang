@@ -51,7 +51,7 @@ jobs:
           $env:BGLANG_CLIENT_SOURCE_ROOT = $env:GITHUB_WORKSPACE
           node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs tests/BgLang.Web.Tests/Client/demo-lab.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Locked authoring input, four-file package, Public/example and optional HTTP checks
+      - name: Locked authoring input, Graph5 package, Public/example and optional HTTP checks
         shell: pwsh
         env:
           INPUT_BASE_URL: ${{ inputs.input_base_url || vars.BGLANG_INPUT_BASE_URL }}
@@ -76,12 +76,14 @@ jobs:
             Invoke-WebRequest -Uri ($base.AbsoluteUri.TrimEnd('/') + '/' + $file.name) -OutFile $download
             if ((Get-Item -LiteralPath $download).Length -ne $file.bytes -or (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.sha256) { throw "Locked authoring input mismatch: $($file.name)" }
           }
+          $articleCurrent = Join-Path $env:RUNNER_TEMP 'article-current'
+          ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -Profile Current -OutputDirectory $articleCurrent
           $packageA = Join-Path $env:RUNNER_TEMP 'annotated-a'
           $packageB = Join-Path $env:RUNNER_TEMP 'annotated-b'
           $optionalChecks = @{}
           if ($env:TEST_WEB -eq 'true') { $optionalChecks.TestWeb = $true }
           else { Write-Host 'HTTP consumer checks were not requested; no HTTP validation is claimed for this run.' }
-          ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -OutputDirectory $packageA -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-a') @optionalChecks
+          ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -Profile CurrentGraphStress -ArticleCurrentManifest (Join-Path $articleCurrent 'manifest.json') -OutputDirectory $packageA -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-a') @optionalChecks
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -OutputDirectory $packageB -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-b') -CompareWith $packageA @optionalChecks
+            ./packaging/Build-PublicPackage.ps1 -InputDirectory $authoringDirectory -Profile CurrentGraphStress -ArticleCurrentManifest (Join-Path $articleCurrent 'manifest.json') -OutputDirectory $packageB -Test -ResultsDirectory (Join-Path $env:RUNNER_TEMP 'results-b') -CompareWith $packageA @optionalChecks
           }

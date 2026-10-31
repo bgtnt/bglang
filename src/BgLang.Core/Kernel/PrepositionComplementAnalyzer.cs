@@ -10,6 +10,7 @@ internal static class PrepositionComplementAnalyzer
     private static readonly string[] ReviewedSurfaces =
         ["без", "в", "във", "до", "за", "зад", "към", "между", "на", "над", "около", "от", "под", "пред",
          "през", "при", "с", "след", "сред", "със"];
+    private static readonly string[] ReportSurfaces = ["върху", "покрай", "срещу"];
     internal static IReadOnlyList<TextDiagnostic> Analyze(
         IReadOnlyList<TokenAnalysis> tokens,
         IReadOnlyList<SentenceSpan> sentences,
@@ -36,7 +37,8 @@ internal static class PrepositionComplementAnalyzer
                 string? surface = token.Kind == TokenKind.Word ? token.Analysis?.NormalizedWord : null;
                 if (surface is null || !IsReviewed(surface) || IsQuotedWord(tokens, index, first, end) ||
                     !HasAuthority(surface, lexicon, authority, cancellationToken) ||
-                    !IsMissingComplement(tokens, index, end, surface, lexicon, authority, cancellationToken))
+                    !IsMissingComplement(tokens, index, end, surface, lexicon, authority, cancellationToken) ||
+                    (IsReportSurface(surface) && !IsSimpleReportUse(tokens, index, first)))
                 {
                     continue;
                 }
@@ -71,6 +73,18 @@ internal static class PrepositionComplementAnalyzer
             HasAuthority(surface, lexicon, authority, cancellationToken);
     }
 
+    // A terminal choice or coordinated ellipsis does not establish a missing complement.
+    private static bool IsSimpleReportUse(IReadOnlyList<TokenAnalysis> tokens, int index, int first)
+    {
+        if (index == first)
+            return false;
+        for (int current = first; current < index; current++)
+            if (tokens[current].Kind != TokenKind.Word ||
+                tokens[current].Analysis?.NormalizedWord is "и" or "или" or "а" or "но")
+                return false;
+        return true;
+    }
+
     private static bool IsQuotedWord(IReadOnlyList<TokenAnalysis> tokens, int index, int first, int end)
     {
         if (index <= first || index + 1 >= end)
@@ -99,6 +113,7 @@ internal static class PrepositionComplementAnalyzer
         if (memo.TryGetValue(surface, out bool cached))
             return cached;
         bool found = false;
+        bool pure = IsReportSurface(surface);
         IReadOnlyList<WordReading> readings = lexicon.LookupExactNormalized(surface, int.MaxValue);
         cancellationToken.ThrowIfCancellationRequested();
         foreach (WordReading reading in readings)
@@ -106,7 +121,11 @@ internal static class PrepositionComplementAnalyzer
             cancellationToken.ThrowIfCancellationRequested();
             string? tag = reading.PartOfSpeech;
             if (tag?.StartsWith("Предлог", StringComparison.OrdinalIgnoreCase) != true)
+            {
+                if (pure)
+                    return memo[surface] = false;
                 continue;
+            }
             if (tag != CanonicalTag || BulgarianTextNormalizer.NormalizeKey(reading.Form) != surface ||
                 BulgarianTextNormalizer.NormalizeKey(reading.Lemma) != surface)
             {
@@ -124,5 +143,7 @@ internal static class PrepositionComplementAnalyzer
     private static bool IsLegacyChainSurface(string surface) =>
         surface is "на" or "към" or "с" or "без" or "от" or "до" or "пред" or "след";
 
-    private static bool IsReviewed(string surface) => ReviewedSurfaces.Contains(surface, StringComparer.Ordinal);
+    private static bool IsReportSurface(string surface) => ReportSurfaces.Contains(surface, StringComparer.Ordinal);
+    private static bool IsReviewed(string surface) => IsReportSurface(surface) ||
+        ReviewedSurfaces.Contains(surface, StringComparer.Ordinal);
 }

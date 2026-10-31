@@ -391,6 +391,62 @@ export function initLiveDemo({
     return {start, end};
   }
 
+  function replacementButton(binding, data, range, original, replacement, label) {
+    const {start, end} = range, button = el('button', label);
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      if (!currentSpelling(binding) || response.data !== data
+        || editor.value.slice(start, end) !== original) return;
+      editor.setRangeText(replacement, start, end, 'preserve');
+      editor.focus({preventScroll: true});
+      onInput();
+    });
+    return button;
+  }
+
+  function renderNominalReviews(rows, data, binding) {
+    const evidence = data.nominalConstructions;
+    const isCompatible = value => typeof value === 'string' && value.toLowerCase() === 'compatible';
+    if (evidence?.available !== true || !Array.isArray(evidence.reviews)) return;
+    for (const review of evidence.reviews) {
+      if (!review || !Number.isInteger(review.tokenIndex) || review.tokenIndex < 0 || review.noChangeRetained !== true) continue;
+      const token = data.tokens[review.tokenIndex], alternatives = review.alternatives;
+      if (!token || token.kind !== 'Word' || review.start !== token.start || review.length !== token.length
+        || !Array.isArray(alternatives) || !alternatives.length
+        || alternatives.some(row => typeof row?.alternative?.form !== 'string' || !row.alternative.form.length
+          || !Number.isInteger(row.alternative.distance) || row.alternative.distance < 0)) continue;
+      const range = spellingRange(data.text, token);
+      if (!range) continue;
+      const original = data.text.slice(range.start, range.end), rawOrder = alternatives.map((_, index) => index);
+      const proposed = review.contextualOrder;
+      // Optional server ranking must be complete and preserve primary letter distance.
+      const ordered = Array.isArray(proposed) && proposed.length === alternatives.length
+        && new Set(proposed).size === alternatives.length
+        && proposed.every(index => Number.isInteger(index) && index >= 0 && index < alternatives.length)
+        && proposed.every((index, position) => position === 0
+          || alternatives[proposed[position - 1]].alternative.distance <= alternatives[index].alternative.distance);
+      const order = ordered ? proposed : rawOrder;
+      rows.push(el('p', 'Структурни предложения за „' + original + '“ · ' + token.start + '+' + token.length, 'word-meta'),
+        el('p', 'Оригиналът „' + original + '“ остава възможен. Съвместимостта след замяна не доказва грешка или замислен смисъл.'));
+      for (const index of order) {
+        const {alternative, phrase} = alternatives[index], headIndex = phrase?.headTokenIndex;
+        const head = Number.isInteger(headIndex) && headIndex >= 0 ? data.tokens[headIndex] : null;
+        const compatible = isCompatible(phrase?.assessment) && head?.kind === 'Word'
+          && Array.isArray(phrase.headSupports) && phrase.headSupports.some(support =>
+            (support?.reading?.tokenIndex === headIndex || support?.graphReading?.tokenIndex === headIndex)
+            && Array.isArray(support?.members) && support.members.some(member => member?.tokenIndex === review.tokenIndex
+              && isCompatible(member.assessment) && Array.isArray(member.replacementReadings) && Array.isArray(alternative.readings)
+              && member.replacementReadings.some(reading => Number.isInteger(reading) && reading >= 0 && reading < alternative.readings.length)));
+        const replacement = spellingReplacement(original, alternative.form);
+        const assessment = compatible ? 'при замяна: съвместима именна група с „' + head.text + '“'
+          : 'съвместимост на конструкцията: неустановена';
+        const label = replacement + ' · буквено разстояние ' + alternative.distance + ' · ' + assessment;
+        rows.push(replacement === original ? el('p', label + ' · без промяна', 'word-meta')
+          : replacementButton(binding, data, range, original, replacement, label));
+      }
+    }
+  }
+
   function renderSpellings() {
     const data = response.data;
     const binding = {response, revision: controller.revision, start: editor.selectionStart, end: editor.selectionEnd};
@@ -426,24 +482,17 @@ export function initLiveDemo({
           .filter(text => typeof text === 'string' && text.length))] : [];
         const assessment = supported && following.length ? 'съвместим прочит с „' + following.join('“, „') + '“'
           : kind === 'nocompatiblepair' ? 'няма съвместима измерена двойка' : 'контекст: неоценен';
-        const button = el('button', replacement + ' · разстояние ' + alternative.distance + ' · ' + assessment);
-        button.type = 'button';
-        button.addEventListener('click', () => {
-          if (!currentSpelling(binding) || response.data !== data
-            || editor.value.slice(start, end) !== original) return;
-          editor.setRangeText(replacement, start, end, 'preserve');
-          editor.focus({preventScroll: true});
-          onInput();
-        });
-        rows.push(button);
+        rows.push(replacementButton(binding, data, range, original, replacement,
+          replacement + ' · разстояние ' + alternative.distance + ' · ' + assessment));
       }
     }
+    renderNominalReviews(rows, data, binding);
     if (!rows.length) {
       spellingHost.replaceChildren();
       spellingHost.hidden = true;
       return;
     }
-    spellingHost.replaceChildren(el('p', 'Близки речникови форми в целия текст'), ...rows,
+    spellingHost.replaceChildren(el('p', 'Речникови и структурни предложения в целия текст'), ...rows,
       el('p', 'Предложения за преглед, не доказани правописни грешки. Имена, графови прочити и текуща незавършена дума остават несигурни. Замяна има само при изричен избор.'));
     spellingHost.hidden = false;
   }

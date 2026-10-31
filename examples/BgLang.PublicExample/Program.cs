@@ -258,14 +258,12 @@ object Preview<T>(IReadOnlyList<T> values, Func<T, object> project) => new {
 object Flags(WordAnalysis value) => new { value.GraphSearchIncomplete, value.GraphCandidatesTruncated,
     value.CandidateSearchLimited, value.CandidateEvidenceLimited, value.KnownBaseSearchLimited,
     value.BaseTypeSearchLimited, value.BaseTypeEvidenceLimited };
-object WordValue(WordAnalysis value) => new { value.Word, value.NormalizedWord, value.IsKnown,
+object WordValue(WordAnalysis value) => new WordProjection(value.Word, value.NormalizedWord, value.IsKnown,
     value.GraphSearchIncomplete, value.GraphCandidatesTruncated, value.CandidateSearchLimited,
     value.CandidateEvidenceLimited, value.KnownBaseSearchLimited, value.BaseTypeSearchLimited, value.BaseTypeEvidenceLimited,
-    Readings = value.Readings.Select(ReadingValue).ToArray(), value.BaseEvidence,
-    GraphCandidates = value.GraphCandidates.Select(PathValue).ToArray(),
-    Candidates = value.Candidates.Select(CandidateValue).ToArray(),
-    KnownBaseCandidates = value.KnownBaseCandidates.Select(CandidateValue).ToArray(),
-    BaseTypeCandidates = value.BaseTypeCandidates.Select(CandidateValue).ToArray() };
+    value.Readings.Select(ReadingValue).ToArray(), value.BaseEvidence,
+    value.GraphCandidates.Select(PathValue).ToArray(), value.Candidates.Select(CandidateValue).ToArray(),
+    value.KnownBaseCandidates.Select(CandidateValue).ToArray(), value.BaseTypeCandidates.Select(CandidateValue).ToArray(), value.GraphStress);
 string WordSummary(WordAnalysis value) => $"{value.Word}: known={value.IsKnown}; " +
     JsonSerializer.Serialize(new { value.NormalizedWord, Readings = Preview(value.Readings, ReadingValue), value.BaseEvidence,
         GraphCandidates = Preview(value.GraphCandidates, PathSummary), Candidates = Preview(value.Candidates, CandidateSummary),
@@ -273,3 +271,12 @@ string WordSummary(WordAnalysis value) => $"{value.Word}: known={value.IsKnown};
         BaseTypeCandidates = Preview(value.BaseTypeCandidates, CandidateSummary), flags = Flags(value) }, options);
 
 sealed record MemorySnapshot(long WorkingSetBytes, long PrivateBytes, long PeakWorkingSetBytes, long ManagedBytes, long AllocatedBytes);
+
+// Keep all existing JSON fields while omitting absent graph evidence, just like the API contract.
+sealed record WordProjection(string Word, string NormalizedWord, bool IsKnown,
+    bool GraphSearchIncomplete, bool GraphCandidatesTruncated, bool CandidateSearchLimited,
+    bool CandidateEvidenceLimited, bool KnownBaseSearchLimited, bool BaseTypeSearchLimited, bool BaseTypeEvidenceLimited,
+    object[] Readings, object? BaseEvidence, object[] GraphCandidates, object[] Candidates,
+    object[] KnownBaseCandidates, object[] BaseTypeCandidates,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    GraphStressEvidence? GraphStress);

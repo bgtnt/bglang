@@ -75,6 +75,11 @@ internal sealed class WordFormationAnalyzer
 
     internal string SourceId => _graph.SourceId;
 
+    internal bool HasGraphAccentProfiles => _graph.HasAccentProfiles;
+    internal WordFormationGraph.AccentRoute? GetAccentRoute(WordDerivation candidate,
+        CancellationToken cancellationToken, out string reason) =>
+        _graph.GetAccentRoute(candidate, cancellationToken, out reason);
+
     internal bool HasReviewedExactStress => _reviewedExactStress is not null;
 
     internal IReadOnlyList<ReviewedVerbCliticRelationNode> ReviewedVerbCliticRelations =>
@@ -250,8 +255,9 @@ internal sealed class WordFormationAnalyzer
             _ => required
         };
         StrictJson.RequireObject(root, label, versionedRequired, schemaVersion == SchemaVersion
-            ? ["paradigmEdges", "lexicalCliticProjections", "ordinaryParadigmAliases"]
-            : ["lexicalCliticProjections", "ordinaryParadigmAliases"]);
+            ? ["paradigmEdges", "lexicalCliticProjections", "ordinaryParadigmAliases", "graphAccentProfiles"]
+            : ["lexicalCliticProjections", "ordinaryParadigmAliases", "graphAccentProfiles"]);
+        GraphAccentProfile.ValidateJson(root);
         StrictJson.RequireString(root, "sourceId", label);
         ValidateObjectArray(root, "morphs", ["id", "kind", "canonicalText", "variantSetId", "reviewState"], ValidateMorphJson);
         ValidateObjectArray(root, "variantSets", ["id", "canonical", "variants"], ValidateVariantSetJson);
@@ -628,6 +634,7 @@ internal sealed class WordFormationAnalyzer
         Dictionary<string, RuleNode> ruleIds = source.Rules.ToDictionary(item => item.Id, StringComparer.Ordinal);
         HashSet<string> applicationIds = source.Applications.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         HashSet<string> evidenceIds = source.Evidence.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        GraphAccentProfile.Validate(source.GraphAccentProfiles, source.TypedTransitions, evidenceIds);
         HashSet<string> controlIds = source.NegativeControls.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         Dictionary<string, TransformNode> transformIds = source.MorphophonologicalTransforms
             .ToDictionary(item => item.Id, StringComparer.Ordinal);
@@ -1463,7 +1470,8 @@ internal sealed class WordFormationAnalyzer
         ReviewedVerbCliticRelationSourceNode? ReviewedVerbCliticRelations,
         ReviewedExactStressSourceNode? ReviewedExactStress,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] LexicalCliticProjection[]? LexicalCliticProjections = null,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OrdinaryParadigmAlias[]? OrdinaryParadigmAliases = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OrdinaryParadigmAlias[]? OrdinaryParadigmAliases = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] GraphAccentProfile[]? GraphAccentProfiles = null);
 
     internal sealed record MorphNode(
         string Id,

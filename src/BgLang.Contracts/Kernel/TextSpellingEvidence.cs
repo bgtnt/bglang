@@ -34,9 +34,16 @@ public enum SpellingContextAssessment { Unassessed, Supported, NoCompatiblePair 
 // Candidate indices address Alternatives and its complete Readings, never the unknown token's inventory.
 public sealed record SpellingContextMatch(int CandidateReadingIndex, TextReadingReference FollowingNounReading);
 
+// Separate inverse witnesses preserve the existing FollowingNounReading contract and constructor.
+public sealed record SpellingPreviousModifierMatch(int CandidateReadingIndex, TextReadingReference PreviousModifierReading);
+
 // Matches are deterministic measured witnesses, not an exhaustive Cartesian product or correction confidence.
 public sealed record SpellingContextCandidate(int AlternativeIndex, SpellingContextAssessment Assessment,
-    IReadOnlyList<SpellingContextMatch> Matches);
+    IReadOnlyList<SpellingContextMatch> Matches)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<SpellingPreviousModifierMatch>? PreviousModifierMatches { get; init; }
+}
 
 // These are configured bounds, not a claim that every word requested a search.
 // Alternatives retain existing ranking and Form/Readings; scores are not correction confidence.

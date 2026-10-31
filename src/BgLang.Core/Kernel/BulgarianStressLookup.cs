@@ -84,6 +84,44 @@ internal static class BulgarianStressLookup
         }
     }
 
+    // Used only by the profiled automatic API lane, after its one graph traversal.
+    // Graph candidate segments remain relative to candidate.Word; only decomposition source spans move.
+    internal static WordDecomposition RestoreGraphSource(WordDecomposition proof, string original)
+    {
+        string canonical = BulgarianTextNormalizer.NormalizeKey(original);
+        bool supportRoute = canonical != proof.NormalizedWord;
+        if (!BulgarianOrthography.IsWellFormedWord(original.AsSpan().Trim()) ||
+            supportRoute && (!TryGetSupportKey(original, canonical, out string supported) || proof.NormalizedWord != supported))
+            return proof with { Word = original, Base = null, Segments = [] };
+        string expected = proof.NormalizedWord;
+        List<int> boundaries = [];
+        List<char> letters = [];
+        int start = original.Length - original.AsSpan().TrimStart().Length;
+        int end = original.AsSpan().TrimEnd().Length;
+        for (int offset = start; offset < end;)
+        {
+            boundaries.Add(offset);
+            char value = char.ToLowerInvariant(BulgarianOrthography.ReadLetter(original.AsSpan(), offset, out int width));
+            offset += width;
+            if (offset < end && (original[offset] is '\u0300' or '\u0301')) offset++;
+            letters.Add(supportRoute ? value is 'ѝ' ? 'и' : value is 'ѐ' ? 'е' : value : value);
+        }
+        boundaries.Add(end);
+        if (new string(letters.ToArray()) != expected)
+            return proof with { Word = original, Base = null, Segments = [] };
+        List<MorphSegment> segments = [];
+        foreach (MorphSegment segment in proof.Segments)
+        {
+            if (segment.Start < 0 || segment.Length < 0 || segment.Length > letters.Count ||
+                segment.Start > letters.Count - segment.Length ||
+                !expected.AsSpan(segment.Start, segment.Length).SequenceEqual(segment.Surface.AsSpan()))
+                return proof with { Word = original, Base = null, Segments = [] };
+            int from = boundaries[segment.Start], to = boundaries[segment.Start + segment.Length];
+            segments.Add(segment with { Surface = original[from..to], Start = from, Length = to - from });
+        }
+        return proof with { Word = original, Segments = segments.AsReadOnly() };
+    }
+
     internal static bool TryGetSupportKey(string surface, string normalized, out string support)
     {
         support = string.Empty;

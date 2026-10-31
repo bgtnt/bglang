@@ -104,8 +104,7 @@ internal static class NominalStructuralProjection
             foreach (WordDerivation path in analysis.GraphCandidates)
             {
                 ct.ThrowIfCancellationRequested();
-                if (BulgarianTextNormalizer.NormalizeKey(path.Word) != normalized)
-                    throw new ArgumentException("Potential graph path belongs to a foreign word.");
+                MorphologyEvidenceProjection.RequirePathWord(analysis, path);
                 foreach (string tag in path.FullTags ?? [])
                 {
                     ct.ThrowIfCancellationRequested();
@@ -177,6 +176,9 @@ internal static class NominalStructuralProjection
     // Uses all supplied alternatives, not RoleReadings alone. Incomplete evidence stays unassessed.
     // Rows at the edited target belong to the candidate branch and must map to ReplacementReadings.
     internal static ContextLanes.NominalPhrase? Measure(Binding binding, CancellationToken ct) =>
+        Measure(binding, ct, allowAdnominalReadings: true);
+
+    internal static ContextLanes.NominalPhrase? Measure(Binding binding, CancellationToken ct, bool allowAdnominalReadings) =>
         ContextLanes.NominalMembers(binding.Participants.Select(member => member.Word).ToArray(),
-            binding.Participants.Count - 1, ct, allowAdnominalReadings: true);
+            binding.Participants.Count - 1, ct, allowAdnominalReadings);
 }

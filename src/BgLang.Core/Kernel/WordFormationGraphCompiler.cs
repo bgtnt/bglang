@@ -326,7 +326,7 @@ internal static class WordFormationGraphCompiler
             structuralDecisions?.ToArray(),
             additionalCells.Select(pair => new ParadigmRuntime.ProgramCells(pair.Key.State, pair.Key.BaseTag,
                 pair.Key.Rule, pair.Value.ToArray(), pair.Key.Kind)).ToArray(), source.LexicalCliticProjections,
-            source.OrdinaryParadigmAliases);
+            source.OrdinaryParadigmAliases, source.GraphAccentProfiles);
     }
 
     private static StructuralDecision? TryCompileStructuralDecision(

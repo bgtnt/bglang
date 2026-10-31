@@ -1,3 +1,26 @@
+# BgLang — Preview14: актуален quickstart
+
+Това е source подготовката за [Preview14](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.14). Download връзките са целеви адреси до публикуването; release страницата удостоверява действителните source/tag, CI и окончателния anonymous readback.
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-inputs.zip) и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.14/packaging/RELEASE-CANDIDATE.md).
+
+SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Runtime ZIP за Preview14 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
+
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+[Web guide](apps/BgLang.Web/README.md) описва локалния HTTP host. `Build-PublicPackage.ps1` запазва default **Current** (`bglang-neutral:90bea7c5c799f04d`); за matching Preview14 runtime изберете изрично **CurrentGraphStress** по [reproduction guide](packaging/RELEASE-CANDIDATE.md). **Baseline** (`bglang-neutral:36b0b69685d6d3e9`) остава отделен профил.
+
+Preview14 включва приетите локални nominal/finite continuations, guarded preposition+NP предложения и тесни бройни конструкции, complete-row и cross-sentence quote защити. Добавени са тесни sentence-boundary случаи след лични/числови съкращения, advisory запетаи при „понеже“/„докато“ и подкрепа от предходен modifier за правописни кандидати. Opt-in `TextContextOptions.IncludeNominalConstructions` остава default `false`; coherent readings, raw alternatives, original UTF-16 refs, ambiguity и abstention се запазват. Редакциите изискват изричен избор. Обхватът не удостоверява общ parser или отстраняване на всичките 33 рапортувани въпроса.
+
+## Исторически snapshots — Preview13 и по-стари
+
+Цялото предходно тяло по-долу е запазено RAW. Неговите версии, package defaults, counts и pending/publication формулировки описват собствените им snapshots; актуалният Preview14 quickstart е горе.
+
 # BgLang — Preview13: актуален quickstart
 
 Това е source подготовката за [Preview13](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13). Връзките са бъдещи targets за тази версия; release страницата удостоверява достъпността, публикувания source/tag и окончателните CI/readback резултати. Тук няма предварително заявен publication или hosted PASS.

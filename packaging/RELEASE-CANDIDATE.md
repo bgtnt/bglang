@@ -1,3 +1,37 @@
+# Preview14 — matching Graph5 runtime и reproduction
+
+Този source guide подготвя [Preview14](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.14). Download връзките са целеви адреси до публикуването; release страницата удостоверява действителните source/tag, CI и окончателния anonymous readback.
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/SHA256SUMS) и при rebuild — [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.14/bglang-v0.1.0-preview.14-inputs.zip). [Tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.14/packaging/RELEASE-CANDIDATE.md) и [README quickstart](../README.md) пазят matching source/recipe/lock. SDK е **10.0.403** от `global.json`.
+
+Runtime ZIP за Preview14 съдържа четирите файла на **CurrentGraphStress / Graph5**. Готовият runtime не изисква authoring input. Съществуващите recipe профили запазват отделните си identities:
+
+| Роля | Профил / package ID | manifest SHA-256 |
+| --- | --- | --- |
+| Preview14 runtime | `CurrentGraphStress` / `bglang-neutral:9e9a4f441f679542` | `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` |
+| Builder default и article/editorial consumer dependency | `Current` / `bglang-neutral:90bea7c5c799f04d` | `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7` |
+| Legacy consumer controls | `Baseline` / `bglang-neutral:36b0b69685d6d3e9` | `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7` |
+
+За reproduction използвайте exact locked `lexemes.source.json`. Source ZIP го включва под `public-inputs/preview7-auxiliary-repair-authoring-v5/lexemes.source.json`; при checkout вземете matching inputs ZIP. За показаните команди копирайте само този файл в `./authoring-input`. [Public input lock](../data/dictionary/public-input-lock.v1.json) изисква 146429828 bytes и SHA-256 `55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a`. [GraphStress profile](../data/dictionary/current-graph-stress-reproduction.v1.json) обвързва отделния source graph и четирите expected output файла. Задайте process `TEMP` и `TMP` към налична writable temp папка и използвайте нови, отделни output/results директории:
+
+~~~powershell
+$ErrorActionPreference = 'Stop'
+./packaging/Build-PublicPackage.ps1 -InputDirectory ./authoring-input -Profile Current -OutputDirectory ./article-current
+./packaging/Build-PublicPackage.ps1 -InputDirectory ./authoring-input -Profile CurrentGraphStress -ArticleCurrentManifest ./article-current/manifest.json -OutputDirectory ./graph-a -ResultsDirectory ./graph-results-a -Test -TestWeb
+# Optional second exact reproduction, with the same consumer bindings:
+./packaging/Build-PublicPackage.ps1 -InputDirectory ./authoring-input -Profile CurrentGraphStress -ArticleCurrentManifest ./article-current/manifest.json -OutputDirectory ./graph-b -ResultsDirectory ./graph-results-b -Test -TestWeb -CompareWith ./graph-a
+~~~
+
+Първата команда строи strict Current dependency без consumer/test claim. `CurrentGraphStress -Test` изисква explicit `-ArticleCurrentManifest`; ambient selector не го заменя. Primary Graph5 се използва от dedicated GraphStress Public/HTTP контролите и CLI примерите. Existing legacy Public/Lexical/Stress/repair и общият Web selector остават върху strict Baseline; article/editorial контролите използват exact Current dependency. Няма all-tests-on-Graph5 claim. `-CompareWith` сравнява всичките четири RAW файла. `-TestWeb` изисква `-Test`; без него няма Web validation claim. Missing input/hash mismatch е FAIL, без private fallback.
+
+[Windows workflow](../.github/workflows/windows-public.yml) задава Node.js 24, client transport/DOM и три syntax проверки. Той първо строи Current dependency без `-Test`, след което тества Graph5 A; `workflow_dispatch` добавя Graph5 B с `-CompareWith A`. Push към branch изпълнява A; tag push сам по себе си не стартира този workflow. Публикационните hosted резултати се удостоверяват отделно с exact main/tag runs и поискан Web gate, след изпълнението им.
+
+Preview14 включва приетите bounded nominal/finite continuations, guarded preposition+NP/бройни предложения и quote защити, както и тесни boundary, conjunction-comma и modifier-supported spelling случаи. Original readings/UTF-16 refs, ambiguity, abstention и normative/inferred границите се пазят. Няма общ parser или all33-fixed claim.
+
+## Исторически договори — Preview13 и по-стари
+
+Цялото предходно тяло по-долу е запазено RAW. Старите runtime defaults, identities, counts и pending/publication статуси описват собствените им snapshots; за Preview14 използвайте горните matching targets и изричния GraphStress профил.
+
 # Preview13 — matching source/runtime и reproduction
 
 Този source guide подготвя [Preview13](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.13). Download връзките са бъдещи targets за тази версия; release страницата удостоверява действителната публикация, source/tag, CI и окончателния anonymous readback. Не се заявява предварителен PASS.
