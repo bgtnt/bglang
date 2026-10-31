@@ -469,6 +469,7 @@
       "targetFramework": "net10.0",
       "sdk": "10.0.403",
       "requiredSourceInputs": [
+        "Compile|src/BgLang.Contracts/Kernel/ConstructionIndexEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/DocumentReadingProfile.cs",
         "Compile|src/BgLang.Contracts/Kernel/ExactSelfReadingRequirement.cs",
         "Compile|src/BgLang.Contracts/Kernel/FuzzyMatch.cs",
@@ -497,6 +498,7 @@
         "Compile|src/BgLang.Contracts/Kernel/SentenceSpan.cs",
         "Compile|src/BgLang.Contracts/Kernel/StressEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextAnalysis.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextConstructionProjection.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextContextEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextContextOptions.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextContinuationEvidence.cs",
@@ -644,7 +646,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 57,
+      "compileCount": 59,
       "projectReferenceCount": 0
     },
     {
@@ -668,6 +670,7 @@
         "Compile|src/BgLang.Core/Kernel/ConditionalRootProof.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSeedIndex.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSupportInventory.cs",
+        "Compile|src/BgLang.Core/Kernel/ConstructionIndex.cs",
         "Compile|src/BgLang.Core/Kernel/ConstructionSpanMatcher.cs",
         "Compile|src/BgLang.Core/Kernel/ConstructionTemplateComposer.cs",
         "Compile|src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
@@ -727,6 +730,7 @@
         "Compile|src/BgLang.Core/Kernel/StyleRepetitionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/SuffixReadingCursor.cs",
         "Compile|src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
+        "Compile|src/BgLang.Core/Kernel/TextConstructionProjector.cs",
         "Compile|src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/TextContinuationAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/TextCountConstructionAnalyzer.cs",
@@ -861,7 +865,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 90,
+      "compileCount": 92,
       "projectReferenceCount": 1
     },
     {
@@ -1535,8 +1539,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 17142,
-      "sha256": "b714219ee6356475bfbaed21e1504f3a3255c6f02853f8a5a7c7af14bb3ee064"
+      "bytes": 17385,
+      "sha256": "b307bde43d5aab6e9961a173a392664448fcdf37f4717e20cb65194137ccd9b4"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2742,6 +2746,26 @@
       "path": "tests/BgLang.Web.Tests/FinitePredicateHttpTests.cs",
       "bytes": 4351,
       "sha256": "0399aab59ed14377fe7fd6d761bbc5a2d581ca1356697757d25b34a3bafd8213"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/ConstructionIndexEvidence.cs",
+      "bytes": 3197,
+      "sha256": "e9ab83eae8b5401c92123454f87fc4c0d1dc7334651ca60fa51856c52dd311f3"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextConstructionProjection.cs",
+      "bytes": 1634,
+      "sha256": "d2b80aa6775e923efd835de5a3c6242bd65cacaf3ac96bcf40b8d11e644ef3ba"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ConstructionIndex.cs",
+      "bytes": 17032,
+      "sha256": "190bf3e0b23bbfad068cbbdd1c07e63f8d005ecdc91bba771145d41ec9532694"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/TextConstructionProjector.cs",
+      "bytes": 15606,
+      "sha256": "c397c36b43f6f97a62e331bbd306f863411dcba72b697f04e694b642fa3711e6"
     }
   ],
   "publication": false

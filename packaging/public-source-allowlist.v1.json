@@ -295,7 +295,11 @@
     "tests/Shared/FinitePredicateAcceptance.cs",
     "tests/Shared/Fixtures/finite-predicate-links-independent.v1.json",
     "tests/BgLang.Public.Tests/FinitePredicatePackageTests.cs",
-    "tests/BgLang.Web.Tests/FinitePredicateHttpTests.cs"
+    "tests/BgLang.Web.Tests/FinitePredicateHttpTests.cs",
+    "src/BgLang.Contracts/Kernel/ConstructionIndexEvidence.cs",
+    "src/BgLang.Contracts/Kernel/TextConstructionProjection.cs",
+    "src/BgLang.Core/Kernel/ConstructionIndex.cs",
+    "src/BgLang.Core/Kernel/TextConstructionProjector.cs"
   ],
   "inputDirectory": "public-inputs/preview7-auxiliary-repair-authoring-v5",
   "inputFiles": [
