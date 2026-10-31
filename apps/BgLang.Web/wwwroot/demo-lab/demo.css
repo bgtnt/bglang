@@ -102,12 +102,15 @@ main { max-width: 1480px; margin: 0 auto; padding: 0 16px 40px; }
 .c-unknown { background: var(--unknown); }
 .c-ambiguous { background: var(--ambiguous); }
 .c-known { background: transparent; }
+/* Advice is quieter than a warning; when both apply, the warning (declared later) wins. */
+.w-advice { text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 5px; text-decoration-skip-ink: none; }
 .w-warning { text-decoration: underline wavy var(--warn); text-decoration-thickness: 1.5px; text-underline-offset: 5px; text-decoration-skip-ink: none; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 2px 0; font-size: .85rem; color: var(--muted); }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { display: inline-block; width: 16px; height: 11px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .swatch.w-warning { border: 0; border-bottom: 2px dotted var(--warn); border-radius: 0; height: 8px; text-decoration: none; }
+.swatch.w-advice { border: 0; border-bottom: 2px dotted var(--accent); border-radius: 0; height: 8px; text-decoration: none; }
 .status { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 2px 0; font-size: .9rem; color: var(--muted); }
 #lab-state[data-state="ready"] { color: var(--ink); }
 #lab-state[data-state="error"], #lab-state[data-state="oversize"] { color: var(--warn); }
@@ -139,6 +142,11 @@ main { max-width: 1480px; margin: 0 auto; padding: 0 16px 40px; }
 .check { border-left: 4px solid var(--line); padding: 8px 10px; border-radius: 8px; background: var(--info-soft); }
 .check-warning { border-left-color: var(--warn); background: var(--warn-soft); }
 .check-spelling { border-left-color: var(--accent); }
+.check-advice { border-left: 4px dotted var(--accent); }
+.advice-preview { margin: 6px 0 2px; font-family: var(--font-text); }
+.preview-phrase { text-decoration: underline var(--accent); text-underline-offset: 4px; }
+.preview-change { padding: 0 2px; border-radius: 3px; background: var(--info-soft); }
+.word-checks li.check-advice { list-style: circle; }
 .check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
 .check-word { border: 0; background: none; padding: 0; font: 600 1rem var(--font-text); color: var(--ink); text-decoration: underline dotted; cursor: pointer; }
 .check-message { flex: 1 1 260px; }

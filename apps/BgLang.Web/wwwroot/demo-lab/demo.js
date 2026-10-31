@@ -330,7 +330,130 @@ export function responseShapeValid(response) {
     && (data.lexical?.tokens || []).every(token => listOrAbsent(token?.owners?.entries)
       && (token?.owners?.entries || []).every(entry => listOrAbsent(entry?.meaning)))
     && listOrAbsent(data.syntax?.sentences) && (data.syntax?.sentences || []).every(sentence => listOrAbsent(sentence?.candidates)
-      && (sentence?.candidates || []).every(candidate => listOrAbsent(candidate?.targets)));
+      && (sentence?.candidates || []).every(candidate => listOrAbsent(candidate?.targets)))
+    && listOrAbsent(data.nominalConstructions?.reviews) && (data.nominalConstructions?.reviews || []).every(review =>
+      listOrAbsent(review?.alternatives) && listOrAbsent(review?.contextualOrder) && (review?.alternatives || []).every(row =>
+        listOrAbsent(row?.alternative?.readings) && listOrAbsent(row?.phrase?.headSupports)
+        && (row?.phrase?.headSupports || []).every(support => listOrAbsent(support?.members)
+          && (support?.members || []).every(member => listOrAbsent(member?.replacementReadings)))));
+}
+
+// ---------- construction advice (nominalConstructions.reviews) ----------
+const isCompatible = value => typeof value === 'string' && value.toLowerCase() === 'compatible';
+
+// Resolve one response-local head witness. The inventory binds exact ordinals to their original occurrence;
+// graph ordinals address that token's own analysis, candidate and full tag, never the replacement inventory.
+function supportedHead(support, head, data, response) {
+  const token = data.tokens[head], inventory = data.readingInventory;
+  const occurrence = inventory?.occurrences?.find(row => row?.tokenIndex === head);
+  if (!occurrence || occurrence.start !== token.start || occurrence.length !== token.length || occurrence.text !== token.text
+    || !Number.isInteger(occurrence.readingSetIndex) || occurrence.readingSetIndex < 0) return null;
+  const set = inventory.sets?.[occurrence.readingSetIndex], analysis = tokenAnalysisOf(response, token);
+  if (!set || typeof set.lookupText !== 'string' || !set.lookupText.length || analysis?.word !== set.lookupText
+    || !Array.isArray(set.canonicalReadings) || ((set.supportKey == null) !== (set.supportReadings == null))
+    || (set.supportReadings != null && (!Array.isArray(set.supportReadings) || set.canonicalReadings.length !== 0))) return null;
+  const rows = completeReadings(data, head), key = set.supportReadings?.length > 0 ? set.supportKey : set.canonicalKey;
+  if (!Array.isArray(rows) || !Array.isArray(analysis.readings) || analysis.readings.length > rows.length
+    || typeof key !== 'string' || !key.length || analysis.normalizedWord !== key) return null;
+  const exact = support?.reading, graph = support?.graphReading;
+  if (exact != null) {
+    if (graph != null || exact.tokenIndex !== head || !Number.isInteger(exact.completeReadingIndex) || exact.completeReadingIndex < 0) return null;
+    const reading = rows[exact.completeReadingIndex], raw = reading?.raw, features = reading?.features;
+    // The server retains raw forms (including stress) and permits lookup aliases. Only displayed ordinals have
+    // a second raw witness; later ordinals belong to the complete inventory, not the truncated display prefix.
+    const displayed = analysis.readings[exact.completeReadingIndex];
+    if (typeof raw?.form !== 'string' || !raw.form.length || (exact.completeReadingIndex < analysis.readings.length
+      && (!displayed || ['form', 'lemma', 'partOfSpeech', 'score', 'legacyTypeId', 'legacyBaseId', 'legacyWordId', 'source']
+        .some(field => raw[field] !== displayed[field]))) || features?.partOfSpeech !== 'Noun'
+      || features.hasUnrecognizedFeatures === true || features.hasConflictingFeatures === true
+      || (features.number !== 'Plural' && (features.number !== 'Singular' || !['Masculine', 'Feminine', 'Neuter'].includes(features.gender)))) return null;
+    return {features, graph: false};
+  }
+  if (!graph || graph.tokenIndex !== head || !Number.isInteger(graph.graphCandidateIndex) || graph.graphCandidateIndex < 0
+    || !Number.isInteger(graph.fullTagIndex) || graph.fullTagIndex < 0 || rows.length !== 0
+    || set.canonicalReadings.length !== 0 || analysis.readings.length !== 0) return null;
+  const candidates = analysis.graphCandidates;
+  if (analysis.graphSearchIncomplete === true || analysis.graphExactRootCandidatesComplete !== true || !Array.isArray(candidates)) return null;
+  const candidate = candidates[graph.graphCandidateIndex], tags = candidate?.fullTags;
+  // The current graph producer emits normalized candidate words; use its response keys without a UI normalizer.
+  if (typeof candidate?.word !== 'string' || (candidate.word !== set.canonicalKey && candidate.word !== set.supportKey)
+    || candidate?.isConditional === true || candidate?.conditionalRootProgramId != null || candidate?.conditionalRootBaseFullTag != null
+    || candidate?.conditionalRootSupportCount != null || candidate?.conditionalSupportingLemmas != null || candidate?.conditionalSupportingLemmasRef != null
+    || (candidate?.unmetExactSelfReadingRequirements != null && (!Array.isArray(candidate.unmetExactSelfReadingRequirements)
+      || candidate.unmetExactSelfReadingRequirements.length > 0))
+    || typeof candidate?.derivedLemma !== 'string' || !candidate.derivedLemma.trim() || !Array.isArray(tags)
+    || typeof tags[graph.fullTagIndex] !== 'string' || !tags[graph.fullTagIndex].trim()) return null;
+  return {features: null, graph: true};
+}
+
+// One alternative is supported when its phrase is Compatible and a support of the phrase's own head has a Compatible
+// member for the reviewed word whose replacement readings address this alternative's readings (the /demo rule).
+// Both the reviewed word and the complete head must lie inside the phrase's original source span.
+function supportedPhrase(row, review, data, response) {
+  const phrase = row.phrase, head = phrase?.headTokenIndex, token = data.tokens[head], readings = row.alternative.readings;
+  if (!isCompatible(phrase?.assessment) || !Number.isInteger(head) || token?.kind !== 'Word'
+    || !Array.isArray(phrase.headSupports) || !Array.isArray(readings) || !Number.isInteger(phrase.start)
+    || !Number.isInteger(phrase.length) || phrase.start < 0 || phrase.start > review.start
+    || review.start + review.length > phrase.start + phrase.length || phrase.start + phrase.length > data.text.length
+    || !replaceableSpan(data.text, token.start, token.length) || token.start < phrase.start
+    || token.start + token.length > phrase.start + phrase.length || data.text.slice(token.start, token.start + token.length) !== token.text) return null;
+  for (const support of phrase.headSupports) {
+    const witness = supportedHead(support, head, data, response);
+    if (!witness) continue;
+    const member = (Array.isArray(support.members) ? support.members : []).find(item => item?.tokenIndex === review.tokenIndex
+      && isCompatible(item.assessment) && Array.isArray(item.replacementReadings)
+      && item.replacementReadings.some(index => Number.isInteger(index) && index >= 0 && index < readings.length));
+    if (member) return {start: phrase.start, length: phrase.length, head, support, witness,
+      modifier: Array.isArray(phrase.modifierTokenIndices) && phrase.modifierTokenIndices.includes(review.tokenIndex)};
+  }
+  return null;
+}
+
+// Advice for a known word whose local construction is complete only with a near form. A review must name its word
+// exactly (index, span, text and safe UTF-16 boundaries), every alternative needs a form and a distance, and the
+// server order is used only as a complete permutation that keeps letter distance first; otherwise the raw order.
+// Only reviews with a supported replacement become advice, and the original word always stays possible.
+export function constructionAdvice(data, response = null) {
+  const evidence = data?.nominalConstructions;
+  if (evidence?.available !== true || !Array.isArray(evidence.reviews)) return [];
+  const advice = [];
+  for (const review of evidence.reviews) {
+    const token = data.tokens[review?.tokenIndex], alternatives = review?.alternatives;
+    if (!Number.isInteger(review?.tokenIndex) || review.noChangeRetained !== true || token?.kind !== 'Word'
+      || review.start !== token.start || review.length !== token.length
+      || data.text.slice(token.start, token.start + token.length) !== token.text
+      || !replaceableSpan(data.text, token.start, token.length) || !Array.isArray(alternatives) || !alternatives.length
+      || alternatives.some(row => typeof row?.alternative?.form !== 'string' || !row.alternative.form.length
+        || !Number.isInteger(row.alternative.distance) || row.alternative.distance < 0)) continue;
+    const proposed = review.contextualOrder;
+    const ordered = Array.isArray(proposed) && proposed.length === alternatives.length && new Set(proposed).size === alternatives.length
+      && proposed.every(index => Number.isInteger(index) && index >= 0 && index < alternatives.length)
+      && proposed.every((index, position) => position === 0
+        || alternatives[proposed[position - 1]].alternative.distance <= alternatives[index].alternative.distance);
+    const supported = [], others = [];
+    for (const index of ordered ? proposed : alternatives.map((_, i) => i)) {
+      const row = alternatives[index];
+      if (row.alternative.distance === 0 || row.alternative.form === token.text) continue;
+      const phrase = supportedPhrase(row, review, data, response);
+      (phrase ? supported : others).push({index, form: row.alternative.form, distance: row.alternative.distance, phrase,
+        readings: Array.isArray(row.alternative.readings) ? row.alternative.readings : []});
+    }
+    if (supported.length) advice.push({tokenIndex: review.tokenIndex, start: token.start, length: token.length,
+      original: token.text, pattern: review.pattern, context: review.contextReadings?.[0]?.tokenIndex ?? null,
+      ordered, supported, others, review});
+  }
+  return advice;
+}
+
+// The sentence of the advised word as it would read with the replacement, split so the phrase and the changed word
+// can be marked. Text only, in original offsets; the editor is never touched.
+export function advicePreview(data, item, replacement, phrase) {
+  const sentence = (data.sentences || []).find(s => s.start <= item.start && item.start < s.start + s.length)
+    ?? {start: 0, length: data.text.length};
+  const from = Math.min(sentence.start, phrase.start), to = Math.max(sentence.start + sentence.length, phrase.start + phrase.length);
+  const end = item.start + item.length, phraseEnd = phrase.start + phrase.length;
+  return {before: data.text.slice(from, phrase.start).trimStart(), phraseBefore: data.text.slice(phrase.start, item.start),
+    replacement, phraseAfter: data.text.slice(end, phraseEnd), after: data.text.slice(phraseEnd, to).trimEnd()};
 }
 
 // Shapes of the on-demand answers the card reads. Anything else is reported as an invalid answer, never rendered.
@@ -373,7 +496,7 @@ export function stressedForm(text, start, realization) {
   return result;
 }
 
-export function tokenClass(response, index, layer, warnings) {
+export function tokenClass(response, index, layer, warnings, advised = new Set()) {
   const data = response.data, token = data.tokens[index], classes = [];
   if (layer === 'pos' || layer === 'dictionary') {
     const rows = completeReadings(data, index);
@@ -386,6 +509,7 @@ export function tokenClass(response, index, layer, warnings) {
       classes.push(new Set(rows.map(row => row?.raw?.lemma + '\u0001' + row?.features?.partOfSpeech)).size > 1 ? 'c-ambiguous' : 'c-known');
     }
   }
+  if (advised.has(index)) classes.push('w-advice');
   if (warnings.has(index)) classes.push('w-warning');
   return classes.join(' ');
 }
@@ -590,7 +714,7 @@ export function initLab(doc, {
     const key = display;
     if (backdropKey === key && backdrop.dataset.paintedLayer === layer) return;
     renderBackdrop(backdrop, display.response.data.text, display.response.data.tokens,
-      index => tokenClass(display.response, index, layer, display.warnings));
+      index => tokenClass(display.response, index, layer, display.warnings, display.advised));
     backdropKey = key;
     backdrop.dataset.paintedLayer = layer;
     backdrop.dataset.fresh = 'true';
@@ -612,7 +736,9 @@ export function initLab(doc, {
     }
     const warning = el('span', undefined, 'legend-item');
     warning.append(el('i', undefined, 'swatch w-warning'), doc.createTextNode('предупреждение (подробности под редактора)'));
-    legend.append(warning);
+    const advice = el('span', undefined, 'legend-item');
+    advice.append(el('i', undefined, 'swatch w-advice'), doc.createTextNode('съвет: близка дума допълва конструкцията'));
+    legend.append(warning, advice);
   }
 
   function setLayer(name, focus = false) {
@@ -674,7 +800,53 @@ export function initLab(doc, {
       if (!(Array.isArray(rows) && rows.length)) unknown++;
     });
     return 'Думи: ' + words + ' · Изречения: ' + (data.sentences?.length ?? 0)
-      + ' · Без точен прочит: ' + unknown + ' · Предупреждения: ' + display.checks.filter(c => c.severity === 'warning').length;
+      + ' · Без точен прочит: ' + unknown + ' · Предупреждения: ' + display.checks.filter(c => c.severity === 'warning').length
+      + (display.advice.length ? ' · Съвети: ' + display.advice.length : '');
+  }
+
+  // What supports one replacement, as three separate facts: the near word, the local construction and the measured
+  // agreement with the head's own reading. Features are typed reading features, never parsed from raw tags.
+  // The kernel compares number, and gender only in the singular, so a plural head names number alone.
+  function adviceSupport(item, choice) {
+    const data = display.response.data, head = data.tokens[choice.phrase.head];
+    const facts = [choice.distance === 1 ? 'една буква разлика' : choice.distance + ' букви разлика'];
+    facts.push(choice.phrase.modifier ? '„' + choice.form + '“ пояснява „' + head.text + '“' : 'именна група с „' + head.text + '“');
+    const {features, graph} = choice.phrase.witness;
+    const plural = features?.number === 'Plural';
+    const axes = [plural ? null : FEATURE_WORDS.gender[features?.gender], FEATURE_WORDS.number[features?.number]].filter(Boolean);
+    facts.push(!graph ? 'съгласувани по ' + (plural ? 'число' : 'род и число') + ' (' + axes.join(', ') + ')'
+      : 'съгласувани по графова хипотеза за „' + head.text + '“');
+    return 'Подкрепа: ' + facts.join(' · ') + '.';
+  }
+
+  function adviceRow(item) {
+    const data = display.response.data, key = 'checks:advice:' + item.start;
+    const row = keyed(el('li', undefined, 'check check-advice'), key), head = el('div', undefined, 'check-head');
+    const context = Number.isInteger(item.context) && data.tokens[item.context]?.kind === 'Word' ? data.tokens[item.context].text : null;
+    head.append(button('„' + item.original + '“', 'check-word', () => jump(item.start, item.length, item.original)),
+      el('span', 'Позната дума. ' + (item.pattern === 'preposition+NP' ? 'След предлога' : 'След глагола')
+        + (context ? ' „' + context + '“' : '') + ' би имало съгласувана именна група с близка дума:', 'check-message'));
+    row.append(head);
+    for (const choice of item.supported) {
+      const replacement = matchCase(item.original, choice.form), preview = advicePreview(data, item, replacement, choice.phrase);
+      const line = el('p', undefined, 'advice-preview'), phrase = el('span', undefined, 'preview-phrase');
+      phrase.append(doc.createTextNode(preview.phraseBefore), el('strong', preview.replacement, 'preview-change'),
+        doc.createTextNode(preview.phraseAfter));
+      line.append(el('span', 'При „' + replacement + '“: ', 'note'), doc.createTextNode(preview.before), phrase, doc.createTextNode(preview.after));
+      row.append(line, el('p', adviceSupport(item, choice), 'note'));
+      const actions = el('div', undefined, 'actions');
+      actions.append(keyed(button('Замени с „' + replacement + '“', 'action',
+        () => replace(item.start, item.length, item.original, replacement)), key + ':' + choice.index));
+      row.append(actions);
+    }
+    row.append(el('p', '„' + item.original + '“ също остава възможна: съветът не е грешка и не доказва какво е искал авторът.', 'note'));
+    row.append(details('Технически детайли', node => {
+      technicalList(node, [['Конструкция', String(item.pattern)], ['Позиция', item.start + '+' + item.length + ' (UTF-16)'],
+        ['Ред', item.ordered ? 'по разстояние, после по подкрепена конструкция (от API-то)' : 'суровият ред (няма валиден контекстен ред)'],
+        ['Без подкрепена конструкция', item.others.map(other => other.form + ' (' + other.distance + ')').join(', ') || 'няма']]);
+      node.append(el('pre', JSON.stringify(item.review, null, 2)));
+    }, key + ':tech'));
+    return row;
   }
 
   function checkRow(check) {
@@ -775,6 +947,14 @@ export function initLab(doc, {
       for (const check of warnings) list.append(checkRow(check));
       parts.push(list);
     }
+    // Advice is not a warning: its own heading, after the warnings, and no claim that the text is wrong.
+    if (display.advice.length) {
+      parts.push(el('h3', 'Съвети по конструкцията'));
+      const list = el('ul', undefined, 'check-list');
+      for (const item of display.advice) list.append(adviceRow(item));
+      parts.push(list);
+    } else if (data.nominalConstructions?.available === false)
+      parts.push(el('p', 'Съветите по конструкцията не са налични за този текст.', 'note'));
     const covered = new Set(warnings.filter(check => check.code === 'spelling_unknown_word_unique_distance_one_candidate')
       .map(check => data.tokens.findIndex(token => token.kind === 'Word' && token.start === check.start && token.length === check.length)));
     const spelling = (data.spelling?.words || []).map(word => spellingRow(word, covered)).filter(Boolean);
@@ -1128,11 +1308,14 @@ export function initLab(doc, {
     const parts = [badges];
     const own = display.checks.filter(check => check.validSpan && check.length > 0 && check.start < token.start + token.length
       && check.start + check.length > token.start);
-    if (own.length) {
+    const advice = display.advice.find(item => item.tokenIndex === index);
+    if (own.length || advice) {
       const block = el('section', undefined, 'word-checks');
       block.append(el('h3', 'Проверки за думата'));
       const list = el('ul');
       for (const check of own) list.append(el('li', check.message, 'check-' + check.severity));
+      if (advice) list.append(el('li', 'Съвет: близка дума допълва конструкцията (' + advice.supported.map(choice =>
+        '„' + matchCase(advice.original, choice.form) + '“').join(', ') + '); вижте „Проверки“.', 'check-advice'));
       block.append(list);
       parts.push(block);
     }
@@ -1563,9 +1746,11 @@ export function initLab(doc, {
       try {
         if (!responseShapeValid(response)) throw new Error('Невалидна колекция в отговора.');
         const checks = collectChecks(response.data), evidence = response.data.continuation ?? null;
+        const advice = constructionAdvice(response.data, response);
         display = {response, revision, text: editor.value, heuristics: heuristicsToggle.checked, checks,
           warnings: warningTokens(response.data, checks), package: packageOf(response),
-          continuation: {snapshot: snapshot ?? null, evidence, binding: bindContinuation(snapshot, evidence)}};
+          continuation: {snapshot: snapshot ?? null, evidence, binding: bindContinuation(snapshot, evidence)},
+          advice, advised: new Set(advice.map(item => item.tokenIndex))};
         // Answers of another package are never shown; a new package starts an empty cache.
         if (previous && previous.package !== display.package) answers.clear();
         view = {checks: checksView(), counts: countsView(), sentences: sentencesView(),

@@ -1439,23 +1439,23 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.css",
-      "bytes": 13649,
-      "sha256": "ad2f8e05a63dce10f7d7579528f6ad90e82a567a0d762048992f2971907c9e9d"
+      "bytes": 14379,
+      "sha256": "0739338ae0359de3b243ddfb175f90913cfcbba64bc233ac001a3d4c57e26b9f"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.js",
-      "bytes": 102883,
-      "sha256": "331a2c6dc5d499e7222308097590a48cefd9bc56e0ebc7eeb25158495a8635bf"
+      "bytes": 118669,
+      "sha256": "4a2eeacc9f08007c085f32a482138939a1b190189975b7074558c03fba5682e5"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/index.html",
-      "bytes": 7554,
-      "sha256": "41cc4c455bef43b23b841503109094e1e82cf8eb2a171cd13d1abe7013889916"
+      "bytes": 7706,
+      "sha256": "03070ae4481380cb0ea5ed55ee5127761db814667d34ea28111c4b43849746d0"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/README.md",
-      "bytes": 9130,
-      "sha256": "535a4d060c3de29a21382007e02766e0a409860f9b7a7b421b396d78ef0b5b87"
+      "bytes": 12180,
+      "sha256": "81b7d38bd2f5d26e3eca1aa2c04197d1173e3bf2f0489811a9c014e74212157b"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.html",
@@ -2624,8 +2624,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/demo-lab.test.mjs",
-      "bytes": 109480,
-      "sha256": "461e6ebfc0df9dc43574b5281b8e2a805ae53839872d625e2f2c024ffd44dec9"
+      "bytes": 142649,
+      "sha256": "926527e351dc5608863c2f636f94e610fb2577061b401fe3f8bf6187a08c9b6c"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",

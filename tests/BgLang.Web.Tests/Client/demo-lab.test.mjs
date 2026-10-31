@@ -13,7 +13,7 @@ const labUrl = new URL('apps/BgLang.Web/wwwroot/demo-lab/', root);
 const lab = await import(new URL('demo.js', labUrl).href);
 const {collectChecks, warningTokens, possibleName, renderBackdrop, renderPlain, initLab, MESSAGES, GENERIC_MESSAGE,
   featureChips, readingGroups, spellingAlternatives, tokenClass, matchCase, replaceableSpan, responseShapeValid,
-  stressedForm, answerShapeValid, packageOf} = lab;
+  stressedForm, answerShapeValid, packageOf, constructionAdvice, advicePreview} = lab;
 
 const drain = () => new Promise(resolve => setImmediate(resolve));
 // Node identity checks with a cheap message: assert.equal on fake DOM nodes would describe the whole object graph.
@@ -166,14 +166,14 @@ const WORD = /[\p{L}\p{M}]+(?:-[\p{L}\p{M}]+)*/gu;
 const NOUN = lemma => ({raw: {form: lemma, lemma, partOfSpeech: 'Съществително:41,Женски'}, features: {partOfSpeech: 'Noun', number: 'Singular', gender: 'Feminine', article: 'Indefinite'}});
 const VERB = (form, lemma, person, number) => ({raw: {form, lemma, partOfSpeech: 'Глагол:161'}, features: {partOfSpeech: 'Verb', person, number, tense: 'Present', verbForm: 'Finite'}});
 function analysis(text, {lexicon = {}, graph = {}, diagnostics = [], validation = undefined, spelling = [], names = [], lexical = [],
-  continuation = undefined, syntax = undefined, pkg = undefined} = {}) {
+  continuation = undefined, syntax = undefined, pkg = undefined, nominal = undefined} = {}) {
   const tokens = [], wordAnalyses = [], occurrences = [], sets = [];
   for (const match of text.matchAll(WORD)) {
     const index = tokens.length, readings = lexicon[match[0]] ?? [];
-    wordAnalyses.push({word: match[0], readings: readings.map(r => r.raw), isKnown: readings.length > 0, graphCandidates: graph[match[0]] ?? []});
+    wordAnalyses.push({word: match[0], normalizedWord: match[0].toLowerCase(), readings: readings.map(r => r.raw), isKnown: readings.length > 0, graphCandidates: graph[match[0]] ?? []});
     tokens.push({text: match[0], kind: 'Word', start: match.index, length: match[0].length, analysisRef: index});
     occurrences.push({tokenIndex: index, text: match[0], start: match.index, length: match[0].length, readingSetIndex: sets.length});
-    sets.push({lookupText: match[0], canonicalKey: match[0], canonicalReadings: readings, supportKey: null, supportReadings: null});
+    sets.push({lookupText: match[0], canonicalKey: match[0].toLowerCase(), canonicalReadings: readings, supportKey: null, supportReadings: null});
   }
   const terminators = [...text.matchAll(/[.!?]+/g)];
   const sentences = [];
@@ -182,6 +182,7 @@ function analysis(text, {lexicon = {}, graph = {}, diagnostics = [], validation 
   if (start < text.length && text.slice(start).trim()) sentences.push({start, length: text.length - start});
   return {evidenceFormat: 'shared-analyses-v1', wordAnalyses, ...(pkg ? {package: {packageId: 'test', manifestSha256: pkg}} : {}), data: {
     text, tokens, sentences, diagnostics, ...(continuation ? {continuation} : {}), ...(syntax ? {syntax} : {}),
+    ...(nominal ? {nominalConstructions: nominal} : {}),
     readingInventory: {occurrences, sets},
     validation: validation ?? {version: 'bounded-validation.v2', available: true, diagnostics: [], spacingDiagnostics: [], subordinateCommaDiagnostics: [], fragmentDiagnostics: [], unavailableChecks: []},
     spelling: {configuredMaxDistance: 2, configuredLimit: 8, words: spelling},
@@ -1554,6 +1555,427 @@ test('stage 3: a waiting reading of a text that changed is abandoned and its lat
   await respond(env, call, 200, readingOf(READ_TEXT));
   assert.equal(env.$('lab-reading').querySelectorAll('p').filter(node => node.className === 'stress-text').length, 0);
   assert.ok(env.host.maxActive <= 1);
+});
+
+// ---------- construction advice (nominalConstructions.reviews) ----------
+// The real review shape captured from the owner's host (1.0.0+37e2ec982, package bglang-neutral:36b0b69685d6d3e9) for
+// „Рисувам сипя река.“: the ten distance-zero/one forms, only „синя“ with a Compatible phrase whose head support has a
+// Compatible member for the reviewed word with replacementReadings [0]; parameterized by positions for other texts.
+const SIPYA_FORMS = ['сипя', 'кипя', 'сивя', 'силя', 'синя', 'сип', 'сипа', 'сипе', 'сипея', 'сипи'];
+function sipyaReview(tokenIndex, start, head, {pattern = 'finite+NP', context = tokenIndex - 1, headReading = 2,
+  order = [0, 4, 1, 2, 3, 5, 6, 7, 8, 9], phraseLength = 9, member = {}, phrase = {}, review = {}} = {}) {
+  return {tokenIndex, start, length: 4, pattern, noChangeRetained: true, maxDistance: 1, limit: 10, allPackageAlternativesExamined: false,
+    contextualOrder: order, contextReadings: [{tokenIndex: context, completeReadingIndex: 0}], ...review,
+    alternatives: SIPYA_FORMS.map((form, index) => ({
+      alternative: {form, distance: index === 0 ? 0 : 1, readings: form === 'синя'
+        ? [{form: 'синя', lemma: 'син', partOfSpeech: 'Прилагателно:86,Женски'}, {form: 'синя', lemma: 'синея', partOfSpeech: 'Глагол:160ii,2л.,Минало_свършено'},
+          {form: 'синя', lemma: 'синея', partOfSpeech: 'Глагол:160ii,3л.,Минало_свършено'}, {form: 'Синя', lemma: 'Синя', partOfSpeech: 'Място:195'}]
+        : [{form, lemma: form, partOfSpeech: 'Глагол:1'}]},
+      phrase: form !== 'синя' ? null : {constructionKey: 'NP', start, length: phraseLength, headTokenIndex: head, modifierTokenIndices: [tokenIndex],
+        connectorTokenIndices: [], assessment: 'Compatible', ...phrase, headSupports: [{reading: {tokenIndex: head, completeReadingIndex: headReading},
+          graphReading: null, members: [{tokenIndex, assessment: 'Compatible', readings: [], graphReadings: [], replacementReadings: [0], ...member}]}]}}))};
+}
+const nominalOf = (...reviews) => ({version: 'nominal_constructions.v1', available: true, unavailableReason: null, phrases: [], reviews});
+const PLACE = lemma => ({raw: {form: lemma.toLowerCase(), lemma, partOfSpeech: 'Място:195'}, features: {partOfSpeech: 'ProperNoun', nameKind: 'PlaceName'}});
+const RIVER = {'Рисувам': [VERB('Рисувам', 'рисувам', 'First', 'Singular')], 'сипя': [VERB('сипя', 'сипя', 'First', 'Singular')],
+  'Сипя': [VERB('Сипя', 'сипя', 'First', 'Singular')], 'река': [VERB('река', 'река', 'First', 'Singular'), PLACE('Река'), NOUN('река')]};
+const adviceRows = env => env.$('lab-checks').querySelectorAll('li').filter(node => node.className.includes('check-advice'));
+const adviceButton = (env, label) => env.$('lab-checks').querySelectorAll('button').find(node => node.textContent === label);
+async function adviceOn(text, reviews, lexicon = RIVER) {
+  const env = await boot(text);
+  await respond(env, env.host.calls[0], 200, analysis(text, {lexicon, nominal: nominalOf(...reviews)}));
+  return env;
+}
+// Graph refs use the actual response-local graphCandidateIndex/fullTagIndex schema and an exact-empty head.
+function graphAdviceResponse() {
+  const review = sipyaReview(1, 8, 2, {phraseLength: 14}), support = review.alternatives[4].phrase.headSupports[0];
+  support.reading = null;
+  support.graphReading = {tokenIndex: 2, graphCandidateIndex: 0, fullTagIndex: 0};
+  const response = analysis('Рисувам сипя суперрека.', {lexicon: RIVER, nominal: nominalOf(review), graph: {'суперрека': [
+    {word: 'суперрека', base: 'река', derivedLemma: 'суперрека', fullTags: ['Съществително:41,Женски']}
+  ]}});
+  Object.assign(response.wordAnalyses[2], {normalizedWord: 'суперрека', graphSearchIncomplete: false, graphExactRootCandidatesComplete: true});
+  return response;
+}
+function graphWireResponse(format) {
+  const response = graphAdviceResponse();
+  if (format === 'shared-analyses-v1') return response;
+  for (const token of response.data.tokens) {
+    token.analysis = response.wordAnalyses[token.analysisRef];
+    delete token.analysisRef;
+  }
+  delete response.wordAnalyses;
+  if (format === null) delete response.evidenceFormat; else response.evidenceFormat = format;
+  return response;
+}
+
+test('construction advice: a known word whose phrase agrees with a near form is advice, with what changes and why', async () => {
+  const env = await adviceOn('Рисувам сипя река.', [sipyaReview(1, 8, 2)]);
+  const box = env.$('lab-checks').textContent;
+  assert.match(box, /Няма предупреждения в проверения обхват/, 'advice is not a warning');
+  assert.match(box, /Съвети по конструкцията/);
+  assert.equal(adviceRows(env).length, 1);
+  const row = adviceRows(env)[0].textContent;
+  assert.match(row, /„сипя“Позната дума\. След глагола „Рисувам“ би имало съгласувана именна група с близка дума:/);
+  assert.match(row, /При „синя“: Рисувам синя река\./, 'the sentence as it would read');
+  assert.match(row, /Подкрепа: една буква разлика · „синя“ пояснява „река“ · съгласувани по род и число \(ж\.р\., ед\.ч\.\)\./);
+  assert.match(row, /„сипя“ също остава възможна: съветът не е грешка и не доказва какво е искал авторът\./);
+  assert.ok(adviceButton(env, 'Замени с „синя“'));
+  assert.ok(!adviceButton(env, 'Замени с „кипя“') && !adviceButton(env, 'Замени с „сипя“'), 'unsupported forms and the original are not offered');
+  const preview = env.$('lab-checks').querySelectorAll('strong').find(node => node.className === 'preview-change');
+  assert.equal(preview.textContent, 'синя');
+  assert.match(env.$('lab-counts').textContent, /Съвети: 1/);
+  const advised = spans(env).find(span => span.textContent === 'сипя');
+  assert.match(advised.className, /w-advice/);
+  assert.doesNotMatch(advised.className, /w-warning/);
+  env.editor.setSelectionRange(9, 9); env.editor.dispatch('click');
+  assert.match(env.$('lab-word').textContent, /Съвет: близка дума допълва конструкцията \(„синя“\); вижте „Проверки“\./);
+});
+
+test('construction advice: choosing replaces only the original span through the undoable editor path', async () => {
+  const env = await adviceOn('Рисувам сипя река.', [sipyaReview(1, 8, 2)]);
+  env.editor.focus();
+  adviceButton(env, 'Замени с „синя“').click();
+  assert.equal(env.editor.value, 'Рисувам синя река.');
+  assert.equal(env.editor.history.length, 1, 'execCommand insertText keeps the native undo history');
+  assert.equal(env.editor.selectionStart, 12);
+  assert.equal(adviceRows(env).length, 1, 'the previous advice stays on screen as the previous analysis');
+  assert.ok(env.$('lab-checks').querySelectorAll('button').every(node => node.disabled), 'and its actions are inactive');
+});
+
+test('construction advice: a repeated word keeps each occurrence and an emoji before it keeps the UTF-16 offsets', async () => {
+  const text = '🙂 Рисувам сипя река. Рисувам сипя река.';
+  const env = await adviceOn(text, [sipyaReview(1, 11, 2), sipyaReview(4, 30, 5)]);
+  assert.equal(adviceRows(env).length, 2);
+  const buttons = env.$('lab-checks').querySelectorAll('button').filter(node => node.textContent === 'Замени с „синя“');
+  assert.equal(buttons.length, 2);
+  buttons[1].click();
+  assert.equal(env.editor.value, '🙂 Рисувам сипя река. Рисувам синя река.', 'only the second occurrence changed');
+});
+
+test('construction advice: the preposition pattern names the preposition and keeps the head’s own reading', async () => {
+  const text = 'Спирам пред сипя къща.';
+  const lexicon = {'Спирам': [VERB('Спирам', 'спирам', 'First', 'Singular')], 'сипя': [VERB('сипя', 'сипя', 'First', 'Singular')],
+    'пред': [{raw: {form: 'пред', lemma: 'пред', partOfSpeech: 'Предлог'}, features: {partOfSpeech: 'Preposition'}}], 'къща': [NOUN('къща')]};
+  const env = await adviceOn(text, [sipyaReview(2, 12, 3, {pattern: 'preposition+NP', context: 1, headReading: 0})], lexicon);
+  const row = adviceRows(env)[0].textContent;
+  assert.match(row, /След предлога „пред“ би имало съгласувана именна група/);
+  assert.match(row, /При „синя“: Спирам пред синя къща\./);
+  assert.match(row, /„синя“ пояснява „къща“ · съгласувани по род и число \(ж\.р\., ед\.ч\.\)/);
+});
+
+test('construction advice: a plural head names agreement in number only, as the kernel compares it', async () => {
+  const review = sipyaReview(1, 8, 2, {headReading: 0});
+  review.alternatives[4].alternative.form = 'сини';
+  review.alternatives[4].alternative.readings = [{form: 'сини', lemma: 'син', partOfSpeech: 'Прилагателно:86,мн.ч.'}];
+  const lexicon = {'Рисувам': RIVER['Рисувам'], 'сипи': [VERB('сипи', 'сипя', 'Third', 'Singular')],
+    'реки': [{raw: {form: 'реки', lemma: 'река', partOfSpeech: 'Съществително:41,Женски,Множествено'},
+      features: {partOfSpeech: 'Noun', number: 'Plural', gender: 'Feminine', article: 'Indefinite'}}]};
+  const env = await adviceOn('Рисувам сипи реки.', [review], lexicon);
+  const row = adviceRows(env)[0].textContent;
+  assert.match(row, /При „сини“: Рисувам сини реки\./);
+  assert.match(row, /„сини“ пояснява „реки“ · съгласувани по число \(мн\.ч\.\)\./);
+  assert.ok(adviceButton(env, 'Замени с „сини“'));
+});
+
+test('construction advice: a graph head says the agreement rests on a graph hypothesis; a support of another word is not one', async () => {
+  const response = graphAdviceResponse(), env = await boot(response.data.text);
+  await respond(env, env.host.calls[0], 200, response);
+  assert.match(adviceRows(env)[0].textContent, /„синя“ пояснява „суперрека“ · съгласувани по графова хипотеза за „суперрека“\./);
+  assert.ok(adviceButton(env, 'Замени с „синя“'));
+  response.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading.tokenIndex = 1;
+  assert.equal(constructionAdvice(response.data, response).length, 0);
+});
+
+test('construction advice: the exact head ordinal must resolve to that original occurrence and noun reading', () => {
+  const fresh = () => analysis('Рисувам сипя река.', {lexicon: structuredClone(RIVER), nominal: nominalOf(sipyaReview(1, 8, 2))});
+  const valid = fresh();
+  assert.equal(constructionAdvice(valid.data, valid).length, 1);
+  const cases = [
+    ['missing head reading', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.completeReadingIndex = 999; }],
+    ['negative head reading', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.completeReadingIndex = -1; }],
+    ['fractional head reading', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.completeReadingIndex = 2.5; }],
+    ['verb homograph ordinal', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.completeReadingIndex = 0; }],
+    ['place-name homograph ordinal', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.completeReadingIndex = 1; }],
+    ['foreign token ordinal', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].reading.tokenIndex = 1; }],
+    ['foreign occurrence span', r => { r.data.readingInventory.occurrences[2].start = 8; }],
+    ['foreign occurrence text', r => { r.data.readingInventory.occurrences[2].text = 'къща'; }],
+    ['foreign reading set', r => { r.data.readingInventory.occurrences[2].readingSetIndex = 1; }],
+    ['foreign exact form', r => { r.data.readingInventory.sets[2].canonicalReadings[2] = NOUN('къща'); }],
+    ['ambiguous witness origin', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading =
+      {tokenIndex: 2, graphCandidateIndex: 0, fullTagIndex: 0}; }]
+  ];
+  for (const [name, change] of cases) {
+    const response = fresh(); change(response);
+    assert.deepEqual(constructionAdvice(response.data, response), [], name);
+  }
+});
+
+test('construction advice: the complete original head must be inside the phrase, including its final character', async () => {
+  for (const [name, phraseLength] of [['head excluded', 4], ['head cut short', 8]]) {
+    const env = await adviceOn('Рисувам сипя река.', [sipyaReview(1, 8, 2, {phraseLength})]);
+    assert.equal(adviceRows(env).length, 0, name);
+    assert.equal(adviceButton(env, 'Замени с „синя“'), undefined, name);
+    assert.doesNotMatch(env.$('lab-checks').textContent, /съгласувани по род и число/, name);
+  }
+});
+
+test('construction advice: missing or unmeasured exact axes cannot default to singular agreement wording', async () => {
+  const cases = [{}, {partOfSpeech: 'Noun'}, {partOfSpeech: 'Noun', number: 'Singular'},
+    {partOfSpeech: 'Noun', number: 'Count', gender: 'Feminine'},
+    {partOfSpeech: 'Noun', number: 'Singular', gender: 'toString'},
+    {...NOUN('река').features, hasUnrecognizedFeatures: true}, {...NOUN('река').features, hasConflictingFeatures: true}];
+  for (const features of cases) {
+    const lexicon = {...RIVER, 'река': [{raw: NOUN('река').raw, features}]};
+    const env = await adviceOn('Рисувам сипя река.', [sipyaReview(1, 8, 2, {headReading: 0})], lexicon);
+    assert.equal(adviceRows(env).length, 0, JSON.stringify(features));
+    assert.equal(adviceButton(env, 'Замени с „синя“'), undefined);
+    assert.doesNotMatch(env.$('lab-checks').textContent, /съгласувани по/);
+  }
+});
+
+test('construction advice: plural exact support needs no gender and never claims gender agreement', async () => {
+  const review = sipyaReview(1, 8, 2, {headReading: 0});
+  review.alternatives[4].alternative.form = 'сини';
+  review.alternatives[4].alternative.readings = [{form: 'сини', lemma: 'син', partOfSpeech: 'Прилагателно:86,мн.ч.'}];
+  const lexicon = {...RIVER, 'реки': [{raw: {form: 'реки', lemma: 'река', partOfSpeech: 'Съществително:41,Женски,мн.ч.'},
+    features: {partOfSpeech: 'Noun', number: 'Plural'}}]};
+  const env = await adviceOn('Рисувам сипя реки.', [review], lexicon);
+  assert.equal(adviceRows(env).length, 1);
+  assert.match(adviceRows(env)[0].textContent, /съгласувани по число \(мн\.ч\.\)\./);
+  assert.doesNotMatch(adviceRows(env)[0].textContent, /съгласувани по род|ед\.ч\./);
+});
+
+test('construction advice: graph ordinals and candidate identity must belong to the exact-empty head analysis', () => {
+  const valid = graphAdviceResponse();
+  assert.equal(constructionAdvice(valid.data, valid).length, 1);
+  const cases = [
+    ['missing candidate', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading.graphCandidateIndex = 999; }],
+    ['missing full tag', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading.fullTagIndex = 999; }],
+    ['negative candidate', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading.graphCandidateIndex = -1; }],
+    ['fractional full tag', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading.fullTagIndex = 0.5; }],
+    ['foreign shared analysis', r => { r.data.tokens[2].analysisRef = 1; }],
+    ['foreign graph owner', r => { r.wordAnalyses[2].word = 'суперкъща'; }],
+    ['foreign normalized owner', r => { r.wordAnalyses[2].normalizedWord = 'суперкъща'; }],
+    ['foreign candidate word', r => { r.wordAnalyses[2].graphCandidates[0].word = 'суперкъща'; }],
+    ['empty full tag', r => { r.wordAnalyses[2].graphCandidates[0].fullTags[0] = ''; }],
+    ['incomplete graph search', r => { r.wordAnalyses[2].graphSearchIncomplete = true; }],
+    ['incomplete exact roots', r => { r.wordAnalyses[2].graphExactRootCandidatesComplete = false; }],
+    ['conditional graph', r => { r.wordAnalyses[2].graphCandidates[0].isConditional = true; }],
+    ['unmet graph requirement', r => { r.wordAnalyses[2].graphCandidates[0].unmetExactSelfReadingRequirements = [{}]; }],
+    ['wrong candidateIndex schema', r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].graphReading =
+      {tokenIndex: 2, candidateIndex: 0, fullTagIndex: 0}; }],
+    ['graph over an exact head', r => { r.data.readingInventory.sets[2].canonicalReadings = [NOUN('суперрека')]; }]
+  ];
+  for (const [name, change] of cases) {
+    const response = graphAdviceResponse(); change(response);
+    assert.deepEqual(constructionAdvice(response.data, response), [], name);
+  }
+});
+
+test('construction advice: a malformed support cannot hide a later valid exact or graph support', async () => {
+  for (const graph of [false, true]) {
+    const response = graph ? graphAdviceResponse()
+      : analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2))});
+    const phrase = response.data.nominalConstructions.reviews[0].alternatives[4].phrase;
+    const valid = phrase.headSupports[0], invalid = structuredClone(valid);
+    if (graph) invalid.graphReading.fullTagIndex = 999; else invalid.reading.completeReadingIndex = 999;
+    phrase.headSupports = [null, invalid, valid];
+    const advice = constructionAdvice(response.data, response);
+    assert.equal(advice.length, 1, graph ? 'graph' : 'exact');
+    assert.strictEqual(advice[0].supported[0].phrase.support, valid);
+    const env = await boot(response.data.text);
+    await respond(env, env.host.calls[0], 200, response);
+    assert.equal(adviceRows(env).length, 1);
+    assert.ok(adviceButton(env, 'Замени с „синя“'));
+    assert.match(adviceRows(env)[0].textContent, graph ? /съгласувани по графова хипотеза за „суперрека“\./
+      : /съгласувани по род и число \(ж\.р\., ед\.ч\.\)\./);
+  }
+});
+
+test('construction advice: embedded graph analyses preserve the same reference checks as shared analyses', () => {
+  const response = graphAdviceResponse();
+  response.data.tokens[2].analysis = response.wordAnalyses[2];
+  delete response.evidenceFormat; delete response.wordAnalyses;
+  assert.equal(constructionAdvice(response.data, response).length, 1);
+  response.data.tokens[2].analysis.graphCandidates[0].word = 'суперкъща';
+  assert.deepEqual(constructionAdvice(response.data, response), []);
+});
+
+test('construction advice: an exact raw accented form keeps its unaccented lookup key and original head span', async () => {
+  const response = structuredClone(analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2))}));
+  response.data.readingInventory.sets[2].canonicalReadings[2].raw.form = 'ре\u0301ка';
+  response.wordAnalyses[2].readings[2].form = 'ре\u0301ка';
+  const advice = constructionAdvice(response.data, response);
+  assert.equal(advice.length, 1, 'DAWG preserves the raw acute form indexed under река');
+  assert.equal(response.data.readingInventory.sets[2].canonicalKey, 'река');
+  assert.equal(response.data.tokens[2].text, 'река');
+  const env = await boot(response.data.text);
+  await respond(env, env.host.calls[0], 200, response);
+  assert.equal(adviceRows(env).length, 1);
+  assert.ok(adviceButton(env, 'Замени с „синя“'));
+  assert.match(adviceRows(env)[0].textContent, /„синя“ пояснява „река“ · съгласувани по род и число \(ж\.р\., ед\.ч\.\)\./);
+});
+
+test('construction advice: an abbreviation lookup alias retains the entire original occurrence span', () => {
+  const response = analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2, {headReading: 0, phraseLength: 11}))});
+  response.data.text = 'Рисувам сипя кв. м.';
+  response.data.sentences = [{start: 0, length: response.data.text.length}];
+  Object.assign(response.data.tokens[2], {text: 'кв. м.', length: 6});
+  Object.assign(response.data.readingInventory.occurrences[2], {text: 'кв. м.', length: 6});
+  response.data.readingInventory.sets[2] = {lookupText: 'кв.м.', canonicalKey: 'кв.м.', canonicalReadings: [NOUN('кв.м.')],
+    supportKey: null, supportReadings: null, displayedReadingCount: 1};
+  Object.assign(response.wordAnalyses[2], {word: 'кв.м.', normalizedWord: 'кв.м.', readings: [NOUN('кв.м.').raw]});
+  const advice = constructionAdvice(response.data, response);
+  assert.equal(advice.length, 1, 'lookupText owns the acquired analysis while occurrence.text owns the original text');
+  assert.equal(advice[0].supported[0].phrase.length, 11);
+  assert.deepEqual(advicePreview(response.data, advice[0], 'синя', advice[0].supported[0].phrase),
+    {before: 'Рисувам ', phraseBefore: '', replacement: 'синя', phraseAfter: ' кв. м.', after: ''});
+  response.data.readingInventory.occurrences[2].length = 5;
+  assert.deepEqual(constructionAdvice(response.data, response), [], 'the permitted lookup alias never relaxes the raw occurrence span');
+});
+
+test('construction advice: a nonempty stress-support route owns the normalized word instead of the canonical key', () => {
+  const response = analysis('Рисувам сипя рѐка.', {lexicon: {...RIVER, 'рѐка': RIVER['река']}, nominal: nominalOf(sipyaReview(1, 8, 2))});
+  const set = response.data.readingInventory.sets[2];
+  set.supportReadings = set.canonicalReadings; set.canonicalReadings = []; set.supportKey = 'река';
+  response.wordAnalyses[2].normalizedWord = 'река';
+  assert.equal(set.canonicalKey, 'рѐка');
+  assert.equal(constructionAdvice(response.data, response).length, 1);
+  response.wordAnalyses[2].normalizedWord = 'рѐка';
+  assert.deepEqual(constructionAdvice(response.data, response), [], 'nonempty support rows select supportKey');
+});
+
+test('construction advice: a complete head ordinal beyond the displayed prefix remains authoritative', () => {
+  const response = structuredClone(analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2))}));
+  response.data.readingInventory.sets[2].displayedReadingCount = 1;
+  response.wordAnalyses[2].readings = response.wordAnalyses[2].readings.slice(0, 1);
+  const advice = constructionAdvice(response.data, response);
+  assert.equal(advice.length, 1, 'the noun at complete ordinal 2 is outside the displayed verb-only prefix');
+  assert.equal(advice[0].supported[0].phrase.support.reading.completeReadingIndex, 2);
+  assert.equal(response.data.readingInventory.sets[2].canonicalReadings.length, 3);
+});
+
+test('construction advice: nonnull direct or shared conditional donors exclude a graph support in every wire format', () => {
+  for (const format of [null, 'shared-donors-v1', 'shared-analyses-v1']) {
+    const valid = graphWireResponse(format);
+    assert.equal(constructionAdvice(valid.data, valid).length, 1, String(format));
+    for (const donors of [[], ['река']]) {
+      for (const shared of [false, true]) {
+        const response = graphWireResponse(format), token = response.data.tokens[2];
+        const owner = format === 'shared-analyses-v1' ? response.wordAnalyses[token.analysisRef] : token.analysis;
+        if (shared) { owner.graphCandidates[0].conditionalSupportingLemmasRef = 0; response.donorSets = [donors]; }
+        else owner.graphCandidates[0].conditionalSupportingLemmas = donors;
+        assert.deepEqual(constructionAdvice(response.data, response), [], String(format) + ' shared=' + shared + ' donors=' + donors.length);
+      }
+    }
+  }
+});
+
+test('construction advice: graph evidence requires both the owning display and canonical inventory to be exact-empty', () => {
+  for (const format of [null, 'shared-donors-v1', 'shared-analyses-v1']) {
+    const response = graphWireResponse(format), token = response.data.tokens[2];
+    const owner = format === 'shared-analyses-v1' ? response.wordAnalyses[token.analysisRef] : token.analysis;
+    owner.readings = [NOUN('суперрека').raw];
+    assert.deepEqual(constructionAdvice(response.data, response), [], String(format) + ' nonempty exact display');
+    owner.readings = [];
+    Object.assign(response.data.readingInventory.sets[2], {canonicalReadings: [NOUN('суперрека')], supportKey: 'суперрека', supportReadings: []});
+    assert.deepEqual(constructionAdvice(response.data, response), [], String(format) + ' a searched-empty support cannot hide canonical exact rows');
+  }
+});
+
+test('construction advice: a foreign displayed raw witness or conditional graph support does not hide a later valid support', () => {
+  const exact = structuredClone(analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2))}));
+  exact.data.readingInventory.sets[2].canonicalReadings.push(structuredClone(NOUN('река')));
+  exact.wordAnalyses[2].readings.push(structuredClone(NOUN('река').raw));
+  exact.data.readingInventory.sets[2].canonicalReadings[2].raw = NOUN('къща').raw;
+  const phrase = exact.data.nominalConstructions.reviews[0].alternatives[4].phrase, validExact = structuredClone(phrase.headSupports[0]);
+  validExact.reading.completeReadingIndex = 3; phrase.headSupports.push(validExact);
+  assert.strictEqual(constructionAdvice(exact.data, exact)[0].supported[0].phrase.support, validExact);
+  for (const format of [null, 'shared-donors-v1', 'shared-analyses-v1']) {
+    const response = graphWireResponse(format), token = response.data.tokens[2];
+    const owner = format === 'shared-analyses-v1' ? response.wordAnalyses[token.analysisRef] : token.analysis;
+    owner.graphCandidates.push(structuredClone(owner.graphCandidates[0]));
+    if (format === null) owner.graphCandidates[0].conditionalSupportingLemmas = [];
+    else { owner.graphCandidates[0].conditionalSupportingLemmasRef = 0; response.donorSets = [[]]; }
+    const graphPhrase = response.data.nominalConstructions.reviews[0].alternatives[4].phrase, validGraph = structuredClone(graphPhrase.headSupports[0]);
+    validGraph.graphReading.graphCandidateIndex = 1; graphPhrase.headSupports.push(validGraph);
+    const advice = constructionAdvice(response.data, response);
+    assert.equal(advice.length, 1, String(format));
+    assert.strictEqual(advice[0].supported[0].phrase.support, validGraph);
+  }
+});
+
+test('construction advice: the replacement keeps the case of the original word', async () => {
+  const env = await adviceOn('Рисувам Сипя река.', [sipyaReview(1, 8, 2)]);
+  assert.ok(adviceButton(env, 'Замени с „Синя“'));
+  assert.match(adviceRows(env)[0].textContent, /При „Синя“: Рисувам Синя река\./);
+});
+
+test('construction advice: a review that does not name its word exactly or lacks a measured support gives no advice', async () => {
+  const cases = [
+    ['another start', sipyaReview(1, 9, 2)],
+    ['noChangeRetained false', sipyaReview(1, 8, 2, {review: {noChangeRetained: false}})],
+    ['a mismatched phrase', sipyaReview(1, 8, 2, {phrase: {assessment: 'Mismatch'}})],
+    ['replacement readings outside the alternative', sipyaReview(1, 8, 2, {member: {replacementReadings: [9]}})],
+    ['a member for another word', sipyaReview(1, 8, 2, {member: {tokenIndex: 2}})],
+    ['an incompatible member', sipyaReview(1, 8, 2, {member: {assessment: 'Unassessed'}})],
+    ['a phrase that does not contain the word', sipyaReview(1, 8, 2, {phrase: {start: 13, length: 4}})]
+  ];
+  for (const [name, review] of cases) {
+    const env = await adviceOn('Рисувам сипя река.', [review]);
+    assert.equal(adviceRows(env).length, 0, name);
+    assert.doesNotMatch(env.$('lab-checks').textContent, /Съвети по конструкцията/, name);
+  }
+  const marked = 'Рисувам сипя̀ река.';
+  const env = await boot(marked);
+  const response = analysis(marked, {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2, {phraseLength: 10}))});
+  response.data.tokens[1] = {...response.data.tokens[1], text: 'сипя', length: 4};
+  await respond(env, env.host.calls[0], 200, response);
+  assert.equal(adviceRows(env).length, 0, 'a replacement would detach the combining mark');
+});
+
+test('construction advice: the server order is used only as a complete permutation that keeps letter distance first', () => {
+  const response = analysis('Рисувам сипя река.', {lexicon: RIVER}), data = response.data;
+  const advice = order => constructionAdvice({...data, nominalConstructions: nominalOf(sipyaReview(1, 8, 2, {order}))}, response)[0];
+  assert.equal(advice([0, 4, 1, 2, 3, 5, 6, 7, 8, 9]).ordered, true);
+  assert.deepEqual(advice([0, 4, 1, 2, 3, 5, 6, 7, 8, 9]).others.map(other => other.form).slice(0, 3), ['кипя', 'сивя', 'силя']);
+  assert.equal(advice([4, 0, 1, 2, 3, 5, 6, 7, 8, 9]).ordered, false, 'distance one before distance zero');
+  assert.equal(advice([0, 4, 1]).ordered, false, 'incomplete');
+  assert.equal(advice([0, 4, 4, 2, 3, 5, 6, 7, 8, 9]).ordered, false, 'repeated');
+  assert.deepEqual(advice([0, 4, 1]).supported.map(choice => choice.form), ['синя'], 'the raw order still finds the supported form');
+  assert.equal(advice([0, 4, 1]).others.length, 8, 'an incomplete order falls back to every raw alternative');
+  assert.equal(advice([0, 4, 4, 2, 3, 5, 6, 7, 8, 9]).supported.length, 1, 'a repeated index never repeats a choice');
+  const preview = advicePreview(data, advice(null), 'синя', advice(null).supported[0].phrase);
+  assert.deepEqual(preview, {before: 'Рисувам ', phraseBefore: '', replacement: 'синя', phraseAfter: ' река', after: '.'});
+});
+
+test('construction advice: an edit makes the advice stale, a new analysis without reviews removes it', async () => {
+  const env = await adviceOn('Рисувам сипя река.', [sipyaReview(1, 8, 2)]);
+  await type(env, 'Рисувам синя река.');
+  assert.equal(env.$('lab-stale-checks').hidden, false);
+  assert.equal(adviceButton(env, 'Замени с „синя“').disabled, true);
+  assert.equal(spans(env).length, 0, 'no advice underline on a stale text');
+  await env.clock.advance(1000);
+  await respond(env, env.host.calls.at(-1), 200, analysis('Рисувам синя река.', {lexicon: RIVER, nominal: nominalOf()}));
+  assert.equal(adviceRows(env).length, 0);
+  assert.doesNotMatch(env.$('lab-counts').textContent, /Съвети/);
+});
+
+test('construction advice: malformed nested collections reject the response; an unavailable lane says so quietly', async () => {
+  const base = () => analysis('Рисувам сипя река.', {lexicon: RIVER, nominal: nominalOf(sipyaReview(1, 8, 2))});
+  for (const breakIt of [r => { r.data.nominalConstructions.reviews = {}; }, r => { r.data.nominalConstructions.reviews[0].alternatives = {}; },
+    r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports = {}; },
+    r => { r.data.nominalConstructions.reviews[0].alternatives[4].phrase.headSupports[0].members[0].replacementReadings = 0; }]) {
+    const response = base();
+    breakIt(response);
+    assert.equal(responseShapeValid(response), false, breakIt.toString());
+  }
+  assert.equal(responseShapeValid(base()), true);
+  const env = await boot('Рисувам сипя река.');
+  await respond(env, env.host.calls[0], 200, analysis('Рисувам сипя река.', {lexicon: RIVER,
+    nominal: {version: 'nominal_constructions.v1', available: false, unavailableReason: 'morphology_unavailable', phrases: [], reviews: []}}));
+  assert.match(env.$('lab-checks').textContent, /Съветите по конструкцията не са налични за този текст\./);
 });
 
 // ---------- static page ----------
