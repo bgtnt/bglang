@@ -1484,8 +1484,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
-      "bytes": 53039,
-      "sha256": "669f6a93701154acf034dad70e1ae6c59f135dadeaed82b8a213aa50318b0739"
+      "bytes": 53984,
+      "sha256": "eebca5ad44aaf4f64faa95c8b679bd2163408da9c12a6923ec060f87b6bfc63a"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.css",
@@ -2394,8 +2394,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 137322,
-      "sha256": "b9df6a1bcd6682d55fb01e64e3f103838352b844fe2f1d471ad40f489677c0b8"
+      "bytes": 146169,
+      "sha256": "4fb684b008c1ba55dd46a5e0933c6c925b6f821806c27da56ac4fe723ea2b839"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",

@@ -478,10 +478,22 @@ export function initLiveDemo({
         const replacement = spellingReplacement(original, alternative.form);
         const candidate = contextual.find(row => row.alternativeIndex === alternativeIndex);
         const kind = typeof candidate?.assessment === 'string' ? candidate.assessment.toLowerCase() : '';
-        const supported = kind === 'supported' && Array.isArray(candidate.matches) && candidate.matches.length > 0;
-        const following = supported ? [...new Set(candidate.matches.map(match => data.tokens[match.followingNounReading?.tokenIndex]?.text)
-          .filter(text => typeof text === 'string' && text.length))] : [];
-        const assessment = supported && following.length ? 'съвместим прочит с „' + following.join('“, „') + '“'
+        const supported = kind === 'supported';
+        const witnessText = (match, reading, previous) => {
+          const index = reading?.tokenIndex, complete = reading?.completeReadingIndex, candidateIndex = match?.candidateReadingIndex;
+          const token = Number.isInteger(index) && index >= 0
+            && (previous ? index < word.tokenIndex : index > word.tokenIndex) ? data.tokens[index] : null;
+          return token?.kind === 'Word' && typeof token.text === 'string' && token.text.length
+            && Number.isInteger(complete) && complete >= 0 && complete < (completeReadings(data, index)?.length ?? 0)
+            && Number.isInteger(candidateIndex) && candidateIndex >= 0
+            && (!Array.isArray(alternative.readings) || candidateIndex < alternative.readings.length) ? token.text : null;
+        };
+        const following = supported && Array.isArray(candidate.matches)
+          ? candidate.matches.map(match => witnessText(match, match?.followingNounReading, false)) : [];
+        const previous = supported && Array.isArray(candidate.previousModifierMatches)
+          ? candidate.previousModifierMatches.map(match => witnessText(match, match?.previousModifierReading, true)) : [];
+        const words = [...new Set([...following, ...previous].filter(Boolean))];
+        const assessment = words.length ? 'съвместим прочит с „' + words.join('“, „') + '“'
           : kind === 'nocompatiblepair' ? 'няма съвместима измерена двойка' : 'контекст: неоценен';
         rows.push(replacementButton(binding, data, range, original, replacement,
           replacement + ' · разстояние ' + alternative.distance + ' · ' + assessment));

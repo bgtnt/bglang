@@ -1845,3 +1845,122 @@ test('unknown diagnostic remains Live information after finite predicate catalog
   const data = {text: 'а', diagnostics: [{code: 'test_unknown_code', start: 0, length: 1}], validation: {available: true}};
   assert.equal(diagnosticPresentation(data).messages[0].classification, 'information');
 });
+
+
+// INV-LABEL wire-shaped DOM controls: spelling refs address the original token
+// inventory; candidateReadingIndex addresses an alternative's own readings.
+// These literals are UI oracles, not new package/grammar/browser measurements.
+function inverseLabelReply(text='Нова кнгиа.', {leadingSymbol=false}={}) {
+  const reply=lifecycleReply(text,{leadingSymbol}),typo=reply.data.tokens.findLastIndex(token=>token.text==='кнгиа');
+  assert.ok(typo>=0);
+  reply.data.tokens[typo].analysis={isKnown:false};
+  const occurrence=reply.data.readingInventory.occurrences.find(row=>row.tokenIndex===typo);
+  reply.data.readingInventory.sets[occurrence.readingSetIndex].canonicalReadings=[];
+  const word=reply.data.spelling.words.find(row=>row.tokenIndex===typo);
+  word.alternatives=[{form:'книга',distance:1,readings:[{form:'книга',lemma:'книга',partOfSpeech:'Съществително:41,Женски'}]},
+    {form:'книги',distance:1,readings:[]}];
+  const previous=reply.data.tokens.findLastIndex((token,index)=>index<typo&&token.kind==='Word');
+  const supported={alternativeIndex:0,assessment:'Supported',matches:[],
+    previousModifierMatches:[{candidateReadingIndex:0,previousModifierReading:{tokenIndex:previous,completeReadingIndex:0}}]};
+  word.contextualCandidates=[{alternativeIndex:1,assessment:'Unassessed',matches:[]},supported];
+  return {reply,word,supported,typo,previous};
+}
+function inverseLabelButton(f) {
+  const button=Array.from(f.spelling.querySelectorAll('button')).find(node=>node.textContent.startsWith('книга ·'));
+  assert.ok(button,'Production renderSpellings retains the raw replacement candidate.');
+  return button;
+}
+
+test('INV-LABEL reverse-only Supported displays the original modifier and preserves raw order and replacement', {concurrency:false}, async()=>{
+  for(const assessment of ['Supported','supported'])await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply();
+    sample.supported.assessment=assessment;
+    const wire=JSON.stringify(sample.reply);
+    await f.first(sample.reply);
+    const button=inverseLabelButton(f);
+    assert.match(button.textContent,/съвместим прочит с „Нова“/);
+    assert.doesNotMatch(button.textContent,/контекст: неоценен|няма съвместима/);
+    assert.deepEqual(Array.from(f.spelling.querySelectorAll('button')).map(node=>node.textContent.split(' ·')[0]),['книги','книга'],
+      'Server tie order remains primary for equal raw distance.');
+    assert.equal(JSON.stringify(sample.reply),wire,'Rendering must not mutate either raw alternatives or contextual witnesses.');
+    assert.equal(sample.supported.matches.length,0);
+    assert.equal(f.editor.value,'Нова кнгиа.');assert.equal(f.editor.setRangeTextCalls.length,0);
+    button.click();assert.equal(f.editor.value,'Нова книга.');
+    assert.deepEqual(f.editor.setRangeTextCalls.at(-1),{form:'книга',start:5,end:10,mode:'preserve'});
+    assert.equal(button.disabled,true);
+    f.forceClick(button);assert.equal(f.editor.setRangeTextCalls.length,1);
+  },{text:'Нова кнгиа.',caret:11});
+});
+
+test('INV-LABEL both witness directions keep the forward words first and deduplicate original text', {concurrency:false}, async()=>{
+  const raw='Нова кнгиа дума.';
+  await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply(raw),following=sample.reply.data.tokens.findIndex(token=>token.text==='дума');
+    sample.supported.matches=[{candidateReadingIndex:0,followingNounReading:{tokenIndex:following,completeReadingIndex:0}},
+      {candidateReadingIndex:0,followingNounReading:{tokenIndex:following,completeReadingIndex:0}}];
+    sample.supported.previousModifierMatches.push(structuredClone(sample.supported.previousModifierMatches[0]));
+    const wire=JSON.stringify(sample.reply);await f.first(sample.reply);
+    const label=inverseLabelButton(f).textContent;
+    assert.match(label,/съвместим прочит с „дума“, „Нова“/);
+    assert.equal((label.match(/„дума“/g)||[]).length,1);assert.equal((label.match(/„Нова“/g)||[]).length,1);
+    assert.equal(JSON.stringify(sample.reply),wire);assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:raw,caret:raw.length});
+});
+
+test('INV-LABEL reverse witness resolves its distinct original occurrence instead of candidate or unknown readings', {concurrency:false}, async()=>{
+  const raw='😀 Но̀ва книга. Стара кнгиа.';
+  await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply(raw,{leadingSymbol:true});
+    assert.equal(sample.reply.data.tokens[sample.previous].text,'Стара');
+    sample.word.alternatives[0].readings.push({...sample.word.alternatives[0].readings[0]});
+    sample.supported.previousModifierMatches[0].candidateReadingIndex=1;
+    assert.equal(sample.reply.data.readingInventory.sets[sample.typo-1].canonicalReadings.length,0,
+      'The replaced unknown occurrence has no original readings; the candidate uses its own domain.');
+    const wire=JSON.stringify(sample.reply);await f.first(sample.reply);
+    const button=inverseLabelButton(f);
+    assert.match(button.textContent,/съвместим прочит с „Стара“/);assert.doesNotMatch(button.textContent,/„Но̀ва“/);
+    button.click();assert.equal(f.editor.value,'😀 Но̀ва книга. Стара книга.');
+    assert.deepEqual(f.editor.setRangeTextCalls.at(-1),{form:'книга',start:raw.indexOf('кнгиа'),end:raw.indexOf('кнгиа')+5,mode:'preserve'});
+    assert.equal(JSON.stringify(sample.reply),wire);
+  },{text:raw,caret:raw.length});
+});
+
+test('INV-LABEL populated witnesses cannot promote Unassessed or NoCompatiblePair to support', {concurrency:false}, async()=>{
+  for(const assessment of ['Unassessed','NoCompatiblePair'])await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply();sample.supported.assessment=assessment;
+    await f.first(sample.reply);const label=inverseLabelButton(f).textContent;
+    assert.doesNotMatch(label,/съвместим прочит с/);
+    assert.ok(label.includes(assessment==='Unassessed'?'контекст: неоценен':'няма съвместима измерена двойка'));
+    assert.equal(f.editor.value,'Нова кнгиа.');assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:'Нова кнгиа.',caret:11});
+});
+
+test('INV-LABEL malformed inverse references stay unassessed while valid mixed witnesses survive', {concurrency:false}, async()=>{
+  const badRefs=[null,{}, {tokenIndex:'0',completeReadingIndex:0},{tokenIndex:-1,completeReadingIndex:0},
+    {tokenIndex:0.5,completeReadingIndex:0},{tokenIndex:99,completeReadingIndex:0},
+    {tokenIndex:1,completeReadingIndex:0},{tokenIndex:2,completeReadingIndex:0},
+    {tokenIndex:0},{tokenIndex:0,completeReadingIndex:'0'},{tokenIndex:0,completeReadingIndex:-1},
+    {tokenIndex:0,completeReadingIndex:0.5},{tokenIndex:0,completeReadingIndex:99}];
+  const groups=[undefined,null,{},'not-an-array',[],[null],[{}],
+    ...badRefs.map(ref=>[{candidateReadingIndex:0,previousModifierReading:ref}]),
+    ...[-1,0.5,'0',99].map(index=>[{candidateReadingIndex:index,previousModifierReading:{tokenIndex:0,completeReadingIndex:0}}]),
+    [{candidateReadingIndex:0,followingNounReading:{tokenIndex:0,completeReadingIndex:0}}]];
+  const raw='Нова кнгиа дума.';
+  for(const group of groups)await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply(raw);sample.supported.previousModifierMatches=group;
+    await f.first(sample.reply);const label=inverseLabelButton(f).textContent;
+    assert.match(label,/контекст: неоценен/,'Bad inverse witness must not manufacture support: '+JSON.stringify(group));
+    assert.doesNotMatch(label,/съвместим прочит с/);assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text:raw,caret:raw.length});
+  await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply('😀 Нова кнгиа.',{leadingSymbol:true});
+    sample.supported.previousModifierMatches[0].previousModifierReading.tokenIndex=0;
+    await f.first(sample.reply);assert.match(inverseLabelButton(f).textContent,/контекст: неоценен/,'A Symbol cannot become the modifier text.');
+  },{text:'😀 Нова кнгиа.',caret:14});
+  await withLiveLifecycle(async f=>{
+    const sample=inverseLabelReply(raw);
+    sample.supported.previousModifierMatches=[null,{candidateReadingIndex:0,previousModifierReading:{tokenIndex:99,completeReadingIndex:0}},
+      ...sample.supported.previousModifierMatches];
+    await f.first(sample.reply);assert.match(inverseLabelButton(f).textContent,/съвместим прочит с „Нова“/);
+  },{text:raw,caret:raw.length});
+});
