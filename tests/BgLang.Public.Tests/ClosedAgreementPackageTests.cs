@@ -109,11 +109,31 @@ public sealed partial class PublicPackageTests
 
     private static void ClosedAssertPinned(string word, IReadOnlyList<TextReadingSnapshot> rows)
     {
-        (int count, string sha) = ClosedPinnedRows(word.ToLowerInvariant());
+        string canonicalWord = word.ToLowerInvariant();
+        (int count, string sha) = ClosedPinnedRows(canonicalWord);
         Assert.HasCount(count, rows, word);
-        string body = string.Join('\n', rows.Select(ClosedRowIdentity));
+        string body = string.Join('\n', rows.Select((row, index) => ClosedRowIdentity(
+            canonicalWord == "ти" && index == 0 ? ClosedHistoricalShortPossessive(row) : row)));
         Assert.AreEqual(sha, Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(body))),
-            "Every full raw row and typed feature remains at its premeasurement original position: " + word);
+            "Every full raw row and historical typed feature remains at its premeasurement original position: " + word);
+    }
+
+    private static TextReadingSnapshot ClosedHistoricalShortPossessive(TextReadingSnapshot row)
+    {
+        WordReading raw = row.Raw;
+        Assert.AreEqual("ти", raw.Form);
+        Assert.AreEqual("твой", raw.Lemma);
+        Assert.AreEqual("Притежателно_местоимение:107,Мъжки,Кратка", raw.PartOfSpeech);
+        Assert.AreEqual(0x3ff0000000000000L, BitConverter.DoubleToInt64Bits(raw.Score));
+        Assert.IsNull(raw.LegacyTypeId);
+        Assert.IsNull(raw.LegacyBaseId);
+        Assert.IsNull(raw.LegacyWordId);
+        Assert.AreEqual("neutral-source-v3:7e43ca45a13e2b3ef2948d32b7576834e5225e724cb14f26e1474a54db4410c7", raw.Source);
+        Assert.IsFalse(row.Features.HasUnrecognizedFeatures);
+        Assert.AreEqual(true, row.Features.IsShortForm);
+
+        // Preserve the frozen hash by reversing this one verified projection change in its hash input.
+        return row with { Features = row.Features with { HasUnrecognizedFeatures = true, IsShortForm = null } };
     }
     private static string ClosedRowIdentity(TextReadingSnapshot row)
     {

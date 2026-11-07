@@ -118,154 +118,90 @@ internal static class TextValidationAnalyzer
     }
 
     internal static (TextAnalysis Analysis, IReadOnlyList<TextValidationDiagnostic> LocalFacts) ApplyPrepositionalArticles(
-        TextAnalysis analysis, TextSyntaxEvidence syntax, Func<string, IReadOnlyList<TextReadingSnapshot>> lookup,
+        TextAnalysis analysis, Func<string, IReadOnlyList<TextReadingSnapshot>> lookup,
         CancellationToken ct, MorphologyEvidenceProjection.View? morphology = null)
     {
         ct.ThrowIfCancellationRequested();
-        if (!syntax.Available || analysis.ReadingInventory is null)
-            return (analysis, []);
+        if (analysis.ReadingInventory is null) return (analysis, []);
         morphology ??= MorphologyEvidenceProjection.Create(analysis, ct);
         if (morphology.UnavailableReason is not null) return (analysis, []);
+
         Dictionary<int, Word> bound = Bind(analysis, ct);
+        var quoted = TextPredicateLinkAnalyzer.QuoteSpans(analysis.Text, ct, protectBackticks: true);
         HashSet<(int Start, int Length)> evaluated = [];
         List<TextDiagnostic> added = [];
         List<TextValidationDiagnostic> facts = [];
-        int quoteCursor = 0;
-        char closingQuote = '\0';
-        bool TouchesQuotedSpan(SentenceSpan sentence)
-        {
-            while (quoteCursor < sentence.Start) ObserveQuote(analysis.Text[quoteCursor++]);
-            bool touches = closingQuote != '\0';
-            int end = sentence.Start + sentence.Length;
-            while (quoteCursor < end) touches |= ObserveQuote(analysis.Text[quoteCursor++]);
-            return touches;
-        }
-        bool ObserveQuote(char value)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (closingQuote != '\0')
-            {
-                if (value == closingQuote) closingQuote = '\0';
-            }
-            else closingQuote = value switch
-            {
-                '"' => '"', '\'' => '\'', '„' => '“', '“' => '”', '«' => '»', '‘' => '’', _ => '\0'
-            };
-            return value is '"' or '\'' or '„' or '“' or '”' or '«' or '»' or '‘' or '’';
-        }
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             ct.ThrowIfCancellationRequested();
             RequireSpan(analysis.Text, sentence.Start, sentence.Length);
-            if (TouchesQuotedSpan(sentence)) continue;
-            bool upperFrame = analysis.Text.AsSpan(sentence.Start, sentence.Length).ToString().All(c => !char.IsLetter(c) || char.IsUpper(c));
-            Word[] words = bound.Values.Where(w => Within(sentence.Start, sentence.Length, w.Token.Start, w.Token.Length))
-                .OrderBy(w => w.Token.Start).ToArray();
-            IReadOnlyList<ContextLanes.TokenView> nominalWords = NominalStructuralProjection.SentenceWords(analysis, sentence, morphology, ct);
-            List<(int Start, int Length, IReadOnlyList<TextSyntaxSupport> Targets, IReadOnlyList<TextSyntaxSupport> Context)> groups =
-                syntax.Sentences.Where(s => s.Status == "Calculated" && s.Start == sentence.Start && s.Length == sentence.Length)
-                    .SelectMany(s => s.Candidates).Where(c => c.Role == TextSyntaxRole.PrepositionalObject && c.RuleId == "BasicPrepositionalObject")
-                    .Select(c => (c.Start, c.Length, c.Targets, c.Context)).ToList();
-            if (groups.Count == 0)
-            {
-                // A context abstention is not preposition authority. Reprove one finite frame and
-                // the immediately attached, fully-read preposition + one common nominal group.
-                Word[] predicates = words.Where(HasVerb).ToArray();
-                if (predicates.Length == 1 && All(predicates[0], f => CleanArticleFeatures(f) &&
-                    f.PartOfSpeech == MorphologicalPartOfSpeech.Verb && f.VerbForm == MorphologicalVerbForm.Finite))
-                {
-                    Word predicate = predicates[0];
-                    TextSyntaxSupport Support(Word word) => new(word.Index, "ExactCategory",
-                        Enumerable.Range(0, word.Rows.Count).Select(i => new TextReadingReference(word.Index, i)).ToArray());
-                    TextSyntaxSupport PrepositionSupport(Word word) => new(word.Index, "ExactCategory",
-                        word.Rows.Select((row, index) => (row, index)).Where(pair =>
-                            pair.row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition)
-                            .Select(pair => new TextReadingReference(word.Index, pair.index)).ToArray());
-                    for (int i = 0; i < words.Length; i++)
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        Word preposition = words[i];
-                        if (preposition.Token.Start <= predicate.Token.Start ||
-                            !Bridge(analysis.Text, predicate.Token.Start + predicate.Token.Length, preposition.Token.Start) ||
-                            !PrepositionArticleSupport(PrepositionSupport(preposition), preposition)) continue;
-                        for (int count = 1; count <= 2 && i + count < words.Length; count++)
-                        {
-                            Word[] nominal = words.Skip(i + 1).Take(count).ToArray();
-                            if (!WhitespaceChain(analysis.Text, new[] { preposition }.Concat(nominal).ToArray())) break;
-                            groups.Add((preposition.Token.Start,
-                                nominal[^1].Token.Start + nominal[^1].Token.Length - preposition.Token.Start,
-                                new[] { PrepositionSupport(preposition) }.Concat(nominal.Select(Support)).ToArray(), [Support(predicate)]));
-                        }
-                    }
-                }
-            }
-            foreach (var candidate in groups)
+            var words = NominalStructuralProjection.SentenceWords(analysis, sentence, morphology, ct);
+            for (int head = words.Count - 1; head > 0; head--)
             {
                 ct.ThrowIfCancellationRequested();
-                RequireSpan(analysis.Text, candidate.Start, candidate.Length);
-                Word[] phrase = words.Where(w => Within(candidate.Start, candidate.Length, w.Token.Start, w.Token.Length)).ToArray();
-                if (phrase.Length < 2 || candidate.Start != phrase[0].Token.Start ||
-                    candidate.Start + candidate.Length != phrase[^1].Token.Start + phrase[^1].Token.Length ||
-                    candidate.Targets.Count != phrase.Length || !WhitespaceChain(analysis.Text, phrase) ||
-                    !candidate.Targets.Zip(phrase).Select((p, i) => i == 0
-                        ? PrepositionArticleSupport(p.First, p.Second) : CompleteArticleSupport(p.First, p.Second)).All(value => value) ||
-                    candidate.Context.Count != 1 || !bound.TryGetValue(candidate.Context[0].TokenIndex, out Word? predicate) ||
-                    !CompleteArticleSupport(candidate.Context[0], predicate) || predicate.Token.Start >= phrase[0].Token.Start ||
-                    !Within(sentence.Start, sentence.Length, predicate.Token.Start, predicate.Token.Length) ||
-                    !Bridge(analysis.Text, predicate.Token.Start + predicate.Token.Length, phrase[0].Token.Start) ||
-                    !All(predicate, f => CleanArticleFeatures(f) && f.PartOfSpeech == MorphologicalPartOfSpeech.Verb && f.VerbForm == MorphologicalVerbForm.Finite) ||
-                    words.Any(w => w.Index != predicate.Index && HasVerb(w))) continue;
-                Word carrier = phrase[1];
-                if (phrase.Skip(1).Any(w => w.Token.Text.Length == 0 || char.IsUpper(w.Token.Text[0]) && !upperFrame)) continue;
+                var binding = NominalStructuralProjection.BindHead(analysis.Text, sentence, analysis.Tokens, words, head, ct);
+                if (binding is null) continue;
+                var first = binding.Participants[0];
+                // Do not rebind an interior homograph as a shorter group when the maximal spine abstains.
+                head = first.WordIndex;
+                if (head == 0) continue;
+                var preposition = words[head - 1];
+                if (first.Word.OriginalIndex != preposition.OriginalIndex + 1 ||
+                    !Bridge(analysis.Text, preposition.Token.Start + preposition.Token.Length, binding.Start) ||
+                    !preposition.Complete || preposition.UsesGraph ||
+                    PrepositionArticleReadings(bound[preposition.OriginalIndex], ct) is not { Count: > 0 } prepReadings)
+                    continue;
+
+                int start = preposition.Token.Start, end = binding.Start + binding.Length;
+                int quote = quoted.BinarySearch((start, 0));
+                if (quote < 0) quote = ~quote;
+                if (quote > 0 && quoted[quote - 1].End > start ||
+                    quote < quoted.Count && quoted[quote].Start < end) continue;
                 if (analysis.ProperNames is { } names &&
-                    (names.Candidates.Any(n => Overlap(candidate.Start, candidate.Length, n.Start, n.Length)) ||
-                     names.Groups.Any(n => Overlap(candidate.Start, candidate.Length, n.Start, n.Length)) ||
-                     phrase.Skip(1).Any(w => names.DeferredTokenIndices.Contains(w.Index) ||
-                         names.UnresolvedContextTokens?.Any(n => n.TokenIndex == w.Index) == true))) continue;
-                int head = -1;
-                for (int i = 0; i < nominalWords.Count; i++) if (nominalWords[i].OriginalIndex == phrase[^1].Index) head = i;
-                NominalStructuralProjection.Binding? binding = NominalStructuralProjection.BindHead(analysis.Text, sentence,
-                    analysis.Tokens, nominalWords, head, ct);
-                if (binding is null || binding.Start != carrier.Token.Start ||
-                    binding.Start + binding.Length != phrase[^1].Token.Start + phrase[^1].Token.Length ||
-                    !binding.Participants.Select(m => m.Word.OriginalIndex).SequenceEqual(phrase.Skip(1).Select(w => w.Index)) ||
-                    binding.Bridges.Any(b => b.Kind != NominalStructuralProjection.BridgeKind.Whitespace) ||
-                    binding.Participants.Any(m => !m.Word.Complete || m.Word.UsesGraph)) continue;
-                // First delivered shapes: a common noun, or one common adjective with its actual noun head.
-                if (binding.Participants.Count == 1)
+                    (names.Candidates.Any(n => Overlap(start, end - start, n.Start, n.Length)) ||
+                     names.Groups.Any(n => Overlap(start, end - start, n.Start, n.Length)) ||
+                     binding.Participants.Any(member => names.DeferredTokenIndices.Contains(member.Word.OriginalIndex) ||
+                         names.UnresolvedContextTokens?.Any(token => token.TokenIndex == member.Word.OriginalIndex) == true)))
+                    continue;
+
+                Word carrier = bound[first.Word.OriginalIndex];
+                Word[] phrase = binding.Participants.Select(member => bound[member.Word.OriginalIndex]).ToArray();
+                bool upperFrame = phrase.All(word => word.Token.Text.All(c => !char.IsLetter(c) || char.IsUpper(c)));
+                if (!upperFrame && phrase.Any(word => char.IsUpper(word.Token.Text[0]))) continue;
+                if (binding.Bridges.Any(bridge => bridge.Kind == NominalStructuralProjection.BridgeKind.ConjunctionAnd) ||
+                    binding.Participants.Any(member => !member.Word.Complete || member.Word.UsesGraph ||
+                        member.RoleReadings.Count != member.Word.Readings.Count) ||
+                    phrase.Any(word => !ExactArticleRows(word))) continue;
+                if (phrase.Length == 1)
                 {
                     if (!All(carrier, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Noun)) continue;
                 }
-                else if (binding.Participants.Count == 2)
-                {
-                    if (!All(carrier, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Adjective) ||
-                        !All(phrase[^1], f => CleanArticleFeatures(f) && f.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
-                            f.Number == MorphologicalNumber.Singular && f.Gender == MorphologicalGender.Masculine &&
-                            f.Article == MorphologicalArticle.Indefinite && f.NameKind is null) ||
-                        NominalStructuralProjection.Measure(binding, ct) is null) continue;
-                }
-                else continue;
+                // Only the first member can carry the group's article. Another definite
+                // member can signal a different local structure even when the axes agree.
+                else if (!All(carrier, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Adjective) ||
+                         phrase.Skip(1).Any(word => !All(word, f => f.Article == MorphologicalArticle.Indefinite ||
+                             f.Article is null && ContextEvidenceGuards.IsMeasuredPassiveAttribute(f))) ||
+                         NominalStructuralProjection.Measure(binding, ct) is not { } measured ||
+                         measured.Heads.Any(group => group.Attributes.Where((rows, index) =>
+                             rows.Length != binding.Participants[index].RoleReadings.Count).Any()))
+                    continue;
+
                 KnownArticlePair? pair = ArticlePair(carrier, lookup, ct);
-                if (pair is null) continue;
-                IReadOnlyList<TextReadingReference> supports = Supports(phrase.Append(predicate));
+                if (pair is null || !evaluated.Add((carrier.Token.Start, carrier.Token.Length))) continue;
+                var supports = Freeze(prepReadings.Concat(Supports(phrase)));
                 if (pair.SourceIsFull)
                 {
-                    evaluated.Add((carrier.Token.Start, carrier.Token.Length));
-                    if (!added.Any(d => d.Start == carrier.Token.Start && d.Length == carrier.Token.Length) &&
-                        !analysis.Diagnostics.Any(d => d.Code == PrepositionalArticleCode && d.Start == carrier.Token.Start && d.Length == carrier.Token.Length))
+                    if (!analysis.Diagnostics.Any(d => d.Code == PrepositionalArticleCode &&
+                        d.Start == carrier.Token.Start && d.Length == carrier.Token.Length))
                         added.Add(new(PrepositionalArticleCode, carrier.Token.Start, carrier.Token.Length, PrepositionalArticleRule)
                         { ProjectedText = MatchArticleCase(carrier.Token.Text, pair.Short), Readings = supports });
                 }
-                else if (pair.RawArticle is MorphologicalArticle.Short or MorphologicalArticle.Definite)
-                {
-                    evaluated.Add((carrier.Token.Start, carrier.Token.Length));
-                    if (facts.Any(d => d.Start == carrier.Token.Start && d.Length == carrier.Token.Length)) continue;
+                else
                     facts.Add(new(LocalArticleCode, carrier.Token.Start, carrier.Token.Length,
                         "independent_preposition;raw_article=" + pair.RawArticle + ";pair_verified_short_form=" + pair.Short +
                         ";known_full_form=" + pair.Full +
                         ";known_short_form=" + pair.Short + ";exact_inverse_full_counterpart_roundtrip;count_alternatives_retained=" + pair.CountAlternatives +
                         ";local_article_only;not_sentence_verdict", supports));
-                }
             }
         }
         if (evaluated.Count == 0) return (analysis, []);
@@ -274,21 +210,29 @@ internal static class TextValidationAnalyzer
             .Concat(added).OrderBy(d => d.Start).ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal)) }, Freeze(facts));
     }
 
-    private static bool CleanArticleFeatures(MorphologicalFeatures f) => !f.HasConflictingFeatures && !f.HasUnrecognizedFeatures && f.NameKind is null;
-    private static bool PrepositionArticleSupport(TextSyntaxSupport support, Word word) =>
-        support.TokenIndex == word.Index && support.Basis is "ExactCategory" or "TypedFeatures" &&
-        support.GraphReadings is not { Count: > 0 } && word.Rows.Count > 0 &&
-        word.Rows.All(r => r.Features == r.Raw.Features && CleanArticleFeatures(r.Features) && Key(r.Raw.Form) == Key(word.Token.Text)) &&
-        word.Rows.Where(r => r.Features.PartOfSpeech != MorphologicalPartOfSpeech.Preposition)
-            .All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle) &&
-        support.Readings.SequenceEqual(word.Rows.Select((r, i) => (r, i))
-            .Where(pair => pair.r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition)
-            .Select(pair => new TextReadingReference(word.Index, pair.i))) && support.Readings.Count > 0;
-    private static bool CompleteArticleSupport(TextSyntaxSupport support, Word word) =>
-        support.TokenIndex == word.Index && support.Basis is "ExactCategory" or "TypedFeatures" &&
-        support.GraphReadings is not { Count: > 0 } && word.Rows.Count > 0 &&
-        word.Rows.All(r => r.Features == r.Raw.Features && !r.Features.HasConflictingFeatures && !r.Features.HasUnrecognizedFeatures && Key(r.Raw.Form) == Key(word.Token.Text)) &&
-        support.Readings.SequenceEqual(Enumerable.Range(0, word.Rows.Count).Select(i => new TextReadingReference(word.Index, i)));
+    private static bool CleanArticleFeatures(MorphologicalFeatures f) =>
+        !f.HasConflictingFeatures && !f.HasUnrecognizedFeatures && f.NameKind is null;
+
+    private static bool ExactArticleRows(Word word) => word.Rows.Count > 0 && word.Rows.All(row =>
+        row.Features == row.Raw.Features && CleanArticleFeatures(row.Features) && Key(row.Raw.Form) == Key(word.Token.Text));
+
+    private static IReadOnlyList<TextReadingReference> PrepositionArticleReadings(Word word, CancellationToken ct)
+    {
+        if (!ExactArticleRows(word)) return [];
+        List<TextReadingReference> supports = [];
+        for (int index = 0; index < word.Rows.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var row = word.Rows[index];
+            if (row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition)
+                supports.Add(new(word.Index, index));
+            // A bare particle reading does not bind this immediate common nominal spine.
+            // A different lexical owner or a competing nominal/conjunction use remains open.
+            else if (row.Features.PartOfSpeech != MorphologicalPartOfSpeech.Particle ||
+                     Key(row.Raw.Lemma) != Key(word.Token.Text)) return [];
+        }
+        return supports;
+    }
 
     private sealed record KnownArticlePair(string Full, string Short, bool SourceIsFull, MorphologicalArticle RawArticle, int CountAlternatives);
     private static KnownArticlePair? ArticlePair(Word word, Func<string, IReadOnlyList<TextReadingSnapshot>> lookup, CancellationToken ct)
@@ -403,6 +347,37 @@ internal static class TextValidationAnalyzer
         if (occurrenceIndex != inventory.Occurrences.Count)
             throw new ArgumentException("Unbound complete occurrence.", nameof(analysis));
         return result;
+    }
+
+    // Bind has checked every raw token/occurrence. A represented opaque tail
+    // still needs its own lookup snapshot rather than an absent or foreign set.
+    private static void RequireSubordinateSource(TextAnalysis analysis, CancellationToken ct)
+    {
+        TextReadingInventory inventory = analysis.ReadingInventory!;
+        int index = 0;
+        bool[] used = new bool[inventory.Sets.Count];
+        var original = new BulgarianTokenizer().Tokenize(analysis.Text, lookup =>
+        {
+            ct.ThrowIfCancellationRequested();
+            if (index >= inventory.Occurrences.Count)
+                throw new ArgumentException("Subordinate prefix needs the original Word occurrences.");
+            var occurrence = inventory.Occurrences[index++];
+            var display = analysis.Tokens[occurrence.TokenIndex].Analysis;
+            var set = inventory.Sets[occurrence.ReadingSetIndex];
+            if (display is null || set.LookupText != lookup || display.Word != lookup ||
+                set.CanonicalKey != BulgarianTextNormalizer.NormalizeKey(lookup) ||
+                set.SupportKey is { } support && (!BulgarianStressLookup.TryGetSupportKey(lookup, set.CanonicalKey, out string valid) || support != valid) ||
+                display.NormalizedWord != (set.SupportReadings is { Count: > 0 } ? set.SupportKey : set.CanonicalKey) ||
+                display.Readings.Count != set.DisplayedReadingCount ||
+                !display.Readings.SequenceEqual(set.ResolvedReadings.Take(set.DisplayedReadingCount).Select(r => r.Raw)))
+                throw new ArgumentException("Subordinate prefix needs the original lookup snapshot for every Word.");
+            used[occurrence.ReadingSetIndex] = true;
+            return display;
+        });
+        ct.ThrowIfCancellationRequested();
+        if (index != inventory.Occurrences.Count || !original.SequenceEqual(analysis.Tokens))
+            throw new ArgumentException("Subordinate prefix needs the original tokenization.");
+        if (used.Contains(false)) throw new ArgumentException("Subordinate prefix has an unused lookup snapshot.");
     }
 
     private static void ValidateReferences(TextAnalysis analysis, TextContextEvidence context, TextSyntaxEvidence syntax,
@@ -594,9 +569,9 @@ internal static class TextValidationAnalyzer
         }
         MorphologyEvidenceProjection.View? originalRelationMorphology = null;
         var claimedPrefix = context.Sentences.SelectMany(sentence => sentence.Candidates
-            .Where(candidate => candidate.AuthorityLane == ContextLanes.ExactPronounPrefixLane)
+            .Where(candidate => ContextLanes.IsPronounPrefixLane(candidate.AuthorityLane))
             .Select(candidate => (Sentence: sentence, Candidate: candidate))).ToArray();
-        if (claimedPrefix.Length > 0 || analysis.Diagnostics.Any(d => d.RuleId == ContextLanes.ExactPronounPrefixLane))
+        if (claimedPrefix.Length > 0 || analysis.Diagnostics.Any(d => ContextLanes.IsPronounPrefixLane(d.RuleId)))
         {
             // Rebind to original snapshots, not to claimed candidate roles or display readings.
             int previousEnd = 0;
@@ -607,17 +582,25 @@ internal static class TextValidationAnalyzer
                 RequireSpan(analysis.Text, sentence.Start, sentence.Length);
                 previousEnd = sentence.Start + sentence.Length;
             }
+            if (claimedPrefix.Any(c => c.Candidate.AuthorityLane == ContextLanes.SubordinatePronounPrefixLane) ||
+                analysis.Diagnostics.Any(d => d.RuleId == ContextLanes.SubordinatePronounPrefixLane))
+            {
+                RequireSubordinateSource(analysis, ct);
+                if (!SentenceBoundaryDetector.Split(analysis.Text, analysis.Tokens, analysis.ReadingInventory).SequenceEqual(analysis.Sentences))
+                    throw new ArgumentException("Subordinate prefix needs the original sentence edges.");
+            }
             originalRelationMorphology = MorphologyEvidenceProjection.Create(analysis, ct);
             var (measured, _) = TextContextAnalyzer.Calculate(analysis, default, ct, originalRelationMorphology);
+            var bySpan = measured.Sentences.ToLookup(sentence => (sentence.Start, sentence.Length));
             foreach (var claim in claimedPrefix)
             {
                 ct.ThrowIfCancellationRequested();
-                if (!measured.Sentences.Where(s => s.Start == claim.Sentence.Start && s.Length == claim.Sentence.Length)
-                    .SelectMany(s => s.Candidates).Any(expected => SamePrefix(claim.Candidate, expected)))
+                if (!bySpan[(claim.Sentence.Start, claim.Sentence.Length)].SelectMany(s => s.Candidates)
+                    .Any(expected => SamePrefix(claim.Candidate, expected)))
                     throw new ArgumentException("Pronoun prefix candidate does not bind its complete original relation.");
             }
             TextDiagnostic[] exactAgreement = analysis.Diagnostics.Where(d =>
-                d.RuleId == ContextLanes.ExactPronounPrefixLane || d.Code == ContextLanes.ProductiveGraphMismatch &&
+                ContextLanes.IsPronounPrefixLane(d.RuleId) || d.Code == ContextLanes.ProductiveGraphMismatch &&
                 d.GraphReadings is null && d.Readings is not null && claimedPrefix.Any(claim =>
                     claim.Candidate.Roles.Any(role => role.Role == TextContextRole.Predicate && role.Start == d.Start && role.Length == d.Length))).ToArray();
             IReadOnlyList<TextDiagnostic> expectedAgreement = TextContextAnalyzer.GraphAgreementDiagnostics(measured, ct, analysis.Diagnostics);
@@ -629,7 +612,7 @@ internal static class TextValidationAnalyzer
             }
         }
         bool SamePrefix(TextContextCandidate actual, TextContextCandidate expected) =>
-            expected.AuthorityLane == ContextLanes.ExactPronounPrefixLane &&
+            actual.AuthorityLane == expected.AuthorityLane &&
             actual.PredicateTokenIndex == expected.PredicateTokenIndex && actual.Selectable == expected.Selectable &&
             actual.Score == expected.Score && actual.CanonicalKey == expected.CanonicalKey &&
             actual.EvidenceCodes.SequenceEqual(expected.EvidenceCodes) && actual.Roles.Count == expected.Roles.Count &&

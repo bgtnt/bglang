@@ -113,8 +113,11 @@ public sealed partial class PublicPackageTests
             Assert.IsTrue(inventory.Sets[head.ReadingSetIndex].ResolvedReadings.All(row =>
                 row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun));
         }
-        return supported.SelectMany(occurrence => Enumerable.Range(0, inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Count)
-                .Select(ordinal => new TextReadingReference(occurrence.TokenIndex, ordinal)))
+        return supported.Skip(1).SelectMany(occurrence => inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings
+                .Select((row, ordinal) => (row, ordinal))
+                .Where(pair => occurrence.TokenIndex != preposition.TokenIndex ||
+                    pair.row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition)
+                .Select(pair => new TextReadingReference(occurrence.TokenIndex, pair.ordinal)))
             .OrderBy(reference => reference.TokenIndex).ThenBy(reference => reference.CompleteReadingIndex).ToArray();
     }
 

@@ -1,6 +1,7 @@
 // Seven bounded contextual lanes over the complete response reading inventory.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using BgLang.Contracts;
@@ -78,6 +79,8 @@ internal static class ContextLanes
     }
 
     internal const string ExactPronounPrefixLane = "licensed_personal_pronoun_prefix_agreement.v1";
+    internal const string SubordinatePronounPrefixLane = "licensed_subordinate_pronoun_prefix_agreement.v1";
+    internal static bool IsPronounPrefixLane(string? lane) => lane is ExactPronounPrefixLane or SubordinatePronounPrefixLane;
     // Diagnostic evidence only; selection and the old closed lane are unchanged.
     internal static ContextOverlayInput? CalculateExactPronounPrefix(string text, SentenceSpan sentence,
         IReadOnlyList<TokenView> words, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey,
@@ -87,6 +90,11 @@ internal static class ContextLanes
         Validate(text, sentence, words, ct);
         return new Calculation(text, sentence, words, sourceKey, ct).ExactPronounPrefix();
     }
+
+    internal static IReadOnlyList<ContextOverlayCandidate> CalculateSubordinatePronounPrefixes(string text, SentenceSpan sentence,
+        IReadOnlyList<TokenAnalysis> tokens, IReadOnlyList<TokenView> words, IReadOnlyList<(int Start, int End)> protectedSpans,
+        int firstProtected, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey, CancellationToken ct) =>
+        new Calculation(text, sentence, words, sourceKey, ct).SubordinatePronounPrefixes(tokens, protectedSpans, firstProtected);
 
     internal sealed record NominalHead(MorphologicalNumber Number, MorphologicalGender? Gender,
         int[] Members, int[][] Attributes);
@@ -416,22 +424,88 @@ internal static class ContextLanes
             if (words.Count < 3 || !Space(sentence.Start, T(0).Token.Start)) return null;
             foreach (TokenView word in words)
             {
+                if (!PrefixReady(word)) return null;
+            }
+            return PronounPrefix(0, ExactPronounPrefixLane) is { } prefix
+                ? new(true, false, null, [prefix], [], []) : null;
+        }
+
+        internal IReadOnlyList<ContextOverlayCandidate> SubordinatePronounPrefixes(IReadOnlyList<TokenAnalysis> tokens,
+            IReadOnlyList<(int Start, int End)> protectedSpans, int firstProtected)
+        {
+            List<ContextOverlayCandidate> result = [];
+            int scope = firstProtected;
+            for (int marker = 0; marker + 2 < words.Count; marker++)
+            {
                 Check();
-                if (word.UsesGraph || !word.Complete || word.Readings.Count == 0) return null;
-                foreach (ReadingView row in word.Readings)
+                TokenView connector = T(marker);
+                string key = connector.CanonicalText;
+                int commaIndex = connector.OriginalIndex - 1;
+                if (key is not ("че" or "защото") || commaIndex < 0 ||
+                    tokens[commaIndex] is not { Kind: TokenKind.Punctuation, Text: "," } comma ||
+                    comma.Start < sentence.Start || !Space(comma.Start + comma.Length, connector.Token.Start) ||
+                    !WordBridge(marker, marker + 1) || !PrefixReady(connector)) continue;
+                while (scope < protectedSpans.Count && protectedSpans[scope].End <= comma.Start) scope++;
+                if (scope < protectedSpans.Count && protectedSpans[scope].Start < connector.Token.Start + connector.Token.Length) continue;
+
+                List<int> supports = [];
+                for (int row = 0; row < connector.Readings.Count; row++)
                 {
                     Check();
-                    if (row.Category == Category.Unknown || row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Unknown ||
-                        row.Features.HasConflictingFeatures || row.Features.HasUnrecognizedFeatures) return null;
+                    ReadingView reading = connector.Readings[row];
+                    if (Norm(reading.Lemma) != key) { supports.Clear(); break; }
+                    if (reading.SourceConjunction && reading.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Conjunction, RawTag: "Съюз:189" } ||
+                        key == "защото" && reading.SourceAdverb &&
+                        reading.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Adverb, RawTag: "Наречие:188" })
+                        supports.Add(row);
+                    else if (key != "че" || reading.Category != Category.Particle ||
+                        reading.Features is not { PartOfSpeech: MorphologicalPartOfSpeech.Particle, RawTag: "Частица:191" })
+                    { supports.Clear(); break; }
                 }
+                if (supports.Count == 0 || PronounPrefix(marker + 1, SubordinatePronounPrefixLane) is not { } prefix) continue;
+                int end = prefix.Roles[0].Start + prefix.Roles[0].Length;
+                if (scope < protectedSpans.Count && protectedSpans[scope].Start < end) continue;
+
+                string boundary = FormattableString.Invariant($"subordinate_boundary={commaIndex}@{comma.Start}:{comma.Length}|{connector.OriginalIndex}@{connector.Token.Start}:{connector.Token.Length}");
+                string readings = "connector_readings=" + string.Join(',', supports.Select(i => i.ToString(CultureInfo.InvariantCulture)));
+                string consumed = FormattableString.Invariant($"consumed_prefix={T(marker + 1).Token.Start}:{end - T(marker + 1).Token.Start}");
+                result.Add(prefix with
+                {
+                    CanonicalKey = prefix.CanonicalKey + "|" + boundary + "|" + readings + "|" + consumed,
+                    EvidenceCodes = [.. prefix.EvidenceCodes, boundary, readings, consumed]
+                });
             }
-            foreach (ReadingView row in T(0).Readings)
-            { Check(); if (!Guard.LicensedSubject(T(0).CanonicalText, row)) return null; }
-            int predicate = 1;
-            while (predicate < words.Count && WordBridge(predicate - 1, predicate) && Transparent(predicate))
-            { Check(); predicate++; }
+            return result;
+        }
+
+        private bool PrefixReady(TokenView word)
+        {
+            Check();
+            if (word.UsesGraph || !word.Complete || word.Readings.Count == 0) return false;
+            foreach (ReadingView row in word.Readings)
+            {
+                Check();
+                if (row.Category == Category.Unknown || row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Unknown ||
+                    row.Features.HasConflictingFeatures || row.Features.HasUnrecognizedFeatures) return false;
+            }
+            return true;
+        }
+
+        private ContextOverlayCandidate? PronounPrefix(int first, string lane)
+        {
+            if (!PrefixReady(T(first))) return null;
+            foreach (ReadingView row in T(first).Readings)
+            { Check(); if (!Guard.LicensedSubject(T(first).CanonicalText, row)) return null; }
+            int predicate = first + 1;
+            while (predicate < words.Count && WordBridge(predicate - 1, predicate))
+            {
+                Check();
+                if (!PrefixReady(T(predicate))) return null;
+                if (!Transparent(predicate)) break;
+                predicate++;
+            }
             if (predicate == words.Count || !WordBridge(predicate - 1, predicate)) return null;
-            MorphologicalFeatures subject = T(0).Readings[0].Features;
+            MorphologicalFeatures subject = T(first).Readings[0].Features;
             // Every licensed row has the same canonical cell tuple; retain every original row below.
             foreach (ReadingView row in T(predicate).Readings)
             {
@@ -443,16 +517,16 @@ internal static class ContextLanes
             ContextOverlayRoleSelection[] roles =
             [
                 Role(ContextOverlayRole.Predicate, predicate, Enumerable.Range(0, T(predicate).Readings.Count).ToArray(), "complete_exact_reading"),
-                Role(ContextOverlayRole.Subject, 0, Enumerable.Range(0, T(0).Readings.Count).ToArray(), "licensed_canonical_personal_subject")
+                Role(ContextOverlayRole.Subject, first, Enumerable.Range(0, T(first).Readings.Count).ToArray(), "licensed_canonical_personal_subject")
             ];
             Check();
-            return new(true, false, null,
-                [new(T(predicate).OriginalIndex, false, ExactPronounPrefixLane, 0, sourceKey(roles), roles,
-                    ["complete_exact_reading", ProductiveGraphMismatch, "all_complete_rows_licensed_canonical_personal_subject",
-                     "pure_typed_transparent_prefix", "all_finite_person_number_pairs_mismatch"])], [], []);
+            return new(T(predicate).OriginalIndex, false, lane, 0, sourceKey(roles), roles,
+                ["complete_exact_reading", ProductiveGraphMismatch, "all_complete_rows_licensed_canonical_personal_subject",
+                 "pure_typed_transparent_prefix", "all_finite_person_number_pairs_mismatch"]);
 
             bool Transparent(int index)
             {
+                if (lane == SubordinatePronounPrefixLane && T(index).CanonicalText == "защото") return false;
                 bool negative = T(index).CanonicalText == "не";
                 foreach (ReadingView row in T(index).Readings)
                 {
@@ -675,8 +749,12 @@ internal static class ContextLanes
             }
             return [];
         }
-        private bool Clitic(int i)
+        private bool Clitic(int i) => ClassifyClitic(i, out bool hasShortPossessive) &&
+            (!hasShortPossessive || i > 0 && i + 1 < words.Count && ThirdTopology(0, i + 1)?.Clitic == true);
+
+        private bool ClassifyClitic(int i, out bool hasShortPossessive)
         {
+            hasShortPossessive = false;
             if (!Ready(i)) return false;
             bool typed = false;
             foreach (ReadingView r in T(i).Readings)
@@ -686,9 +764,13 @@ internal static class ContextLanes
                     r.Features.PartOfSpeech == MorphologicalPartOfSpeech.PersonalPronoun &&
                     r.Features.IsShortForm == true && r.Features.Case is MorphologicalCase.Accusative or MorphologicalCase.Dative)
                 { typed = true; continue; }
-                if (r.Category == Category.Pronoun && (r.SourcePersonalPronoun || r.Features.IsShortForm == true) ||
+                if (r.Category == Category.Pronoun && r.SourcePersonalPronoun ||
                     r.Category == Category.Particle || r.SourceConjunction ||
                     r.SourceGenericUnknown && Norm(r.Lemma) == Norm(T(i).CanonicalText)) continue;
+                // In the nonpersonal Pronoun category only possessive tags project IsShortForm.
+                if (r.Category == Category.Pronoun &&
+                    r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Pronoun, IsShortForm: true })
+                { hasShortPossessive = true; continue; }
                 return false;
             }
             return typed;
@@ -718,7 +800,10 @@ internal static class ContextLanes
                 if (Ready(i) && T(i).Readings.All(r => r.SourceAdverb))
                 { if (adverb) return null; adverb = true; }
                 else if (PreMarker(i)) { if (marker is not null) return null; marker = i; }
-                else if (Clitic(i)) { if (clitic is not null) return null; clitic = i; }
+                else if (ClassifyClitic(i, out bool hasShortPossessive) &&
+                    (!hasShortPossessive || i == predicate - 1 && Ready(predicate) &&
+                        Groups(subject, false).Any(ThirdSubject) && Groups(predicate, true).Any(PersonalGroup)))
+                { if (clitic is not null) return null; clitic = i; }
                 else return null;
             }
             if (clitic is not null && clitic != predicate - 1 || marker is not null && marker != (clitic ?? predicate) - 1) return null;

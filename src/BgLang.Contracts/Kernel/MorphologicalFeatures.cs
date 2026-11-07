@@ -23,11 +23,19 @@ public readonly record struct MorphologicalFeatures(
     /// <summary>Explicit personal-pronoun case; absence never implies nominative.</summary>
     public MorphologicalCase? Case { get; init; }
 
-    /// <summary>True for the explicit personal-pronoun Кратка marker; null does not mean long.</summary>
+    /// <summary>True for the explicit personal or possessive pronoun Кратка marker; null does not mean long.</summary>
     public bool? IsShortForm { get; init; }
 
     /// <summary>Exact supported past-participle class; no lexical or construction acceptance is implied.</summary>
     public MorphologicalParticipleKind? ParticipleKind { get; init; }
+
+    /// <summary>Transitivity declared by the verb type. It does not establish argument structure for a use or license excluding an object.</summary>
+    public MorphologicalVerbTransitivity? DeclaredTransitivity => PartOfSpeech == MorphologicalPartOfSpeech.Verb
+        ? DeclaredVerbTypeCatalog.Lookup(ParadigmId)?.Transitivity : null;
+
+    /// <summary>Aspect declared by the verb type. It is independent of the tense and form of this reading.</summary>
+    public MorphologicalVerbAspect? DeclaredAspect => PartOfSpeech == MorphologicalPartOfSpeech.Verb
+        ? DeclaredVerbTypeCatalog.Lookup(ParadigmId)?.Aspect : null;
 
     /// <summary>
     /// Projects Bulgarian compatibility tags without inspecting a word's spelling.
@@ -73,6 +81,7 @@ public readonly record struct MorphologicalFeatures(
         int personAtoms = 0;
         bool numberConflict = false, genderConflict = false, tenseConflict = false, formConflict = false;
         bool nominal = pos is MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.Adjective;
+        bool possessive = category == "ПРИТЕЖАТЕЛНО_МЕСТОИМЕНИЕ";
         bool definite = false, full = false, shortArticle = false, indefinite = false;
         foreach (string atom in atoms)
         {
@@ -91,9 +100,10 @@ public readonly record struct MorphologicalFeatures(
                 Set(ref grammaticalCase, MorphologicalCase.Dative, ref caseConflict);
             else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "ДателенПредложна"))
                 Set(ref grammaticalCase, MorphologicalCase.PrepositionalDative, ref caseConflict);
-            else if (pos == MorphologicalPartOfSpeech.PersonalPronoun && Equal(atom, "Кратка")) shortForm = true;
+            else if ((pos == MorphologicalPartOfSpeech.PersonalPronoun || possessive) &&
+                Equal(atom, "Кратка")) shortForm = true;
             // Verb article atoms are accepted only if the final coarse form is an unambiguous participle.
-            else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Членуван")) definite = true;
+            else if ((nominal || pos == MorphologicalPartOfSpeech.Verb || possessive) && Equal(atom, "Членуван")) definite = true;
             else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Пълен")) full = true;
             else if (nominal && (Equal(atom, "Непълен") || Equal(atom, "Кратка"))) shortArticle = true;
             else if ((nominal || pos == MorphologicalPartOfSpeech.Verb) && Equal(atom, "Нечленуван")) indefinite = true;
@@ -173,6 +183,7 @@ public readonly record struct MorphologicalFeatures(
             else article = full ? MorphologicalArticle.Full : shortArticle ? MorphologicalArticle.Short :
                 definite ? MorphologicalArticle.Definite : indefinite || nominal ? MorphologicalArticle.Indefinite : null;
         }
+        else if (possessive && shortForm != true && definite) article = MorphologicalArticle.Definite;
         else if (definite || full || indefinite) unknown = true;
         conflict |= numberConflict || genderConflict || tenseConflict || formConflict || caseConflict || participleKindConflict;
         return new(fullTag, pos, paradigm, person, number, gender, tense, form, article, unknown, conflict)

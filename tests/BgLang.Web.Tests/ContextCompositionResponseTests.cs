@@ -12,11 +12,11 @@ public sealed class ContextCompositionResponseTests
 {
     private static readonly string[] FeatureFields = ["rawTag", "partOfSpeech", "paradigmId", "person", "number", "gender",
         "tense", "verbForm", "article", "hasUnrecognizedFeatures", "hasConflictingFeatures", "nameKind",
-        "case", "isShortForm", "participleKind"];
+        "case", "isShortForm", "participleKind", "declaredTransitivity", "declaredAspect"];
 
     [TestMethod]
     [DataRow("raw-v1")][DataRow("shared-donors-v1")][DataRow("shared-analyses-v1")]
-    public async Task Every_format_keeps_fifteen_feature_fields_refs31_32_33_raw_duplicates_and_exact_budget(string format)
+    public async Task Every_format_keeps_seventeen_feature_fields_refs31_32_33_raw_duplicates_and_exact_budget(string format)
     {
         foreach (bool supportRoute in new[] { false, true })
         {
@@ -138,6 +138,8 @@ public sealed class ContextCompositionResponseTests
             Assert.AreEqual("Accusative", features.GetProperty("case").GetString());
             Assert.IsTrue(features.GetProperty("isShortForm").GetBoolean());
             Assert.AreEqual(JsonValueKind.Null, features.GetProperty("participleKind").ValueKind);
+            Assert.AreEqual(JsonValueKind.Null, features.GetProperty("declaredTransitivity").ValueKind);
+            Assert.AreEqual(JsonValueKind.Null, features.GetProperty("declaredAspect").ValueKind);
             Assert.AreEqual(JsonValueKind.Null, features.GetProperty("nameKind").ValueKind);
         }
         JsonElement part = sets[1].GetProperty("canonicalReadings")[0].GetProperty("features");

@@ -470,6 +470,7 @@
       "sdk": "10.0.403",
       "requiredSourceInputs": [
         "Compile|src/BgLang.Contracts/Kernel/ConstructionIndexEvidence.cs",
+        "Compile|src/BgLang.Contracts/Kernel/DeclaredVerbTypeCatalog.cs",
         "Compile|src/BgLang.Contracts/Kernel/DocumentReadingProfile.cs",
         "Compile|src/BgLang.Contracts/Kernel/ExactSelfReadingRequirement.cs",
         "Compile|src/BgLang.Contracts/Kernel/FuzzyMatch.cs",
@@ -489,7 +490,9 @@
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalPartOfSpeech.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalPerson.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalTense.cs",
+        "Compile|src/BgLang.Contracts/Kernel/MorphologicalVerbAspect.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologicalVerbForm.cs",
+        "Compile|src/BgLang.Contracts/Kernel/MorphologicalVerbTransitivity.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphologyCandidate.cs",
         "Compile|src/BgLang.Contracts/Kernel/MorphSegment.cs",
         "Compile|src/BgLang.Contracts/Kernel/PackageProvenance.cs",
@@ -646,7 +649,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 59,
+      "compileCount": 62,
       "projectReferenceCount": 0
     },
     {
@@ -881,6 +884,7 @@
         "Compile|tests/BgLang.Public.Tests/GeneratedArticlePackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/GraphStressSuccessorPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/JoinedNegationPackageTests.cs",
+        "Compile|tests/BgLang.Public.Tests/LocalPrepositionalArticleGraphPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/NominalConstructionPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/PrepositionalArticleGeneratedPackageTests.cs",
@@ -1024,7 +1028,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 20,
+      "compileCount": 21,
       "projectReferenceCount": 1
     },
     {
@@ -1334,13 +1338,13 @@
   "files": [
     {
       "path": ".gitattributes",
-      "bytes": 12919,
-      "sha256": "de49d4b19233dfa50d53826fc20081c0fe1e1ff22d10a0a896b1f904c8d93bdb"
+      "bytes": 12943,
+      "sha256": "223eb842ee5d5c23b1b4d01c0cd919fd22ad94e2fd3d4cc1049aeb8993ddd0c6"
     },
     {
       "path": ".github/workflows/windows-public.yml",
-      "bytes": 5169,
-      "sha256": "7e7b35d4117a2f40c0f21e3902402b0ca5b6d3ad300309562f5c0a92b8311a5f"
+      "bytes": 5258,
+      "sha256": "b2ad867cb148014ae9cab265c515535b4ffd199a3c25de4be5c6645c0536a211"
     },
     {
       "path": ".gitignore",
@@ -1359,138 +1363,138 @@
     },
     {
       "path": "LICENSE",
-      "bytes": 1076,
-      "sha256": "2292f45550d63208e79dd82ff634829bc9283549608ecb974eea33f3cff8d4ef"
+      "bytes": 1097,
+      "sha256": "8992503aa16ae864890fb8a7fb35ea169cb019e9d2e12478087072a2bc12d893"
     },
     {
       "path": "README.md",
-      "bytes": 70935,
-      "sha256": "a788ad08a8624149a91bdfacb5fbd85a7023cfd9292abd88c83ed8a1b527a896"
+      "bytes": 74473,
+      "sha256": "dd24beae48b62bc918a81560a047b9dc530e7351320e58099b1274b55b52190d"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
-      "bytes": 1681,
-      "sha256": "41db46a80d99b8ba6ff6f50f24f392fc938ca0a80f8663145b21fdb2e45a0f8b"
+      "bytes": 1714,
+      "sha256": "da143c2d4efb336d16329f0853d9bc03a33da69e5330a53466c9b9ef3d650fb0"
     },
     {
       "path": "apps/BgLang.Web/ApiOperations.cs",
-      "bytes": 11466,
-      "sha256": "db0af46e63e2768985f9568619bf47868c7692f0d6fb7a8a92fd7ae89fd37221"
+      "bytes": 11607,
+      "sha256": "9eb57f0a21f70bc8d7dcac83a7ac68837de29772e41225ad35b44ac741d96613"
     },
     {
       "path": "apps/BgLang.Web/BgLang.Web.csproj",
-      "bytes": 443,
-      "sha256": "074d7d502c69c9837f32318ccd4cef60cdb205312c45c999265b1c9d5f6976e7"
+      "bytes": 455,
+      "sha256": "742225f3794de86b671c44aad058d061ac92bb3ad20d39491ac777ded982158e"
     },
     {
       "path": "apps/BgLang.Web/ClientRateLimit.cs",
-      "bytes": 1825,
-      "sha256": "fd98d77704b9ca16d143e56adf00bfe8f3a1ecf133fca16bcf8630a925a502e3"
+      "bytes": 1868,
+      "sha256": "433a1a780f22deebd22b5ff21a68d9be371982153e248b9f9c1cc576f9acb6da"
     },
     {
       "path": "apps/BgLang.Web/HttpContract.cs",
-      "bytes": 3569,
-      "sha256": "64b0d3b032cb03c2a44444f2b2f6eb6ed9065174010a3cc8015f33e4efccbfaa"
+      "bytes": 3649,
+      "sha256": "2caa1ba670e2d3d8afd4102b6eacf80fc5c801b83c13564be6d214ba37ec3b22"
     },
     {
       "path": "apps/BgLang.Web/Program.cs",
-      "bytes": 92,
-      "sha256": "5cae96ea20fba79a4db0830e8514ac96c7a39a6575828a07b56ea1b0ea9bb288"
+      "bytes": 96,
+      "sha256": "1aec0a2518bb22fd5bededec0e703cde10ec7ba4c34ad5ab436d4bc1b3a239e6"
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 95425,
-      "sha256": "ab3656f439962ea906b5c69ab4de28c082a52820b3fa0263362964bf908893f6"
+      "bytes": 98663,
+      "sha256": "bd96845621447fad5fa9a63c2d07e4fb5232c5d226fe5e75c49cae5b398a996a"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
-      "bytes": 4174,
-      "sha256": "10ee75d975a31b1ac711fbf844318edd01e5ec82125c85157ee7040e06cf4754"
+      "bytes": 4257,
+      "sha256": "5eb21a9a4ee4c8eb1ef12af8e4b66f0430ef4876f9acc125aa1274ab89b36b91"
     },
     {
       "path": "apps/BgLang.Web/SerializedWorkQueue.cs",
-      "bytes": 5315,
-      "sha256": "59f8ccf522d8a11bbf9ab4ae03d1794d814c6e7d3402db4a15494a3c36deb1ac"
+      "bytes": 5444,
+      "sha256": "d68b9d3d4f2ec9ea1a035a3f5185c7a4f206edce6363848c1b466c4e8f3925c8"
     },
     {
       "path": "apps/BgLang.Web/SessionHost.cs",
-      "bytes": 3558,
-      "sha256": "664dc8a9b02f3237fb47c572fe0d4e22529388efc8ebe5d2050394bfbb43e3eb"
+      "bytes": 3638,
+      "sha256": "7161abcc1c7afb9958350b3e4bc816c6d0f815b27d285cb2b55ae6b3e9a89762"
     },
     {
       "path": "apps/BgLang.Web/SharedDonorResponse.cs",
-      "bytes": 8330,
-      "sha256": "874e34481c436d6c9ad00470feed6c41636a1d71246fb6193b7e2082285183e6"
+      "bytes": 8502,
+      "sha256": "d3958a6c1b9632fd9c90d2eebe0965c23b3170b586c233e5474625408ff90317"
     },
     {
       "path": "apps/BgLang.Web/TextMatchProjection.cs",
-      "bytes": 6144,
-      "sha256": "e2c9d1d4d3f7a9b2bc1e4cfe4f8df0876613aaf64edceaa7913d9830d2d802f9"
+      "bytes": 6242,
+      "sha256": "43d8ad149d45d9fb9e5eda8aa10a9d662c7ebb89169493347444a807fb885837"
     },
     {
       "path": "apps/BgLang.Web/WebHostFactory.cs",
-      "bytes": 10233,
-      "sha256": "df3ecb24f71f94f1b1ea59ccba323441ad0a5c27fa03754d3173e1b9873aa109"
+      "bytes": 10388,
+      "sha256": "b523261b16a0e3055e247903d154c23abc0a7791bd575e5a9a33e198b359c4f1"
     },
     {
       "path": "apps/BgLang.Web/scope-metrics.json",
-      "bytes": 12995,
-      "sha256": "edbccafbe73d75406ea051d3fec4a9e71d2ed458921d1b1abf79363e78b2fa23"
+      "bytes": 13370,
+      "sha256": "56446d645b85fc2dcaea03dca6c7015ff1346af3be9fe157577e358281436041"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.css",
-      "bytes": 14379,
-      "sha256": "0739338ae0359de3b243ddfb175f90913cfcbba64bc233ac001a3d4c57e26b9f"
+      "bytes": 14594,
+      "sha256": "9734f412ebe0a0a247a9fa41fdfd3b252b70e6025e3b7fc5d84e9c749e49a96c"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.js",
-      "bytes": 118669,
-      "sha256": "4a2eeacc9f08007c085f32a482138939a1b190189975b7074558c03fba5682e5"
+      "bytes": 120617,
+      "sha256": "50e96d637dd220b8fc8fba2a733ddaf1fa0bcc65aa3d81c874c0b726c9dce677"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/index.html",
-      "bytes": 7706,
-      "sha256": "03070ae4481380cb0ea5ed55ee5127761db814667d34ea28111c4b43849746d0"
+      "bytes": 7806,
+      "sha256": "bca49ca1b188c32f2dc7ff4d39e0f5dfb3544fd6761e6ead4706eea1a5ff76e3"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/README.md",
-      "bytes": 12180,
-      "sha256": "81b7d38bd2f5d26e3eca1aa2c04197d1173e3bf2f0489811a9c014e74212157b"
+      "bytes": 12221,
+      "sha256": "d5d5c561298e134b058894e9fb2f9e33f2649082f3e784b9c72121483f48ab71"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.html",
-      "bytes": 14946,
-      "sha256": "7aa539fa8d02c56d05b3361947c48aa019f1f846355be00cfd62f51c8478c826"
+      "bytes": 15068,
+      "sha256": "a240e5bfca3a81414ab3759c29fdae392c583908e95ff63bd20b1b853057e02f"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.js",
-      "bytes": 31125,
-      "sha256": "d25424a209c19830c758e2f9440f82658750a45fea0385591e9f6ea41027998f"
+      "bytes": 31605,
+      "sha256": "ab630bba6ba7cabe43d8fc5f23bf01430e3ec1e28a7df182fc6aa774a6550236"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/docs.html",
-      "bytes": 35214,
-      "sha256": "3163a8ced729959f39a565ae2b43d8d9f7fcbdde49c045acb742e7900768f06f"
+      "bytes": 35343,
+      "sha256": "fb7b56bcf44fef5f8338dee880319af59c65b67716400aeb907771ebbcbfd576"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/site.css",
-      "bytes": 3222,
-      "sha256": "27d1e5ffb67ba9cfa17ff3cc9ef69b95d3c56af4dcdaeaa729550920f943692f"
+      "bytes": 3273,
+      "sha256": "d97a8fef1385d7b3e090d5cc4b39b47ffc4deac514ba5029baa698c205d0a5a5"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 15721,
-      "sha256": "ed018b44b42134c5263b0dd31b762891bdaaef5dc0849dec2e3d093d2c619c74"
+      "bytes": 16159,
+      "sha256": "c70a95b0b0f1b3749f5090d519aefebee5ffe6ca8be8123401321deaefda1443"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
-      "bytes": 53984,
-      "sha256": "eebca5ad44aaf4f64faa95c8b679bd2163408da9c12a6923ec060f87b6bfc63a"
+      "bytes": 55586,
+      "sha256": "8f4adcffa22a251d78d2af8907fcafeec3fb5be9ef731635b32ebd5bf27558ed"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.css",
-      "bytes": 17466,
-      "sha256": "c7328d6d33c7391268c0f410279ef9f14754b77e98e71cd69f7bf1ea3c237f27"
+      "bytes": 18554,
+      "sha256": "2bf2b7f3cb86710d0396f4e6e639e3ddb75d8e2eca277af817fe7988fc84c142"
     },
     {
       "path": "data/dictionary/public-input-lock.v1.json",
@@ -1504,13 +1508,13 @@
     },
     {
       "path": "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",
-      "bytes": 297,
-      "sha256": "6e4cde887efb88716a5b0137263d0865fc0cffdff534225fbb0f564284663f5a"
+      "bytes": 307,
+      "sha256": "9e6f357d1dfbb19c47604eab9076a855f830e0d602b8c47caf1821087a3bc3c1"
     },
     {
       "path": "examples/BgLang.PublicExample/Program.cs",
-      "bytes": 20219,
-      "sha256": "6ed612f1a3fc3b1ead5f43e49eab60e348061f681a41af31157b3e40923712d2"
+      "bytes": 20501,
+      "sha256": "0070ccf5108ade2f51f12677ac0bfc1b883aefe5dff145b1f69bb505d6087f00"
     },
     {
       "path": "global.json",
@@ -1519,28 +1523,28 @@
     },
     {
       "path": "packaging/Build-PublicPackage.ps1",
-      "bytes": 35784,
-      "sha256": "fe7c39df6d229afb0f6fbc52d55a524c77f9ba47f9c07638d987be7fcbb33a7e"
+      "bytes": 36197,
+      "sha256": "89516a2e393bc1301f48a33b78ad5a7ef439fac38af57696f8a834cd97a1ea28"
     },
     {
       "path": "packaging/Export-PublicSource.ps1",
-      "bytes": 16389,
-      "sha256": "a0074053f4a5a338cd6e49a647532a4e9881e08cf0a550b59a6ec4c619969dda"
+      "bytes": 16623,
+      "sha256": "46b086fe48e0813b0f9c5ec1d49b88174263912de1fcc3986a8b8b975ee36347"
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 58505,
-      "sha256": "9b8c2bca658c667e2be8f71474190329b167f466d5078c88ba4a7a627e4016f1"
+      "bytes": 64529,
+      "sha256": "ef038abb9b10fc76d70f88b585ff79f1b0de2fb3406383d55e1e8f0b5d0c1f40"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
-      "bytes": 33103,
-      "sha256": "424f78afdf0f80bf62111add0973819d16baca3bc931250b4fb04e58e727d8db"
+      "bytes": 33528,
+      "sha256": "953217f5de1e6c533a0059520e0d9d35e1c7f7d4fd1793d20d2456a313775630"
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 17385,
-      "sha256": "b307bde43d5aab6e9961a173a392664448fcdf37f4717e20cb65194137ccd9b4"
+      "bytes": 17661,
+      "sha256": "2b2f7c07df424e07e83c363c4798c3620d5c06ee947f17a86f771db2145ca34b"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -1549,13 +1553,13 @@
     },
     {
       "path": "src/BgLang.Api/Kernel/AssemblyInfo.cs",
-      "bytes": 182,
-      "sha256": "9f3b345e14619c9df07fa162827ef4c621918cd6ebd9995ba1cef558f32054aa"
+      "bytes": 186,
+      "sha256": "6c040ae8e848ac6da11933b9b2546742247d073515d55315f15b3bad64c26676"
     },
     {
       "path": "src/BgLang.Api/Kernel/BulgarianLanguageSession.cs",
-      "bytes": 28287,
-      "sha256": "fed9167a1dac04588e98f7e5075cb156b1ed007832b067db9ba1b42bfe3abd4d"
+      "bytes": 28741,
+      "sha256": "4d71025d4a2c229f037af3ca41e1ad4e5c0d3b5860b67a228a30d27bcffd3bfc"
     },
     {
       "path": "src/BgLang.Api/Kernel/TextReadingInventorySnapshot.cs",
@@ -1569,13 +1573,13 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/DocumentReadingProfile.cs",
-      "bytes": 1971,
-      "sha256": "e31cce1d48966c7fed11c6628ca0aedc34e354b748757f989e40fab9a0022e25"
+      "bytes": 2007,
+      "sha256": "9176b70319148c3bbf95e890be878696c5023bfa002a9e4c01597dc08a57936b"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/ExactSelfReadingRequirement.cs",
-      "bytes": 257,
-      "sha256": "da90841f85eb896bd7943ff9794744c7607e68c5e02dd3b2a8a098103c31ecfc"
+      "bytes": 264,
+      "sha256": "2d121213c7d689542729e1e8f35695cf9a8b477bd85f24bf5fed6c04f2bc2391"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/FuzzyMatch.cs",
@@ -1584,18 +1588,18 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/LexicalEntry.cs",
-      "bytes": 1626,
-      "sha256": "4692c2c0d9ea80fb5236d17511cfd2baed3c4e2409305dd9cb9bd87f3dacf9e3"
+      "bytes": 1659,
+      "sha256": "b034eb7d6d8f0e3e7669c32e8fc506ec490d0558f77e7dc8195e0246690e904f"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/LexicalEntryLookup.cs",
-      "bytes": 699,
-      "sha256": "e8cee27d376fdacece0e076c9d495babf078e136164995d05899814e2f7618ce"
+      "bytes": 718,
+      "sha256": "2cdb996a44ebd72f56f6f6b62d55f1473dd8a1dcd81d55f4fe6c128ce85ec00c"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/LexicalTextEvidence.cs",
-      "bytes": 921,
-      "sha256": "26e429dd6a496672aaa6122105de22f1fcb0946d6d328f0e40681294d083a790"
+      "bytes": 945,
+      "sha256": "47b7ac659ab9259a10dc70fb6882e9712bbb557f0e355af7d6c725e56f643393"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/LookupMode.cs",
@@ -1614,63 +1618,73 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalArticle.cs",
-      "bytes": 205,
-      "sha256": "ebe7980eb8e17bfdfbf5fbf1f8c83f54023e74d39657887e5a8cb07f87124e98"
+      "bytes": 209,
+      "sha256": "57a455f943ba90130c707677d1f9b43e1356491eb08e04a694feeddd68063559"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalCase.cs",
-      "bytes": 208,
-      "sha256": "d74480e5856714eec26fb76156e865bf918c04d70ec2480d44e0310651d87f09"
+      "bytes": 212,
+      "sha256": "69a9281a7625106a18876596b49a08baafb7c5b134cc0e2926275af9aef64727"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalFeatures.cs",
-      "bytes": 14829,
-      "sha256": "6f02406fe720a5aae1b999eb08d3b019ef9cc9856cf2e23718dd2a133e4c19a0"
+      "bytes": 15930,
+      "sha256": "bc7875bfefddd56b7980638673eaf071f926ba254f501a127426997bad17771d"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalGender.cs",
-      "bytes": 171,
-      "sha256": "ac53d45594ca20ed7ef8985517183806363e483503b83c9b44bce14389d148ce"
+      "bytes": 175,
+      "sha256": "e4b4d7625ea8dfb08b9e9037a03436a2b2b5c546720fd3539766939c2d265745"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalNameKind.cs",
-      "bytes": 205,
-      "sha256": "2d43ef72f6985518c593b3fada05c05ccfa6b3141e612720f79f10e95d598d76"
+      "bytes": 209,
+      "sha256": "81ce96a51d8616a6a3e53667628b00a0007689e34e8e2767af0c1c929123eb12"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalNumber.cs",
-      "bytes": 170,
-      "sha256": "d856f47800fd3f698292bfe6321e6e0a5c950e07dbf2b7ce91f430877f539ae8"
+      "bytes": 174,
+      "sha256": "81ec6836895c35fe8430d0024260bf2f8ae0c2e7eee5094901d983883e353bd1"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalPartOfSpeech.cs",
-      "bytes": 308,
-      "sha256": "16714dd30452bd23d4a407af41a277b1a606234bc51ace8a5846a18888d73ac6"
+      "bytes": 316,
+      "sha256": "20611a78858311fd6eabbb49c2ec5432be53d8b0cd7eff882958594a3fc004a1"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalParticipleKind.cs",
-      "bytes": 224,
-      "sha256": "b8605f5667fbca8d84246272a5a49bf3e79663fc8bfa6b0b93a3a4d6ecf0d7a2"
+      "bytes": 228,
+      "sha256": "8e95d2c4624b02183fed11b620be97f65069aac4df1d8bf6bd4815d760f1db06"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalPerson.cs",
-      "bytes": 164,
-      "sha256": "c41e305f1e7ea529951efddfd9dd5eca65fa34876267119d54bb36bb98f66316"
+      "bytes": 168,
+      "sha256": "7d60b7d3a93c738d7e353c6e91122bb4abb38727ac53cb81605b87e060f59f30"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalTense.cs",
-      "bytes": 182,
-      "sha256": "e7c0a2a0e5f9e8d5e59a57ee82b93c0277bf7b5b10a825b9df1fe80b81a94ac3"
+      "bytes": 186,
+      "sha256": "8f770168d44cce1dba117426f3ae8cc648851538515e93b3f41252482df0faca"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/MorphologicalVerbAspect.cs",
+      "bytes": 167,
+      "sha256": "0520e0596b4f7be74b175dff2881225bdaebd05edaabd969297bd345cdc2c0b7"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologicalVerbForm.cs",
-      "bytes": 202,
-      "sha256": "113d74ba4e2feb7b49a0c8d6972d79714d4653cfceb6e624a6f35488eff41584"
+      "bytes": 206,
+      "sha256": "3eadada10fab8e80b5b9968c1a5c97c200cb9f9877b197bc079c9043914317c3"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/MorphologicalVerbTransitivity.cs",
+      "bytes": 179,
+      "sha256": "2cecdcbb22b2640ccf3fe91e5e208a5ca265d5b53e997720f7c522fb4bb3f4d7"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/MorphologyCandidate.cs",
-      "bytes": 1648,
-      "sha256": "ec07a1acb2665976858243b01933d7c38d012908d3e11f41992a63dd71f8cdd1"
+      "bytes": 1655,
+      "sha256": "dbf7778e5a7080e54df1e723bf07805a6aa8a81f0fd36b56fec8fc8a3ccb782a"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/PackageProvenance.cs",
@@ -1684,8 +1698,8 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/ProperNameEvidence.cs",
-      "bytes": 1653,
-      "sha256": "e5deb2cbd768dec94cfb35b7a17fb43af54c80ea6c829ea6d6426d6f784ef1a1"
+      "bytes": 1684,
+      "sha256": "c1238ba42d70667eb0cdb92e7a22d5597fd430d0c714efb4c128649b1d086f38"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/SentenceSpan.cs",
@@ -1694,28 +1708,28 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/StressEvidence.cs",
-      "bytes": 3766,
-      "sha256": "6efbdc2e192c8862cd492596177bea4b1827b7baccce54ac8f5956897d266f66"
+      "bytes": 3824,
+      "sha256": "0fa9ff6ba5113bb51036a24f78087bfa48f1aa34ceaa5128e60228484f2c5c29"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextAnalysis.cs",
-      "bytes": 3529,
-      "sha256": "d673f5de35dabc9d1d889b8bcd210904943222352b8c4faa8386e7e6d33a99b2"
+      "bytes": 3533,
+      "sha256": "0a66a4d94a65aa3be245e6f06a033f64bd89c3a915898f3ec742990a8c239a16"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContextEvidence.cs",
-      "bytes": 1562,
-      "sha256": "5d9d9a40992d0304307607922e5ca8afb04aa002463100df32b0753f734bc118"
+      "bytes": 1588,
+      "sha256": "efb95a87dd042aa2766c4558f206099c7d557f9787f13c37eaffc95805249c2d"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextNominalConstructionEvidence.cs",
-      "bytes": 3863,
-      "sha256": "c8b90bff3a8c4e5699fd0892ef2418b9c1edb7851a6e803d8486edc948d18b77"
+      "bytes": 3919,
+      "sha256": "372de6fbfadb983d113a24233b4ad9db0ccebc5e5ccb038ef67ae430abe5a9b6"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContextOptions.cs",
-      "bytes": 610,
-      "sha256": "ee5edb940bbd6ccf73842765fa9d303b842606475393155dfb47c198409dc104"
+      "bytes": 623,
+      "sha256": "e0fb09932c5d779f6b689f14f74a39f909fb4f7d6695c8445b6010104abcd3c3"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextDiagnostic.cs",
@@ -1724,33 +1738,33 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextMetrics.cs",
-      "bytes": 998,
-      "sha256": "9f3e9ca0cfeafbb7a782e085fe38ca33562fbe01fbbdf742b9c6d3c72fa2b0a3"
+      "bytes": 1011,
+      "sha256": "e5a8c9818b4a88bc1e4f33f21642c3868d8fd68d5d576d38e7bcf29b09f5c335"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextReadingInventory.cs",
-      "bytes": 5180,
-      "sha256": "f6fb47591628cbff7f38270969e7c1765bf6ae39c7655a8927f24450b13f9152"
+      "bytes": 5189,
+      "sha256": "b3a8812101dc547f8decafe4dbe0e4ae73b25301608cec3c791636867853fbd8"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextSpellingEvidence.cs",
-      "bytes": 2284,
-      "sha256": "0a168c2f6b678f901e9374a086d14f58e71906a82ab97f7329c880ed7470b800"
+      "bytes": 2337,
+      "sha256": "aa2b2a196b37427020286925348ef732997c616d35ce3195cce6c572fb2139b6"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextSyntaxEvidence.cs",
-      "bytes": 1634,
-      "sha256": "29539289d4cfaa2137c95bbee0f6e5f61c41f47a43bcec4788733615d2d79882"
+      "bytes": 1659,
+      "sha256": "e8264fb9251129f427954e649535937dde06c0b7778651e3e287aaa35f114e52"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextValidationEvidence.cs",
-      "bytes": 701,
-      "sha256": "6c191693f8efa3297f956b06a7012f301a916f40e658f536d63b4efa9ec0b46e"
+      "bytes": 712,
+      "sha256": "ba59a8c05e88ef44c532bc4409c96eb0325c3a0765affe1f0326b6282882d513"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextWordConstructionEvidence.cs",
-      "bytes": 796,
-      "sha256": "dc97c37716bc3a90b2b4591106733516f55127b650c684a1aeef4211bde27d1a"
+      "bytes": 809,
+      "sha256": "f989a7ef01bb6e74e2115614e48730e9e8264cf147c50de92ef751ed258a371a"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TokenAnalysis.cs",
@@ -1764,43 +1778,43 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordAnalysis.cs",
-      "bytes": 3516,
-      "sha256": "0cb0246310852da81197f756cb7c6062797792af5a310204d58f7801d8ed73e3"
+      "bytes": 3554,
+      "sha256": "3afe68d97d732642374f268f763e70d87788338510ccef0b667e750f125dcfde"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordConstructionCandidate.cs",
-      "bytes": 470,
-      "sha256": "514cdc6863e5b562df2ef0fd8933fd5490b48d5ca8f27045dc857bab20b4fded"
+      "bytes": 480,
+      "sha256": "1659cc6ece56493ebbca724109188e623afdf8628c037bb841b876201a2a34f4"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordConstructionMatch.cs",
-      "bytes": 257,
-      "sha256": "d08f1832a0d7b143b1ba506c76f16ccb682d2dcfb751f1b75a34c5d54556f675"
+      "bytes": 262,
+      "sha256": "0f9b430c5a0ba759c580579fde2cbb2fda76de4d0b5cb1c8ca9ad0caea576afe"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordConstructionOwnerEvidence.cs",
-      "bytes": 317,
-      "sha256": "794f0204d9048d35bf681d8e804d15587c6ebbb22646ed2c46986dc284c84efb"
+      "bytes": 322,
+      "sha256": "26e70ee32de244fb22f089bae15df25b8d8e677c1d9041c8397f87c119a60f66"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordConstructionResult.cs",
-      "bytes": 493,
-      "sha256": "462fe3923d3b1d0775fc99e62126b660ccbe0abb2493e1cecb31f84ebcb5b3bb"
+      "bytes": 502,
+      "sha256": "c5294c5cc3603746541b71e97487c04281cf15a91125eb169f2a48bd71336fec"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordConstructionStatus.cs",
-      "bytes": 154,
-      "sha256": "a6b2ed4235e89693298259c9ac7e4f8c2dedf6066c38448aa0df063e6ee6c6a5"
+      "bytes": 160,
+      "sha256": "add66b96b6b008275ca2e669b94f38d93f7b6c1acadffbb81d7c6f01dca68b89"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordDecomposition.cs",
-      "bytes": 1162,
-      "sha256": "dae71a2ae07b0592279565de2b526ab46bca2a00c4af0aa32bb039741844ce29"
+      "bytes": 1164,
+      "sha256": "eff0d50c1a477e403d622155bd84b671aad693f33728d4625ce4655590776a77"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordDerivation.cs",
-      "bytes": 2711,
-      "sha256": "977bb9b15f65c81dd33a55119cbfaff8a8acf4208c9ec2be0fb432a1b7ffe316"
+      "bytes": 2756,
+      "sha256": "cc178a89efb714891126482c86c7bbaf0a256add319bb9e4c94344e6fbc7c1c4"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/WordForm.cs",
@@ -1834,8 +1848,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/AnnotationPhrase.cs",
-      "bytes": 1512,
-      "sha256": "e613770366015b1f7012396e57c400b0c90cf07e520e58e4cc38a135a3faf08a"
+      "bytes": 1545,
+      "sha256": "6f2051687c568d836fb323e868d9d3193b005c3edf0ca788999cb6d9b234c6ce"
     },
     {
       "path": "src/BgLang.Core/Kernel/ArticleCoverageEvidenceAnalyzer.cs",
@@ -1854,8 +1868,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/BinaryProofBudget.cs",
-      "bytes": 3540,
-      "sha256": "7ceafe191391fafb64052e2734c9bcef27f9fdaf9bc4e5f3cc70181c540783b5"
+      "bytes": 3605,
+      "sha256": "ffd2b5972bafe60d6b99273c8ac73eee95385445c089c5626d14e765fee83439"
     },
     {
       "path": "src/BgLang.Core/Kernel/BlockRankedRangeSelector.cs",
@@ -1884,8 +1898,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianStressLookup.cs",
-      "bytes": 7937,
-      "sha256": "40b4ff535c90d88353ee86a7de47d1e5da060a2b77be6a2297e666f1c8f419d4"
+      "bytes": 8072,
+      "sha256": "66f1cd6d7b648df8050215c43f4fbea0d521416d109ea02f8800d16166364ea2"
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianTextNormalizer.cs",
@@ -1904,8 +1918,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ConditionalSeedIndex.cs",
-      "bytes": 3157,
-      "sha256": "296eba7629e63fee65d6eddb7549952a4cee681d5e3c589ece1625ec92d16734"
+      "bytes": 3235,
+      "sha256": "c67aa2574e73db0638c2beb07a655a3f9248afd0c1a0e1e3d4d24d4eeac8ae08"
     },
     {
       "path": "src/BgLang.Core/Kernel/ConditionalSupportInventory.cs",
@@ -1914,58 +1928,58 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ConstructionSpanMatcher.cs",
-      "bytes": 5883,
-      "sha256": "9bbc26d92ae05cdc2da5880ef6a5db4649856e8170b07e6b0c189b54ce59e401"
+      "bytes": 5989,
+      "sha256": "b4e361c9fd211b7587841afdffa94ea88fec1df3c36947cce99c59935e79d17f"
     },
     {
       "path": "src/BgLang.Core/Kernel/ConstructionTemplateComposer.cs",
-      "bytes": 12031,
-      "sha256": "4eef6ddbca9866c6970a45fc749b1cd5a85d9263813b253b84847c3f42756f53"
+      "bytes": 12211,
+      "sha256": "e4c579ed24dcabbb0b39c4d640e82294523a42d2fe5e63af48770a81aaecba0d"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
-      "bytes": 7004,
-      "sha256": "f3925eaa430aa37b8b9debdb10212c1f45c98fd915787b1d4e97e7e9ebc07146"
+      "bytes": 7129,
+      "sha256": "9c361b4e1b6b795ce36744009dbbb20452311c799f706208b12ede1e52d6e1ad"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextJointSelection.cs",
-      "bytes": 7845,
-      "sha256": "373489fff008cbfea8e4be0913106933f70d42c5349932d21e88c6dfa12f8f77"
+      "bytes": 7978,
+      "sha256": "e4ab1fceaf610fc6b9ea0911ec32a2efe5c02bff0253542c10ee6303025da326"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextLanes.cs",
-      "bytes": 56209,
-      "sha256": "2c374cedd2d43a0f565f869cfe1852c19070aad3b147132f9801403fbc34c4f6"
+      "bytes": 62703,
+      "sha256": "708362203ad0ec742c837bf4491ef3dab4cac85629c6761d08d4b7ce6108699b"
     },
     {
       "path": "src/BgLang.Core/Kernel/NominalStructuralProjection.cs",
-      "bytes": 10799,
-      "sha256": "a352fd777f848ac1174f9b73eec5f023592b397d921bbf2dd781471e23577520"
+      "bytes": 10983,
+      "sha256": "262d0a1f2ed2a8a8f7bb59ec1859b43a27885ddf63d7d86c02475f905a1a9179"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextReadingProjection.cs",
-      "bytes": 4220,
-      "sha256": "298affc46b13d7ac5a653fdd7cc7cf88d6615af9b14c67e4e29496de3a245fb5"
+      "bytes": 4280,
+      "sha256": "48a9aba93e5169c675331936fa31141e7882b3a16b8cec972fd372c5bec8707b"
     },
     {
       "path": "src/BgLang.Core/Kernel/DawgIndex.cs",
-      "bytes": 28617,
-      "sha256": "ba313908780c5add86c132eb0620bf234f5b989897d20e8f95d70eec73c9ec17"
+      "bytes": 29324,
+      "sha256": "243862a46a5d4b8410de1963922dfece8794154efda193d53f268de2d8fdd79b"
     },
     {
       "path": "src/BgLang.Core/Kernel/DerivationalAccent.cs",
-      "bytes": 2014,
-      "sha256": "6abdbab54801ec29967a08ac9382a41002bcc8c96fc58f3d710764c0995b8364"
+      "bytes": 2043,
+      "sha256": "b12fccae11e80f7262124096f6c06b0ad50ca7961fa6a635eae4c97aa5f1dcb9"
     },
     {
       "path": "src/BgLang.Core/Kernel/DocumentReadingProfileAnalyzer.cs",
-      "bytes": 10438,
-      "sha256": "2b47457f5ec80489ecc16d0002bdc3d60e001f23fb7ee6425bfaf0f4496da5c7"
+      "bytes": 10600,
+      "sha256": "7e02875ef7d9b101f2610cf7bffb50a2d16b4ed27fb4ef24f2d9a39fc3a04be8"
     },
     {
       "path": "src/BgLang.Core/Kernel/ExactLookupResult.cs",
-      "bytes": 715,
-      "sha256": "1bfc35c8bbf6b8775bcb90047f466a5e6f0dd437397ef3574c204cd8f515251f"
+      "bytes": 734,
+      "sha256": "2dbd7e8d0ce5b5541cfef97283c80431ad8e3f40f9ac5ca69a0894e75ef5bc93"
     },
     {
       "path": "src/BgLang.Core/Kernel/ExactWordSegmenter.cs",
@@ -1974,18 +1988,18 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/GeneratedLexemeSource.cs",
-      "bytes": 4634,
-      "sha256": "4ba2568a321c28187a1d1f51f9b016805c5c249066ce54d3a0be81926432e107"
+      "bytes": 4648,
+      "sha256": "0cab92a15a1be354b7350023a7f61abd70b20811562baa69718acae076df6907"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphSearchBudget.cs",
-      "bytes": 1001,
-      "sha256": "f46bd87c1553529e06b809132d8afe2876dc3ed25feaebaa4d0c46042ea7a29b"
+      "bytes": 1033,
+      "sha256": "f20f38d4e7c3e6ff21ce8d20d074a818d9222d103f653751510c2d7c3fe06d71"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphSegmentation.cs",
-      "bytes": 9830,
-      "sha256": "0f32224c6c9caa3e80790cabfd9c3fbbdd3bf0e066d12a664c9c1e6e9c8b2236"
+      "bytes": 9842,
+      "sha256": "4fb20cf745590d6ce4b1cbe43f8b80b4ebce8c62f3db2966bf29275a86acac4d"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphState.cs",
@@ -1994,13 +2008,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphSurfaceOperations.cs",
-      "bytes": 18252,
-      "sha256": "413a28ecb8fe7e510b2ee1e99a4d38e7e9a19a8ad2c604fe6c143f4578e48eaa"
+      "bytes": 18270,
+      "sha256": "f6a6a5d5db7678e918c120063d0ae34b427d12f2cb4187131ccdadcbfdd000ca"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphWorkLexicon.cs",
-      "bytes": 2652,
-      "sha256": "e055d8b1ab65d93b71ee2e5098039dcf16b1d239cc2783206f35bd562a9564ea"
+      "bytes": 2700,
+      "sha256": "b690a27b1f2e94f7b424db821fd90eb53bccf8f8c2d0b779d8aa9cd2f482efda"
     },
     {
       "path": "src/BgLang.Core/Kernel/HyphenatedDegreeEvidenceAnalyzer.cs",
@@ -2014,38 +2028,38 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/IRuntimeLexicon.cs",
-      "bytes": 3461,
-      "sha256": "84d38ebebaad249cf3c5fcc971fa0fd6607eca094b54062361276ee6956c2c1c"
+      "bytes": 3526,
+      "sha256": "0c9f7f4f9b57ee3da046a578535b1c7ae00176fc7b205b6e06ed3c0f96a15712"
     },
     {
       "path": "src/BgLang.Core/Kernel/InMemoryRuntimeLexicon.cs",
-      "bytes": 10318,
-      "sha256": "bb8957b2a330d3722dcee9901ab1bc93522dcead494c124ed07f5d1fcee715c2"
+      "bytes": 10532,
+      "sha256": "0c7d5e6aa97484e8bf36e549d8e4f71f8df0827fd18f65f4439db30110b92899"
     },
     {
       "path": "src/BgLang.Core/Kernel/LastOccurrenceReplacement.cs",
-      "bytes": 1961,
-      "sha256": "044508b1c1a7d0b82a9610ec4ce049e28aad26df9e725a062d409fc388ce7568"
+      "bytes": 1999,
+      "sha256": "fd25c772c8a3282829079caf3ed568f1ac6d2be4713cd2b0eebdbbb3f7ceb44a"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexemeAccentParadigm.cs",
-      "bytes": 6383,
-      "sha256": "0c343971178b18fab32a720c5c505a7f5aa81ee0e366199c8e72400bf4d38d6e"
+      "bytes": 6482,
+      "sha256": "fb55ca02ab51d2f3732c8db6d85a7da04f214d28e74e825c0b6d7bd428dbf7df"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexemeAnnotations.cs",
-      "bytes": 18988,
-      "sha256": "eb9f06b93ead5c67737b47931fa4eba709b5233a8abebe055abf881dfff8dff7"
+      "bytes": 18989,
+      "sha256": "3afa12617f331c0b4274b0a796c5e961a1142202b32c760f1d99adbed948fe7e"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexemeStressPattern.cs",
-      "bytes": 12392,
-      "sha256": "4342e9570234dc2148991fbd7ce562f75e612d576913f73b8bfe3c723945a443"
+      "bytes": 12620,
+      "sha256": "3cc2f2af9fbf36d063bbd28268267d0af70444d9a6c680e5b65cb173c4faeda2"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexicalCliticProjection.cs",
-      "bytes": 710,
-      "sha256": "8f25f2b6f19ddf7d69073aaa29efcdf383e7254aeec19148a65e4bb6b0dd62f2"
+      "bytes": 725,
+      "sha256": "5c4f46aa6fac4bbcccbb38c122e60a41a1e2d14cc690e44dcaa4a6a493b8bd86"
     },
     {
       "path": "src/BgLang.Core/Kernel/LexicalIdentity.cs",
@@ -2059,8 +2073,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/NeutralDictionaryPackageLoader.cs",
-      "bytes": 37118,
-      "sha256": "070d9fd3500932c4060ac92cb355d2750332e2e33a50128fb8605883e70aa30c"
+      "bytes": 37835,
+      "sha256": "01b11fa366131161db6692ded8c0346a4333383e78ebdf47ee00dba504299a72"
     },
     {
       "path": "src/BgLang.Core/Kernel/NeutralPackageSnapshot.cs",
@@ -2074,48 +2088,48 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/OrdinaryBaseProofCache.cs",
-      "bytes": 1849,
-      "sha256": "229b0406a8ea01a06e80776b4b68109381755688282678f2112c686a2022ee13"
+      "bytes": 1896,
+      "sha256": "fa9d49fcfc790872e7fbb348c8d70fe66fae78b20e9572db27c8709a3bd46556"
     },
     {
       "path": "src/BgLang.Core/Kernel/OrdinaryParadigmAlias.cs",
-      "bytes": 290,
-      "sha256": "c3640e91aa0b2c8c0c66e83111ca99fc94a172e2c011524dc4cca74a7524733d"
+      "bytes": 295,
+      "sha256": "cc7bba05d2b2024871225afc23ed86b200561f78066a30e44e65f365e5ddc0f7"
     },
     {
       "path": "src/BgLang.Core/Kernel/PackageLexicalCatalog.cs",
-      "bytes": 11193,
-      "sha256": "89f6d306666b084307f2fac625ce0fe2e25ef4922a3f4df32370c7594e58993d"
+      "bytes": 11383,
+      "sha256": "ad9af58608896fc7f2685b12c78c33d2964bca24534d819510f65d21877f0fdb"
     },
     {
       "path": "src/BgLang.Core/Kernel/PackageLoadEvents.cs",
-      "bytes": 464,
-      "sha256": "582b448d6237192ef58770f1307f959f36dc72edb108755588816a30e20a9904"
+      "bytes": 480,
+      "sha256": "d45d42f122707d4cf3d897549c554421e9688891fbcaf2acea1d54ecf934efd5"
     },
     {
       "path": "src/BgLang.Core/Kernel/ParadigmProgram.cs",
-      "bytes": 4608,
-      "sha256": "a50c37f92ccf771d33ae3da2aa818308623cacc366f83995730fa486c432eb1c"
+      "bytes": 4698,
+      "sha256": "9d163bc5829087ad5eb29971e8cb2d0dbb02add479a1c9a334f4e5edd0128046"
     },
     {
       "path": "src/BgLang.Core/Kernel/ParadigmReverseIndex.cs",
-      "bytes": 1375,
-      "sha256": "22a112dc4f7b24e52e3b5915d83a534e1b21a460ef61bc5f8973174ee3efba44"
+      "bytes": 1380,
+      "sha256": "2e5fbef4fde1ab10e354d6ac73eb0c4cd2e744291ea6c20b6229197db98cdb44"
     },
     {
       "path": "src/BgLang.Core/Kernel/ParadigmRuntime.cs",
-      "bytes": 8653,
-      "sha256": "2a390b44a702dc6bbe71830ab8dea37d7df944823ea131feb67edd64572c9e99"
+      "bytes": 8788,
+      "sha256": "47a825a7d3c2cee79b5598e897fa193ae21332a61fa709595bcce73743dafa01"
     },
     {
       "path": "src/BgLang.Core/Kernel/PathMorphologyProjectionPolicy.cs",
-      "bytes": 2113,
-      "sha256": "74d27a910ad6a1e1567cf5c1ef5536dff11cf51277e399ef2f7b5bea30e02b83"
+      "bytes": 2150,
+      "sha256": "cb2cf147d59047665c964ef6f04bf26b8a6d2365d67fbce053ab7d476aa41c60"
     },
     {
       "path": "src/BgLang.Core/Kernel/PrepositionComplementAnalyzer.cs",
-      "bytes": 6865,
-      "sha256": "6167bdcae5f23375c141a7c4bfe3b232fb2fb77b2503c17cb0907c37a6965783"
+      "bytes": 7014,
+      "sha256": "870141e7d786bc8e782e6cb418e400f6df31db71160d9c9481c771cb0a50fad7"
     },
     {
       "path": "src/BgLang.Core/Kernel/PronounVerbAgreementAnalyzer.cs",
@@ -2124,8 +2138,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ProperNameAnalyzer.cs",
-      "bytes": 15626,
-      "sha256": "b89f2f165f52c38566046561a880fd466a077fed877558521ba374bad30b1d67"
+      "bytes": 15934,
+      "sha256": "fb0de1ca0f9b241e29daa409f3d48f476ce8a395869a5859393317d9599b3390"
     },
     {
       "path": "src/BgLang.Core/Kernel/ProperNameEvidenceAnalyzer.cs",
@@ -2144,18 +2158,18 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/RuntimePackageState.cs",
-      "bytes": 2612,
-      "sha256": "7bd73c665b076c12919e0842ad63439f83eeb43d33ae11d300c0ee1dd9a07aa6"
+      "bytes": 2679,
+      "sha256": "0a85cecdb5249e2b896ed0179709bb2531d12adb92375477e987711d332bc174"
     },
     {
       "path": "src/BgLang.Core/Kernel/SentenceBoundaryDetector.cs",
-      "bytes": 12064,
-      "sha256": "98f5fe7a8bae4bdaeba2d6c9be5bcaa9f199389de298b1959c81f56cf9546f89"
+      "bytes": 12087,
+      "sha256": "28924c2917dfc0d486b80e027661f539d06aaa58aa706a209907332cb189a771"
     },
     {
       "path": "src/BgLang.Core/Kernel/SpellingCandidateCache.cs",
-      "bytes": 1921,
-      "sha256": "36de9a06e49761d44e11af8201c272b18abedf3c2ce461fd6583193edb414e06"
+      "bytes": 1963,
+      "sha256": "2ade0aaef63be896b6b9a6f10d404620b8b07174ef128ba134be31e4b0a45113"
     },
     {
       "path": "src/BgLang.Core/Kernel/SpellingProjectionAnalyzer.cs",
@@ -2164,8 +2178,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/StressEvidenceAnalyzer.cs",
-      "bytes": 12927,
-      "sha256": "64f64dd8f90600aa36e59b3c867dfd4dd21f9f4209c8411b2eca7a3eaf5aef2b"
+      "bytes": 13140,
+      "sha256": "f5e04271ed9b1abb1364e1286311646790fbde14f45704b61fda064dd541a4b8"
     },
     {
       "path": "src/BgLang.Core/Kernel/StrictJson.cs",
@@ -2179,53 +2193,53 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/SuffixReadingCursor.cs",
-      "bytes": 2442,
-      "sha256": "474d67000ba49965d42bafde0ab668da4527a9471dcd26c5f479c3776c3eaa0b"
+      "bytes": 2518,
+      "sha256": "3f1c7300e43f3cd3e2710731475877a56300f325dacf6fa19021d0e4ebbe74e1"
     },
     {
       "path": "src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
-      "bytes": 36199,
-      "sha256": "9f46383ce11116cc55613c96eb0127e517bb5cdf43d698fd929dd12775a5180b"
+      "bytes": 36792,
+      "sha256": "f4ec31390bbb797b2bf0b29b0261bcef6bed9b0a22babe36a437e344ccc6159d"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
-      "bytes": 24743,
-      "sha256": "65c54dcdaf0d3698cdfb5e1ab8dbd781225984cc27d1178dc6d40802a0799f2c"
+      "bytes": 25799,
+      "sha256": "fbb702ff85f98d36dacac19f2a1fab352736e0fbda972b340ef9ead9e0eea31a"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextNominalConstructionAnalyzer.cs",
-      "bytes": 14762,
-      "sha256": "442cdbe907c991a13095e7b96dcd540378b21b6ff1650acfa7730f94a9f2d697"
+      "bytes": 14979,
+      "sha256": "ae501655747356dc5280208fd61574189d6693d7b6864a2ebb9a2652fb9de5ec"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextMetricsAnalyzer.cs",
-      "bytes": 2372,
-      "sha256": "32511d76f7d538a841819c4bf8f5e12b815c86ba3379af6b540ac8ecb087b6ae"
+      "bytes": 2428,
+      "sha256": "b33eeefaa512c7d2cbdaf5f08e54b88d77c16557c48be4e7e6291a52b9c919ed"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextSpellingAnalyzer.cs",
-      "bytes": 11269,
-      "sha256": "4cb34455dea3014b734e9068da82af0826c7c7841daae4cb95ed6e3c6eb8cf22"
+      "bytes": 11451,
+      "sha256": "65f40dcd310318b5eed2998fce300a9aae62c0306995d1bab5961a36fc4d2c60"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 78672,
-      "sha256": "682e5e7d9537760cbabf20e52808269251410df128ea09d60489bd830dd18b01"
+      "bytes": 76939,
+      "sha256": "d7ddfa7ee5e77708a8e936c007f66f55e0258e5a5d12bffd32de16973abc399d"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
-      "bytes": 17529,
-      "sha256": "204d802ab1f3c44b541aa7909e7c167469f0a7afbfe4491cd9c2026479ff0918"
+      "bytes": 17834,
+      "sha256": "775b23ea07da3237c309102a2da3d7409216a2763984f498177a1ac358037a55"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordConstructionAnalyzer.cs",
-      "bytes": 12843,
-      "sha256": "31852dcddc1dfe6d8e428b648dc9fa7350ba877ab569a8863e5b715b5f11e639"
+      "bytes": 13054,
+      "sha256": "2a63f6126bc96145bc2f3888bb8a6d9b0541c8e52ec725d81de8ab964b9e0a7a"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationAnalyzer.cs",
-      "bytes": 101068,
-      "sha256": "7c5ab683a6da7184c3bf764481e87110a2389499bbad9b6b3e2bc4bc5585dbd5"
+      "bytes": 102750,
+      "sha256": "45d0315bc03af621ee2736f5b0e7accf78a8ff1143bafe8856e4d3e182c54511"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationEvidenceAnalyzer.cs",
@@ -2234,8 +2248,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationGraph.cs",
-      "bytes": 143514,
-      "sha256": "f2b96f9ccc8ac92d863c23d8ade4fedab64c30a32b1d5f817d2a0239c6f5b264"
+      "bytes": 143515,
+      "sha256": "78198beb48de9293de5e4c0461aba990c5123e75eb996bdfc105d01888364cfa"
     },
     {
       "path": "src/BgLang.Core/Kernel/WordFormationGraphCompiler.cs",
@@ -2249,8 +2263,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/BgLang.Public.Tests.csproj",
-      "bytes": 2703,
-      "sha256": "6438a6cd7a901b3ffd7e573b48fc0dd16d6c45d48f3549a0c3b9acb57a5403dd"
+      "bytes": 2734,
+      "sha256": "ecaba0f1943155b7994efc67b34c9219e6acfc04cc8c6ddb684eefc2d61e192f"
     },
     {
       "path": "tests/BgLang.Public.Tests/Fixtures/preview6-repair-package.v1.json",
@@ -2274,13 +2288,13 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/JoinedNegationPackageTests.cs",
-      "bytes": 7089,
-      "sha256": "2f5a40c57e548ab979af134d85f78f296da1c0d9f99c05c3195a04bde73b8592"
+      "bytes": 7202,
+      "sha256": "1a72df74d0d256ed12d2afee2e7a8c85916f182212f1cc7c818b5cb23555a6ea"
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 132100,
-      "sha256": "86a1e01dd298dab1f000319912b4a48643bdc8d787094f347e365234816d933e"
+      "bytes": 134047,
+      "sha256": "88af3d7c8b08bb6af4bc0c98d4dfbc68ddb0634f746d60ebd3a0274a763b1d26"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",
@@ -2289,33 +2303,33 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/BgLang.Web.Tests.csproj",
-      "bytes": 1732,
-      "sha256": "e5adc42c438091a2383b2ee569762fc2eaef342d761dc5229ff4bf6806a72aaa"
+      "bytes": 1742,
+      "sha256": "e27aba93bcbb136f39bb50762c6c743ad49477186ad33dc15f30614204dc291d"
     },
     {
       "path": "tests/BgLang.Web.Tests/ConstructionHttpTests.cs",
-      "bytes": 16845,
-      "sha256": "0a17986eda7efb3b78cd041c97f9450d274524cf3d71bbad06b59c9c1bfb9c04"
+      "bytes": 17056,
+      "sha256": "544811404d1698e57c1e229b68829d3f285c46453b7d91a2c1ad0b2ab1014e58"
     },
     {
       "path": "tests/BgLang.Web.Tests/ConstructionResponseTests.cs",
-      "bytes": 8214,
-      "sha256": "c5cdb1a47d39b69403f930a58c6a31959aaef0b0416038d492a6c53734775b6e"
+      "bytes": 8316,
+      "sha256": "df4980f22a79bb7934d19943dca4910f3e6586c6a1cafff00239f7512b6e7ce4"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionHttpTests.cs",
-      "bytes": 52749,
-      "sha256": "95ba36e726e9938b4608a719a752565b44814728a427d06d2534cccdd467f8f5"
+      "bytes": 53515,
+      "sha256": "d9de99ef5c454019aa1ccc4e2d4f165ab2d143d9719f910b55bae700a3d3a557"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContextCompositionResponseTests.cs",
-      "bytes": 14160,
-      "sha256": "693239728c104b9552b5b8c66a37cef8e747bd2460b703565b9070540a2bd239"
+      "bytes": 14596,
+      "sha256": "5fa9673021a246fcacd46e1e98b81408b80236378a6a4b77d576f798cc3990b4"
     },
     {
       "path": "tests/BgLang.Web.Tests/DefaultResponseTests.cs",
-      "bytes": 36723,
-      "sha256": "9d28742e1a91bb83e986bfacae3e1552503ddbcdc1af4c2006bfcd2681450448"
+      "bytes": 37254,
+      "sha256": "2947fd2f863fb864c38218ccfc625bcf8357e0125f0e55c02f8a94f1cdcd61f1"
     },
     {
       "path": "tests/BgLang.Web.Tests/Fixtures/dense-unknown-text.v1.txt",
@@ -2329,83 +2343,83 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/FullPackageHttpTests.cs",
-      "bytes": 20696,
-      "sha256": "0f41e9c7b6b6805c9c9ae8618bfb81991137a786a22996838f084a8f6bec552c"
+      "bytes": 20962,
+      "sha256": "aec70cdc3ba838057678bda9f24b4b71a722a51cfa35ffb1354c23f05dea7e58"
     },
     {
       "path": "tests/BgLang.Web.Tests/HttpBoundaryTests.cs",
-      "bytes": 4137,
-      "sha256": "30cfe115e17b91782c94133f5a6f7d2074f1da580c4a3a1cd207dfb2b737db48"
+      "bytes": 4217,
+      "sha256": "5701d8626c06cb6888301042e4ae40a0804751dc71ffff85915ee52f07e95f20"
     },
     {
       "path": "tests/BgLang.Web.Tests/JoinedNegationHttpTests.cs",
-      "bytes": 9465,
-      "sha256": "4655a46cb813fa1ddab99cebeca7533ca79a0fd8386a3469324b1eb3ede95dec"
+      "bytes": 9601,
+      "sha256": "1a9863da45e15cc34a2e442d777b8e62aff7e422697f19903dc605d0966d1c71"
     },
     {
       "path": "tests/BgLang.Web.Tests/LexicalHttpTests.cs",
-      "bytes": 9743,
-      "sha256": "c369cd3bb25dd523e8a89ef2ff8f66188f2d1679383cde48f2d69effa734b4aa"
+      "bytes": 9875,
+      "sha256": "131ccf949f61489a80440d632eb3798051e6a07c6ebe3ff79ea5cd753a11c8df"
     },
     {
       "path": "tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
-      "bytes": 4805,
-      "sha256": "1a88e5a6bd55411cd40f1e2641f3903c57b01f6c7b934fe78a2cc80071e7f084"
+      "bytes": 4907,
+      "sha256": "1357f7e97f9264401cefb38b4d59d4928afed4abe496bbcffa169c70e0866836"
     },
     {
       "path": "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
-      "bytes": 23592,
-      "sha256": "32e3f2edef735ba5cbecc5da303a89d581e651fbbcda42a7f1939a706cf87e84"
+      "bytes": 23900,
+      "sha256": "eac5c4b1d50c943413d53164833dc6357af26704a3a8336ae6eb9f4267f07d70"
     },
     {
       "path": "tests/BgLang.Web.Tests/StressHttpTests.Morphology.cs",
-      "bytes": 17131,
-      "sha256": "bfdbabc36a6204886fe4053e04a2244923aba8ceb63c22df7fed32668d4e8a01"
+      "bytes": 17340,
+      "sha256": "9cf5a40225fe1a20b72456a33c118b5b7bd3d22ff994fba86d4984814074da8c"
     },
     {
       "path": "tests/BgLang.Web.Tests/StressHttpTests.cs",
-      "bytes": 9755,
-      "sha256": "b0f424c299150ae0589c339a56834986da28a6e87474b15dba98304f9834fc7a"
+      "bytes": 9886,
+      "sha256": "a093860014f32df6a785c9f8b1b98a0f86e21b46c2ab412e4638185e32adb38c"
     },
     {
       "path": "tests/BgLang.Web.Tests/TextAnalysisCancellationTests.cs",
-      "bytes": 3858,
-      "sha256": "1dcab91ce4160f2c748377725bf0e9c627581c7778f9cb1f4ec3d053710e961d"
+      "bytes": 3919,
+      "sha256": "ca1e95327fa6ca037e29717591ec02d6a887cc032b31871747ec0994637aafc8"
     },
     {
       "path": "tests/BgLang.Web.Tests/TextCompositionHttpFixture.cs",
-      "bytes": 7132,
-      "sha256": "7c650a0be45d6dcfb647062dca64fc09898d745c7f0897796179a0bae26ed960"
+      "bytes": 7292,
+      "sha256": "d6a02ec66012bbfdf2700f78f3cfb449461d41fb8b310ff9e831c4ce2077736d"
     },
     {
       "path": "tests/BgLang.Web.Tests/TextCompositionOptInHttpTests.cs",
-      "bytes": 12640,
-      "sha256": "cb4c0b3d911143906d7e8e093e8bf9b623f7ff8beef9e2fdc5201db426ef5979"
+      "bytes": 12828,
+      "sha256": "50358366382609b85174d38e94e1d0ffaa1b340873096372cada0b6965b2ae15"
     },
     {
       "path": "tests/BgLang.Web.Tests/TextCompositionResponseTests.cs",
-      "bytes": 10091,
-      "sha256": "e0522ffd204c4f2ad0ccadc71030d7abf5d46b3540cf824f6307f2ca255a5ed5"
+      "bytes": 10264,
+      "sha256": "848c708e52a5974cbc3e6e54bef3e5286e3b10f87392bfe420fd57965a034a88"
     },
     {
       "path": "tests/BgLang.Web.Tests/TextMatchProjectionTests.cs",
-      "bytes": 30516,
-      "sha256": "f752f2b60cbfaf9057144c3e1b90f7020c65352219b295f11a75e555de6d6703"
+      "bytes": 31040,
+      "sha256": "30c5502f0c6e35deeadf44d9b4126e62f5e627109bf2d20ce32b8cfff043a17a"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 146169,
-      "sha256": "4fb684b008c1ba55dd46a5e0933c6c925b6f821806c27da56ac4fe723ea2b839"
+      "bytes": 150026,
+      "sha256": "25389a8e0957900e22e3628a87580d2b13f15d17b7fa4bb384351c9fff3980ae"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
-      "bytes": 11692,
-      "sha256": "5f0998ef5a6cb59b31314770b7d41f33dd3a64d48506be6de3721fd13a4f1ff5"
+      "bytes": 11881,
+      "sha256": "c0445026e7cdc19bc65861718020485581556375e2a55663ddf764599f40f18a"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContinuationHttpTests.cs",
-      "bytes": 40832,
-      "sha256": "cb79188123d41de7a2d8b049ec7de9bef077a28c906323bd6c60a78e8e15ea60"
+      "bytes": 41430,
+      "sha256": "9961af698e78dfe5a8086ba863ab0f55d54cd1d2d5fb47ab47e8b6ecf34c4a9c"
     },
     {
       "path": "tools/BgLang.SourceBuilder/AuthoringDocument.cs",
@@ -2424,18 +2438,18 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/LegacyStressCompactor.cs",
-      "bytes": 10783,
-      "sha256": "337344648c01c2ed98c8f1240debe95a6f17437cc0e0800479cca0bf2777caca"
+      "bytes": 10925,
+      "sha256": "260c86ee24616c5397893bcb8ff2b4128204aa53a0b6b68e6fd8970f5a9db2db"
     },
     {
       "path": "tools/BgLang.SourceBuilder/LegacyStressImporter.cs",
-      "bytes": 15129,
-      "sha256": "5bad8bb3f0bc9b908cb0936d545771fdaa10a75efcc549d0a48ca304e80600ef"
+      "bytes": 15339,
+      "sha256": "37393e3262f4e84862087a82bbac7c98584a92fb2cecaede8ebc35667aa49688"
     },
     {
       "path": "tools/BgLang.SourceBuilder/NativeSourcePromotion.cs",
-      "bytes": 13002,
-      "sha256": "498681fa4a47e0c3434cfade15f46f43585cd9f49e4a514a49c4dd89d4e53bf8"
+      "bytes": 13183,
+      "sha256": "cf4fd4775d38c0f13ebcba36bee23c06a4b778a67b1307a6ab2166a8b3dcc36e"
     },
     {
       "path": "tools/BgLang.SourceBuilder/NeutralSourceBuilder.cs",
@@ -2444,8 +2458,8 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/NeutralSourceEditor.cs",
-      "bytes": 12728,
-      "sha256": "0e7947ce94501815a52b58a925dfd88f2fcd9b22f6ea3312e8c6f4f3e9d7dc63"
+      "bytes": 12814,
+      "sha256": "8afdbba7a1188b7563afbef122b761f6938ee15fd5783ff1ccc67bf5b51f61e3"
     },
     {
       "path": "tools/BgLang.SourceBuilder/OwnedStageDirectory.cs",
@@ -2454,33 +2468,33 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/PackageOpenMeasurement.cs",
-      "bytes": 3665,
-      "sha256": "e4dba86a8380fd7d390c394176c48fc429f96137adde6b0d62c228fad25601fb"
+      "bytes": 3734,
+      "sha256": "834d0df46d21da6bdbc658b4e65003fe34e58d4ff19e7678fb241a637e6ac345"
     },
     {
       "path": "tools/BgLang.SourceBuilder/Program.cs",
-      "bytes": 4808,
-      "sha256": "2b58758d9d649727622b97502b0fa0d72ac8c29896308dcc213d2f5491314133"
+      "bytes": 4867,
+      "sha256": "447fc549ea55999a6a1dd33c8daf7f4a25ed4cf7429c301c1da333b91b1f5598"
     },
     {
       "path": "tools/BgLang.SourceBuilder/README.md",
-      "bytes": 26558,
-      "sha256": "ad74b423353061fa96246327c25cab3e7486032f5626f11d281ea3a86b0d7007"
+      "bytes": 26616,
+      "sha256": "1ec5c8a89a901e3fa8e1236748390f25826284096bf4c79fa1003638852beff9"
     },
     {
       "path": "tools/BgLang.SourceBuilder/StoredLemmaMigration.cs",
-      "bytes": 10421,
-      "sha256": "85b7ba891a14c2f43c686b24f3852c6d5df5046f90368bf8fda98c949a6153aa"
+      "bytes": 10571,
+      "sha256": "dde892cc3ea0fde654a488e5e256db836cd3f59eb4539f7ad842efa6148b73c9"
     },
     {
       "path": "tools/BgLang.SourceBuilder/StoredSourceCorrection.cs",
-      "bytes": 7939,
-      "sha256": "75b5c11acc308d8408d3789b32a91e3d363e5c6b5e5205436ec248a2b3e6218b"
+      "bytes": 8043,
+      "sha256": "6ce25e7e409310528ef0455b7b1fbf1d226f9b55b34cf10f3feb776074536499"
     },
     {
       "path": "tools/BgLang.SourceBuilder/derive_native_pins.py",
-      "bytes": 10405,
-      "sha256": "527ca68691982689c0bb762aec0f70f188b68d8280f5f481fba451e021be8947"
+      "bytes": 10587,
+      "sha256": "3d32b2cbd5206c976fa6ae30f73d1380c50968be3cd493691ee690383d3dff94"
     },
     {
       "path": "tools/BgLang.SourceBuilder/example.source.jsonl",
@@ -2489,68 +2503,68 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextGraphReadingReference.cs",
-      "bytes": 451,
-      "sha256": "5125ec347d14e95760b9d23c5cdd23755b269c0435db20f2674267385e744b12"
+      "bytes": 459,
+      "sha256": "eea0cdfdbcb123a4fc9ad52ea8cedb4f55c65cb79e1d99a53dc5b08c81bad7b7"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContinuationRequest.cs",
-      "bytes": 381,
-      "sha256": "771b351cd292931aca366446c47d409a7c4eb53e1c18a877016cd1b5288c8a89"
+      "bytes": 391,
+      "sha256": "be3d68c5d81d2178815d78459cc77025aaaae9176a9cf248e6f806ee31a1ae8e"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContinuationTarget.cs",
-      "bytes": 212,
-      "sha256": "4bff38c33b0483d592994f2965fb58a842f202aba8854b57858c583c5167b5e5"
+      "bytes": 216,
+      "sha256": "504ba67bdb5cd9d24f4ea25952a63a4c94316bc14452ecb489ef465923d5ee37"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContinuationEvidence.cs",
-      "bytes": 2131,
-      "sha256": "fecb7a81f0e49ed261b8baffdba73b3b26a88194c705f594c1cc564b5b95e7da"
+      "bytes": 2167,
+      "sha256": "666f3a972fb6df0bc75693b93d9cb1d508e6417ccf56f60c6fc1acc17ef46d35"
     },
     {
       "path": "src/BgLang.Core/Kernel/MorphologyEvidenceProjection.cs",
-      "bytes": 9821,
-      "sha256": "2d94fd4859fa43dce999ef142c915c5b2759ba2eeac533b3a6681daaa68f9813"
+      "bytes": 9978,
+      "sha256": "a9c7a0534396361f0b8afab7c65ee6182a8d3f0db64c385d792bc7851ebfaf96"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContinuationAnalyzer.cs",
-      "bytes": 18052,
-      "sha256": "dd617b5371dd848c68cc94df62136323b0b21bc759a3d2766bf50b2b3897c866"
+      "bytes": 18354,
+      "sha256": "dc00a35f2b2267ab20f8cc001da34685263707c8168cd7aaca9420ea9d9d9286"
     },
     {
       "path": "src/BgLang.Core/Kernel/PrefixDiscoveryResult.cs",
-      "bytes": 1520,
-      "sha256": "f9e465d5cea8ab4198b2ff3c882349560c9c89e200daba36c79ab6b7df4c83d7"
+      "bytes": 1547,
+      "sha256": "288f25f175983b86322e87bef73ead1b8b5cd3c466640eebc2df8cd48d014d31"
     },
     {
       "path": "tests/BgLang.Public.Tests/ClosedAgreementPackageTests.cs",
-      "bytes": 35121,
-      "sha256": "b11dbb8a476bd5044b76ecd49fbfbaffd809e4190ca215383d9ad73b50cd6338"
+      "bytes": 36804,
+      "sha256": "09da195e1c3bad3004420f1906e42561b5cae5651aff275dfe1f677a7ac6738d"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalConstructionPackageTests.cs",
-      "bytes": 11631,
-      "sha256": "56ea2e8f35e003bf76534d306cdce3fdb621e2cb417d539d6a447e67a0d60711"
+      "bytes": 11799,
+      "sha256": "4e04a821c8ad0d5df190ff93c4c6e8bf44e7bed8115cf3eb4c7dc411ae97c864"
     },
     {
       "path": "tests/BgLang.Public.Tests/ReverseSpellingContextPackageTests.cs",
-      "bytes": 5044,
-      "sha256": "4e945429c1f199e2cc410bd5fb3282540c1f135e3c3d84d8d874ecee75253cca"
+      "bytes": 5109,
+      "sha256": "cb1d6cd19223b650fd16a1344460fa8a76b9c59fab3df0504f671f7e873d9cdb"
     },
     {
       "path": "tests/BgLang.Web.Tests/AgreementHttpTests.cs",
-      "bytes": 29789,
-      "sha256": "86e2eef7d68f68dfcc835b52861db09c0494b0bfcd168df15e6c1c41a4d5d180"
+      "bytes": 30143,
+      "sha256": "ed69c0c51ccbe2a0c0ac995fc8446c21b2c42d40f2ee7212a92bed6e56cab5f3"
     },
     {
       "path": "tests/BgLang.Web.Tests/NominalConstructionHttpTests.cs",
-      "bytes": 5410,
-      "sha256": "5a91394c37ec7eecaf969d59004abc91280804456695019bc9ac6a99f849c209"
+      "bytes": 5496,
+      "sha256": "552e495c5803c2df8fe8cf7264db8b458d6f561bee5e18cb64495f1261d2c72f"
     },
     {
       "path": "tools/BgLang.SourceBuilder/AuthoringStressOverlay.cs",
-      "bytes": 6077,
-      "sha256": "c3237ef566ba41c915058b361b2f3421b7fed895d22c9dbf0a6348311cdec7b6"
+      "bytes": 6163,
+      "sha256": "b03bdad82e854f9f82c45dbff38f45fe872d3ff2ff47e0b79c6bb7f4627f3c57"
     },
     {
       "path": "data/dictionary/cheta-editorial-stress-overlay.v1.json",
@@ -2564,13 +2578,13 @@
     },
     {
       "path": "packaging/Test-EditorialReproduction.ps1",
-      "bytes": 8999,
-      "sha256": "df5f11c9efc8a433cb85a1252080aabbcd5622347d5c9e1faa3887f19586e50e"
+      "bytes": 9100,
+      "sha256": "21c5ed2c097425990eb0ee0eefea49bc03b6032285f7dd8a3f2706b28e744220"
     },
     {
       "path": "tests/Shared/EditorialStressAcceptance.cs",
-      "bytes": 13759,
-      "sha256": "61f8bbe282f1f9b540702a617b44e19bc9a7a7d120f47680cb08e221c3072f59"
+      "bytes": 13944,
+      "sha256": "82ac90c7101e58997d31e95df41d96a896504bf319f07508330b51c89baeb3eb"
     },
     {
       "path": "tests/Shared/Fixtures/editorial-stress-acceptance.v1.json",
@@ -2579,23 +2593,23 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/EditorialStressPackageTests.cs",
-      "bytes": 1283,
-      "sha256": "17cf78628f8ce8c756c1aea535c1eb5de6e1896527b1424311f4f1b715647721"
+      "bytes": 1312,
+      "sha256": "974e50304e47eeb1fb301f352cab19a748e5e1448216444f2ff666a72de2714a"
     },
     {
       "path": "tests/BgLang.Web.Tests/EditorialStressHttpTests.cs",
-      "bytes": 7825,
-      "sha256": "8660e84c816c7978752010efce91748b19bd1a4faa8133ffa5a3153773e50b2e"
+      "bytes": 7920,
+      "sha256": "90c0a686fc9125d1f135cb2dd37da7455f5382903542a4dd304b9dd4e80053b9"
     },
     {
       "path": "tests/BgLang.Public.Tests/ArticleCaseFactory.cs",
-      "bytes": 9038,
-      "sha256": "db82fac4915e4c5a7185845a2ca67a59d55056256726a936937a72e3c92f1c9c"
+      "bytes": 9158,
+      "sha256": "ff9d99729c13263193aed02d63aff6cd2d83e05ea2b3cc28b3c5ec0539683bbb"
     },
     {
       "path": "tests/BgLang.Public.Tests/GeneratedArticlePackageTests.cs",
-      "bytes": 67730,
-      "sha256": "51891c8b82f766de3e42c5219eab6ce1bdac911bc0fe46154e25f6999449ccf5"
+      "bytes": 63110,
+      "sha256": "ffcf68ed4dba5e218e33bf3fd4268207a8378513f9380adfa3fdda890144baf3"
     },
     {
       "path": "tests/BgLang.Public.Tests/Fixtures/article-seeds.development.v1.json",
@@ -2614,63 +2628,68 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PrepositionalArticleGeneratedPackageTests.cs",
-      "bytes": 12465,
-      "sha256": "9fb19efbe346f4ad3648f926fe3020c4c5389bc6d9ca95b73c1cb6e5ab7ca08e"
+      "bytes": 12866,
+      "sha256": "4b9bf8e6db73f60a08925848cda8aeb1fc14bb409502a0fe196bfd1c80703764"
     },
     {
       "path": "tests/BgLang.Public.Tests/PrepositionalArticlePackageTests.cs",
-      "bytes": 5524,
-      "sha256": "80f93f055d4c727988b159160e905389f7f8abb5bc7fcc7fa22ae8cec383c00d"
+      "bytes": 5595,
+      "sha256": "3cdb27a211c8c41cc33f418150f9909aed3fc215bc8c60b608c319366578c136"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/LocalPrepositionalArticleGraphPackageTests.cs",
+      "bytes": 8987,
+      "sha256": "d200e65d69a823c59f3ae7dd8a6dc121e4348633475617b55835f0508e13acf3"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/demo-lab.test.mjs",
-      "bytes": 142649,
-      "sha256": "926527e351dc5608863c2f636f94e610fb2577061b401fe3f8bf6187a08c9b6c"
+      "bytes": 147574,
+      "sha256": "ae869073297f307612527c3bc8e2fb36a63522c4ed06a985fd6a4cf77872a117"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",
-      "bytes": 18960,
-      "sha256": "94dc8340c994dc993310f9a3a2beba5156c498a6b93b68f4d9f430ffc53849bf"
+      "bytes": 19190,
+      "sha256": "029198c93d78bbc5ce47fd44698d58de8379076604977f7c46985865f0061d5e"
     },
     {
       "path": "tests/BgLang.Public.Tests/PrepositionalNominalRepairPackageTests.cs",
-      "bytes": 11898,
-      "sha256": "c4170845556ba919eed6d0bedb50b89e115e86c1a20f003ffa4d24e13172ffb0"
+      "bytes": 12053,
+      "sha256": "dafdebca86da6854aef2b548e6a79d0f6e0909787003fe721010cae96b49c872"
     },
     {
       "path": "tests/BgLang.Web.Tests/PrepositionalNominalRepairHttpTests.cs",
-      "bytes": 4327,
-      "sha256": "dbf2cc96d2149fa627acb858335dd896a865d41418eed8caf986744c60023210"
+      "bytes": 4391,
+      "sha256": "c67bf16391ea4b32ed4ddc46ca10155a0e875e261a3b7f6e652ede9c5d5769d0"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextCountConstructionAnalyzer.cs",
-      "bytes": 17904,
-      "sha256": "d601aa3200ed9b754e54a37f38a02fdbadaa07da179a8653759d842f64664024"
+      "bytes": 18166,
+      "sha256": "7ddb2a8d3e6130c1f23dda64317d9e1a472ab3657d6bd62cb5bcafcdced86703"
     },
     {
       "path": "tests/BgLang.Public.Tests/CountConstructionPackageTests.cs",
-      "bytes": 4577,
-      "sha256": "4cc2212bc5f43da1cfee5bab262a860a2520dd89ef6b4b79b087050d03af864a"
+      "bytes": 4643,
+      "sha256": "ecc7493cda97f41a02b247bbe0e74b451676be2ca13c744dd516fc856b0ddfa2"
     },
     {
       "path": "tests/BgLang.Public.Tests/PrepositionComplementReportPackageTests.cs",
-      "bytes": 3923,
-      "sha256": "2043a6cf75379f58f6a99b6d36a7be250c532613b265dc7091acdd22437b4178"
+      "bytes": 3981,
+      "sha256": "82362b8a58270c5409bee4af574f56b5823d58c6001101003297b35860d4b20a"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/GraphStressEvidence.cs",
-      "bytes": 1670,
-      "sha256": "17f2be355895faf188e83277013017193891f6f4d723d34eaba5070b4861942c"
+      "bytes": 1696,
+      "sha256": "db6fd65839a48baeb8abca945e018ecea4e1632c7206c05d15cf6313e894b5fa"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphAccentProfile.cs",
-      "bytes": 3535,
-      "sha256": "87aac74ccc25d6694d1991f5d72daae1f38654f52b9e07ec9afc9e338328f027"
+      "bytes": 3597,
+      "sha256": "d87b9b848104f4bd970cfdd04114c3f3950b70982f916960e0ab4c4a5a81367c"
     },
     {
       "path": "src/BgLang.Core/Kernel/GraphStressProjector.cs",
-      "bytes": 9051,
-      "sha256": "f536d5ff7286e0023f9102cf3b993b4b5d9f396f7d1d7f948629461a28e715d5"
+      "bytes": 9185,
+      "sha256": "d832d4f31cc615e480b0f409d30f2069e763e5729fda38ddc93ace99a6d44135"
     },
     {
       "path": "data/word-formation/automatic-graph-stress-ist.v1.json",
@@ -2684,8 +2703,8 @@
     },
     {
       "path": "tests/Shared/GraphStressAcceptance.cs",
-      "bytes": 9332,
-      "sha256": "058444e4d0d809c938a28ae0fb045f4f389738ce5ff6d79cc5ca026721740e66"
+      "bytes": 9471,
+      "sha256": "0c3a8be67eb22d298ca1a64e9c5a845ad8dbd120545081c4f929560ecc1decdd"
     },
     {
       "path": "tests/Shared/Fixtures/graph-stress-acceptance.v1.json",
@@ -2694,43 +2713,43 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/GraphStressSuccessorPackageTests.cs",
-      "bytes": 1421,
-      "sha256": "0a30582391e9c6ceb344f621686a3a95137d8081b70baacd0a4a41b2beefe5ee"
+      "bytes": 1452,
+      "sha256": "9a2a8249e7ec0f7fd6bc43ab3f2505c256b1dec6431956a4a91eb3bcf559c064"
     },
     {
       "path": "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",
-      "bytes": 5649,
-      "sha256": "8e83d1e5ae3f23537eba0564ed021a92e43372dcba43fe58884adec58aae3b20"
+      "bytes": 5732,
+      "sha256": "e6d29bac1c450142321d1e8489756ed4709f674303e7d23a48854234f1cd42f9"
     },
     {
       "path": "packaging/GRAPH-STRESS.md",
-      "bytes": 3489,
-      "sha256": "b40da74d40f2f91d3661da4360b77589908061b6e15d77ff70bfce60b2e8a3ee"
+      "bytes": 3511,
+      "sha256": "21978be0ffe52d0cc40edce9e3a96d22b7bb46f53077560bd275b9faedfc2397"
     },
     {
       "path": "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",
-      "bytes": 10347,
-      "sha256": "0ad0c6134f9ac686b2886484713c2d37ff0f5e8039b5308864b1b47eaecda7da"
+      "bytes": 10468,
+      "sha256": "36ee89fd355d49d1aef87d17ec809f54828b80ae792fdefb561516fa07bb9949"
     },
     {
       "path": "tests/BgLang.Web.Tests/InverseSpellingHttpTests.cs",
-      "bytes": 14807,
-      "sha256": "ccb20a50dea54b33984d032ad81dadd157ca8d6fd8e845f466a248c27fe38827"
+      "bytes": 15012,
+      "sha256": "b4e0ea4d36357b12afc8dffcc65dbe411c4c11206307d46f9473e9a2aa6904ec"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextPredicateLinkEvidence.cs",
-      "bytes": 1508,
-      "sha256": "1ccb51064964e4da98d9c814bc962f4e8907a89c77e076160d46df7b549a43f0"
+      "bytes": 1529,
+      "sha256": "81267be4463e434bba0b67bae8aaedef72a5a02793deb964d6675fdeaeae4c4a"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextPredicateLinkAnalyzer.cs",
-      "bytes": 16129,
-      "sha256": "c59736ce3e5f92333b46659c27db86dcfc8809d3fe573f50928f82b95236d1c8"
+      "bytes": 16885,
+      "sha256": "588fc32c4c6bc04d9eb303fcf32c5e38c759677d69a45066a2cd22cda06016b6"
     },
     {
       "path": "tests/Shared/FinitePredicateAcceptance.cs",
-      "bytes": 15252,
-      "sha256": "bdb9f3459707abe20b82291db3f4b93b770c7053acbd2d3f64698f39e35f0f94"
+      "bytes": 15480,
+      "sha256": "bff164b1ae627927631af29f6efe43861e8d8df26855e3d85870d7bb2479f5cf"
     },
     {
       "path": "tests/Shared/Fixtures/finite-predicate-links-independent.v1.json",
@@ -2739,33 +2758,38 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/FinitePredicatePackageTests.cs",
-      "bytes": 2021,
-      "sha256": "5297b757c0075844bc70ec2aedbd74bd58b91227a1bf75b311b03323018dafda"
+      "bytes": 6254,
+      "sha256": "23e27fcafce5a5ccf9765bb449febe91c63189d06a525f68358c0a0c1ac3c349"
     },
     {
       "path": "tests/BgLang.Web.Tests/FinitePredicateHttpTests.cs",
-      "bytes": 4351,
-      "sha256": "0399aab59ed14377fe7fd6d761bbc5a2d581ca1356697757d25b34a3bafd8213"
+      "bytes": 6685,
+      "sha256": "37bb6dbb9b08cb36de3bd18a971ed9e9e3adbf2a6dadbdc1d89458c77937ea95"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/ConstructionIndexEvidence.cs",
-      "bytes": 3197,
-      "sha256": "e9ab83eae8b5401c92123454f87fc4c0d1dc7334651ca60fa51856c52dd311f3"
+      "bytes": 3280,
+      "sha256": "27551bcf0e357e8cc318ee4283ad3a056c7af97991a61ed954db14dc230223b0"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/DeclaredVerbTypeCatalog.cs",
+      "bytes": 2924,
+      "sha256": "2a70710236bb3eaca5f97c8cd734aa78f3c95bdbbb50b0db0eb67ac8edcc4a77"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextConstructionProjection.cs",
-      "bytes": 1634,
-      "sha256": "d2b80aa6775e923efd835de5a3c6242bd65cacaf3ac96bcf40b8d11e644ef3ba"
+      "bytes": 1658,
+      "sha256": "5853533ff9a5bc38f00f57723b483be1380f3fc8afa5b4b49d3733dcf05cff80"
     },
     {
       "path": "src/BgLang.Core/Kernel/ConstructionIndex.cs",
-      "bytes": 17032,
-      "sha256": "190bf3e0b23bbfad068cbbdd1c07e63f8d005ecdc91bba771145d41ec9532694"
+      "bytes": 17358,
+      "sha256": "b99d97cb8d14501ad099d6bf8bb26dd07c66bf69289e0f2cd8db49e01619436c"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextConstructionProjector.cs",
-      "bytes": 15606,
-      "sha256": "c397c36b43f6f97a62e331bbd306f863411dcba72b697f04e694b642fa3711e6"
+      "bytes": 15838,
+      "sha256": "0af577885c632ba198dc35865027fe745de805ab5c4c16b392ce8c20da6a3b4a"
     }
   ],
   "publication": false

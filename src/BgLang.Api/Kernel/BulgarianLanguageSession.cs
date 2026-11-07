@@ -419,7 +419,7 @@ public sealed class BulgarianLanguageSession : IDisposable
             Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(countDiagnostics).OrderBy(d => d.Start)
                 .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
         };
-        var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, syntax, ExactCounterpart, cancellationToken, morphology);
+        var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, ExactCounterpart, cancellationToken, morphology);
         analysis = article.Analysis;
         TextValidationEvidence validation = TextValidationAnalyzer.Analyze(analysis, context, syntax,
             contextOptions, cancellationToken, ExactCounterpart, localArticleFacts: article.LocalFacts);

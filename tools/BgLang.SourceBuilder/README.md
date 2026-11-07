@@ -38,8 +38,8 @@ UTF-8 ред. Повторени, липсващи или различни ancho
 Избраният запис трябва да е stored, без productive rule и с налична собствена
 базова форма. Той се заменя с един reading със същите form/lemma, `fullTag:null`
 и `score:1`. Другите записи, хомоними, scores и routing се запазват.
-Примерната reviewed selection е
-`data/morphology/reviewed-stored-lemma-selection.v1.json`.
+Примерът `data/morphology/reviewed-stored-lemma-selection.v1.json` е само за development repository.
+Public source export го изключва.
 
 Командата проверява целия predecessor и държи входовете заключени за четене.
 Малък converter подава explicit authoring v1 към същия builder; изходът е

@@ -1,3 +1,26 @@
+# BgLang — Preview15 quickstart
+
+Този quickstart описва локалната подготовка за [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15). Връзките за изтегляне са целеви адреси. Release страницата ще посочи публичния source commit, CI и проверката на артефактите след публикуване.
+
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-inputs.zip) и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.15/packaging/RELEASE-CANDIDATE.md).
+
+SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Целевият runtime ZIP за Preview15 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
+
+~~~powershell
+dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Example build failed.' }
+dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release --no-build --no-restore -- ./runtime/manifest.json --json
+if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
+~~~
+
+[Web guide](apps/BgLang.Web/README.md) описва локалния HTTP host. `Build-PublicPackage.ps1` запазва default **Current** (`bglang-neutral:90bea7c5c799f04d`); за matching Preview15 runtime изберете изрично **CurrentGraphStress** по [reproduction guide](packaging/RELEASE-CANDIDATE.md). **Baseline** (`bglang-neutral:36b0b69685d6d3e9`) остава отделен профил.
+
+Кандидатът включва локални предложения за кратък член в доказани предложни групи и ограничена проверка за съгласуване между явно лично местоимение и първата финитна форма след „, че“ или „, защото“. Типизираните прочити пазят декларираните вид и преходност при поддържаните глаголни типове. `TextContextOptions.IncludeNominalConstructions` е `false` по подразбиране. Оригиналните UTF-16 позиции, алтернативните прочити и въздържането се пазят. Предложените редакции изискват изричен избор.
+
+## Исторически snapshots — Preview14 и по-стари
+
+Публикуваният [Preview14](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.14) има собствени артефакти и CI доказателства. Следва запазеният текст на версията.
+
 # BgLang — Preview14: актуален quickstart
 
 Това е source подготовката за [Preview14](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.14). Download връзките са целеви адреси до публикуването; release страницата удостоверява действителните source/tag, CI и окончателния anonymous readback.

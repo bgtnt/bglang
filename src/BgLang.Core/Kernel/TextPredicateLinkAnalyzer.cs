@@ -18,7 +18,7 @@ internal static class TextPredicateLinkAnalyzer
             return (new("local-predicate-links.v1", false, unavailable, []), []);
         List<TextPredicateSentence> sentences = [];
         List<TextDiagnostic> diagnostics = [];
-        var quoted = Quotes(analysis.Text, ct);
+        var quoted = QuoteSpans(analysis.Text, ct);
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             ct.ThrowIfCancellationRequested();
@@ -217,7 +217,7 @@ internal static class TextPredicateLinkAnalyzer
     private static bool Horizontal(string value, bool allowEmpty = false) =>
         (allowEmpty || value.Length > 0) && value.All(c => c is ' ' or '\t');
     private static IReadOnlyList<T> Freeze<T>(IEnumerable<T> rows) => Array.AsReadOnly(rows.ToArray());
-    private static List<(int Start, int End)> Quotes(string text, CancellationToken ct)
+    internal static List<(int Start, int End)> QuoteSpans(string text, CancellationToken ct, bool protectBackticks = false, bool protectBrackets = false)
     {
         List<(int, int)> spans = [];
         Stack<char> closing = new(); int start = 0;
@@ -231,10 +231,15 @@ internal static class TextPredicateLinkAnalyzer
                 if (closing.Count == 0) spans.Add((start, i + 1));
                 continue;
             }
+            if (protectBrackets && closing.TryPeek(out char wrapper) && wrapper == '`') continue;
+            bool outsideQuote = closing.Count == 0 || closing.Peek() is ')' or ']' or '}';
+            bool brackets = protectBrackets && outsideQuote;
             char close = c switch
             {
                 '„' => '“', '“' => '”', '«' => '»', '‘' => '’', '‚' => '‘',
-                _ => SentenceBoundaryDetector.IsSentenceQuote(c) ? c : '\0'
+                '(' when brackets => ')', '[' when brackets => ']', '{' when brackets => '}',
+                _ => SentenceBoundaryDetector.IsSentenceQuote(c) ||
+                    protectBackticks && c == '`' && (!protectBrackets || outsideQuote) ? c : '\0'
             };
             if (close == '\0') continue;
             // Nested/open or unsupported unmatched wrappers keep the outer scope protected.

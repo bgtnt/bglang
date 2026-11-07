@@ -28,6 +28,10 @@ internal static class TextContextAnalyzer
         var contextSentences = new List<TextContextSentence>();
         var syntaxSentences = new List<TextSyntaxSentence>();
         int[] groupCounts = new int[AdditionalGroupIds.Length];
+        bool hasComma = analysis.Text.Contains(',');
+        IReadOnlyList<(int Start, int End)> protectedSpans = hasComma
+            ? TextPredicateLinkAnalyzer.QuoteSpans(analysis.Text, cancellationToken, protectBackticks: true, protectBrackets: true) : [];
+        int firstProtected = 0;
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -60,8 +64,11 @@ internal static class TextContextAnalyzer
                 { GraphReadings = GraphReferences(role.TokenIndex, role.AlternativeIndices) };
             ContextOverlayInput? prefixDiagnostics = productive is null
                 ? ContextLanes.CalculateExactPronounPrefix(analysis.Text, sentence, laneWords, CanonicalKey, cancellationToken) : null;
+            while (firstProtected < protectedSpans.Count && protectedSpans[firstProtected].End <= sentence.Start) firstProtected++;
+            var subordinate = hasComma ? ContextLanes.CalculateSubordinatePronounPrefixes(analysis.Text, sentence, analysis.Tokens,
+                laneWords, protectedSpans, firstProtected, CanonicalKey, cancellationToken) : [];
             var candidates = input.Candidates.Concat(exactDiagnostics?.Candidates ?? [])
-                .Concat(prefixDiagnostics?.Candidates ?? []).Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
+                .Concat(prefixDiagnostics?.Candidates ?? []).Concat(subordinate).Select(candidate => new TextContextCandidate(candidate.PredicateTokenIndex,
                 candidate.Selectable, candidate.AuthorityLane, candidate.Score, candidate.CanonicalKey,
                 Freeze(candidate.Roles.Select(MapRole)), Freeze(candidate.EvidenceCodes)));
             contextSentences.Add(new(sentence.Start, sentence.Length, !input.Truncated,
@@ -179,7 +186,7 @@ internal static class TextContextAnalyzer
         {
             ct.ThrowIfCancellationRequested();
             foreach (var group in sentence.Candidates.Where(candidate =>
-                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane or ContextLanes.ExactAgreementLane or ContextLanes.ExactPronounPrefixLane &&
+                candidate.AuthorityLane is ContextLanes.ProductiveGraphLane or ContextLanes.ProductiveNominalLane or ContextLanes.ExactAgreementLane or ContextLanes.ExactPronounPrefixLane or ContextLanes.SubordinatePronounPrefixLane &&
                 candidate.EvidenceCodes.Any(code => code is ContextLanes.ProductiveGraphMismatch or ContextLanes.ProductiveAttributeMismatch))
                 .GroupBy(candidate => (candidate.PredicateTokenIndex, candidate.AuthorityLane,
                     Attribute: candidate.EvidenceCodes.FirstOrDefault(code => code.StartsWith("attribute_mismatch_token=", StringComparison.Ordinal)))))
@@ -189,7 +196,7 @@ internal static class TextContextAnalyzer
                 int attributeToken = attributeMismatch ? int.Parse(group.Key.Attribute!.AsSpan("attribute_mismatch_token=".Length), CultureInfo.InvariantCulture) : -1;
                 TextContextRoleSelection[] relation = roles.Where(role => role.Role == TextContextRole.Subject ||
                     (attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken : role.Role == TextContextRole.Predicate)).ToArray();
-                bool prefix = group.Key.AuthorityLane == ContextLanes.ExactPronounPrefixLane;
+                bool prefix = ContextLanes.IsPronounPrefixLane(group.Key.AuthorityLane);
                 bool exact = prefix || group.Key.AuthorityLane == ContextLanes.ExactAgreementLane;
                 TextContextRoleSelection? target = exact
                     ? relation.FirstOrDefault(role => attributeMismatch ? role.Role == TextContextRole.Attribute && role.TokenIndex == attributeToken
@@ -201,7 +208,7 @@ internal static class TextContextAnalyzer
                     old.Code == "pronoun_verb_agreement_mismatch" && old.Start == target.Start && old.Length == target.Length)) continue;
                 if (prefix && (output.Any(old => old.Code == ContextLanes.ProductiveGraphMismatch &&
                     old.Start == target.Start && old.Length == target.Length) || existingDiagnostics is not null &&
-                    existingDiagnostics.Any(old => old.RuleId != ContextLanes.ExactPronounPrefixLane &&
+                    existingDiagnostics.Any(old => old.RuleId != group.Key.AuthorityLane &&
                         old.Code == ContextLanes.ProductiveGraphMismatch && old.Start == target.Start && old.Length == target.Length))) continue;
                 output.Add(new(attributeMismatch ? ContextLanes.ProductiveAttributeMismatch : ContextLanes.ProductiveGraphMismatch,
                     target.Start, target.Length, group.Key.AuthorityLane!)

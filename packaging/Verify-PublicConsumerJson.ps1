@@ -228,7 +228,8 @@ try {
         Assert-Fields $diagnostic @('Code','Start','Length','RuleId','ProjectedText','Classification') 'preserved DiagnosticValue enrichment'
     }
     $featureFields = @('RawTag','PartOfSpeech','ParadigmId','Person','Number','Gender','Tense','VerbForm','Article',
-        'HasUnrecognizedFeatures','HasConflictingFeatures','NameKind','Case','IsShortForm','ParticipleKind')
+        'HasUnrecognizedFeatures','HasConflictingFeatures','NameKind','Case','IsShortForm','ParticipleKind',
+        'DeclaredTransitivity','DeclaredAspect')
     foreach ($token in $tokens.EnumerateArray()) {
         Assert-Fields $token @('Text','Kind','Start','Length','Analysis') 'token'
         $start = (Get-Field $token 'Start').GetInt32(); $length = (Get-Field $token 'Length').GetInt32()

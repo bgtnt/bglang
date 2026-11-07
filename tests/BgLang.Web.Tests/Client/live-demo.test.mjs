@@ -915,7 +915,7 @@ function checksWire(diagnostics = [], validation = {available:true,diagnostics:[
 
 test('diagnostic presentation warns only for the explicit supported warning codes',()=>{
   const codes=['missing_terminal_punctuation','sentence_initial_lowercase','mixed_script_ocr_known_candidate',
-    'digit_shape_ocr_known_candidate','accent_sensitive_i_grave','spelling_unknown_word_unique_distance_one_candidate',
+    'digit_shape_ocr_known_candidate','accent_sensitive_i_grave',
     'pronoun_verb_agreement_mismatch','preposition_missing_complement','full_article_expected_for_subject_candidate',
     'productive_morphology_agreement_mismatch','productive_attribute_agreement_mismatch',
     'short_article_expected_after_preposition_candidate'];
@@ -926,6 +926,37 @@ test('diagnostic presentation warns only for the explicit supported warning code
     assert.equal(actual.messages[0].classification,'warning',code);
     assert.equal(actual.messages[0].label,'Предупреждение',code);
     assert.strictEqual(actual.messages[0].diagnostic,diagnostic,'Original diagnostic identity is preserved.');
+  }
+});
+
+test('unique distance-one spelling observations are informational with or without a name marker', () => {
+  // Synthetic wire observations exercise presentation independently of package coverage.
+  for (const [word, projectedText, nameMarker] of [
+    ['Лувена', 'Лумена', false], ['Лувена', 'Лумена', true],
+    ['лувена', 'лумена', false], ['лувена', 'лумена', true], ['подкаст', 'подраст', false]
+  ]) {
+    const text = '😀 ' + word + '.';
+    const token = {kind: 'Word', text: word, start: 3, length: word.length};
+    const diagnostic = Object.freeze({
+      code: 'spelling_unknown_word_unique_distance_one_candidate', start: token.start, length: token.length,
+      ruleId: 'spelling.unknown_word_unique_distance_one.v1', projectedText
+    });
+    const data = {
+      text, tokens: [token], diagnostics: [], validation: {available: true},
+      properNames: {candidates: nameMarker ? [{tokenIndex: 0, lane: 'Surname', kinds: 'Person'}] : []},
+      spelling: {words: [{tokenIndex: 0, text: word, start: 3, length: word.length,
+        alternatives: [{form: projectedText.toLowerCase(), distance: 1}]}]}
+    };
+    assert.equal(diagnosticPresentation(data, token).tokenClass, 'check-empty');
+    assert.deepEqual(diagnosticPresentation(data).messages, []);
+    const actual = diagnosticPresentation({...data, diagnostics: [diagnostic]}, token);
+    assert.equal(actual.tokenClass, 'check-information');
+    assert.equal(actual.messages.length, 1);
+    assert.equal(actual.messages[0].classification, 'information');
+    assert.equal(actual.messages[0].label, 'Информация');
+    assert.match(actual.messages[0].text, /предложение за преглед/);
+    assert.strictEqual(actual.messages[0].diagnostic, diagnostic);
+    assert.equal(text.slice(diagnostic.start, diagnostic.start + diagnostic.length), word);
   }
 });
 

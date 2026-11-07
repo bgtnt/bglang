@@ -478,6 +478,49 @@ test('"друфа" is replaced only explicitly, only on its own span, and undo c
   assert.equal(spans(env).length, 0);
 });
 
+test('unique distance-one spelling stays visible as information without duplicate or automatic replacement', async () => {
+  // The wire fixture leaves exact readings absent without asserting package coverage.
+  for (const [word, projectedText, names] of [
+    ['Лувена', 'Лумена', []], ['Лувена', 'Лумена', [0]],
+    ['лувена', 'лумена', []], ['лувена', 'лумена', [0]], ['подкаст', 'подраст', []]
+  ]) {
+    const text = '😀 ' + word + '. Дуфа. Аз чете.';
+    const env = await boot(text);
+    const code = 'spelling_unknown_word_unique_distance_one_candidate';
+    const diagnostic = {code, start: 3, length: word.length, projectedText, ruleId: 'spelling.unknown_word_unique_distance_one.v1'};
+    const response = analysis(text, {names,
+      diagnostics: [diagnostic, {code: 'pronoun_verb_agreement_mismatch', start: text.indexOf('чете'), length: 4}],
+      spelling: [
+        {tokenIndex: 0, text: word, start: 3, length: word.length, search: 'Searched',
+          alternatives: [{form: projectedText.toLowerCase(), distance: 1}]},
+        {tokenIndex: 1, text: 'Дуфа', start: text.indexOf('Дуфа'), length: 4, search: 'Searched',
+          alternatives: [{form: 'духа', distance: 1}, {form: 'дума', distance: 1}]}
+      ]});
+    await respond(env, env.host.calls[0], 200, response);
+    const check = env.lab.display.checks.find(check => check.code === code);
+    assert.equal(check.severity, 'information');
+    assert.equal(check.original, word);
+    assert.strictEqual(check.records[0].record, diagnostic);
+    assert.deepEqual([...env.lab.display.warnings], [3], 'only the separately supported agreement check underlines a word');
+    const checks = env.$('lab-checks');
+    assert.match(checks.textContent, /Непознати думи.*предложение за преглед/);
+    assert.equal(enabledButtons(checks).filter(button => button.textContent === '„' + word + '“').length, 1);
+    const labels = enabledButtons(checks).map(button => button.textContent);
+    assert.deepEqual(labels.filter(label => label === 'Духа' || label === 'Дума'), ['Духа', 'Дума']);
+    const action = 'Замени с „' + projectedText + '“';
+    assert.equal(labels.filter(label => label === action).length, names.length ? 0 : 1);
+    assert.equal(env.editor.value, text);
+    if (names.length) {
+      const row = checks.querySelectorAll('li').find(node => node.className === 'check check-information');
+      const details = row.querySelector('details');
+      details.open = true;
+      details.dispatch('toggle');
+    }
+    enabledButtons(checks).find(button => button.textContent === action).click();
+    assert.equal(env.editor.value, '😀 ' + projectedText + '. Дуфа. Аз чете.');
+  }
+});
+
 test('spelling and OCR replacements keep the case of the original, and the label is the inserted text', async () => {
   const text = 'Друфа дума. ДРУФА. Kнига.';
   const env = await boot(text);

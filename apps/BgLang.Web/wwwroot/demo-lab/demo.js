@@ -4,6 +4,7 @@
 import {createPostLane, createLiveController, completeReadings, caretWord, bindContinuation, applyContinuation} from '../live-client.js';
 
 export const MAX_LENGTH = 4096;
+const UNIQUE_SPELLING_CODE = 'spelling_unknown_word_unique_distance_one_candidate';
 
 // Presentation only: the warning set matches the current /demo allowlist. Unknown codes stay information.
 const WARNING_CODES = new Set([
@@ -12,7 +13,6 @@ const WARNING_CODES = new Set([
   'mixed_script_ocr_known_candidate',
   'digit_shape_ocr_known_candidate',
   'accent_sensitive_i_grave',
-  'spelling_unknown_word_unique_distance_one_candidate',
   'joined_verb_negation_should_be_separate',
   'pronoun_verb_agreement_mismatch',
   'unseparated_finite_predications',
@@ -30,7 +30,7 @@ const AGREEMENT_CODES = new Set([
 ]);
 // Codes whose projectedText is offered as an explicit, user-confirmed replacement of the original span.
 const REPLACEABLE_CODES = new Set([
-  'spelling_unknown_word_unique_distance_one_candidate',
+  UNIQUE_SPELLING_CODE,
   'joined_verb_negation_should_be_separate',
   'accent_sensitive_i_grave',
   'mixed_script_ocr_known_candidate',
@@ -45,7 +45,7 @@ export const MESSAGES = {
   full_article_expected_for_subject_candidate: 'Ако думата е подлог, се очаква пълен член.',
   short_article_expected_after_preposition_candidate: 'В проверената предложна група се очаква кратък член.',
   preposition_missing_complement: 'След предлога не е намерена дума, към която да се отнася.',
-  spelling_unknown_word_unique_distance_one_candidate: 'Няма точен речников прочит; има една близка речникова форма за преглед.',
+  [UNIQUE_SPELLING_CODE]: 'Няма точен речников прочит. Намерената близка форма е предложение за преглед.',
   joined_verb_negation_should_be_separate: 'Ако е отрицателна глаголна форма, „не“ се пише отделно.',
   accent_sensitive_i_grave: 'Ако е местоимение, се пише „ѝ“.',
   mixed_script_ocr_known_candidate: 'Думата смесва кирилица и латиница; възможна грешка при въвеждане или разпознаване.',
@@ -863,7 +863,7 @@ export function initLab(doc, {
     }
     let message = check.message;
     if (check.words.length > 1) message += ' Думи: ' + check.words.map(word => '„' + word + '“').join(' · ') + '.';
-    if (check.projected && check.code === 'spelling_unknown_word_unique_distance_one_candidate') message += ' Предложение: „' + check.projected + '“.';
+    if (check.projected && check.code === UNIQUE_SPELLING_CODE) message += ' Предложение: „' + check.projected + '“.';
     if (check.projected && check.code === 'reviewed_word_formation_evidence') message += ' Основа: „' + check.projected + '“.';
     if (check.projected && check.code === 'hyphenated_degree_morphology_evidence') message += ' Основна форма: „' + check.projected + '“.';
     head.append(el('span', message, 'check-message'));
@@ -935,7 +935,8 @@ export function initLab(doc, {
     const data = display.response.data, checks = display.checks, v = data.validation;
     const warnings = checks.filter(check => check.severity === 'warning');
     const unsupported = checks.filter(check => check.severity === 'unsupported');
-    const information = checks.filter(check => check.severity === 'information');
+    const spellingChecks = checks.filter(check => check.code === UNIQUE_SPELLING_CODE);
+    const information = checks.filter(check => check.severity === 'information' && check.code !== UNIQUE_SPELLING_CODE);
     const parts = [];
     const summary = el('p', warnings.length
       ? 'Предупреждения: ' + warnings.length + '. Те са кандидати за преглед, не автоматични поправки.'
@@ -955,13 +956,13 @@ export function initLab(doc, {
       parts.push(list);
     } else if (data.nominalConstructions?.available === false)
       parts.push(el('p', 'Съветите по конструкцията не са налични за този текст.', 'note'));
-    const covered = new Set(warnings.filter(check => check.code === 'spelling_unknown_word_unique_distance_one_candidate')
+    const covered = new Set(spellingChecks
       .map(check => data.tokens.findIndex(token => token.kind === 'Word' && token.start === check.start && token.length === check.length)));
     const spelling = (data.spelling?.words || []).map(word => spellingRow(word, covered)).filter(Boolean);
-    if (spelling.length) {
+    if (spellingChecks.length || spelling.length) {
       parts.push(el('h3', 'Непознати думи'));
       const list = el('ul', undefined, 'check-list');
-      list.append(...spelling);
+      list.append(...spellingChecks.map(checkRow), ...spelling);
       parts.push(list);
     }
     const byMessage = new Map();

@@ -34,6 +34,8 @@ const featureNames = {
   nameKind: 'Вид име',
   isShortForm: 'Кратка форма',
   participleKind: 'Причастие',
+  declaredTransitivity: 'Декларирана преходност',
+  declaredAspect: 'Деклариран вид',
   hasUnrecognizedFeatures: 'Неразпознати признаци',
   hasConflictingFeatures: 'Конфликтни признаци',
   paradigmId: 'Парадигма'
@@ -49,6 +51,10 @@ const words = {
   Second: 'Второ',
   Third: 'Трето',
   Present: 'Сегашно',
+  Transitive: 'Преходен',
+  Intransitive: 'Непреходен',
+  Imperfective: 'Несвършен',
+  Perfective: 'Свършен',
   Past: 'Минало',
   Indefinite: 'Нечленувано',
   DefiniteFull: 'Пълен член',
@@ -106,7 +112,6 @@ const diagnosticWarningCodes = new Set([
   "mixed_script_ocr_known_candidate",
   "digit_shape_ocr_known_candidate",
   "accent_sensitive_i_grave",
-  "spelling_unknown_word_unique_distance_one_candidate",
   "joined_verb_negation_should_be_separate",
   "pronoun_verb_agreement_mismatch",
   "unseparated_finite_predications",
@@ -144,9 +149,12 @@ export function diagnosticPresentation(data, token = null) {
     const classification = diagnostic.code === 'full_short_article_check_not_ready'
       ? 'unsupported-check' : diagnosticWarningCodes.has(diagnostic.code) ? 'warning' : 'information';
     const label = diagnosticLabels[classification];
+    const description = diagnostic.code === 'spelling_unknown_word_unique_distance_one_candidate'
+      ? ' · Няма точен речников прочит. Намерената близка форма е предложение за преглед.' : '';
     return {
       diagnostic, classification, label,
-      text: label + ' · ' + diagnostic.code + ' · ' + diagnostic.start + '+' + diagnostic.length + graphSupportLabel([diagnostic])
+      text: label + ' · ' + diagnostic.code + ' · ' + diagnostic.start + '+' + diagnostic.length
+        + graphSupportLabel([diagnostic]) + description
     };
   });
   const strongest = token && ['warning', 'unsupported-check', 'information'].find(classification =>

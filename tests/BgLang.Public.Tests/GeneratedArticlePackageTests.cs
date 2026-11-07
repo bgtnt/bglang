@@ -1,4 +1,4 @@
-// Reuses V7, preserves its assertions, and adds exact independent required-participant support guards.
+// Independently checks the local PREP+NP proof against literal cases and original complete readings.
 // The measured article route opens explicit Current locally; shared Baseline initialization is preserved.
 using System.Diagnostics;
 using System.Reflection;
@@ -37,6 +37,7 @@ public sealed partial class PublicPackageTests
         using JsonDocument projectionDoc = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data/article-projection.v1.json")));
         JsonElement projection = projectionDoc.RootElement;
         Assert.AreEqual("bglang.article-acceptance-projection.v1", projection.GetProperty("schema").GetString());
+        // This label identifies the unchanged historical fixture; the current proof uses only original local readings.
         Assert.AreEqual("candidate_pp_or_exact_local_adposition_with_finite_hypothesis.v2", projection.GetProperty("independentPrepositionProofPolicy").GetString());
         Assert.AreEqual(projection.GetProperty("manifestSha256").GetString(), ArticleHash(File.ReadAllBytes(manifest)));
         string optionsJson = JsonSerializer.Serialize(new { includeUnknownContextProperNames = false,
@@ -219,7 +220,8 @@ public sealed partial class PublicPackageTests
     {
         try
         {
-                string? lexicalIssue = ArticlePairIssue(form(full), form(shortForm), c.CarrierLemma);
+                ArticleFormEvidence fullEvidence = form(full), shortEvidence = form(shortForm);
+                string? lexicalIssue = ArticlePairIssue(fullEvidence, shortEvidence, c.CarrierLemma);
                 TextAnalysis actual = analyze(c.Text);
                 ArticleSignal[] signals = ArticleSignals(actual);
                 string[] unknown = UnknownArticleCodes(signals, p);
@@ -229,22 +231,22 @@ public sealed partial class PublicPackageTests
                 var proposals = signals.SelectMany(s => s.Root.Where(d => d.ProjectedText is not null &&
                     (s.Start<0 || s.Length<0 || s.Start>c.Text.Length-s.Length || d.ProjectedText!=c.Text.Substring(s.Start,s.Length))).Select(d => (Signal:s, Diagnostic:d)))
                     .DistinctBy(p => (p.Signal.Code, p.Signal.Start, p.Signal.Length, p.Diagnostic.ProjectedText)).ToArray();
+                bool localPp = c.Construction == "prepositional_np";
+                ArticleWitness? witness = ArticleIndependentWitness(actual, c);
+                if (witness is not null && lexicalIssue is null && !ArticleSameOccurrenceReadings(witness,
+                    c.NormativeExpectation == "MUST_WARN" ? fullEvidence : shortEvidence))
+                    lexicalIssue = "FOREIGN_OCCURRENCE_READING_IDENTITY";
                 int matchingProposals = proposals.Count(p => c.ExpectedReplacement is not null && p.Signal.Start == c.Target.Start && p.Signal.Length == c.Target.Length &&
                     p.Diagnostic.ProjectedText == c.ExpectedReplacement && ArticleCaseFactory.Repair(c, p.Diagnostic.ProjectedText!) == c.ExpectedTextAfterRepair);
-                int correctProposals = proposals.Count(p => c.ExpectedReplacement is not null && p.Signal.Start == c.Target.Start && p.Signal.Length == c.Target.Length &&
-                    p.Diagnostic.ProjectedText == c.ExpectedReplacement && ArticleCaseFactory.Repair(c, p.Diagnostic.ProjectedText) == c.ExpectedTextAfterRepair && lexicalIssue is null);
-                TextReadingReference[]? independentSupport = ArticleIndependentSupport(actual, c);
-                ArticleWitness? witness = ArticlePpWitness(actual, c.Target, p.GetProperty("independentPrepositionalRule").GetString()!, independentSupport);
+                int correctProposals = lexicalIssue is null ? matchingProposals : 0;
                 string? relation = witness?.Key;
-                bool independentRelation = independentSupport is null || witness is not null && ArticleSameSupport(witness.OriginalCoverage, independentSupport);
-                bool proof = independentRelation && exact.Length>0 && exact.All(s => s.Root.Length>0 && s.Validation.Length>0 && s.Root.All(d => ArticleProof(actual, c.Target, d.Readings, c.Construction == "prepositional_np", independentSupport) &&
-                    (independentSupport is null || ArticleSameSupport(d.Readings, independentSupport)) &&
+                bool proof = exact.Length > 0 && exact.All(s => s.Root.Length == 1 && s.Validation.Length == 1 && s.Root.All(d =>
+                    ArticleProof(actual, c.Target, d.Readings, localPp, witness) &&
                     (c.ExpectedArticle != "Short" || d.RuleId == p.GetProperty("expectedShortRule").GetString()) &&
                     s.Validation.All(v => d.Readings is not null && v.Supports.SequenceEqual(d.Readings) &&
-                        v.Basis.StartsWith("existing_diagnostic="+d.RuleId+";bounded_article_advice",StringComparison.Ordinal)))) &&
-                    (c.Construction != "prepositional_np" || relation is not null);
+                        v.Basis.StartsWith("existing_diagnostic=" + d.RuleId + ";bounded_article_advice", StringComparison.Ordinal))));
                 bool notReady = signals.Any(s => ArticleAvailability(s.Code, p) && s.Start == c.Target.Start && s.Length == c.Target.Length);
-                bool assessed = c.Construction == "prepositional_np" && ArticleAssessed(actual, c.Target, p, independentSupport) && relation is not null && independentRelation && !notReady;
+                bool assessed = localPp && ArticleAssessed(actual, c.Target, p, witness) && !notReady;
                 bool correct = c.NormativeExpectation == "MUST_ACCEPT_LOCALLY";
                 int wrongLocalization = accusations.Count(s => s.Start != c.Target.Start || s.Length != c.Target.Length);
                 bool pass = lexicalIssue is null && unknown.Length == 0 && (correct
@@ -252,7 +254,7 @@ public sealed partial class PublicPackageTests
                     : exact.Length > 0 && wrongLocalization == 0 && correctProposals > 0 && correctProposals == proposals.Length && proof && !notReady);
                 return new(c.Id, required, c.NormativeExpectation, true, lexicalIssue is null, lexicalIssue, exact.Length > 0,
                     wrongLocalization, proposals.Length, correctProposals, correct ? accusations.Length : 0,
-                    assessed, correct && !assessed, notReady, proof, relation, pass, unknown, signals, null) { WrongProposals=proposals.Length-matchingProposals, UnverifiedProposals=matchingProposals-correctProposals, RelationAuthority=witness?.Authority };
+                    assessed, correct && !assessed, notReady, proof, relation, pass, unknown, signals, null) { WrongProposals=proposals.Length-matchingProposals, UnverifiedProposals=matchingProposals-correctProposals, RelationAuthority=witness is null ? null : "literal_prep_np_original_inventory" };
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         { return new(c.Id,required,c.NormativeExpectation,false,false,"OPERATIONAL_NONMEASUREMENT",false,0,0,0,0,false,true,false,false,null,false,[],[],error.ToString()); }
@@ -292,47 +294,45 @@ public sealed partial class PublicPackageTests
             .Select(line => JsonSerializer.Deserialize<ArticleGeneratedCase>(line, ArticleCaseFactory.Json)!).ToArray();
     }
 
-    private static TextReadingReference[]? ArticleIndependentSupport(TextAnalysis actual, ArticleGeneratedCase c)
+    private static ArticleWitness? ArticleIndependentWitness(TextAnalysis actual, ArticleGeneratedCase c)
     {
-        if (c.InitialDeliveryScope != "REQUIRED_BASIC") return null;
-        if (actual.Text != c.Text || c.Construction != "prepositional_np" || c.Position != "postposed")
-            throw new InvalidDataException("Required article case lost its declared construction.");
+        if (c.Construction != "prepositional_np" || c.Layout is not ("noun" or "single_attribute" or "control"))
+            return null;
+        if (actual.Text != c.Text)
+            throw new InvalidDataException("Article case lost its literal source.");
         (string Verb, string Preposition) frame = c.Frame switch
         {
             "govorya_za" => ("Говоря", "за"), "mislya_za" => ("Мисля", "за"),
             "pisha_na" => ("Пиша", "на"), "tragvam_bez" => ("Тръгвам", "без"),
             "control" when c.Id is "s01" or "s02" or "s03" or "s04" or "s17" or "s18" => ("Говоря", "с"),
             "control" when c.Id is "s05" or "s06" => ("Помагам", "на"),
-            _ => throw new InvalidDataException("Required article case lacks an independent literal frame.")
+            _ => throw new InvalidDataException("Article case lacks an independent literal frame.")
         };
-        bool adjective = c.Layout == "single_attribute" || c.Frame == "control" && (c.Id is "s03" or "s04");
-        if (c.Frame != "control" && c.Layout is not ("noun" or "single_attribute"))
-            throw new InvalidDataException("Required article case lost its declared head layout.");
-        int predicateStart = c.Target.Start - frame.Verb.Length - frame.Preposition.Length - 2;
-        int prepositionStart = predicateStart + frame.Verb.Length + 1;
-        string prefix = frame.Verb + " " + frame.Preposition + " ";
-        if (predicateStart < 0 || !string.Equals(c.Text.Substring(predicateStart, prefix.Length), prefix, StringComparison.OrdinalIgnoreCase) ||
-            c.Text.Substring(c.Target.Start, c.Target.Length) != c.Target.Surface)
-            throw new InvalidDataException("Required article literal participants do not match their original ranges.");
-        List<ArticleParticipant> participants =
-        [
-            new(predicateStart, frame.Verb.Length, MorphologicalPartOfSpeech.Verb),
-            new(prepositionStart, frame.Preposition.Length, MorphologicalPartOfSpeech.Preposition),
-            new(c.Target.Start, c.Target.Length, adjective ? MorphologicalPartOfSpeech.Adjective : MorphologicalPartOfSpeech.Noun)
-        ];
-        if (adjective)
+        int prepStart = c.Target.Start - frame.Preposition.Length - 1;
+        if (c.Position == "postposed")
+        {
+            string prefix = frame.Verb + " " + frame.Preposition + " ";
+            int start = c.Target.Start - prefix.Length;
+            if (start < 0 || !c.Text.AsSpan(start, prefix.Length).Equals(prefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Article case lost its literal frame.");
+        }
+        else if (c.Position != "fronted" || c.InitialDeliveryScope == "REQUIRED_BASIC")
+            throw new InvalidDataException("Unexpected position in the independent article fixture.");
+
+        if (prepStart < 0 || !c.Text.AsSpan(prepStart, frame.Preposition.Length).Equals(frame.Preposition, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Article preposition lost its original range.");
+        List<ArticleTarget> phrase = [new(prepStart, frame.Preposition.Length, c.Text.Substring(prepStart, frame.Preposition.Length)), c.Target];
+        if (c.Layout == "single_attribute" || c.Frame == "control" && c.Id is "s03" or "s04")
         {
             string head = c.Frame == "control" ? "учител" : c.NounLemma;
             int start = c.Target.Start + c.Target.Length + 1;
-            if (c.Text[c.Target.Start + c.Target.Length] != ' ' ||
-                !string.Equals(c.Text.Substring(start, head.Length), head, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Required article noun head lost its independent literal range.");
-            participants.Add(new(start, head.Length, MorphologicalPartOfSpeech.Noun));
+            if (start > c.Text.Length - head.Length || !c.Text.AsSpan(start, head.Length).Equals(head, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Article noun head lost its independent literal range.");
+            phrase.Add(new(start, head.Length, c.Text.Substring(start, head.Length)));
         }
-        // Reuse the independently fixed original-occurrence/all-reading expansion.
-        return ExpectedArticleSupport(actual, new ArticleCase(c.Id, c.PairId, c.Text, c.Target.Start, c.Target.Length,
-            c.Target.Surface, c.NormativeExpectation == "MUST_WARN", c.ExpectedReplacement, c.ExpectedTextAfterRepair, participants.ToArray()));
+        return ArticlePpWitness(actual, phrase);
     }
+
     private static bool ArticleSameSupport(IReadOnlyList<TextReadingReference>? actual, IReadOnlyList<TextReadingReference> expected) =>
         actual is not null && actual.OrderBy(r => r.TokenIndex).ThenBy(r => r.CompleteReadingIndex)
             .SequenceEqual(expected.OrderBy(r => r.TokenIndex).ThenBy(r => r.CompleteReadingIndex));
@@ -348,9 +348,11 @@ public sealed partial class PublicPackageTests
     private static bool ArticleAvailability(string code, JsonElement p) => p.GetProperty("availabilityCodes").EnumerateArray().Any(x => x.GetString() == code);
     private static string[] UnknownArticleCodes(ArticleSignal[] rows, JsonElement p) => rows.Where(s => !ArticleCategorical(s.Code,p) && !ArticleAvailability(s.Code,p) &&
         s.Code != p.GetProperty("assessedValidCode").GetString() && !p.GetProperty("quoteAdvisoryCodes").EnumerateArray().Any(x => x.GetString() == s.Code)).Select(s => s.Code).Distinct().ToArray();
-    private static bool ArticleProof(TextAnalysis a, ArticleTarget target, IReadOnlyList<TextReadingReference>? refs, bool requirePp = false, IReadOnlyList<TextReadingReference>? expectedCoverage = null)
+    private static bool ArticleProof(TextAnalysis a, ArticleTarget target, IReadOnlyList<TextReadingReference>? refs, bool requirePp, ArticleWitness? witness)
     {
-        if (a.ReadingInventory is not { } inventory || refs is not { Count: > 0 }) return false;
+        if (refs is not { Count: > 0 }) return false;
+        if (requirePp) return witness is not null && refs.SequenceEqual(witness.RoleSupports);
+        if (a.ReadingInventory is not { } inventory) return false;
         TokenAnalysis? carrier = a.Tokens.SingleOrDefault(t => t.Kind == TokenKind.Word && t.Start == target.Start && t.Length == target.Length);
         if (carrier is null) return false;
         int index = Array.IndexOf(a.Tokens.ToArray(), carrier);
@@ -364,102 +366,173 @@ public sealed partial class PublicPackageTests
                 !a.Sentences.Any(s => target.Start >= s.Start && target.Start + target.Length <= s.Start + s.Length &&
                     found[0].Start >= s.Start && found[0].Start + found[0].Length <= s.Start + s.Length)) return false;
         }
-        if (requirePp)
-        { var witness=ArticlePpWitness(a,target,"BasicPrepositionalObject",expectedCoverage);
-          if (witness is null || !witness.RoleSupports.All(refs.Contains) || !witness.OriginalCoverage.All(refs.Contains)) return false; }
         return true;
     }
-    private sealed record ArticleWitness(string Key,TextReadingReference[] RoleSupports,TextReadingReference[] OriginalCoverage,string Authority);
-    private static ArticleWitness? ArticlePpWitness(TextAnalysis a,ArticleTarget target,string rule,IReadOnlyList<TextReadingReference>? expectedCoverage = null)
+    private sealed record ArticleWitness(string Key, TextReadingReference[] RoleSupports,
+        TextReadingReference[] OriginalCoverage, TextReadingSnapshot[] CarrierRows);
+
+    private static ArticleWitness? ArticlePpWitness(TextAnalysis a, IReadOnlyList<ArticleTarget> phrase)
     {
-        if (a.Syntax is not {Available:true} || a.ReadingInventory is not { } inventory) return null;
-        var candidates=a.Syntax.Sentences.Where(s=>s.Status=="Calculated").SelectMany(s=>s.Candidates).Where(c=>c.Role==TextSyntaxRole.PrepositionalObject &&
-            c.RuleId==rule && c.Start<=target.Start && c.Start+c.Length>=target.Start+target.Length).ToArray();
-        if (candidates.Length==0) return ArticleLocalPpWitness(a,target,rule,expectedCoverage);
-        if (candidates.Length!=1) return null;
-        TextSyntaxCandidate c=candidates[0];
-        TokenAnalysis[] phrase=a.Tokens.Where(t=>t.Kind==TokenKind.Word && t.Start>=c.Start && t.Start+t.Length<=c.Start+c.Length).ToArray();
-        if (phrase.Length<2 || c.Targets.Count!=phrase.Length || c.Context.Count!=1 ||
-            c.Start!=phrase[0].Start || c.Start+c.Length!=phrase[^1].Start+phrase[^1].Length) return null;
-        List<TextReadingReference> roleRefs=[], originalCoverage=[]; List<TextReadingSnapshot[]> rows=[];
-        TextSyntaxSupport[] supports=c.Targets.Concat(c.Context).ToArray();
-        for (int participant=0;participant<supports.Length;participant++)
+        if (a.ReadingInventory is not { } inventory || phrase.Count is not (2 or 3)) return null;
+        ArticleTarget last = phrase[^1];
+        if (last.Start < 0 || last.Length <= 0 || last.Start > a.Text.Length - last.Length) return null;
+        int start = phrase[0].Start, end = last.Start + last.Length;
+        if (start < 0 || end <= start ||
+            a.Sentences.Count(s => s.Start >= 0 && s.Length > 0 && s.Start <= a.Text.Length - s.Length &&
+                start >= s.Start && end <= s.Start + s.Length) != 1 ||
+            ArticleOverlapsQuote(a.Text, start, end)) return null;
+        List<int> indices = [];
+        List<TextReadingSnapshot[]> rows = [];
+        foreach (ArticleTarget part in phrase)
         {
-            TextSyntaxSupport support=supports[participant];
-            var original=inventory.Occurrences.Where(o=>o.TokenIndex==support.TokenIndex).ToArray();
-            if (original.Length!=1 || support.Basis is not ("ExactCategory" or "TypedFeatures") || support.GraphReadings is {Count:>0}) return null;
-            var all=inventory.Sets[original[0].ReadingSetIndex].ResolvedReadings.ToArray();
-            var exact=Enumerable.Range(0,all.Length).Select(i=>new TextReadingReference(support.TokenIndex,i)).ToArray();
-            var selected=ArticleCheckedRoleSupport(support.TokenIndex,all.Select(r=>r.Features.PartOfSpeech).ToArray(),support.Readings,
-                participant==0 ? ArticleProofRole.Preposition : participant==c.Targets.Count ? ArticleProofRole.Predicate : ArticleProofRole.Nominal);
-            if (all.Length==0 || selected is null || all.Any(r=>r.Features!=r.Raw.Features || r.Features.HasConflictingFeatures ||
-                r.Features.HasUnrecognizedFeatures || !string.Equals(r.Raw.Form,original[0].Text,StringComparison.OrdinalIgnoreCase))) return null;
-            roleRefs.AddRange(selected); originalCoverage.AddRange(exact);
-            rows.Add(participant==0 || participant==c.Targets.Count ? selected.Select(r=>all[r.CompleteReadingIndex]).ToArray() : all);
+            if (part.Start < 0 || part.Length <= 0 || part.Start > a.Text.Length - part.Length ||
+                !a.Text.AsSpan(part.Start, part.Length).SequenceEqual(part.Surface)) return null;
+            if (ArticleOccurrence(inventory.Occurrences, part) is not { } occurrence ||
+                (uint)occurrence.TokenIndex >= (uint)a.Tokens.Count ||
+                a.Tokens[occurrence.TokenIndex] is not { Kind: TokenKind.Word } token ||
+                token.Start != part.Start || token.Length != part.Length || token.Text != part.Surface) return null;
+            if (indices.Count > 0)
+            {
+                var previous = phrase[indices.Count - 1];
+                int gap = previous.Start + previous.Length;
+                if (occurrence.TokenIndex != indices[^1] + 1 || part.Start <= gap ||
+                    !a.Text.AsSpan(gap, part.Start - gap).Trim().IsEmpty) return null;
+            }
+            var exact = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.ToArray();
+            if (exact.Length == 0 || exact.Any(r => r.Features != r.Raw.Features || r.Features.HasConflictingFeatures ||
+                r.Features.HasUnrecognizedFeatures || r.Features.NameKind is not null ||
+                !string.Equals(r.Raw.Form, part.Surface, StringComparison.OrdinalIgnoreCase))) return null;
+            indices.Add(occurrence.TokenIndex);
+            rows.Add(exact);
         }
-        for (int i=0;i<phrase.Length;i++)
-        {
-            if (a.Tokens[c.Targets[i].TokenIndex]!=phrase[i]) return null;
-            if (i>0 && !a.Text.AsSpan(phrase[i-1].Start+phrase[i-1].Length,phrase[i].Start-phrase[i-1].Start-phrase[i-1].Length).ToString().All(char.IsWhiteSpace)) return null;
-        }
-        if (phrase[1].Start!=target.Start || phrase[1].Length!=target.Length ||
-            !rows[0].All(r=>r.Features.PartOfSpeech==MorphologicalPartOfSpeech.Preposition) ||
-            !rows[^1].All(r=>r.Features.PartOfSpeech==MorphologicalPartOfSpeech.Verb && r.Features.VerbForm==MorphologicalVerbForm.Finite) ||
-            a.Tokens[c.Context[0].TokenIndex].Start>=phrase[0].Start) return null;
-        TokenAnalysis predicate=a.Tokens[c.Context[0].TokenIndex];
-        if (a.Sentences.Count(s=>c.Start>=s.Start && c.Start+c.Length<=s.Start+s.Length &&
-            predicate.Start>=s.Start && predicate.Start+predicate.Length<=s.Start+s.Length)!=1) return null;
-        TextReadingSnapshot[] head=rows[phrase.Length-1];
-        if (!head.Any(r=>r.Features.Number==MorphologicalNumber.Singular) || !head.All(r=>r.Features.PartOfSpeech==MorphologicalPartOfSpeech.Noun &&
-            r.Features.Gender==MorphologicalGender.Masculine && r.Features.Number is MorphologicalNumber.Singular or MorphologicalNumber.Count && r.Features.NameKind is null)) return null;
-        if (rows[1][0].Features.PartOfSpeech==MorphologicalPartOfSpeech.Noun)
-        { if (phrase.Length!=2) return null; }
-        else for (int i=1;i<phrase.Length-1;i++)
-            if (!rows[i].All(r=>r.Features.PartOfSpeech==MorphologicalPartOfSpeech.Adjective && r.Features.Number==MorphologicalNumber.Singular &&
-                r.Features.Gender==MorphologicalGender.Masculine && r.Features.NameKind is null)) return null;
-        // Role supports keep every eligible original ordinal; complete input coverage keeps all other raw alternatives separately.
-        // Count alternatives stay in original coverage. A bare count-only head or a numeral route is never accepted.
-        return new("independent_preposition:"+phrase[0].Text.ToLowerInvariant()+":"+(target.Start-phrase[0].Start),roleRefs.ToArray(),originalCoverage.ToArray(),"global_basic_prepositional_object");
+
+        if (a.ProperNames is { } names && (names.Candidates.Any(n => n.Start < end && start < n.Start + n.Length) ||
+            names.Groups.Any(n => n.Start < end && start < n.Start + n.Length) ||
+            indices.Skip(1).Any(i => names.DeferredTokenIndices.Contains(i) ||
+                names.UnresolvedContextTokens?.Any(n => n.TokenIndex == i) == true))) return null;
+        if (rows[0].Any(r => r.Features.PartOfSpeech != MorphologicalPartOfSpeech.Preposition &&
+            (r.Features.PartOfSpeech != MorphologicalPartOfSpeech.Particle ||
+             !string.Equals(r.Raw.Lemma, phrase[0].Surface, StringComparison.OrdinalIgnoreCase)))) return null;
+
+        bool bare = phrase.Count == 2;
+        MorphologicalPartOfSpeech carrierPos = bare ? MorphologicalPartOfSpeech.Noun : MorphologicalPartOfSpeech.Adjective;
+        var carriers = rows[1];
+        var anchors = carriers.Where(r => r.Features.PartOfSpeech == carrierPos &&
+            r.Features.Gender == MorphologicalGender.Masculine && r.Features.Number == MorphologicalNumber.Singular &&
+            r.Features.Article is MorphologicalArticle.Full or MorphologicalArticle.Short or MorphologicalArticle.Definite).ToArray();
+        if (anchors.Length == 0) return null;
+        var anchor = anchors[0];
+        if (carriers.Any(r => !ArticleSameOwner(r.Raw, anchor.Raw) ||
+            (r.Features with { RawTag = null }) != (anchor.Features with { RawTag = null }) &&
+            !(bare && anchor.Features.Article != MorphologicalArticle.Full && ArticleCountAlternative(r, anchor)))) return null;
+        if (!bare && rows[2].Any(r => r.Features is not { PartOfSpeech: MorphologicalPartOfSpeech.Noun,
+            Gender: MorphologicalGender.Masculine, Number: MorphologicalNumber.Singular, Article: MorphologicalArticle.Indefinite }))
+            return null;
+
+        // An adjacent second noun belongs to the literal counterexample, not to an isolated shorter witness.
+        int next = indices[^1] + 1;
+        if (next < a.Tokens.Count && a.Tokens[next] is { Kind: TokenKind.Word } following &&
+            following.Start > end && following.Start <= a.Text.Length && a.Text.AsSpan(end, following.Start - end).Trim().IsEmpty &&
+            inventory.Occurrences.Any(o => o.TokenIndex == next && inventory.Sets[o.ReadingSetIndex].ResolvedReadings.Any(
+                r => r.Features.PartOfSpeech is MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.ProperNoun))) return null;
+
+        // Complete raw coverage includes particles. Only PREP and all NP ordinals belong in the emitted proof.
+        var rawCoverage = rows.SelectMany((set, i) => set.Select((_, j) => new TextReadingReference(indices[i], j))).ToArray();
+        var emitted = rawCoverage.Where(r => r.TokenIndex != indices[0] ||
+            rows[0][r.CompleteReadingIndex].Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition).ToArray();
+        if (emitted.Length == 0 || emitted[0].TokenIndex != indices[0]) return null;
+        return new("independent_preposition:" + phrase[0].Surface.ToLowerInvariant() + ":" + (phrase[1].Start - start),
+            emitted, rawCoverage, carriers);
     }
+
+    private static TextReadingOccurrence? ArticleOccurrence(IReadOnlyList<TextReadingOccurrence> occurrences, ArticleTarget part)
+    {
+        var spanMatches = occurrences.Where(o => o.Start == part.Start && o.Length == part.Length).ToArray();
+        return spanMatches.Length == 1 && spanMatches[0].Text == part.Surface &&
+            occurrences.Count(o => o.TokenIndex == spanMatches[0].TokenIndex) == 1 ? spanMatches[0] : null;
+    }
+
+    private static bool ArticleOverlapsQuote(string text, int start, int end)
+    {
+        for (int i = 0; i < end; i++)
+        {
+            char close = text[i] switch { '„' => '“', '“' => '”', '«' => '»', '‘' => '’',
+                '"' or '\'' or '\u0060' => text[i], _ => '\0' };
+            if (close == '\0') continue;
+            int closing = text.IndexOf(close, i + 1);
+            if (closing < 0 || closing >= start) return true;
+            i = closing;
+        }
+        return false;
+    }
+
+    private static bool ArticleSameOccurrenceReadings(ArticleWitness witness, ArticleFormEvidence form) =>
+        witness.CarrierRows.Select(r => ArticleReadingIdentity(r.Raw)).ToHashSet()
+            .SetEquals(form.Readings.Select(r => ArticleReadingIdentity(r.Raw)));
+
+    private static (string Form, string Lemma, string? Tag, int? Type, uint? Base, uint? Word, string Source)
+        ArticleReadingIdentity(WordReading row) =>
+        (row.Form.ToLowerInvariant(), row.Lemma.ToLowerInvariant(), row.PartOfSpeech,
+         row.LegacyTypeId, row.LegacyBaseId, row.LegacyWordId, row.Source);
+
+    private static bool ArticleSameOwner(WordReading a, WordReading b) =>
+        string.Equals(a.Lemma, b.Lemma, StringComparison.OrdinalIgnoreCase) && a.Features.ParadigmId is not null &&
+        a.Features.ParadigmId == b.Features.ParadigmId && a.Features.PartOfSpeech == b.Features.PartOfSpeech &&
+        a.LegacyTypeId == b.LegacyTypeId && a.LegacyBaseId == b.LegacyBaseId && a.Source == b.Source;
+
+    private static bool ArticleCountAlternative(TextReadingSnapshot row, TextReadingSnapshot anchor) =>
+        row.Features is { Number: MorphologicalNumber.Count, Article: MorphologicalArticle.Indefinite } &&
+        (row.Features with { RawTag = null, Number = anchor.Features.Number, Article = anchor.Features.Article }) ==
+        (anchor.Features with { RawTag = null });
+
     private static void ArticleLocalProofControls()
     {
-        string[] rejected = ["particle_only_role","extra_particle_role","omitted_eligible_prep","foreign_role_token","foreign_role_ordinal","duplicate_role_ref",
-            "missing_local","wrong_local_evidence","incomplete_context","truncated_context","missing_inventory","missing_hypothesis","foreign_hypothesis",
-            "empty_predicate_role","graph_local_role","unsupported_raw_prep","nonverb_predicate","predicate_nonverb_alternative","mismatch_head","proper_head",
-            "unknown_head","missing_head_coverage","missing_particle_coverage","foreign_coverage","malformed_head_span","second_head","quote","comma",
-            "old_ordinals_after_reorder","mixed_adj_verb","mixed_noun_verb","mixed_noun_proper"];
+        string[] badInput = ["missing_inventory", "missing_head_occurrence", "unsupported_raw_prep", "foreign_particle",
+            "conjunction_prep", "mismatch_head", "proper_head", "unknown_head", "count_only", "foreign_count",
+            "malformed_head_span", "malformed_sentence_span", "overflowing_sentence_span", "second_head", "quote", "comma_in_group", "articulated_head_hint",
+            "mixed_adj_verb", "mixed_noun_verb", "mixed_noun_proper"];
+        string[] badProof = ["particle_only_role", "extra_particle_role", "omitted_eligible_prep", "foreign_role_token",
+            "foreign_role_ordinal", "duplicate_role_ref", "old_ordinals_after_reorder", "missing_head_support", "predicate_support"];
+        string[] outside = ["missing_local", "wrong_local_evidence", "incomplete_context", "truncated_context",
+            "missing_hypothesis", "foreign_hypothesis", "empty_predicate_role", "graph_local_role", "nonverb_predicate",
+            "predicate_nonverb_alternative", "comma", "unavailable_context_and_syntax"];
         string? relation = null;
         foreach (string mode in new[] { "валиден_full", "валиден_short", "bare_short_count", "display_prefix_only",
-            "multiple_preposition_ordinals", "reordered_preposition_ordinals", "articulated_head_hint" }.Concat(rejected))
+            "multiple_preposition_ordinals", "reordered_preposition_ordinals", "missing_particle_coverage", "foreign_coverage",
+            "counterfeit_occurrence_owner", "counterfeit_word_id" }.Concat(outside).Concat(badInput).Concat(badProof))
         {
             var input = ArticleLocalProofFixture(mode);
-            ArticleWitness? witness = ArticlePpWitness(input.Analysis,input.Target,"BasicPrepositionalObject",input.Coverage);
-            if (rejected.Contains(mode)) { Assert.IsNull(witness,mode); continue; }
-            Assert.IsNotNull(witness,mode); Assert.AreEqual("local_adposition_finite_hypothesis",witness.Authority,mode);
-            Assert.IsTrue(ArticleSameSupport(witness.OriginalCoverage,input.Coverage),mode);
-            TextReadingReference[] expectedPrep = mode switch
+            ArticleWitness? witness = ArticlePpWitness(input.Analysis, input.Phrase);
+            if (badInput.Contains(mode)) { Assert.IsNull(witness, mode); continue; }
+            Assert.IsNotNull(witness, mode);
+            bool rawCoverageMatches = ArticleSameSupport(witness.OriginalCoverage, input.Coverage);
+            Assert.AreEqual(mode is not ("missing_particle_coverage" or "foreign_coverage"), rawCoverageMatches, mode);
+            Assert.AreEqual(!badProof.Contains(mode),
+                ArticleProof(input.Analysis, input.Phrase[1], input.Emitted, true, witness), mode);
+            Assert.IsTrue(witness.OriginalCoverage.Contains(input.Particle), mode);
+            Assert.IsFalse(witness.RoleSupports.Contains(input.Particle), mode);
+            Assert.AreEqual(mode is not ("counterfeit_occurrence_owner" or "counterfeit_word_id"),
+                ArticleSameOccurrenceReadings(witness, input.NamedForm), mode);
+            if (mode == "валиден_full")
             {
-                "multiple_preposition_ordinals" => [new(1,0),new(1,2)],
-                "reordered_preposition_ordinals" => [new(1,1),new(1,2)],
-                _ => [new(1,0)]
-            };
-            Assert.IsTrue(witness.RoleSupports.Where(r=>r.TokenIndex==1).SequenceEqual(expectedPrep),mode);
-            var particle = new TextReadingReference(1,mode=="reordered_preposition_ordinals" ? 0 : 1);
-            Assert.IsTrue(witness.OriginalCoverage.Contains(particle),mode);
-            Assert.IsFalse(witness.RoleSupports.Contains(particle),mode);
-            Assert.AreEqual(TextContextSelectionStatus.Ambiguous,input.Analysis.Context!.Sentences[0].Status,mode);
-            Assert.HasCount(0,input.Analysis.Context.Sentences[0].SelectedRoles,mode);
-            Assert.AreEqual("Abstained",input.Analysis.Syntax!.Sentences[0].Route,mode);
-            Assert.HasCount(0,input.Analysis.Syntax.Sentences[0].Candidates,mode);
-            if(mode=="валиден_full") relation=witness.Key;
-            if(mode=="валиден_short") Assert.AreEqual(relation,witness.Key,"Смяната само на Article пази независимата relation.");
-            // Articulated глава запазва role hint; реалният article consumer има отделен naked-head guard.
-            if(mode=="articulated_head_hint") Assert.AreEqual(relation,witness.Key,"Head Article не избира local role и не удостоверява цялата NP.");
+                relation = witness.Key;
+                var inventory = input.Analysis.ReadingInventory!;
+                var prep = ArticleOccurrence(inventory.Occurrences, input.Phrase[0])!.Value;
+                // The public inventory constructor rejects duplicate token indices. Exercise the
+                // occurrence matcher directly to cover the same ambiguity at a different span.
+                TextReadingOccurrence[] duplicateAtForeignSpan = [..inventory.Occurrences, prep with { Start = 0 }];
+                Assert.IsNull(ArticleOccurrence(duplicateAtForeignSpan, input.Phrase[0]), "duplicate-token-occurrence-at-foreign-span");
+                Assert.ThrowsExactly<ArgumentException>(() => new TextReadingInventory(inventory.Sets, duplicateAtForeignSpan));
+            }
+            if (mode == "валиден_short" || outside.Contains(mode))
+                Assert.AreEqual(relation, witness.Key, "Локалното отношение е независимо от Article и от материала извън PP: " + mode);
         }
     }
-    private static (TextAnalysis Analysis,ArticleTarget Target,TextReadingReference[] Coverage) ArticleLocalProofFixture(string mode)
+
+    private static (TextAnalysis Analysis, ArticleTarget[] Phrase, TextReadingReference[] Coverage,
+        TextReadingReference[] Emitted, TextReadingReference Particle, ArticleFormEvidence NamedForm) ArticleLocalProofFixture(string mode)
     {
-        bool bare=mode=="bare_short_count",shortForm=mode=="валиден_short"||bare;
+        bool bare=mode is "bare_short_count" or "count_only" or "foreign_count",shortForm=mode=="валиден_short"||bare;
         string carrier=bare ? "учителя" : shortForm ? "добрия" : "добрият";
         WordReading Row(string form,string lemma,string tag)=>new(form,lemma,tag,1,null,null,null,"independent-article-proof-control");
         List<WordReading[]> raw =
@@ -468,12 +541,15 @@ public sealed partial class PublicPackageTests
             [Row("на","на","Предлог:192"),Row("на","на","Частица")],
             [Row(carrier,bare ? "учител" : "добър",(bare ? "Съществително:7" : "Прилагателно:76")+",Мъжки,"+(shortForm ? "Членуван" : "Пълен"))]
         ];
-        if(bare) raw[2]=[..raw[2],Row(carrier,"учител","Съществително:7,Мъжки,Бройна")];
+        if (bare) raw[2] = [..raw[2], Row(carrier, mode == "foreign_count" ? "друг" : "учител", "Съществително:7,Мъжки,Бройна")];
         else raw.Add([Row("учител","учител","Съществително:7,Мъжки")]);
+        if (mode == "count_only") raw[2] = [raw[2][^1]];
         if(mode is "omitted_eligible_prep" or "multiple_preposition_ordinals") raw[1]=[..raw[1],Row("на","на","Предлог:192")];
         if(mode is "reordered_preposition_ordinals" or "old_ordinals_after_reorder")
             raw[1]=[Row("на","на","Частица"),Row("на","на","Предлог:192"),Row("на","на","Предлог:192")];
         if(mode=="unsupported_raw_prep") raw[1]=[raw[1][0],Row("на","на","Съществително:7,Мъжки")];
+        if(mode=="foreign_particle") raw[1]=[raw[1][0],Row("на","друг","Частица")];
+        if(mode=="conjunction_prep") raw[1]=[raw[1][0],Row("на","на","Съюз")];
         if(mode=="nonverb_predicate") raw[0]=[Row("Говоря","говоря","Съществително:7,Мъжки")];
         if(mode=="predicate_nonverb_alternative") raw[0]=[..raw[0],Row("Говоря","говоря","Съществително:7,Мъжки")];
         if(mode=="mismatch_head") raw[3]=[Row("учител","учител","Съществително:41,Женски")];
@@ -493,6 +569,7 @@ public sealed partial class PublicPackageTests
         string text="Говоря на "+carrier+(bare ? "" : " "+raw[3][0].Form)+".";
         if(mode=="quote") text="„"+text+"“";
         if(mode=="comma") text=text.Replace("Говоря на","Говоря, на",StringComparison.Ordinal);
+        if(mode=="comma_in_group") text=text.Replace("на ","на, ",StringComparison.Ordinal);
         if(mode=="second_head") { text=text[..^1]+" гост."; raw.Add([Row("гост","гост","Съществително:7,Мъжки")]); }
         List<TokenAnalysis> tokens=[]; List<TextReadingSet> sets=[]; List<TextReadingOccurrence> occurrences=[];
         int cursor=0;
@@ -504,8 +581,11 @@ public sealed partial class PublicPackageTests
                 mode=="display_prefix_only"&&i==1 ? 1 : raw[i].Length));
             occurrences.Add(new(i,form,start,form.Length,i));
         }
-        TextReadingReference[] coverage=raw.Take(bare ? 3 : 4).SelectMany((rows,i)=>Enumerable.Range(0,rows.Length).Select(j=>new TextReadingReference(i,j))).ToArray();
-        if(mode=="missing_head_coverage") coverage=coverage.Where(r=>r.TokenIndex!=3).ToArray();
+        int end = bare ? 3 : 4;
+        var phrase = tokens.Skip(1).Take(end - 1).Select(t => new ArticleTarget(t.Start, t.Length, t.Text)).ToArray();
+        var coverage = raw.Take(end).SelectMany((rows,i) => Enumerable.Range(0,rows.Length)
+            .Select(j => new TextReadingReference(i,j))).Where(r => r.TokenIndex != 0).ToArray();
+        if (mode == "missing_head_occurrence") occurrences.RemoveAt(3);
         if(mode=="missing_particle_coverage") coverage=coverage.Where(r=>r!=new TextReadingReference(1,1)).ToArray();
         if(mode=="foreign_coverage") coverage=[..coverage,new(999,0)];
         if(mode=="malformed_head_span") tokens[3]=tokens[3] with { Start=tokens[3].Start+1 };
@@ -526,111 +606,37 @@ public sealed partial class PublicPackageTests
             null,null,mode=="missing_hypothesis" ? [] : [hypothesis],mode=="missing_local" ? [] : [adposition],[],[]);
         var analysis=new TextAnalysis(text,tokens)
         {
-            Sentences=[new(0,text.Length)],ReadingInventory=mode=="missing_inventory" ? null : new(sets,occurrences),
-            Context=new("independent_fixture",true,null,[contextSentence]),
-            Syntax=new("independent_fixture",true,null,[new(0,text.Length,"Calculated","Abstained",null,[])],null)
+            Sentences = mode switch
+            {
+                "malformed_sentence_span" => [new(-1, text.Length + 2)],
+                "overflowing_sentence_span" => [new(1, int.MaxValue)],
+                _ => [new(0, text.Length)]
+            },
+            ReadingInventory=mode=="missing_inventory" ? null : new(sets,occurrences),
+            Context=mode=="unavailable_context_and_syntax" ? null : new("independent_fixture",true,null,[contextSentence]),
+            Syntax=mode=="unavailable_context_and_syntax" ? null : new("independent_fixture",true,null,[new(0,text.Length,"Calculated","Abstained",null,[])],null)
         };
-        return(analysis,new(tokens[2].Start,tokens[2].Length,carrier),coverage);
+        var emitted = prep.Concat(raw.Take(end).SelectMany((set, i) => set.Select((_, j) => new TextReadingReference(i, j)))
+            .Where(r => r.TokenIndex >= 2 && (mode != "missing_head_support" || r.TokenIndex != 3))).ToArray();
+        if (mode == "predicate_support") emitted = [new(0, 0), ..emitted];
+        int particle = mode is "reordered_preposition_ordinals" or "old_ordinals_after_reorder" ? 0 : 1;
+        WordReading[] named = raw[2].ToArray();
+        if (mode == "counterfeit_occurrence_owner") named[0] = named[0] with { Source = "foreign" };
+        if (mode == "counterfeit_word_id") named[0] = named[0] with { LegacyWordId = 900 };
+        return (analysis, phrase, coverage, emitted, new(1, particle), new(carrier, named.Select(r => new TextReadingSnapshot(r, r.Features)).ToArray()));
     }
 
-    private enum ArticleProofRole { Preposition, Predicate, Nominal }
-    private static TextReadingReference[]? ArticleCheckedRoleSupport(int token, IReadOnlyList<MorphologicalPartOfSpeech> pos,
-        IReadOnlyList<TextReadingReference> actual, ArticleProofRole role)
-    {
-        bool Eligible(MorphologicalPartOfSpeech p) => role switch
-        {
-            ArticleProofRole.Preposition => p == MorphologicalPartOfSpeech.Preposition,
-            ArticleProofRole.Predicate => p == MorphologicalPartOfSpeech.Verb,
-            ArticleProofRole.Nominal => p is MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.Adjective or MorphologicalPartOfSpeech.Numeral or
-                MorphologicalPartOfSpeech.ProperNoun or MorphologicalPartOfSpeech.PersonalPronoun or MorphologicalPartOfSpeech.Pronoun,
-            _ => false
-        };
-        TextReadingReference[] expected = Enumerable.Range(0, pos.Count).Where(i => Eligible(pos[i]))
-            .Select(i => new TextReadingReference(token, i)).ToArray();
-        return expected.Length > 0 && actual.SequenceEqual(expected) ? expected : null;
-    }
-    private static ArticleWitness? ArticleLocalPpWitness(TextAnalysis a, ArticleTarget target, string rule,
-        IReadOnlyList<TextReadingReference>? expectedCoverage)
-    {
-        if (rule != "BasicPrepositionalObject" || expectedCoverage is null || a.ReadingInventory is not { } inventory ||
-            a.Context is not { Available: true } context) return null;
-        int[] indices = expectedCoverage.Select(r => r.TokenIndex).Distinct().OrderBy(i => i).ToArray();
-        if (indices.Length is not (3 or 4) || indices.Any(i => (uint)i >= (uint)a.Tokens.Count)) return null;
-        TokenAnalysis[] words = indices.Select(i => a.Tokens[i]).ToArray();
-        if (words.Any(w => w.Kind != TokenKind.Word || w.Start < 0 || w.Length < 1 || w.Start > a.Text.Length - w.Length ||
-            a.Text.Substring(w.Start, w.Length) != w.Text) || words[2].Start != target.Start || words[2].Length != target.Length ||
-            words[2].Text != target.Surface) return null;
-        SentenceSpan[] spans = a.Sentences.Where(s => words.All(w => w.Start >= s.Start && w.Start + w.Length <= s.Start + s.Length)).ToArray();
-        if (spans.Length != 1) return null;
-        SentenceSpan span = spans[0];
-        if (a.Text.AsSpan(span.Start, span.Length).ContainsAny("\"'„“”«»‘’,;:") ||
-            !a.Tokens.Select((t, i) => (t, i)).Where(x => x.t.Kind == TokenKind.Word && x.t.Start >= span.Start &&
-                x.t.Start + x.t.Length <= span.Start + span.Length).Select(x => x.i).SequenceEqual(indices)) return null;
-        for (int i = 1; i < words.Length; i++)
-            if (words[i].Start <= words[i - 1].Start + words[i - 1].Length ||
-                !a.Text.AsSpan(words[i - 1].Start + words[i - 1].Length, words[i].Start - words[i - 1].Start - words[i - 1].Length).ToString().All(char.IsWhiteSpace)) return null;
-        List<TextReadingSnapshot[]> rows = []; List<TextReadingReference> coverage = [];
-        for (int i = 0; i < indices.Length; i++)
-        {
-            TextReadingOccurrence[] occurrences = inventory.Occurrences.Where(o => o.TokenIndex == indices[i]).ToArray();
-            if (occurrences.Length != 1 || occurrences[0].Start != words[i].Start || occurrences[0].Length != words[i].Length || occurrences[0].Text != words[i].Text) return null;
-            TextReadingSnapshot[] all = inventory.Sets[occurrences[0].ReadingSetIndex].ResolvedReadings.ToArray();
-            if (all.Length == 0 || all.Any(r => r.Features != r.Raw.Features || r.Features.HasConflictingFeatures || r.Features.HasUnrecognizedFeatures ||
-                r.Features.NameKind is not null || !string.Equals(r.Raw.Form, words[i].Text, StringComparison.OrdinalIgnoreCase))) return null;
-            rows.Add(all); coverage.AddRange(Enumerable.Range(0, all.Length).Select(j => new TextReadingReference(indices[i], j)));
-        }
-        if (!ArticleSameSupport(coverage, expectedCoverage) || !rows[0].All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Verb &&
-                r.Features.VerbForm == MorphologicalVerbForm.Finite) || !rows[1].Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition) ||
-            !rows[1].All(r => r.Features.PartOfSpeech is MorphologicalPartOfSpeech.Preposition or MorphologicalPartOfSpeech.Particle)) return null;
-        if (words.Length == 3)
-        {
-            if (!rows[2].Any(r => r.Features.Number == MorphologicalNumber.Singular) || !rows[2].All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
-                r.Features.Gender == MorphologicalGender.Masculine && r.Features.Number is MorphologicalNumber.Singular or MorphologicalNumber.Count)) return null;
-        }
-        else if (!rows[2].All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adjective && r.Features.Gender == MorphologicalGender.Masculine &&
-                r.Features.Number == MorphologicalNumber.Singular) || !rows[3].All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
-                r.Features.Gender == MorphologicalGender.Masculine && r.Features.Number == MorphologicalNumber.Singular)) return null;
-        int groupStart = words[1].Start, groupEnd = words[^1].Start + words[^1].Length;
-        if (a.ProperNames is { } names && (names.Candidates.Any(n => n.Start < groupEnd && groupStart < n.Start + n.Length) ||
-            names.Groups.Any(n => n.Start < groupEnd && groupStart < n.Start + n.Length) || indices.Skip(2).Any(i => names.DeferredTokenIndices.Contains(i) ||
-                names.UnresolvedContextTokens?.Any(n => n.TokenIndex == i) == true))) return null;
-        TextContextSentence[] localSentences = context.Sentences.Where(s => s.Start == span.Start && s.Length == span.Length).ToArray();
-        if (localSentences.Length != 1 || !localSentences[0].Complete || localSentences[0].Status is null or TextContextSelectionStatus.Truncated ||
-            !a.Syntax!.Sentences.Any(s => s.Start == span.Start && s.Length == span.Length && s.Status == "Calculated")) return null;
-        TextContextSentence localSentence = localSentences[0];
-        TextContextRoleSelection[] adpositions = localSentence.LocalRoles.Where(r => r.Role == TextContextRole.Adposition).ToArray();
-        if (adpositions.Length != 1 || adpositions[0].TokenIndex != indices[1] || adpositions[0].Start != words[1].Start || adpositions[0].Length != words[1].Length ||
-            adpositions[0].GraphReadings is { Count: > 0 } || adpositions[0].EvidenceCodes.Count != 1 || adpositions[0].EvidenceCodes[0] !=
-                (words.Length == 3 ? "exact_adposition_with_nominal_complement" : "exact_adposition_with_coherent_adjective_noun_complement")) return null;
-        TextReadingReference[]? prepRefs = ArticleCheckedRoleSupport(indices[1], rows[1].Select(r => r.Features.PartOfSpeech).ToArray(), adpositions[0].Readings, ArticleProofRole.Preposition);
-        TextContextCandidate[] hypotheses = localSentence.Candidates.Where(c => c.Selectable).ToArray();
-        if (prepRefs is null || hypotheses.Length == 0 || hypotheses.Any(c => c.PredicateTokenIndex != indices[0])) return null;
-        TextReadingReference[]? predicateRefs = null;
-        foreach (TextContextCandidate hypothesis in hypotheses)
-        {
-            TextContextRoleSelection[] predicates = hypothesis.Roles.Where(r => r.Role == TextContextRole.Predicate).ToArray();
-            if (predicates.Length != 1 || predicates[0].TokenIndex != indices[0] || predicates[0].Start != words[0].Start || predicates[0].Length != words[0].Length ||
-                predicates[0].GraphReadings is { Count: > 0 }) return null;
-            predicateRefs = ArticleCheckedRoleSupport(indices[0], rows[0].Select(r => r.Features.PartOfSpeech).ToArray(), predicates[0].Readings, ArticleProofRole.Predicate);
-            if (predicateRefs is null) return null;
-        }
-        TextReadingReference[] roles = prepRefs.Concat(coverage.Where(r => r.TokenIndex != indices[0] && r.TokenIndex != indices[1])).Concat(predicateRefs!).ToArray();
-        return new("independent_preposition:" + words[1].Text.ToLowerInvariant() + ":" + (target.Start - words[1].Start), roles, coverage.ToArray(), "local_adposition_finite_hypothesis");
-    }
-
-    private static string? ArticleRelation(TextAnalysis a,ArticleTarget target,string rule,IReadOnlyList<TextReadingReference>? expectedCoverage = null)=>ArticlePpWitness(a,target,rule,expectedCoverage)?.Key;
     private static bool ArticleRequired(ArticleGeneratedCase c,JsonElement p)=>c.InitialDeliveryScope=="REQUIRED_BASIC" || p.GetProperty("declaredExtensionIds").EnumerateArray().Any(x=>x.GetString()==c.Id);
     private static (string Full,string Short,string Lemma)? ArticleControlForms(string id)=>id switch
     { "s01" or "s02" or "s17" or "s18"=>("учителят","учителя","учител"),"s03" or "s04"=>("добрият","добрия","добър"),
       "s05" or "s06"=>("ученикът","ученика","ученик"),_=>null };
-    private static bool ArticleAssessed(TextAnalysis a, ArticleTarget target, JsonElement p, IReadOnlyList<TextReadingReference>? independentSupport = null)
+    private static bool ArticleAssessed(TextAnalysis a, ArticleTarget target, JsonElement p, ArticleWitness? witness)
     {
+        if (witness is null || a.Validation is not { Available: true }) return false;
         string? code = p.GetProperty("assessedValidCode").GetString(), prefix = p.GetProperty("assessedValidBasisPrefix").GetString();
-        return code is not null && prefix is not null && a.Validation is { Available:true } &&
-            (independentSupport is null || a.Validation.Diagnostics.Count(d => d.Code == code && d.Start == target.Start && d.Length == target.Length) == 1) &&
-            a.Validation.Diagnostics.Any(d => d.Code == code &&
-            d.Start == target.Start && d.Length == target.Length && d.Basis.StartsWith(prefix,StringComparison.Ordinal) && ArticleProof(a,target,d.Supports,true,independentSupport) &&
-            (independentSupport is null || ArticleSameSupport(d.Supports, independentSupport)));
+        var facts = a.Validation.Diagnostics.Where(d => d.Code == code && d.Start == target.Start && d.Length == target.Length).ToArray();
+        return code is not null && prefix is not null && facts.Length == 1 &&
+            facts[0].Basis.StartsWith(prefix, StringComparison.Ordinal) && ArticleProof(a, target, facts[0].Supports, true, witness);
     }
     private static string? ArticlePairIssue(ArticleFormEvidence full, ArticleFormEvidence shortForm, string lemma)
     {
@@ -638,21 +644,17 @@ public sealed partial class PublicPackageTests
         if (full.Readings.Any(r=>!string.Equals(r.Raw.Form,full.Surface,StringComparison.OrdinalIgnoreCase)) ||
             shortForm.Readings.Any(r=>!string.Equals(r.Raw.Form,shortForm.Surface,StringComparison.OrdinalIgnoreCase))) return "FOREIGN_FORM_READING";
         TextReadingSnapshot anchor = full.Readings[0];
-        bool Owner(WordReading a, WordReading b) => string.Equals(a.Lemma,b.Lemma,StringComparison.OrdinalIgnoreCase) && a.Features.ParadigmId is not null &&
-            a.Features.ParadigmId == b.Features.ParadigmId && a.Features.PartOfSpeech == b.Features.PartOfSpeech &&
-            a.LegacyTypeId == b.LegacyTypeId && a.LegacyBaseId == b.LegacyBaseId && a.Source == b.Source;
         if (!string.Equals(anchor.Raw.Lemma,lemma,StringComparison.OrdinalIgnoreCase) || anchor.Features is not
             { Article:MorphologicalArticle.Full, Number:MorphologicalNumber.Singular, Gender:MorphologicalGender.Masculine,
               PartOfSpeech:MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.Adjective, HasConflictingFeatures:false, HasUnrecognizedFeatures:false }) return "FULL_FEATURE_UNAVAILABLE";
-        if (full.Readings.Any(r => r.Features != r.Raw.Features || !Owner(r.Raw,anchor.Raw) ||
+        if (full.Readings.Any(r => r.Features != r.Raw.Features || !ArticleSameOwner(r.Raw,anchor.Raw) ||
             (r.Features with {RawTag=null}) != (anchor.Features with {RawTag=null}))) return "COMPETING_FULL_READINGS";
         bool matched = false;
         foreach (TextReadingSnapshot r in shortForm.Readings)
         {
-            if (r.Features != r.Raw.Features || !Owner(r.Raw,anchor.Raw)) return "FOREIGN_COUNTERPART_IDENTITY";
-            if (r.Features.Number == MorphologicalNumber.Count && anchor.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
-                r.Features.Article == MorphologicalArticle.Indefinite &&
-                (r.Features with {RawTag=null,Number=anchor.Features.Number,Article=anchor.Features.Article}) == (anchor.Features with {RawTag=null})) continue;
+            if (r.Features != r.Raw.Features || !ArticleSameOwner(r.Raw,anchor.Raw)) return "FOREIGN_COUNTERPART_IDENTITY";
+            if (anchor.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
+                ArticleCountAlternative(r, anchor)) continue;
             if (r.Features.Article is not (MorphologicalArticle.Short or MorphologicalArticle.Definite) ||
                 (r.Features with {RawTag=null,Article=anchor.Features.Article}) != (anchor.Features with {RawTag=null})) return "COMPETING_COUNTERPART_READINGS";
             matched = true;
@@ -670,7 +672,7 @@ public sealed partial class PublicPackageTests
         {
             TextAnalysis actual=(analyze ?? (t=>session.AnalyzeText(t,false,ArticleOptions,default)))(text); ArticleSignal[] signals=ArticleSignals(actual); List<string> errors=[];
             errors.AddRange(UnknownArticleCodes(signals,p).Select(x => "UNMAPPED:"+x));
-            bool warning=false,assessed=false; TextReadingReference[]? requiredSupport=null;
+            bool warning=false,assessed=false; ArticleWitness? requiredWitness=null;
             if (c.TryGetProperty("utf16",out var span))
             {
                 int start=span.GetProperty("start").GetInt32(),length=span.GetProperty("length").GetInt32();
@@ -689,7 +691,7 @@ public sealed partial class PublicPackageTests
                     expected=="MUST_WARN" ? c.GetProperty("expectedTextAfterRepair").GetString()! : text,"https://beron.mon.bg/rechnik/363",[],"Independent literal surface control.");
                 var row=ObserveArticle(specimen,true,pair.Value.Full,pair.Value.Short,p,form,_=>actual);
                 warning=row.ExactWarning; assessed=row.AssessedValid;
-                if(row.Measured) requiredSupport=ArticleIndependentSupport(actual,specimen);
+                if(row.Measured) requiredWitness=ArticleIndependentWitness(actual,specimen);
                 if (!row.RequiredPass) errors.Add("REQUIRED_PUBLIC_PROFILE_UNMET");
                 if (!row.Measured) errors.Add("OPERATIONAL_NONMEASUREMENT");
                 if (!row.LexicallyApplicable) errors.Add("COUNTERPART_EVIDENCE_UNAVAILABLE:"+row.LexicalIssue);
@@ -719,7 +721,7 @@ public sealed partial class PublicPackageTests
                 if (range.GetProperty("requireAssessedValid").GetBoolean())
                 {
                     ArticleTarget target=new(start,length,text.Substring(start,length));
-                    assessed=ArticleAssessed(actual,target,p,requiredSupport) && ArticleRelation(actual,target,p.GetProperty("independentPrepositionalRule").GetString()!,requiredSupport) is not null;
+                    assessed=ArticleAssessed(actual,target,p,requiredWitness);
                     if (!assessed) errors.Add("EVALUATION_UNAVAILABLE");
                 }
             }

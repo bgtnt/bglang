@@ -84,7 +84,8 @@ internal static class TextCompositionHttpFixture
         {
             string property = field == "rawTupleFields" ? "raw" : "features";
             string[] expectedFields = Root.GetProperty("expected").GetProperty(field).EnumerateArray().Select(value => value.GetString()!).ToArray();
-            if (field == "featureFields") expectedFields = [.. expectedFields, "case", "isShortForm", "participleKind"];
+            if (field == "featureFields") expectedFields =
+                [.. expectedFields, "case", "isShortForm", "participleKind", "declaredTransitivity", "declaredAspect"];
             CollectionAssert.AreEquivalent(expectedFields,
                 rows[35].GetProperty(property).EnumerateObject().Select(value => value.Name).ToArray());
         }
