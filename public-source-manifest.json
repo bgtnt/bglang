@@ -895,6 +895,7 @@
         "Compile|tests/BgLang.Public.Tests/PublicPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/ReverseSpellingContextPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",
+        "Compile|tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
         "Compile|tests/Shared/EditorialStressAcceptance.cs",
         "Compile|tests/Shared/FinitePredicateAcceptance.cs",
         "Compile|tests/Shared/GraphStressAcceptance.cs",
@@ -1029,7 +1030,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 22,
+      "compileCount": 23,
       "projectReferenceCount": 1
     },
     {
@@ -1544,8 +1545,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 17732,
-      "sha256": "dc71be7e154368b37dc0655e3d18cd43d007b78c02c48624f46e4340884fd1bc"
+      "bytes": 17808,
+      "sha256": "80943d718656bca4bc880b6044d60f082b46ae99569500dd8683f2e3ff6b50a2"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2721,6 +2722,11 @@
       "path": "tests/BgLang.Public.Tests/ContinuationWordStartPackageTests.cs",
       "bytes": 2593,
       "sha256": "eb6ab6094158a71d6f145569590e50fe2ea1ef1d0b04198724f13db070f09f61"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
+      "bytes": 5178,
+      "sha256": "620dc45df7b91d9d62ae16f3164fb05c377f18ad48d22d6f4465285644f1c4c1"
     },
     {
       "path": "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",

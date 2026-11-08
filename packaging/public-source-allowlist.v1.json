@@ -290,6 +290,7 @@
     "tests/Shared/Fixtures/graph-stress-acceptance.v1.json",
     "tests/BgLang.Public.Tests/GraphStressSuccessorPackageTests.cs",
     "tests/BgLang.Public.Tests/ContinuationWordStartPackageTests.cs",
+    "tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
     "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",
     "packaging/GRAPH-STRESS.md",
     "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",
