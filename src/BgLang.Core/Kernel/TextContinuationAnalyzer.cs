@@ -9,20 +9,21 @@ namespace BgLang.Core;
 /// <summary>One context-selected continuation lane over the same original morphology and exact dictionary.</summary>
 internal static class TextContinuationAnalyzer
 {
-    internal static void ValidateCaret(string text, int caret, CancellationToken ct)
+    internal static int[] ValidateCaret(string text, int caret, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         if ((uint)caret > (uint)text.Length) throw new ArgumentOutOfRangeException(nameof(caret));
         int[] boundaries = StringInfo.ParseCombiningCharacters(text);
         ct.ThrowIfCancellationRequested();
-        if (caret != text.Length && Array.BinarySearch(boundaries, caret) < 0)
+        if (!IsGraphemeBoundary(boundaries, text.Length, caret))
             throw new ArgumentException("Caret must be an original grapheme boundary.", nameof(caret));
+        return boundaries;
     }
 
     internal static TextContinuationEvidence Calculate(TextAnalysis analysis, MorphologyEvidenceProjection.View morphology,
         IRuntimeLexicon lexicon, TextContinuationRequest request, CancellationToken ct)
     {
-        ValidateCaret(analysis.Text, request.Caret, ct);
+        int[] boundaries = ValidateCaret(analysis.Text, request.Caret, ct);
         ArgumentOutOfRangeException.ThrowIfLessThan(request.Limit, 1);
         if (!Enum.IsDefined(request.Target)) throw new ArgumentOutOfRangeException(nameof(request.Target));
         (int start, int length, string prefix) = Replacement(analysis.Text, request.Caret, ct);
@@ -37,8 +38,9 @@ internal static class TextContinuationAnalyzer
         string ContextReason(string reason) => target == TextContinuationTarget.Noun
             ? "nominal_attribute_" + reason : "finite_subject_" + reason;
         if (morphology.UnavailableReason is { } unavailable) return Unavailable(unavailable);
-        if (length > 0 && !analysis.Tokens.Any(token => token.Kind == TokenKind.Word &&
-            token.Start == start && token.Length == length))
+        if (length > 0 && (!IsGraphemeBoundary(boundaries, analysis.Text.Length, start) ||
+            !IsGraphemeBoundary(boundaries, analysis.Text.Length, start + length) ||
+            !analysis.Tokens.Any(token => token.Kind == TokenKind.Word && token.Start == start && token.Length == length)))
             return Unavailable(target == TextContinuationTarget.Noun ? "nominal_edit_span_unsupported" : "finite_edit_span_unsupported");
         var preceding = morphology.OrderedTokens.Where(entry =>
         {
@@ -279,12 +281,14 @@ internal static class TextContinuationAnalyzer
         { GraphReadings = graph.Count == 0 ? null : graph.AsReadOnly() };
     }
 
+    private static bool IsGraphemeBoundary(int[] boundaries, int textLength, int position) =>
+        position == textLength || Array.BinarySearch(boundaries, position) >= 0;
+
     private static (int Start, int Length, string Prefix) Replacement(string text, int caret, CancellationToken ct)
     {
         int start = caret, end = caret;
         while (start > 0 && Rune.DecodeLastFromUtf16(text.AsSpan(0, start), out Rune previous, out int size) == OperationStatus.Done && WordPart(previous))
         { ct.ThrowIfCancellationRequested(); start -= size; }
-        if (start == caret) return (caret, 0, string.Empty);
         while (end < text.Length && Rune.DecodeFromUtf16(text.AsSpan(end), out Rune next, out int size) == OperationStatus.Done && WordPart(next))
         { ct.ThrowIfCancellationRequested(); end += size; }
         return (start, end - start, text[start..caret]);

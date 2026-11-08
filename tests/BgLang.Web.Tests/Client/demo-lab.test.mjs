@@ -1216,6 +1216,26 @@ test('stage 3: without a typed prefix the menu stays closed until it is asked fo
   assert.match(env.$('lab-menu').textContent, /Няма съвместими форми/, 'the only form equals the word: nothing to offer');
 });
 
+test('stage 3: an explicit word-start choice replaces the full existing word', async () => {
+  const text = 'Децата играят.';
+  const env = await boot(text);
+  await respond(env, env.host.calls[0], 200, analysis(text));
+  env.editor.focus();
+  await moveTo(env, 7);
+  assert.equal(env.$('lab-menu').hidden, true);
+  env.$('lab-continue').click();
+  await env.clock.advance(1000);
+  const call = env.host.calls.at(-1);
+  assert.deepEqual(call.payload.context.continuation, {caret: 7, limit: 12, target: 'Auto'});
+  await respond(env, call, 200, analysis(text, {continuation: continuationFor(text, 7, ['четат'])}));
+  assert.equal(env.editor.value, text);
+  assert.deepEqual(menuOptions(env).map(node => node.textContent), ['четат']);
+  assert.ok(key(env, {key: 'ArrowDown'}).defaultPrevented);
+  assert.ok(key(env, {key: 'Enter'}).defaultPrevented);
+  assert.equal(env.editor.value, 'Децата четат.');
+  assert.equal(env.editor.selectionStart, 12);
+});
+
 test('stage 3: Enter and Tab accept only an option activated with the arrows; otherwise they keep their meaning', async () => {
   const {env} = await menuOn('Децата игр');
   for (const name of ['Enter', 'Tab', 'ArrowUp']) assert.equal(key(env, {key: name}).defaultPrevented, false, name + ' without an active option');

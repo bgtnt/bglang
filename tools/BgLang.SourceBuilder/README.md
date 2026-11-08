@@ -257,7 +257,7 @@ Reparse ancestry се отхвърля и се проверява повторн
 прекратяване или защита от непрекъсната злонамерена подмяна на filesystem paths.
 След успешно rename повреден stdout може да върне грешка, но пакетът остава.
 
-Самостоятелни bounded process проверки (Windows със symbolic-link права):
+В development repository `BgLang.SourceBuilder.Checks` изпълнява bounded process проверки на Windows със symbolic-link права. За публичния source export използвайте доставената [рецепта за reproduction](../../packaging/RELEASE-CANDIDATE.md).
 
 ```powershell
 dotnet build tools/BgLang.SourceBuilder -c Release
@@ -293,7 +293,7 @@ public Open и атомарния fresh-target протокол. Новите ke
 и `afterReadings`. Следващото `promote-native` получава този пълен stored
 successor и отделно текущия graph.
 
-Фокусираните CLI controls се изпълняват с `--stored-correction-only` към
+В development repository фокусираните CLI проверки се изпълняват с `--stored-correction-only` към
 `BgLang.SourceBuilder.Checks`. Те проверяват точни preimages, пълна корекция,
 foreign-owner unions/route, RAW/order preservation, reproducible twins,
 отказ на грешни maps/generated вход и create-only publication.

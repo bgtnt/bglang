@@ -549,6 +549,20 @@ test('finite insertion after whitespace uses zero length and partial insertion r
   assert.deepEqual(applyContinuation(text,16,16,7,bound,'работи'),{text:'Супертрактор работи. Следа',caret:19});
 });
 
+test('word-start snapshots bind the complete right token and reject the former insertion span',()=>{
+  const text='😀. Нова кни\u0300га.\r\nНова книга.';
+  const snapshot=continuationSnapshot(text,9,9,4,'Auto');
+  assert.deepEqual(snapshot,{text,caret:9,start:9,end:15,prefix:'',revision:4,requestTarget:'Auto'});
+  const evidence=nominalEvidence({caret:9,start:9,length:6,prefix:''});
+  assert.equal(bindContinuation(snapshot,{...evidence,length:0}),null);
+  const bound=bindContinuation(snapshot,evidence);
+  assert.deepEqual(applyContinuation(text,9,9,4,bound,'книга',false,'Auto'),{text:'😀. Нова книга.\r\nНова книга.',caret:14});
+});
+
+test('word-start snapshots reject a replacement ending inside a grapheme',()=>{
+  assert.equal(continuationSnapshot('Аз че\u200dта.',3,3,1),null);
+});
+
 test('finite insertion retains literal emoji and NFD offsets without touching trailing CRLF or another occurrence',()=>{
   const text='😀. Супертрактор раб',snapshot=continuationSnapshot(text,20,20,4);
   assert.deepEqual(snapshot,{text,caret:20,start:17,end:20,prefix:'раб',revision:4});
@@ -617,7 +631,7 @@ test('caret movement alone makes an active result stale and coalesces the next s
   await f.clock.advance(2024);assert.equal(f.net.calls.length,1);
   await f.clock.advance(1);assert.equal(f.net.calls.length,2);
   assert.deepEqual(posted(f.net.calls[1]).context.continuation,{caret:13,limit:12});
-  await f.net.finish(1,{data:{text:f.editor.text,continuation:finiteEvidence({caret:13,start:13,length:0,prefix:''})}});
+  await f.net.finish(1,{data:{text:f.editor.text,continuation:finiteEvidence({caret:13,start:13,length:3,prefix:''})}});
   assert.equal(f.commits.length,1);assert.equal(f.net.maxInFlight,1);
 });
 
@@ -1382,6 +1396,20 @@ test('actual Live edit immediately disables displayed old actions and forced old
     await f.clock.advance(2025);
     assert.ok(f.net.calls.every(call=>call.url==='/api/v2/analyze-text'),'No queued old stress/word action starts later.');
   });
+});
+
+test('actual Live word-start choice replaces only the selected occurrence', {concurrency:false}, async()=>{
+  const raw='Котката спи. Котката спи.';
+  await withLiveLifecycle(async f=>{
+    await f.first(lifecycleReply(raw,{continuation:finiteEvidence({caret:8,start:8,length:3,prefix:''})}));
+    assert.equal(f.editor.value,raw);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+    const button=f.completion.querySelector('button');assert.ok(button);
+    button.click();
+    assert.equal(f.editor.value,'Котката работи. Котката спи.');
+    assert.deepEqual(f.editor.setRangeTextCalls,[{form:'работи',start:8,end:11,mode:'end'}]);
+    assert.equal(f.editor.selectionStart,14);assert.equal(f.editor.selectionEnd,14);
+  },{text:raw,caret:8});
 });
 
 test('actual Live caret and IME changes invalidate old continuation callbacks without blanking displayed analysis', {concurrency:false}, async()=>{

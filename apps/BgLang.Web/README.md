@@ -1,8 +1,8 @@
-# BgLang Live — Preview15 локален старт
+# BgLang Live — Preview16 локален старт
 
-Това е локалният старт за кандидата [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15). Следващите връзки са целеви адреси за публикуване. Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.15/bglang-v0.1.0-preview.15-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.15/packaging/RELEASE-CANDIDATE.md).
+Това е локалният старт за кандидата [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Следващите връзки са целеви адреси за публикуване. Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
 
-Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Целевият runtime ZIP за Preview15 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
+Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Целевият runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
 
 ~~~powershell
 $env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
@@ -12,7 +12,9 @@ dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 
 Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`; експерименталната лаборатория е `/demo-lab/index.html`. [Root quickstart](../../README.md) и [release guide](../../packaging/RELEASE-CANDIDATE.md) описват готовия runtime и изричното му възпроизвеждане с `-Profile CurrentGraphStress`. Builder default остава отделният **Current** профил.
 
-При `"context":{"includeNominalConstructions":true}` в `POST /api/v1/analyze-text` и `/api/v2/analyze-text` се включват локалните NP/advisory възможности. Opt-in е `false` по подразбиране. Кандидатът включва локални предложения за кратък член в доказани предложни групи, ограничена проверка за съгласуване след „, че“ и „, защото“ и типизирани полета за декларирани вид и преходност при поддържаните глаголни типове. Оригиналните UTF-16 позиции, алтернативните прочити и въздържането се пазят. Редакцията изисква изрично действие.
+В Live и Lab изричният избор при курсор в началото на дума заменя точно това срещане. Например `Нова |книга.` може да стане `Нова аба.`. При курсор след интервал в края на текста предложението се вмъква.
+
+Предишно издание [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15).
 
 ## Исторически snapshots — Preview14 и по-стари
 

@@ -295,7 +295,7 @@ export function completionSpan(text, caret, revision) {
     if (!wordPart(char)) break;
     end += char.length;
   }
-  return start < caret ? {
+  return start < end ? {
     text,
     caret,
     start,
