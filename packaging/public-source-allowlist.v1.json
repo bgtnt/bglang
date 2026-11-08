@@ -291,6 +291,7 @@
     "tests/BgLang.Public.Tests/GraphStressSuccessorPackageTests.cs",
     "tests/BgLang.Public.Tests/ContinuationWordStartPackageTests.cs",
     "tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
+    "tools/check-md-links.mjs",
     "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",
     "packaging/GRAPH-STRESS.md",
     "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",

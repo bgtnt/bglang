@@ -1345,8 +1345,8 @@
     },
     {
       "path": ".github/workflows/windows-public.yml",
-      "bytes": 5258,
-      "sha256": "b2ad867cb148014ae9cab265c515535b4ffd199a3c25de4be5c6645c0536a211"
+      "bytes": 5511,
+      "sha256": "6b91d694fb16c06d2d8702a43f471b963043552629116d1380052dc3d03285b4"
     },
     {
       "path": ".gitignore",
@@ -1370,8 +1370,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 74319,
-      "sha256": "1bc32a6058e727c4e3c0371f3e5f86a69b8aaf51b58991363e10b2d70d45e1b8"
+      "bytes": 74188,
+      "sha256": "30e4b77cb2b2e83610dc0040923d6324665685824898161510e10fff998af34b"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1405,8 +1405,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 98261,
-      "sha256": "5051cb1c22348684326509c65aed5ec19786d7e73cc9a5f04bbd0835eddaaeba"
+      "bytes": 98208,
+      "sha256": "1ce2e11a654bf7bbbce38a74259c0e46d514e207392fbeb2e1e65514e94e0594"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1535,8 +1535,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 64373,
-      "sha256": "2d2ca4d6e36485a7735acf8a611451ac13f3bf6e3dffc50f3d0001745d558388"
+      "bytes": 64228,
+      "sha256": "91917e121b4b99b91211d06d2cb6ca06dcd4cd81f14c40fd224b736ee28ee10a"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -1545,8 +1545,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 17808,
-      "sha256": "80943d718656bca4bc880b6044d60f082b46ae99569500dd8683f2e3ff6b50a2"
+      "bytes": 17841,
+      "sha256": "43daffd08c4735450a6d455fc533265cfb73dc0656fe6b54f0196ec9086a351e"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2727,6 +2727,11 @@
       "path": "tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
       "bytes": 5178,
       "sha256": "620dc45df7b91d9d62ae16f3164fb05c377f18ad48d22d6f4465285644f1c4c1"
+    },
+    {
+      "path": "tools/check-md-links.mjs",
+      "bytes": 2353,
+      "sha256": "fb993315d0690ba52142efe13546ac0f04958b1652eae1fba92abd05f1e3c332"
     },
     {
       "path": "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",

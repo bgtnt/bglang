@@ -1,10 +1,10 @@
 # Preview16 — Graph5 runtime и reproduction
 
-Този guide описва локалната подготовка за [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Връзките за изтегляне са целеви адреси. Release страницата ще посочи публичния source commit, CI и проверката на артефактите след публикуване.
+Този guide описва локалното възпроизвеждане на [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Проверете изтеглените файлове със `SHA256SUMS` от release-а.
 
 Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS) и при rebuild — [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip). [Tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md) и [README quickstart](../README.md) пазят matching source/recipe/lock. SDK е **10.0.403** от `global.json`.
 
-Целевият runtime ZIP за Preview16 съдържа четирите файла на **CurrentGraphStress / Graph5**. Готовият runtime не изисква authoring input. Съществуващите recipe профили запазват отделните си identities:
+Публикуваният runtime ZIP за Preview16 съдържа четирите файла на **CurrentGraphStress / Graph5**. Готовият runtime не изисква authoring input. Съществуващите recipe профили запазват отделните си identities:
 
 | Роля | Профил / package ID | manifest SHA-256 |
 | --- | --- | --- |
@@ -12,7 +12,7 @@
 | Builder default и article/editorial consumer dependency | `Current` / `bglang-neutral:90bea7c5c799f04d` | `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7` |
 | Legacy consumer controls | `Baseline` / `bglang-neutral:36b0b69685d6d3e9` | `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7` |
 
-За reproduction използвайте exact locked `lexemes.source.json`. В bundle с включен authoring input пътят е `public-inputs/preview7-auxiliary-repair-authoring-v5/lexemes.source.json`. При SourceOnly export или checkout използвайте matching inputs ZIP след публикуване. За показаните команди копирайте само този файл в `./authoring-input`. [Public input lock](../data/dictionary/public-input-lock.v1.json) изисква 146429828 bytes и SHA-256 `55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a`. [GraphStress profile](../data/dictionary/current-graph-stress-reproduction.v1.json) обвързва отделния source graph и четирите expected output файла. Задайте process `TEMP` и `TMP` към налична writable temp папка и използвайте нови, отделни output/results директории:
+За reproduction използвайте exact locked `lexemes.source.json`. В bundle с включен authoring input пътят е `public-inputs/preview7-auxiliary-repair-authoring-v5/lexemes.source.json`. При SourceOnly export или checkout използвайте matching inputs ZIP от Preview16. За показаните команди копирайте само този файл в `./authoring-input`. [Public input lock](../data/dictionary/public-input-lock.v1.json) изисква 146429828 bytes и SHA-256 `55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a`. [GraphStress profile](../data/dictionary/current-graph-stress-reproduction.v1.json) обвързва отделния source graph и четирите expected output файла. Задайте process `TEMP` и `TMP` към налична writable temp папка и използвайте нови, отделни output/results директории:
 
 ~~~powershell
 $ErrorActionPreference = 'Stop'

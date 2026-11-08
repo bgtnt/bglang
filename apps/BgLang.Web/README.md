@@ -1,8 +1,8 @@
 # BgLang Live — Preview16 локален старт
 
-Това е локалният старт за кандидата [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Следващите връзки са целеви адреси за публикуване. Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
+Това е локалният старт за [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
 
-Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Целевият runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
+Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Публикуваният runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
 
 ~~~powershell
 $env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
@@ -66,7 +66,7 @@ Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`; екс
 
 Текущият source приема `"context":{"includeNominalConstructions":true}` в `POST /api/v1/analyze-text` и `/api/v2/analyze-text`. Новото поле `nominalConstructions` се запазва в `raw-v1`, `shared-donors-v1` и `shared-analyses-v1`; без opt-in то липсва. [Договорът и примерът](../../README.md#непубликуван-source--именни-ядра-и-контекстни-предложения) описват максималните `NP` ядра, оригиналните refs и отделните advisory варианти с видим no-change. Кандидатните `replacementReadings` адресират само `alternative.readings`, никога оригиналния токен.
 
-Тази API възможност е отделна от публикувания Preview12 и няма автоматично редактиране. [Central evidence](../../Docs/NOMINAL-FUSION-EVIDENCE-2026-10-29.json) описва функционалния Source1 Full и отделната allowlisted source closure; consumer gate е PASS228/177 и заключителният независим review е успешен. Dated резултатите по-долу са исторически.
+Тази API възможност е отделна от публикувания Preview12 и няма автоматично редактиране. Отчетът `NOMINAL-FUSION-EVIDENCE-2026-10-29.json` (не е част от публичното хранилище) описва функционалния Source1 Full и отделната allowlisted source closure; consumer gate е PASS228/177 и заключителният независим review е успешен. Dated резултатите по-долу са исторически.
 
 ## Preview12 — обща typed agreement основа
 

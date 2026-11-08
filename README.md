@@ -1,10 +1,10 @@
 # BgLang — Preview16 quickstart
 
-Този quickstart описва локалната подготовка за [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Връзките за изтегляне са целеви адреси. Release страницата ще посочи публичния source commit, CI и проверката на артефактите след публикуване.
+Този quickstart описва локалния старт с [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Проверете изтеглените файлове със `SHA256SUMS` от release-а.
 
 Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
 
-SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Целевият runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
+SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Публикуваният runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
 
 ~~~powershell
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -86,7 +86,7 @@ TextAnalysis review = language.AnalyzeText("Рисувам сипя река.", 
 
 Тесният advisory сценарий `finite+NP` проверява позната finite дума след друг finite predicate и пред локално именно ядро. „Синя“ може да получи подкрепа като вариант на „сипя“; прочитите на кандидата и цялото целево ядро се оценяват повторно. `Reviews` пази оригинала чрез `NoChangeRetained`, суровия distance-one списък до 10 форми и отделните кандидатни reading indices. Това не е изчерпателно търсене, единствено намерение, граматично предупреждение или автоматична замяна. `Spelling` и всички стари Context/Syntax/Validation резултати запазват значението си. Без opt-in новото поле липсва от JSON. HTTP поддържа същия switch във `context` и трите съществуващи evidence формата.
 
-Тази способност още не е публикувана. Точните функционални проверки, отделната source-only metadata closure и успешните consumer gates и независимия преглед са в [central evidence](Docs/NOMINAL-FUSION-EVIDENCE-2026-10-29.json) и [machine metrics](Docs/NOMINAL-FUSION-METRICS-2026-10-29.json). Следващите dated раздели пазят историческите договори и измервания; Preview12 остава отделният публикуван snapshot.
+Тази способност още не е публикувана. Точните функционални проверки, отделната source-only metadata closure и успешните consumer gates и независимия преглед са в `NOMINAL-FUSION-EVIDENCE-2026-10-29.json` и `NOMINAL-FUSION-METRICS-2026-10-29.json` (не са част от публичното хранилище). Следващите dated раздели пазят историческите договори и измервания; Preview12 остава отделният публикуван snapshot.
 
 BgLang е локален C# API за български речникови форми, морфология, анализ на текст и квалифицирано evidence за ударение. Console примерът и optional HTTP host използват същото ядро и проверен runtime пакет.
 
