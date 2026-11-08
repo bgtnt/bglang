@@ -170,7 +170,13 @@ public static class TextConstructionProjector
             }
             if (!coherent) return false;
             foreach (int connector in phrase.ConnectorTokenIndices)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
                 if ((uint)connector >= (uint)source.Tokens.Count) throw Invalid();
+                var token = source.Tokens[connector];
+                if (token.Start < phrase.Start ||
+                    (long)token.Start + token.Length > (long)phrase.Start + phrase.Length) throw Invalid();
+            }
             var allowed = participants.Concat(phrase.ConnectorTokenIndices).ToHashSet();
             int covered = phrase.Start;
             for (int i = 0; i < source.Tokens.Count; i++)

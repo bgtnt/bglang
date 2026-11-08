@@ -4,6 +4,7 @@ import {
   caretWord,
   bindContinuation,
   applyContinuation,
+  supportedNominalPhrase,
   renderTokenText
 } from './live-client.js';
 
@@ -415,7 +416,7 @@ export function initLiveDemo({
 
   function renderNominalReviews(rows, data, binding) {
     const evidence = data.nominalConstructions;
-    const isCompatible = value => typeof value === 'string' && value.toLowerCase() === 'compatible';
+    const analysisFor = token => tokenAnalysis(token, response);
     if (evidence?.available !== true || !Array.isArray(evidence.reviews)) return;
     for (const review of evidence.reviews) {
       if (!review || !Number.isInteger(review.tokenIndex) || review.tokenIndex < 0 || review.noChangeRetained !== true) continue;
@@ -438,16 +439,10 @@ export function initLiveDemo({
       rows.push(el('p', 'Структурни предложения за „' + original + '“ · ' + token.start + '+' + token.length, 'word-meta'),
         el('p', 'Оригиналът „' + original + '“ остава възможен. Съвместимостта след замяна не доказва грешка или замислен смисъл.'));
       for (const index of order) {
-        const {alternative, phrase} = alternatives[index], headIndex = phrase?.headTokenIndex;
-        const head = Number.isInteger(headIndex) && headIndex >= 0 ? data.tokens[headIndex] : null;
-        const compatible = isCompatible(phrase?.assessment) && head?.kind === 'Word'
-          && Array.isArray(phrase.headSupports) && phrase.headSupports.some(support =>
-            (support?.reading?.tokenIndex === headIndex || support?.graphReading?.tokenIndex === headIndex)
-            && Array.isArray(support?.members) && support.members.some(member => member?.tokenIndex === review.tokenIndex
-              && isCompatible(member.assessment) && Array.isArray(member.replacementReadings) && Array.isArray(alternative.readings)
-              && member.replacementReadings.some(reading => Number.isInteger(reading) && reading >= 0 && reading < alternative.readings.length)));
+        const row = alternatives[index], {alternative} = row;
+        const supported = supportedNominalPhrase(row, review, data, analysisFor);
         const replacement = spellingReplacement(original, alternative.form);
-        const assessment = compatible ? 'при замяна: съвместима именна група с „' + head.text + '“'
+        const assessment = supported ? 'при замяна: съвместима именна група с „' + data.tokens[supported.head].text + '“'
           : 'съвместимост на конструкцията: неустановена';
         const label = replacement + ' · буквено разстояние ' + alternative.distance + ' · ' + assessment;
         rows.push(replacement === original ? el('p', label + ' · без промяна', 'word-meta')

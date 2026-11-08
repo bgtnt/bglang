@@ -1755,6 +1755,12 @@ test('reviewed joined verb negation is a warning while its original phrase proje
 // Literal costs/order are supplied server fields; no language search runs in the client.
 function lifecycleNominalReply(text='Спирам пред сипя къща.', {tokenIndex=2,headIndex=3,pattern='preposition+NP'}={}) {
   const reply=lifecycleReply(text),token=reply.data.tokens[tokenIndex],head=reply.data.tokens[headIndex];
+  const occurrence=reply.data.readingInventory.occurrences.find(row=>row.tokenIndex===headIndex);
+  const set=reply.data.readingInventory.sets[occurrence.readingSetIndex],reading=set.canonicalReadings[0];
+  Object.assign(occurrence,{start:head.start,length:head.length,text:head.text});
+  Object.assign(set,{lookupText:head.text,canonicalKey:head.text.toLowerCase()});
+  reading.features.gender='Feminine';
+  Object.assign(head.analysis,{word:set.lookupText,normalizedWord:set.canonicalKey,readings:[reading.raw]});
   const phrase={constructionKey:'opaque-np',start:token.start,length:head.start+head.length-token.start,
     headTokenIndex:headIndex,modifierTokenIndices:[tokenIndex],connectorTokenIndices:[],assessment:'Compatible',
     headSupports:[{reading:{tokenIndex:headIndex,completeReadingIndex:0},graphReading:null,
@@ -1874,6 +1880,8 @@ test('actual Live requires coherent compatible head evidence for the structural 
   for(const mutate of [
     phrase=>{phrase.assessment='Unassessed';},phrase=>{phrase.headTokenIndex=99;},phrase=>{phrase.headSupports=[];},
     phrase=>{phrase.headSupports=[null];},phrase=>{phrase.headSupports[0].reading.tokenIndex=0;},
+    phrase=>{phrase.headSupports[0].reading.completeReadingIndex=999;},phrase=>{phrase.length-=1;},
+    phrase=>{phrase.headSupports[0].graphReading={tokenIndex:3,graphCandidateIndex:0,fullTagIndex:0};},
     phrase=>{phrase.headSupports[0].members[0].tokenIndex=0;},phrase=>{phrase.headSupports[0].members[0].replacementReadings=[];},
     phrase=>{phrase.headSupports[0].members[0].replacementReadings=[1];},phrase=>{phrase.headSupports[0].members[0].replacementReadings=[-1];}
   ])await withLiveLifecycle(async f=>{
@@ -1882,6 +1890,33 @@ test('actual Live requires coherent compatible head evidence for the structural 
     assert.doesNotMatch(f.spelling.textContent,/при замяна: съвместима/);assert.match(nominalCandidate(f).textContent,/неустановена/);
     assert.equal(f.editor.setRangeTextCalls.length,0);
   },{text:'Спирам пред сипя къща.',caret:22});
+});
+
+test('actual Live resolves exact complete ordinals and graph full tags at the original nominal head', {concurrency:false}, async()=>{
+  const text='😀. Спирам пред сипя къща. Спирам пред сипя къща.';
+  for(const kind of ['complete','graph','missing-graph-tag'])await withLiveLifecycle(async f=>{
+    const reply=lifecycleNominalReply(text),data=reply.data,head=data.tokens[3];
+    const occurrence=data.readingInventory.occurrences.find(row=>row.tokenIndex===3);
+    const set=data.readingInventory.sets[occurrence.readingSetIndex];
+    const support=data.nominalConstructions.reviews[0].alternatives[2].phrase.headSupports[0];
+    if(kind==='complete'){
+      set.canonicalReadings.push(structuredClone(set.canonicalReadings[0]));
+      support.reading.completeReadingIndex=1;
+    }else{
+      set.canonicalReadings=[];
+      Object.assign(head.analysis,{isKnown:false,readings:[],graphExactRootCandidatesComplete:true,
+        graphCandidates:[{word:set.canonicalKey,derivedLemma:'къща',fullTags:['Съществително:41,Женски']}]});
+      support.reading=null;
+      support.graphReading={tokenIndex:3,graphCandidateIndex:0,fullTagIndex:kind==='graph'?0:1};
+    }
+    await f.first(reply);
+    const button=nominalCandidate(f);
+    assert.ok(button);
+    if(kind==='missing-graph-tag')assert.match(button.textContent,/неустановена/);
+    else assert.match(button.textContent,/съвместима именна група с „къща“/);
+    assert.equal(f.editor.value,text);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+  },{text,caret:text.length});
 });
 
 // Portable projection of recorded FP01 diagnostics; runtime/package correctness is checked separately.

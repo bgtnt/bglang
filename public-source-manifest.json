@@ -1449,8 +1449,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.js",
-      "bytes": 120617,
-      "sha256": "50e96d637dd220b8fc8fba2a733ddaf1fa0bcc65aa3d81c874c0b726c9dce677"
+      "bytes": 113905,
+      "sha256": "e4ebe2f8270da32cb8d468d1e5c25c9aff4aedfaf35cf0c65ccba64a3a2526a3"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/index.html",
@@ -1484,13 +1484,13 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 16157,
-      "sha256": "f5f9b6a2e83b67461cca3baaac09765f1706738c1943482e8012c704b507d0b7"
+      "bytes": 23154,
+      "sha256": "233f4b432dcb75bce2b4b20c3b4095ea3c7e28e0cd5b36aaf58d97ba5449b040"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
-      "bytes": 55586,
-      "sha256": "8f4adcffa22a251d78d2af8907fcafeec3fb5be9ef731635b32ebd5bf27558ed"
+      "bytes": 54860,
+      "sha256": "3d61e9ad4ae0577a3a9f2d55be3d8bfd286d31c6b6f8dd1013af6cf3bb80f6e8"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.css",
@@ -2409,8 +2409,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 151701,
-      "sha256": "d802fd91157f2f1e49d22d308f769edd0b71e3e3306ad8698cde89d3c59615a0"
+      "bytes": 154099,
+      "sha256": "2c38e536426b41969246cfa357c812bcfb9928660b51934ab29e7e3c8cea23a3"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
@@ -2794,8 +2794,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextConstructionProjector.cs",
-      "bytes": 15838,
-      "sha256": "0af577885c632ba198dc35865027fe745de805ab5c4c16b392ce8c20da6a3b4a"
+      "bytes": 16150,
+      "sha256": "b6489ae2dd1b96ef3f773c43b605380e9dc7dea1b2022f9b7e32987c713722cc"
     }
   ],
   "publication": false

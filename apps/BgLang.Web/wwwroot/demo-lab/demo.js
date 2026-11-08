@@ -1,7 +1,8 @@
 // BgLang Live Lab: an experimental UI over the unchanged shared transport in ../live-client.js.
 // The textarea is the only editable text. The coloured backdrop behind it is decorative and aria-hidden;
 // the checks list and the word card carry the same information as text.
-import {createPostLane, createLiveController, completeReadings, caretWord, bindContinuation, applyContinuation} from '../live-client.js';
+import {createPostLane, createLiveController, completeReadings, caretWord, bindContinuation, applyContinuation, replaceableSpan, supportedNominalPhrase} from '../live-client.js';
+export {replaceableSpan} from '../live-client.js';
 
 export const MAX_LENGTH = 4096;
 const UNIQUE_SPELLING_CODE = 'spelling_unknown_word_unique_distance_one_candidate';
@@ -304,14 +305,6 @@ export function matchCase(original, form) {
   return result;
 }
 
-// As in /demo: no replacement whose span would split a surrogate pair or detach combining marks.
-export function replaceableSpan(text, start, length) {
-  const end = start + length;
-  if (!Number.isInteger(start) || !Number.isInteger(length) || start < 0 || length <= 0 || end > text.length) return false;
-  const splits = offset => offset > 0 && offset < text.length && /[\uD800-\uDBFF]/.test(text[offset - 1]) && /[\uDC00-\uDFFF]/.test(text[offset]);
-  return !splits(start) && !splits(end) && !/^\p{M}/u.test(text.slice(start, start + 2)) && !/^\p{M}/u.test(text.slice(end, end + 2));
-}
-
 const listOrAbsent = value => value === undefined || value === null || Array.isArray(value);
 // The identity of the package behind an API envelope (its manifest hash, else its id); null when not reported.
 export const packageOf = envelope => envelope?.package?.manifestSha256 ?? envelope?.package?.packageId ?? null;
@@ -339,76 +332,6 @@ export function responseShapeValid(response) {
 }
 
 // ---------- construction advice (nominalConstructions.reviews) ----------
-const isCompatible = value => typeof value === 'string' && value.toLowerCase() === 'compatible';
-
-// Resolve one response-local head witness. The inventory binds exact ordinals to their original occurrence;
-// graph ordinals address that token's own analysis, candidate and full tag, never the replacement inventory.
-function supportedHead(support, head, data, response) {
-  const token = data.tokens[head], inventory = data.readingInventory;
-  const occurrence = inventory?.occurrences?.find(row => row?.tokenIndex === head);
-  if (!occurrence || occurrence.start !== token.start || occurrence.length !== token.length || occurrence.text !== token.text
-    || !Number.isInteger(occurrence.readingSetIndex) || occurrence.readingSetIndex < 0) return null;
-  const set = inventory.sets?.[occurrence.readingSetIndex], analysis = tokenAnalysisOf(response, token);
-  if (!set || typeof set.lookupText !== 'string' || !set.lookupText.length || analysis?.word !== set.lookupText
-    || !Array.isArray(set.canonicalReadings) || ((set.supportKey == null) !== (set.supportReadings == null))
-    || (set.supportReadings != null && (!Array.isArray(set.supportReadings) || set.canonicalReadings.length !== 0))) return null;
-  const rows = completeReadings(data, head), key = set.supportReadings?.length > 0 ? set.supportKey : set.canonicalKey;
-  if (!Array.isArray(rows) || !Array.isArray(analysis.readings) || analysis.readings.length > rows.length
-    || typeof key !== 'string' || !key.length || analysis.normalizedWord !== key) return null;
-  const exact = support?.reading, graph = support?.graphReading;
-  if (exact != null) {
-    if (graph != null || exact.tokenIndex !== head || !Number.isInteger(exact.completeReadingIndex) || exact.completeReadingIndex < 0) return null;
-    const reading = rows[exact.completeReadingIndex], raw = reading?.raw, features = reading?.features;
-    // The server retains raw forms (including stress) and permits lookup aliases. Only displayed ordinals have
-    // a second raw witness; later ordinals belong to the complete inventory, not the truncated display prefix.
-    const displayed = analysis.readings[exact.completeReadingIndex];
-    if (typeof raw?.form !== 'string' || !raw.form.length || (exact.completeReadingIndex < analysis.readings.length
-      && (!displayed || ['form', 'lemma', 'partOfSpeech', 'score', 'legacyTypeId', 'legacyBaseId', 'legacyWordId', 'source']
-        .some(field => raw[field] !== displayed[field]))) || features?.partOfSpeech !== 'Noun'
-      || features.hasUnrecognizedFeatures === true || features.hasConflictingFeatures === true
-      || (features.number !== 'Plural' && (features.number !== 'Singular' || !['Masculine', 'Feminine', 'Neuter'].includes(features.gender)))) return null;
-    return {features, graph: false};
-  }
-  if (!graph || graph.tokenIndex !== head || !Number.isInteger(graph.graphCandidateIndex) || graph.graphCandidateIndex < 0
-    || !Number.isInteger(graph.fullTagIndex) || graph.fullTagIndex < 0 || rows.length !== 0
-    || set.canonicalReadings.length !== 0 || analysis.readings.length !== 0) return null;
-  const candidates = analysis.graphCandidates;
-  if (analysis.graphSearchIncomplete === true || analysis.graphExactRootCandidatesComplete !== true || !Array.isArray(candidates)) return null;
-  const candidate = candidates[graph.graphCandidateIndex], tags = candidate?.fullTags;
-  // The current graph producer emits normalized candidate words; use its response keys without a UI normalizer.
-  if (typeof candidate?.word !== 'string' || (candidate.word !== set.canonicalKey && candidate.word !== set.supportKey)
-    || candidate?.isConditional === true || candidate?.conditionalRootProgramId != null || candidate?.conditionalRootBaseFullTag != null
-    || candidate?.conditionalRootSupportCount != null || candidate?.conditionalSupportingLemmas != null || candidate?.conditionalSupportingLemmasRef != null
-    || (candidate?.unmetExactSelfReadingRequirements != null && (!Array.isArray(candidate.unmetExactSelfReadingRequirements)
-      || candidate.unmetExactSelfReadingRequirements.length > 0))
-    || typeof candidate?.derivedLemma !== 'string' || !candidate.derivedLemma.trim() || !Array.isArray(tags)
-    || typeof tags[graph.fullTagIndex] !== 'string' || !tags[graph.fullTagIndex].trim()) return null;
-  return {features: null, graph: true};
-}
-
-// One alternative is supported when its phrase is Compatible and a support of the phrase's own head has a Compatible
-// member for the reviewed word whose replacement readings address this alternative's readings (the /demo rule).
-// Both the reviewed word and the complete head must lie inside the phrase's original source span.
-function supportedPhrase(row, review, data, response) {
-  const phrase = row.phrase, head = phrase?.headTokenIndex, token = data.tokens[head], readings = row.alternative.readings;
-  if (!isCompatible(phrase?.assessment) || !Number.isInteger(head) || token?.kind !== 'Word'
-    || !Array.isArray(phrase.headSupports) || !Array.isArray(readings) || !Number.isInteger(phrase.start)
-    || !Number.isInteger(phrase.length) || phrase.start < 0 || phrase.start > review.start
-    || review.start + review.length > phrase.start + phrase.length || phrase.start + phrase.length > data.text.length
-    || !replaceableSpan(data.text, token.start, token.length) || token.start < phrase.start
-    || token.start + token.length > phrase.start + phrase.length || data.text.slice(token.start, token.start + token.length) !== token.text) return null;
-  for (const support of phrase.headSupports) {
-    const witness = supportedHead(support, head, data, response);
-    if (!witness) continue;
-    const member = (Array.isArray(support.members) ? support.members : []).find(item => item?.tokenIndex === review.tokenIndex
-      && isCompatible(item.assessment) && Array.isArray(item.replacementReadings)
-      && item.replacementReadings.some(index => Number.isInteger(index) && index >= 0 && index < readings.length));
-    if (member) return {start: phrase.start, length: phrase.length, head, support, witness,
-      modifier: Array.isArray(phrase.modifierTokenIndices) && phrase.modifierTokenIndices.includes(review.tokenIndex)};
-  }
-  return null;
-}
-
 // Advice for a known word whose local construction is complete only with a near form. A review must name its word
 // exactly (index, span, text and safe UTF-16 boundaries), every alternative needs a form and a distance, and the
 // server order is used only as a complete permutation that keeps letter distance first; otherwise the raw order.
@@ -417,6 +340,7 @@ export function constructionAdvice(data, response = null) {
   const evidence = data?.nominalConstructions;
   if (evidence?.available !== true || !Array.isArray(evidence.reviews)) return [];
   const advice = [];
+  const analysisFor = token => tokenAnalysisOf(response, token);
   for (const review of evidence.reviews) {
     const token = data.tokens[review?.tokenIndex], alternatives = review?.alternatives;
     if (!Number.isInteger(review?.tokenIndex) || review.noChangeRetained !== true || token?.kind !== 'Word'
@@ -434,7 +358,7 @@ export function constructionAdvice(data, response = null) {
     for (const index of ordered ? proposed : alternatives.map((_, i) => i)) {
       const row = alternatives[index];
       if (row.alternative.distance === 0 || row.alternative.form === token.text) continue;
-      const phrase = supportedPhrase(row, review, data, response);
+      const phrase = supportedNominalPhrase(row, review, data, analysisFor);
       (phrase ? supported : others).push({index, form: row.alternative.form, distance: row.alternative.distance, phrase,
         readings: Array.isArray(row.alternative.readings) ? row.alternative.readings : []});
     }
