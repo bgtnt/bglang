@@ -17,20 +17,20 @@
 
 BgLang се изпълнява **изцяло локално на вашата машина**. Проектът **няма** публичен облачен сървър или хоствана уеб версия. Адресите `/demo` (`http://127.0.0.1:5070/demo`), `/demo-lab/index.html` (`http://127.0.0.1:5070/demo-lab/index.html`) и `/docs` (`http://127.0.0.1:5070/docs`) стават достъпни на `localhost` едва след като стартирате `BgLang.Web` локално.
 
-## Изтегляне и подготовка (`v0.2.0-alpha.1`)
+## Изтегляне и подготовка (`v0.2.0-alpha.2`)
 
 Изисква се **.NET SDK 10.0.403** (зададен в [`global.json`](global.json)) и PowerShell 7 за скриптованите стъпки.
 
-1. Изтеглете от страницата на изданието [`v0.2.0-alpha.1`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.1) (prerelease):
-   - [`bglang-v0.2.0-alpha.1-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-source.zip) — публичният изходен код;
-   - [`bglang-v0.2.0-alpha.1-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-runtime.zip) — готовият пакет с езикови данни (`CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`);
-   - [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/SHA256SUMS) — контролни суми на архивите.
-   - *(По избор)* [`bglang-v0.2.0-alpha.1-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-inputs.zip) е нужен **само** за независимо пълно преизграждане на пакета с данни (вж. [ръководството за възпроизвеждане](packaging/RELEASE-CANDIDATE.md)); за стандартна употреба готовият `runtime.zip` е достатъчен.
+1. Изтеглете от страницата на изданието [`v0.2.0-alpha.2`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.2) (prerelease):
+   - [`bglang-v0.2.0-alpha.2-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-source.zip) — публичният изходен код;
+   - [`bglang-v0.2.0-alpha.2-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-runtime.zip) — готовият пакет с езикови данни (`CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`);
+   - [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/SHA256SUMS) — контролни суми на архивите.
+   - *(По избор)* [`bglang-v0.2.0-alpha.2-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-inputs.zip) е нужен **само** за независимо пълно преизграждане на пакета с данни (вж. [ръководството за възпроизвеждане](packaging/RELEASE-CANDIDATE.md)); за стандартна употреба готовият `runtime.zip` е достатъчен.
 2. Проверете SHA-256 контролните суми спрямо `SHA256SUMS`:
    ```powershell
-   Get-FileHash bglang-v0.2.0-alpha.1-source.zip, bglang-v0.2.0-alpha.1-runtime.zip -Algorithm SHA256
+   Get-FileHash bglang-v0.2.0-alpha.2-source.zip, bglang-v0.2.0-alpha.2-runtime.zip -Algorithm SHA256
    ```
-3. Разархивирайте `bglang-v0.2.0-alpha.1-source.zip` в нова папка (напр. `bglang`), а четирите файла от `bglang-v0.2.0-alpha.1-runtime.zip` — в нейната подпапка `./runtime`, така че вътре да се намират:
+3. Разархивирайте `bglang-v0.2.0-alpha.2-source.zip` в нова папка (напр. `bglang`), а четирите файла от `bglang-v0.2.0-alpha.2-runtime.zip` — в нейната подпапка `./runtime`, така че вътре да се намират:
    - `runtime/manifest.json` (SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`);
    - `runtime/lexicon.v3.jsonl`;
    - `runtime/word-formation.v0.json`;
@@ -114,9 +114,19 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 - `LookupLexicalEntries` / `GetWordConstructionCandidates` / `GetStressEvidence` — лексикални статии, конструкции и ударения;
 - `AnalyzeText` — включително незадължителни opt-in опции в `TextContextOptions` (`Continuation`, `IncludeNominalConstructions`, `IncludeWordConstructions`, `IncludeGrammarEvidence` и др. — вж. [ръководството на BgLang.Web](apps/BgLang.Web/README.md) и `/docs`).
 
+## Четири слоя на текстовия отговор и `VerbFrameCatalog`
+
+В `TextAnalysis` (и JSON полетата на `POST /api/v2/analyze-text`) резултатът е разделен на четири ясни слоя:
+- **`Diagnostics` (`diagnostics` / `validation`):** доказани предупреждения с точен UTF-16 обхват и без автоматична промяна на входния `Text`.
+- **`Grammar` (`grammar`, при `IncludeGrammarEvidence = true`):** структурни оценки `Compatible`, `Mismatch`, `Ambiguous` и `Unassessed`. Локалните интерфейси `/demo` и `/demo-lab` показват обвързания `Ambiguous` конфликт с `reason: "disjoint_subject_predicate_locus"` (напр. `"Момичетата рисува пейзажи."`) като видимо предупреждение върху сказуемото **без** автоматична замяна, защото двете страни на конфликта не определят еднозначно коя дума е сгрешена.
+- **`Syntax` (`syntax`):** кандидатни синтактични роли (`Predicate`, `Subject`, `Object` и др.) с изричен маршрут `Selected`, `SourceScan` или `Abstained`.
+- **`Repairs` (`repairs`):** само еднозначно проверени локални предложения за замяна, прилагани единствено при изрично потребителско действие.
+
+Публичният вход `BulgarianLanguageSession.Open(manifestPath)` **не** зарежда вътрешния експериментален `VerbFrameCatalog`, защото изходният му лексикон за глаголни рамки (BVFL) се разпространява под `CC BY 3.0` (извън чистия MIT runtime пакет), а съотношенията по брой рамкови типове не са калибрирани спрямо корпусни честоти на употреба.
+
 ## Ограничения
 
-- **Предварително издание (`v0.2.0-alpha.1`):** това е алфа prerelease и договорите/покритието продължават да се развиват.
+- **Предварително издание (`v0.2.0-alpha.2`):** това е алфа prerelease и договорите/покритието продължават да се развиват.
 - **Не е пълен синтактичен парсер:** BgLang не извършва пълен синтактичен или дискурсен разбор на произволен български текст.
 - **Ограничен обхват и съзнателно въздържание:** граматичните проверки покриват поддържани локални именни групи (`NP`) и прости конструкции на изречението. При неподдържани или двусмислени конструкции анализаторът умишлено се въздържа — **`0` предупреждения не е доказателство за граматическа правилност**.
 - **Без автоматично пренаписване:** предупрежденията и предложенията само сочат позиции и алтернативи; редакторът не променя текста без изрично действие от потребителя.
@@ -128,6 +138,7 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 - [Ръководство за локалния HTTP хост (`apps/BgLang.Web/README.md`)](apps/BgLang.Web/README.md)
 - [Бележки за BgLang Live Lab (`apps/BgLang.Web/wwwroot/demo-lab/README.md`)](apps/BgLang.Web/wwwroot/demo-lab/README.md)
 - [Възпроизвеждане на пакета и CI проверки (`packaging/RELEASE-CANDIDATE.md`)](packaging/RELEASE-CANDIDATE.md)
+- [Възпроизводима лингвистична оценка и сравнение с UDPipe 2 (`packaging/LINGUISTIC-EVALUATION.md`)](packaging/LINGUISTIC-EVALUATION.md)
 - [Профил за графово ударение `CurrentGraphStress` (`packaging/GRAPH-STRESS.md`)](packaging/GRAPH-STRESS.md)
 - [Инструмент за изграждане на пакети (`tools/BgLang.SourceBuilder/README.md`)](tools/BgLang.SourceBuilder/README.md)
 - Предишни издания и архивни бележки: [GitHub Releases](https://github.com/bgtnt/bglang/releases)

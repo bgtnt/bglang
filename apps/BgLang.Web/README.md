@@ -1,4 +1,4 @@
-# BgLang.Web — локален HTTP хост и уеб демота (`v0.2.0-alpha.1`)
+# BgLang.Web — локален HTTP хост и уеб демота (`v0.2.0-alpha.2`)
 
 `BgLang.Web` е ASP.NET Core (.NET 10) приложение, което зарежда един строго проверен пакет от данни чрез `BulgarianLanguageSession.Open` и предоставя локален HTTP JSON API (`/api/v2/`, `/api/v1/`) заедно с две локални уеб приложения (`/demo` и `/demo-lab/index.html`) и вградена документация (`/docs`).
 
@@ -6,7 +6,7 @@
 
 ## Подготовка и стартиране
 
-Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.1-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/SHA256SUMS) от изданието [`v0.2.0-alpha.1`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.1).
+Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.2-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/SHA256SUMS) от изданието [`v0.2.0-alpha.2`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.2).
 
 Поставете четирите runtime файла (`manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json`, `lexeme-annotations.v1.json`) в подпапка `./runtime` на изходния код (профил `CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`, manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`). От корена на хранилището:
 
@@ -40,7 +40,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:5070/api/v2/' | ConvertTo-Json -Depth 4
 | Настройка | Стойност по подразбиране | Описание |
 | --- | --- | --- |
 | `BgLang__ManifestPath` | *(задължителна)* | Път до `manifest.json` на зареждания пакет. |
-| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.1`). |
+| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.2`). |
 | `BgLang:RequestsPerMinute` | `30` | Положително цяло число за лимит на `POST` заявките на минута на клиентски IP (включително невалидни заявки). Отразява се в `GET /api/v2/`. |
 | `BgLang:ResponseByteLimit` | `67108864` (`64 MiB`) | Максимален размер в UTF-8 байтове на успешен отговор при count-only preflight; над него се връща `413 response-too-large` без частично орязване. |
 | `ASPNETCORE_URLS` / `--urls` | `http://127.0.0.1:5070` | Локален адрес и порт за слушане. |
@@ -94,6 +94,14 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 - `start: 6`, `length: 4` сочат точно думата `"чете"` в UTF-16 координати (след `😀`, което заема 2 UTF-16 единици).
 - При `"Аз 😀 чета."` и при епистемичния контекст `"Може да беше прав."` хостът връща `0` предупреждения.
 
+### Четири слоя на отговора и `VerbFrameCatalog`
+
+- **`diagnostics` / `validation`:** доказани предупреждения с точни UTF-16 отмествания (`start`, `length`).
+- **`grammar` (`context.includeGrammarEvidence: true`):** оценки `Compatible`, `Mismatch`, `Ambiguous` и `Unassessed`. В `/demo` и `/demo-lab` конфликтите `Ambiguous` с `reason: "disjoint_subject_predicate_locus"` (напр. `"Момичетата рисува пейзажи."`) се показват като предупреждение върху зависимия предикат **без** автоматична поправка.
+- **`syntax`:** кандидатни роли (`Predicate`, `Subject` и др.) с маршрут `Selected`, `SourceScan` или `Abstained`.
+- **`repairs`:** само еднозначно проверени локални предложения за замяна.
+- **`VerbFrameCatalog`:** `BgLang.Web` отваря пакета чрез публичното `BulgarianLanguageSession.Open` без вътрешния `VerbFrameCatalog`, тъй като BVFL каталогът е под `CC BY 3.0` (извън MIT runtime границата) и съотношенията по типове рамки не са калибрирани спрямо реални корпусни честоти.
+
 ## Проверки на клиента и сървъра
 
 Клиентските тестове и проверката на синтаксиса не изискват стартиран сървър:
@@ -112,4 +120,5 @@ node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs tests/BgLang.Web.Te
 - [Начално ръководство (`README.md`)](../../README.md)
 - [Бележки за BgLang Live Lab](wwwroot/demo-lab/README.md)
 - [Възпроизвеждане на пакета (`packaging/RELEASE-CANDIDATE.md`)](../../packaging/RELEASE-CANDIDATE.md)
+- [Възпроизводима лингвистична оценка (`packaging/LINGUISTIC-EVALUATION.md`)](../../packaging/LINGUISTIC-EVALUATION.md)
 - Предишни издания и архивни бележки: [GitHub Releases](https://github.com/bgtnt/bglang/releases)

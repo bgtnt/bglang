@@ -875,4 +875,69 @@ public sealed class NominalDiagnosticsPackageTests
             }
         }
     }
+
+    [TestMethod]
+    public void Post_alpha1_independent_number_gender_and_article_placement_checks_coexist()
+    {
+        using var session = GraphStressAcceptance.Open();
+        TextContextOptions fullOpts = new()
+        {
+            IncludeGrammarEvidence = true,
+            IncludeAdditionalRoleHeuristics = true,
+            IncludeWordConstructions = true,
+            IncludeNominalConstructions = true
+        };
+
+        foreach (TextContextOptions opts in new TextContextOptions[] { default, fullOpts })
+        {
+            foreach ((string sentence, string attrTarget, string artTarget) in new[]
+            {
+                ("Малките книгата пътува с мен.", "Малките", "книгата"),
+                ("Влизам в малките стаята.", "малките", "стаята"),
+                ("Седим на червените пейката.", "червените", "пейката")
+            })
+            {
+                TextAnalysis res = session.AnalyzeText(sentence, false, opts, default);
+                TextDiagnostic attr = res.Diagnostics.SingleOrDefault(d => d.Code == Attribute && sentence.Substring(d.Start, d.Length) == attrTarget)!;
+                TextDiagnostic art = res.Diagnostics.SingleOrDefault(d => d.Code == Placement && sentence.Substring(d.Start, d.Length) == artTarget)!;
+                Assert.IsNotNull(attr, $"{sentence}: expected {Attribute}@{attrTarget}");
+                Assert.IsNotNull(art, $"{sentence}: expected {Placement}@{artTarget}");
+                if (opts.IncludeGrammarEvidence)
+                {
+                    Assert.IsTrue(res.Grammar!.Matches.Any(m => m.Assessment == TextGrammarAssessment.Mismatch && m.RuleId == "local_exact_attribute_agreement.v1" && m.Reason == "article_placement_unresolved"), sentence);
+                    Assert.IsTrue(res.Grammar.Matches.Any(m => m.Assessment == TextGrammarAssessment.Mismatch && m.RuleId.StartsWith("grammar.article.first_", StringComparison.Ordinal)), sentence);
+                }
+            }
+
+            {
+                const string attrOnly = "Малките книга пътува с мен.";
+                TextAnalysis res = session.AnalyzeText(attrOnly, false, opts, default);
+                Assert.IsTrue(res.Diagnostics.Any(d => d.Code == Attribute && attrOnly.Substring(d.Start, d.Length) == "Малките"));
+                Assert.IsFalse(res.Diagnostics.Any(d => d.Code == Placement));
+            }
+            {
+                const string artOnly = "Малката книгата пътува с мен.";
+                TextAnalysis res = session.AnalyzeText(artOnly, false, opts, default);
+                Assert.IsFalse(res.Diagnostics.Any(d => d.Code == Attribute));
+                Assert.IsTrue(res.Diagnostics.Any(d => d.Code == Placement && artOnly.Substring(d.Start, d.Length) == "книгата"));
+            }
+
+            foreach (string clean in new[]
+            {
+                "Малката книга пътува с мен.",
+                "Малките книги пътуват с мен.",
+                "Новите стола са тук.",
+                "Малките детето ги вижда.",
+                "На бедните хората помогнаха.",
+                "Малката книгата описва в детайли градината.",
+                "Живея в старите къщата.",
+                "Оставих при старите къщата.",
+                "Седя на червените пейката."
+            })
+            {
+                TextAnalysis ok = session.AnalyzeText(clean, false, opts, default);
+                Assert.IsFalse(ok.Diagnostics.Any(d => d.Code is Attribute or Placement), clean);
+            }
+        }
+    }
 }

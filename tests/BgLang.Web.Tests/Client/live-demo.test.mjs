@@ -10,7 +10,7 @@ const source = process.env.BGLANG_CLIENT_SOURCE_ROOT
   : new URL('../../../apps/BgLang.Web/wwwroot/live-client.js', import.meta.url);
 const {createPostLane, livePayload, createLiveController, completeReadings,
   caretWord, completionSpan, applyCompletion, renderTokenText, continuationSnapshot, bindContinuation, applyContinuation,
-  renderGrammarReview, MESSAGES, RELATIVE_ANTECEDENT_MESSAGE, diagnosticMessage, collectChecks,
+  renderGrammarReview, MESSAGES, RELATIVE_ANTECEDENT_MESSAGE, diagnosticMessage, collectChecks, warningTokens,
   csharpStringLiteral, explorerCSharpSnippet} = await import(source.href);
 const drain = () => new Promise(resolve => setImmediate(resolve));
 const RAW = '😀 по-ле\u0300сен.\r\n<img src=x onerror=alert(1)>&';
@@ -2508,4 +2508,97 @@ test('explorer C# snippet reproduces checked and unchecked analyze-text options 
   assert.equal(bounded, 'using BgLang.Api;\n\nusing var session = BulgarianLanguageSession.Open("manifest.json");\nvar result = session.GenerateForms("книга", 256);');
 
   assert.equal(csharpStringLiteral('a\\b"\0\u2028\r\n\t'), '"a\\\\b\\"\\0\\u2028\\r\\n\\t"');
+});
+
+test('bound Ambiguous disjoint_subject_predicate_locus warns cleanly without auto-replacement while non-disjoint Ambiguous stays non-warning', () => {
+  const text = 'Момичетата рисува пейзажи.';
+  const tokens = [
+    {kind: 'Word', text: 'Момичетата', start: 0, length: 10},
+    {kind: 'Whitespace', text: ' ', start: 10, length: 1},
+    {kind: 'Word', text: 'рисува', start: 11, length: 6},
+    {kind: 'Whitespace', text: ' ', start: 17, length: 1},
+    {kind: 'Word', text: 'пейзажи', start: 18, length: 7},
+    {kind: 'Punctuation', text: '.', start: 25, length: 1}
+  ];
+  const readingInventory = {
+    occurrences: [
+      {tokenIndex: 0, start: 0, length: 10, text: 'Момичетата', readingSetIndex: 0},
+      {tokenIndex: 2, start: 11, length: 6, text: 'рисува', readingSetIndex: 1},
+      {tokenIndex: 4, start: 18, length: 7, text: 'пейзажи', readingSetIndex: 2}
+    ],
+    sets: [
+      {lookupText: 'момичетата', canonicalKey: 'момичетата', canonicalReadings: [{raw: {form: 'момичетата', lemma: 'момиче', partOfSpeech: 'Съществително:69,Среден,Множествено,Членуван'}, features: {partOfSpeech: 'Noun', gender: 'Neuter', number: 'Plural', article: 'Definite'}}]},
+      {lookupText: 'рисува', canonicalKey: 'рисува', canonicalReadings: [{raw: {form: 'рисува', lemma: 'рисувам', partOfSpeech: 'Глагол:186,Трето,Единствено,Сегашно'}, features: {partOfSpeech: 'Verb', verbForm: 'Finite', person: 'Third', number: 'Singular'}}]},
+      {lookupText: 'пейзажи', canonicalKey: 'пейзажи', canonicalReadings: [{raw: {form: 'пейзажи', lemma: 'пейзаж', partOfSpeech: 'Съществително:7,Мъжки,Множествено'}, features: {partOfSpeech: 'Noun', gender: 'Masculine', number: 'Plural', article: 'Indefinite'}}]}
+    ]
+  };
+  const grammar = {
+    rules: [{
+      id: 'clause_fusion_agreement.v1',
+      diagnosticCode: 'productive_morphology_agreement_mismatch',
+      pattern: 'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+      constraint: 'PersonNumber',
+      explanation: 'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+      sourceSection: '§ 5.1',
+      sourceUrl: 'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+    }],
+    matches: [{
+      ruleId: 'clause_fusion_agreement.v1',
+      start: 0, length: 25,
+      controllerTokenIndices: [0, 4],
+      dependentTokenIndices: [2],
+      assessment: 'Ambiguous',
+      conflicts: [
+        {tokenIndex: 2, actual: [{tokenIndex: 2, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 0, completeReadingIndex: 0}]},
+        {tokenIndex: 2, actual: [{tokenIndex: 2, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 4, completeReadingIndex: 0}]}
+      ],
+      repairs: [],
+      reason: 'disjoint_subject_predicate_locus'
+    }]
+  };
+  const data = {text, tokens, readingInventory, grammar, diagnostics: [], validation: {available: true, diagnostics: []}};
+
+  const checks = collectChecks(data);
+  assert.equal(checks.length, 1);
+  assert.equal(checks[0].code, 'disjoint_subject_predicate_locus');
+  assert.equal(checks[0].severity, 'warning');
+  assert.equal(checks[0].start, 11);
+  assert.equal(checks[0].length, 6);
+  assert.equal(checks[0].original, 'рисува');
+  assert.equal(checks[0].replaceable, false);
+  assert.equal(checks[0].replacement, null);
+  assert.deepEqual([...warningTokens(data, checks)], [2]);
+
+  const pres = diagnosticPresentation(data);
+  assert.equal(pres.messages.length, 1);
+  assert.equal(pres.messages[0].classification, 'warning');
+  assert.equal(pres.messages[0].summary, checks[0].grammarMessage);
+  assert.match(pres.messages[0].summary, /Противоречи на правило R3.*двусмислен подлог.*„Момичетата“.*„пейзажи“.*„рисува“.*автоматична замяна не се избира/);
+  assert.equal(diagnosticPresentation(data, tokens[0]).tokenClass, 'check-empty');
+  assert.equal(diagnosticPresentation(data, tokens[2]).tokenClass, 'check-warning');
+  assert.equal(diagnosticPresentation(data, tokens[4]).tokenClass, 'check-empty');
+
+  const doc = {createElement: tag => ({tag, textContent: '', children: [], attributes: {},
+    append(...values) { this.children.push(...values); }, setAttribute(k, v) { this.attributes[k] = v; }})};
+  const allNodes = el => [el, ...el.children.flatMap(allNodes)];
+  const reviewText = allNodes(renderGrammarReview(data, doc)).map(n => n.textContent).join('\n');
+  assert.match(reviewText, /Двусмислен конфликт при избор на подлог \(кандидати „Момичетата“, „пейзажи“ спрямо „рисува“; без автоматична замяна\)/);
+  assert.doesNotMatch(reviewText, /При прочит като една именна група/);
+
+  // Deduplication: existing overlapping warning prevents duplicate disjoint warning
+  const withExisting = {
+    ...data,
+    diagnostics: [{code: 'productive_morphology_agreement_mismatch', start: 11, length: 6, ruleId: 'clause_fusion_agreement.v1'}]
+  };
+  assert.equal(collectChecks(withExisting).filter(c => c.code === 'disjoint_subject_predicate_locus').length, 0);
+  assert.equal(diagnosticPresentation(withExisting).messages.filter(m => m.diagnostic.code === 'disjoint_subject_predicate_locus').length, 0);
+
+  // Non-disjoint Ambiguous reasons remain non-warning
+  for (const reason of ['competing_nominal_attachment', 'competing_predicative_role', 'competing_predicate_group', 'address_number_gender_unresolved']) {
+    const other = structuredClone(data);
+    other.grammar.matches[0].reason = reason;
+    assert.deepEqual(collectChecks(other), [], reason);
+    assert.deepEqual(diagnosticPresentation(other).messages, [], reason);
+    assert.equal(diagnosticPresentation(other, tokens[2]).tokenClass, 'check-empty', reason);
+  }
 });

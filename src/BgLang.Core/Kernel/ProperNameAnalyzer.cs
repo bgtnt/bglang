@@ -305,4 +305,118 @@ internal static class ProperNameAnalyzer
     private static bool IsCyrillic(char character) =>
         character is >= '\u0400' and <= '\u052f';
 
+    internal static bool TryResolveContextualSurname(
+        TextAnalysis analysis,
+        SentenceSpan sentence,
+        IReadOnlyList<ContextLanes.TokenView> words,
+        int wordIndex,
+        out (MorphologicalNumber Number, MorphologicalGender? Gender) axes,
+        Func<string, IReadOnlyList<TextReadingSnapshot>>? lookup = null,
+        CancellationToken cancellationToken = default)
+    {
+        axes = default;
+        cancellationToken.ThrowIfCancellationRequested();
+        if ((uint)wordIndex >= (uint)words.Count)
+            return false;
+
+        ContextLanes.TokenView word = words[wordIndex];
+        string raw = word.Token.Text;
+        string canon = word.CanonicalText;
+        if (word.UsesGraph || !word.Complete || raw.Length < 5 ||
+            !ProperNameEvidenceAnalyzer.IsBulgarianTitleCase(raw) || raw.Contains('-'))
+            return false;
+
+        (MorphologicalNumber Number, MorphologicalGender? Gender)? resolved = null;
+        if (word.Readings.Count == 0)
+        {
+            if (word.Token.Analysis is not { IsKnown: false, BaseEvidence: null, Candidates: { Count: > 0 } cands })
+                return false;
+            int maxOtherEnding = cands
+                .Where(c => c.ProductiveRuleId != "productive.adjective.type76.v0" && c.SupportingLemmas.Count >= 2)
+                .Select(c => c.MatchedEndingLength)
+                .DefaultIfEmpty(0)
+                .Max();
+            MorphologyCandidate[] type76 = cands
+                .Where(c => c.ProductiveRuleId == "productive.adjective.type76.v0" &&
+                            c.SupportingLemmas.Count >= 2 &&
+                            c.MatchedEndingLength >= maxOtherEnding)
+                .ToArray();
+            if (type76.Length == 0)
+                return false;
+            if ((canon.EndsWith("ова", StringComparison.Ordinal) || canon.EndsWith("ева", StringComparison.Ordinal)) &&
+                type76.Any(c => c.FullTag == "Прилагателно:76,Женски"))
+            {
+                resolved = (MorphologicalNumber.Singular, MorphologicalGender.Feminine);
+            }
+            else if ((canon.EndsWith("ов", StringComparison.Ordinal) || canon.EndsWith("ев", StringComparison.Ordinal)) &&
+                     type76.Any(c => c.FullTag == "Прилагателно:76,Мъжки"))
+            {
+                resolved = (MorphologicalNumber.Singular, MorphologicalGender.Masculine);
+            }
+            else if ((canon.EndsWith("ови", StringComparison.Ordinal) || canon.EndsWith("еви", StringComparison.Ordinal)) &&
+                     type76.Any(c => c.FullTag == "Прилагателно:76,Мъжки,мн.ч."))
+            {
+                resolved = (MorphologicalNumber.Plural, null);
+            }
+        }
+        else if (canon.EndsWith("ови", StringComparison.Ordinal) || canon.EndsWith("еви", StringComparison.Ordinal))
+        {
+            bool sentenceInitial = wordIndex == 0 && SentenceClauseMap.LeadingDialogueOrSpace(analysis.Text, sentence.Start, word.Token.Start);
+            bool hasReal = word.Readings.Any(r => !ContextEvidenceGuards.IsSourcePlaceholder(word, r));
+            bool saw76Plural = false;
+            bool hasCapitalizedLemma = false;
+            for (int r = 0; r < word.Readings.Count; r++)
+            {
+                ContextLanes.ReadingView rv = word.Readings[r];
+                if (hasReal && ContextEvidenceGuards.IsSourcePlaceholder(word, rv) ||
+                    ContextEvidenceGuards.IsUnwrittenCapitalizedReading(word, rv, sentenceInitial) ||
+                    ContextEvidenceGuards.IsSyncreticVocativeCompanion(word, rv))
+                    continue;
+                if (rv.Features is not
+                    {
+                        PartOfSpeech: MorphologicalPartOfSpeech.Adjective,
+                        ParadigmId: "76",
+                        Number: MorphologicalNumber.Plural,
+                        Article: MorphologicalArticle.Indefinite
+                    })
+                {
+                    saw76Plural = false;
+                    break;
+                }
+                saw76Plural = true;
+                if (rv.Reading?.Lemma is { Length: > 0 } lem && char.IsUpper(lem[0]))
+                    hasCapitalizedLemma = true;
+            }
+            if (saw76Plural &&
+                (hasCapitalizedLemma ||
+                 lookup is not null && lookup(canon[..^1]).Any(sr => sr.Features is
+                     { PartOfSpeech: MorphologicalPartOfSpeech.ProperNoun, NameKind: MorphologicalNameKind.FamilyName })))
+            {
+                resolved = (MorphologicalNumber.Plural, null);
+            }
+        }
+
+        if (resolved is not { } candidateAxes)
+            return false;
+
+        // Adnominal guard: possessive -ов/-ова/-ови/-ев/-ева/-еви before a space-bridged lowercase agreeing Noun/Adjective stays adnominal.
+        if (wordIndex + 1 < words.Count &&
+            LocalClauseRoleLinker.Connected(analysis, word, words[wordIndex + 1], symbols: false, cancellationToken))
+        {
+            ContextLanes.TokenView next = words[wordIndex + 1];
+            if (IsBulgarianLowercaseWord(next.Token.Text) &&
+                next.Readings.Any(nr => !ContextEvidenceGuards.IsSourcePlaceholder(next, nr) &&
+                    nr.Features.PartOfSpeech is MorphologicalPartOfSpeech.Noun or MorphologicalPartOfSpeech.Adjective &&
+                    (nr.Features.Number == candidateAxes.Number ||
+                     nr.Features.Number == MorphologicalNumber.Count && candidateAxes.Number == MorphologicalNumber.Plural) &&
+                    (candidateAxes.Gender is null || nr.Features.Gender == candidateAxes.Gender)))
+            {
+                return false;
+            }
+        }
+
+        axes = candidateAxes;
+        return true;
+    }
+
 }

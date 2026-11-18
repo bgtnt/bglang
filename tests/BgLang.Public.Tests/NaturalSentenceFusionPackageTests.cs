@@ -2250,7 +2250,9 @@ public sealed partial class PublicPackageTests
          "reviewed_word_formation_evidence" or
          "style_repetition_evidence" or
          "contextual_morphology_reading_evidence" or
-         "proper_name_exact_morphology_given_name_evidence");
+         "proper_name_exact_morphology_given_name_evidence" or
+         "proper_name_exact_morphology_family_name_evidence" or
+         "proper_name_person_candidate");
 
     [TestMethod]
     public void Wave1a_governed_prepositions_homographs_and_kogoto_parentheticals_hold_on_package()
@@ -2283,6 +2285,10 @@ public sealed partial class PublicPackageTests
                 TextAnalysis bad = session.AnalyzeText(err, false, opts, default);
                 TextDiagnostic hit = bad.Diagnostics.Single(d => d.Code == "pronoun_case_governance_mismatch");
                 Assert.AreEqual(target, err.Substring(hit.Start, hit.Length), err);
+                TextDiagnostic[] extraWarnings = bad.Diagnostics
+                    .Where(d => IsActionablePackageWarning(d.Code) && d.Code != "pronoun_case_governance_mismatch")
+                    .ToArray();
+                Assert.IsEmpty(extraWarnings, $"{err}: unexpected warnings [{string.Join(',', extraWarnings.Select(w => w.Code))}]");
 
                 TextAnalysis ok = session.AnalyzeText(contrast, false, opts, default);
                 TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
@@ -2425,6 +2431,267 @@ public sealed partial class PublicPackageTests
                 TextAnalysis bad = session.AnalyzeText(text, false, opts, default);
                 TextDiagnostic hit = bad.Diagnostics.Single(d => d.Code == expectedCode);
                 Assert.AreEqual(target, text.Substring(hit.Start, hit.Length), text);
+            }
+        }
+    }
+
+    [TestMethod]
+    public void Post_alpha1_prepositional_pronoun_and_surname_agreement_hold_on_package()
+    {
+        using var session = GraphStressAcceptance.Open();
+        TextContextOptions fullOpts = new()
+        {
+            IncludeGrammarEvidence = true,
+            IncludeAdditionalRoleHeuristics = true,
+            IncludeWordConstructions = true,
+            IncludeNominalConstructions = true
+        };
+
+        foreach (TextContextOptions opts in new TextContextOptions[] { default, fullOpts })
+        {
+            // Item 1: Preposition-governed wrong nominative pronoun warns ONLY on the pronoun, never on the verb.
+            foreach ((string err, string pronTarget, string contrast) in new[]
+            {
+                ("Заради аз закъсняхме.", "аз", "Заради мен закъсняхме."),
+                ("Без ти тръгнахме.", "ти", "Без теб тръгнахме."),
+                ("Вместо той дойдохме.", "той", "Вместо него дойдохме."),
+                ("При тя останахме.", "тя", "При нея останахме."),
+                ("С ние говориха.", "ние", "С нас говориха.")
+            })
+            {
+                TextAnalysis bad = session.AnalyzeText(err, false, opts, default);
+                TextDiagnostic[] warnings = bad.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                Assert.HasCount(1, warnings, $"{err}: [{string.Join(',', warnings.Select(w => $"{w.Code}@{err.Substring(w.Start, w.Length)}"))}]");
+                Assert.AreEqual("pronoun_case_governance_mismatch", warnings[0].Code, err);
+                Assert.AreEqual(pronTarget, err.Substring(warnings[0].Start, warnings[0].Length), err);
+
+                TextAnalysis ok = session.AnalyzeText(contrast, false, opts, default);
+                TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                Assert.IsEmpty(okWarnings, $"{contrast}: [{string.Join(',', okWarnings.Select(w => w.Code))}]");
+            }
+
+            // Explicit mismatched subjects outside the PP are still flagged.
+            {
+                const string explicitSubjAfterPp = "Заради мен аз закъсняхме.";
+                TextAnalysis a = session.AnalyzeText(explicitSubjAfterPp, false, opts, default);
+                TextDiagnostic[] warnings = a.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                TextDiagnostic verbWarn = warnings.Single();
+                Assert.AreEqual("productive_morphology_agreement_mismatch", verbWarn.Code);
+                Assert.AreEqual("закъсняхме", explicitSubjAfterPp.Substring(verbWarn.Start, verbWarn.Length));
+            }
+            {
+                const string bothMismatched = "Заради аз ние закъсня.";
+                TextAnalysis a = session.AnalyzeText(bothMismatched, false, opts, default);
+                TextDiagnostic[] warnings = a.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                Assert.HasCount(2, warnings, $"{bothMismatched}: [{string.Join(',', warnings.Select(w => w.Code))}]");
+                Assert.IsTrue(warnings.Any(d => d.Code == "pronoun_case_governance_mismatch" && bothMismatched.Substring(d.Start, d.Length) == "аз"));
+                Assert.IsTrue(warnings.Any(d => d.Code == "productive_morphology_agreement_mismatch" && bothMismatched.Substring(d.Start, d.Length) == "закъсня"));
+            }
+            {
+                const string prePpExplicitSubj = "Той заради мен закъсняхме.";
+                TextAnalysis a = session.AnalyzeText(prePpExplicitSubj, false, opts, default);
+                TextDiagnostic verbWarn = a.Diagnostics.Single(d => IsActionablePackageWarning(d.Code));
+                Assert.AreEqual("productive_morphology_agreement_mismatch", verbWarn.Code);
+                Assert.AreEqual("закъсняхме", prePpExplicitSubj.Substring(verbWarn.Start, verbWarn.Length));
+            }
+
+            // Item 2: Surname as subject (OOV -ов/-ова/-ови, dictionary FamilyName, titles, given+surname, plural, coordinated).
+            {
+                const string compoundTarget = "Чорбанова четат на червена пейката.";
+                TextAnalysis res = session.AnalyzeText(compoundTarget, false, opts, default);
+                TextDiagnostic[] warnings = res.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                Assert.IsTrue(warnings.Any(d => d.Code == "productive_morphology_agreement_mismatch" && compoundTarget.Substring(d.Start, d.Length) == "четат"), compoundTarget);
+                Assert.IsTrue(warnings.Any(d => d.Code == "nominal_article_on_noninitial_member" && compoundTarget.Substring(d.Start, d.Length) == "пейката"), compoundTarget);
+            }
+
+            static bool IsSurnameTestWarning(string text, TextDiagnostic d) =>
+                IsActionablePackageWarning(d.Code) &&
+                !(d.Code == "spelling_unknown_word_unique_distance_one_candidate" &&
+                  (uint)d.Start < (uint)text.Length &&
+                  char.IsUpper(text[d.Start]));
+
+            foreach ((string err, string targetVerb) in new[]
+            {
+                ("Чорбанова четат.", "четат"),
+                ("Чорбанов четат.", "четат"),
+                ("Каравелова четат.", "четат"),
+                ("Дебелянов четат.", "четат"),
+                ("Петрова четат.", "четат"),
+                ("Колева спят.", "спят"),
+                ("Иванов пристигнаха.", "пристигнаха"),
+                ("Мария Чорбанова четат.", "четат"),
+                ("Г-н Чорбанов четат.", "четат"),
+                ("Г-жа Чорбанова четат.", "четат"),
+                ("Д-р Петрова четат.", "четат"),
+                ("Г-н Петров четат.", "четат"),
+                ("Днес г-н Чорбанов четат.", "четат"),
+                ("Днес г-жа Чорбанова четат.", "четат"),
+                ("Днес д-р Петрова четат.", "четат"),
+                ("Днес г-н Петров четат.", "четат"),
+                ("Чорбанови чете.", "чете"),
+                ("Петрови чете.", "чете"),
+                ("Чорбанова и Петрова чете.", "чете")
+            })
+            {
+                TextAnalysis bad = session.AnalyzeText(err, false, opts, default);
+                TextDiagnostic[] warnings = bad.Diagnostics.Where(d => IsSurnameTestWarning(err, d)).ToArray();
+                TextDiagnostic hit = warnings.SingleOrDefault(d =>
+                    d.Code == "productive_morphology_agreement_mismatch" &&
+                    err.Substring(d.Start, d.Length) == targetVerb)!;
+                Assert.IsNotNull(hit, $"{err}: got [{string.Join(',', warnings.Select(w => $"{w.Code}@{err.Substring(w.Start, w.Length)}"))}]");
+                Assert.HasCount(1, warnings, $"{err}: unexpected warnings [{string.Join(',', warnings.Select(w => $"{w.Code}@{err.Substring(w.Start, w.Length)}"))}]");
+            }
+
+            foreach (string clean in new[]
+            {
+                "Чорбанова чете.",
+                "Чорбанова чете на червената пейка.",
+                "Чорбанови четат.",
+                "Петрови четат.",
+                "Чорбанова и Петрова четат.",
+                "Мария Чорбанова и Иван Петров четат.",
+                "Хаджийски чете.",
+                "Хаджийски четат.",
+                "Чорбанова къща се вижда.",
+                "Чорбанови книги лежат на масата.",
+                "Иван пътуваме с теб.",
+                "Тази шапка по ти отива.",
+                "Преди те видях на гарата."
+            })
+            {
+                TextAnalysis ok = session.AnalyzeText(clean, false, opts, default);
+                TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsSurnameTestWarning(clean, d)).ToArray();
+                Assert.IsEmpty(okWarnings, $"{clean}: [{string.Join(',', okWarnings.Select(w => $"{w.Code}@{clean.Substring(w.Start, w.Length)}"))}]");
+            }
+
+            // Item 4 (GPTpro Priority 1): subordinate "че/защото + pronoun + ще" hands off future complexes cleanly to ClauseFusion.
+            foreach ((string err, string targetVerb) in new[]
+            {
+                ("Знам, че аз ще закъснеем.", "закъснеем"),
+                ("Ще остана, защото ние ще работиш.", "работиш"),
+                ("Знам, че тя ще го видят.", "видят")
+            })
+            {
+                TextAnalysis bad = session.AnalyzeText(err, false, opts, default);
+                TextDiagnostic[] warnings = bad.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                TextDiagnostic hit = warnings.SingleOrDefault(d =>
+                    d.Code == "productive_morphology_agreement_mismatch" &&
+                    d.RuleId == "clause_fusion_agreement.v1" &&
+                    err.Substring(d.Start, d.Length) == targetVerb)!;
+                Assert.IsNotNull(hit, $"{err}: got [{string.Join(',', warnings.Select(w => $"{w.Code}:{w.RuleId}@{err.Substring(w.Start, w.Length)}"))}]");
+                Assert.HasCount(1, warnings, $"{err}: unexpected duplicate or extra warnings");
+                if (opts.IncludeGrammarEvidence)
+                {
+                    Assert.IsEmpty(bad.Context!.Sentences.SelectMany(s => s.Candidates)
+                        .Where(c => c.AuthorityLane == "licensed_subordinate_pronoun_prefix_agreement.v1"),
+                        $"{err}: SubordinatePronounPrefixLane must not claim future-marked complexes");
+                }
+            }
+
+            foreach (string cleanFuture in new[]
+            {
+                "Знам, че аз ще закъснея.",
+                "Ще остана, защото ние ще работим.",
+                "Знам, „че аз ще закъснеем“."
+            })
+            {
+                TextAnalysis ok = session.AnalyzeText(cleanFuture, false, opts, default);
+                TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray();
+                Assert.IsEmpty(okWarnings, $"{cleanFuture}: [{string.Join(',', okWarnings.Select(w => $"{w.Code}@{cleanFuture.Substring(w.Start, w.Length)}"))}]");
+            }
+        }
+    }
+
+    [TestMethod]
+    public void Post_alpha1_surname_and_name_predicative_presentation_vs_subject_agreement()
+    {
+        using var session = GraphStressAcceptance.Open();
+        TextContextOptions fullOpts = new()
+        {
+            IncludeGrammarEvidence = true,
+            IncludeAdditionalRoleHeuristics = true,
+            IncludeWordConstructions = true,
+            IncludeNominalConstructions = true
+        };
+
+        string[] cleanPresentation =
+        [
+            "Чорбанова се казвам.",
+            "Мария се казвам.",
+            "Иван Петров се казвам.",
+            "Г-жа Чорбанова се казвам.",
+            "Чорбанова се наричам.",
+            "Петрова се зова.",
+            "Чорбанова се именувам.",
+            "Чорбанова се пиша.",
+            "Чорбанова се казвах.",
+            "Чорбанова ще се казвам.",
+            "Чорбанова съм се казвала.",
+            "Чорбанова щях да се казвам.",
+            "Чорбанова може да се казвам.",
+            "Казвам се Чорбанова.",
+            "Аз се казвам Чорбанова.",
+            "Чорбанова съм аз.",
+            "Чорбанови сме ние.",
+            "Като Чорбанова се представям.",
+            "С фамилия Чорбанова се представям.",
+            "С име Мария се представям."
+        ];
+
+        (string Text, string TargetVerb)[] mismatches =
+        [
+            ("Чорбанова четат.", "четат"),
+            ("Мария четат.", "четат"),
+            ("Чорбанова се смеят.", "смеят"),
+            ("Чорбанова се усмихваме.", "усмихваме"),
+            ("Чорбанова се явявам на изпит.", "явявам"),
+            ("Чорбанова се явяват утре.", "явяват"),
+            ("Аз се казваме Чорбанова.", "казваме"),
+            ("Ти се казвам Чорбанова.", "казвам"),
+            ("Настоящото решение се прилагам за всички продукти.", "прилагам"),
+            ("Когато Чорбанова четат, ние слушаме.", "четат"),
+            ("След като Чорбанова четат, ние слушаме.", "четат")
+        ];
+
+        static bool IsPresentationTestWarning(string text, TextDiagnostic d) =>
+            IsActionablePackageWarning(d.Code) &&
+            !(d.Code == "spelling_unknown_word_unique_distance_one_candidate" &&
+              (uint)d.Start < (uint)text.Length &&
+              char.IsUpper(text[d.Start]));
+
+        foreach (TextContextOptions opts in new TextContextOptions[] { default, fullOpts })
+        {
+            foreach (bool includeUnknown in new[] { false, true })
+            {
+                foreach (string clean in cleanPresentation)
+                {
+                    TextAnalysis ok = session.AnalyzeText(clean, includeUnknown, opts, default);
+                    TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsPresentationTestWarning(clean, d)).ToArray();
+                    Assert.IsEmpty(okWarnings, $"{clean} (unknown={includeUnknown}): [{string.Join(',', okWarnings.Select(w => $"{w.Code}@{clean.Substring(w.Start, w.Length)}"))}]");
+
+                    if (opts.IncludeGrammarEvidence && ok.Syntax is { Available: true } syntax &&
+                        clean is "Чорбанова се казвам." or "Мария се казвам." or "Казвам се Чорбанова.")
+                    {
+                        string nameToken = clean.Contains("Мария", StringComparison.Ordinal) ? "Мария" : "Чорбанова";
+                        TextSyntaxCandidate[] badSubjects = syntax.Sentences
+                            .SelectMany(s => s.Candidates)
+                            .Where(c => c.Role == TextSyntaxRole.Subject &&
+                                clean.Substring(c.Start, c.Length).Contains(nameToken, StringComparison.Ordinal))
+                            .ToArray();
+                        Assert.IsEmpty(badSubjects, $"{clean} (unknown={includeUnknown}): unexpected Subject role on {nameToken}");
+                    }
+                }
+
+                foreach ((string err, string targetVerb) in mismatches)
+                {
+                    TextAnalysis bad = session.AnalyzeText(err, includeUnknown, opts, default);
+                    TextDiagnostic[] warnings = bad.Diagnostics.Where(d => IsPresentationTestWarning(err, d)).ToArray();
+                    TextDiagnostic hit = warnings.SingleOrDefault(d =>
+                        d.Code == "productive_morphology_agreement_mismatch" &&
+                        err.Substring(d.Start, d.Length) == targetVerb)!;
+                    Assert.IsNotNull(hit, $"{err} (unknown={includeUnknown}): got [{string.Join(',', warnings.Select(w => $"{w.Code}@{err.Substring(w.Start, w.Length)}"))}]");
+                    Assert.HasCount(1, warnings, $"{err} (unknown={includeUnknown}): unexpected warning count");
+                }
             }
         }
     }

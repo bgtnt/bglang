@@ -692,7 +692,8 @@ internal static class VerbalComplexBinder
 
     internal static bool IsLinkingOrSemiCopularLemma(string lemma) =>
         BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда" or "бивам" or "стана" or "ставам" or
-            "изглеждам" or "окажа" or "наричам" or "казвам";
+            "изглеждам" or "окажа" or "оказвам" or "наричам" or "нарека" or "казвам" or "кажа" or
+            "зова" or "именувам" or "явявам" or "явя";
 
     internal static bool IsActiveLexicalParticiple(WordSlot slot) =>
         !slot.Word.UsesGraph && slot.Active.Length > 0 &&

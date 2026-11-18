@@ -1,0 +1,627 @@
+# generator = UDPipe 2, https://lindat.mff.cuni.cz/services/udpipe
+# udpipe_model = bulgarian-btb-ud-2.17-251125
+# udpipe_model_licence = CC BY-NC-SA
+# newdoc
+# newpar
+# sent_id = 1
+# text = Влакът от Варна пристигна на трета линия с десет минути закъснение.
+1	Влакът	влак	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	4	nsubj	_	_
+2	от	от	ADP	R	_	3	case	_	_
+3	Варна	варна	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	1	nmod	_	_
+4	пристигна	пристигна	VERB	Vppif-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+5	на	на	ADP	R	_	7	case	_	_
+6	трета	трети	ADJ	Mofsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing|NumType=Ord	7	amod	_	_
+7	линия	линия	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	4	iobj	_	_
+8	с	с	ADP	R	_	10	case	_	_
+9	десет	десет	NUM	Mc-pi	Definite=Ind|Number=Plur|NumType=Card	10	nummod	_	_
+10	минути	минута	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	4	obl	_	_
+11	закъснение	закъснение	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	10	nmod	_	SpaceAfter=No
+12	.	.	PUNCT	punct	_	4	punct	_	SpacesAfter=\n
+
+# sent_id = 2
+# text = Дядо ми чете вестник на балкона всяка сутрин.
+1	Дядо	дядо	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+2	ми	аз	PRON	Ppetds1	Case=Dat|Number=Sing|Person=1|PronType=Prs	3	iobj	_	_
+3	чете	чета	VERB	Vpitf-o3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	вестник	вестник	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	obj	_	_
+5	на	на	ADP	R	_	6	case	_	_
+6	балкона	балкон	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	4	nmod	_	_
+7	всяка	всеки	DET	Pce-os-f	Gender=Fem|Number=Sing|PronType=Tot	8	det	_	_
+8	сутрин	сутрин	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	obl	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 3
+# text = Властите затвориха пътя заради падналите дървета.
+1	Властите	власт	NOUN	Ncfpd	Definite=Def|Gender=Fem|Number=Plur	2	nsubj	_	_
+2	затвориха	затворя-(се)	VERB	Vpptf-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	пътя	път	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	2	obj	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	падналите	паднал	ADJ	Vppicao-p-d	Aspect=Perf|Definite=Def|Degree=Pos|Number=Plur|Tense=Past|VerbForm=Part|Voice=Act	6	amod	_	_
+6	дървета	дърво	NOUN	Ncnpi	Definite=Ind|Gender=Neut|Number=Plur	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 4
+# text = Котката на съседите е много любопитна.
+1	Котката	котка	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	6	nsubj	_	_
+2	на	на	ADP	R	_	3	case	_	_
+3	съседите	съсед	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	1	nmod	_	_
+4	е	съм	AUX	Vxitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	6	cop	_	_
+5	много	много	ADV	Md-pi	Definite=Ind|Degree=Pos|Number=Plur|NumType=Card	6	advmod	_	_
+6	любопитна	любопитен	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	0	root	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	6	punct	_	SpacesAfter=\n
+
+# sent_id = 5
+# text = Миналото лято купихме малка къща на село.
+1	Миналото	минало	ADJ	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	2	amod	_	_
+2	лято	лято	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	3	obl	_	_
+3	купихме	купя	VERB	Vpptf-o1p	Aspect=Perf|Mood=Ind|Number=Plur|Person=1|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	малка	малък	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	5	amod	_	_
+5	къща	къща	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	obj	_	_
+6	на	на	ADP	R	_	7	case	_	_
+7	село	село	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	5	nmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 6
+# text = Цветята в градината растат бързо след дъжд.
+1	Цветята	цветя	NOUN	Ncnpd	Definite=Def|Gender=Neut|Number=Plur	4	nsubj	_	_
+2	в	в	ADP	R	_	3	case	_	_
+3	градината	градина	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	1	nmod	_	_
+4	растат	раста	VERB	Vpiif-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+5	бързо	бързо	ADV	Dm	Degree=Pos	4	advmod	_	_
+6	след	след	ADP	R	_	7	case	_	_
+7	дъжд	дъжд	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	4	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	4	punct	_	SpacesAfter=\n
+
+# sent_id = 7
+# text = Мария написа дълго писмо на своята приятелка.
+1	Мария	мария	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	2	nsubj	_	_
+2	написа	напиша	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	дълго	дълъг	ADJ	Ansi	Definite=Ind|Degree=Pos|Gender=Neut|Number=Sing	4	amod	_	_
+4	писмо	писмо	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	2	obj	_	_
+5	на	на	ADP	R	_	7	case	_	_
+6	своята	свой	DET	Psxlos-fd	Definite=Def|Gender=Fem|Number=Sing|Poss=Yes|PronType=Prs|Reflex=Yes	7	det	_	_
+7	приятелка	приятелка	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	2	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 8
+# text = Филмът беше заснет в стария град.
+1	Филмът	филм	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	заснет	заснема	VERB	Vpptcv--smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	0	root	_	_
+4	в	в	ADP	R	_	6	case	_	_
+5	стария	стар	ADJ	Amsh	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	6	amod	_	_
+6	град	град	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	iobj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 9
+# text = Малките деца обичат сладолед през лятото.
+1	Малките	малък	ADJ	A-pd	Definite=Def|Degree=Pos|Number=Plur	2	amod	_	_
+2	деца	дете	NOUN	Ncnpi	Definite=Ind|Gender=Neut|Number=Plur	3	nsubj	_	_
+3	обичат	обичам	VERB	Vpitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	сладолед	сладолед	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	obj	_	_
+5	през	през	ADP	R	_	6	case	_	_
+6	лятото	лято	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 10
+# text = Срещата започва в десет часа, затова тръгваме рано.
+1	Срещата	среща	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	2	nsubj	_	_
+2	започва	започвам-(се)	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	в	в	ADP	R	_	5	case	_	_
+4	десет	десет	NUM	Mc-pi	Definite=Ind|Number=Plur|NumType=Card	5	nummod	_	_
+5	часа	час	NOUN	Ncmt	Gender=Masc|Number=Count	2	obl	_	SpaceAfter=No
+6	,	,	PUNCT	punct	_	8	punct	_	_
+7	затова	затова	ADV	Pds	_	8	advmod	_	_
+8	тръгваме	тръгвам-(си)	VERB	Vpiif-r1p	Aspect=Imp|Mood=Ind|Number=Plur|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	2	advcl	_	_
+9	рано	рано	ADV	Dt	Degree=Pos	8	advmod	_	SpaceAfter=No
+10	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 11
+# text = Когато дъждът спря, слънцето излезе отново.
+1	Когато	когато	ADV	Prt	PronType=Rel	3	advmod	_	_
+2	дъждът	дъжд	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj	_	_
+3	спря	спра-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	6	advcl	_	SpaceAfter=No
+4	,	,	PUNCT	punct	_	3	punct	_	_
+5	слънцето	слънце	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	6	nsubj	_	_
+6	излезе	изляза	VERB	Vppif-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+7	отново	отново	ADV	Dt	Degree=Pos	6	advmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	6	punct	_	SpacesAfter=\n
+
+# sent_id = 12
+# text = Майсторът поправи счупения прозорец за един час.
+1	Майсторът	майстор	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	поправи	поправя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	счупения	счупя	ADJ	Vpptcv--smh	Aspect=Perf|Definite=Def|Degree=Pos|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	4	amod	_	_
+4	прозорец	прозорец	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	_
+5	за	за	ADP	R	_	7	case	_	_
+6	един	един	NUM	Mcmsi	Definite=Ind|Gender=Masc|Number=Sing|NumType=Card	7	nummod	_	_
+7	час	час	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 13
+# text = Ябълките от нашата градина са сладки и сочни.
+1	Ябълките	ябълка	NOUN	Ncfpd	Definite=Def|Gender=Fem|Number=Plur	6	nsubj	_	_
+2	от	от	ADP	R	_	4	case	_	_
+3	нашата	наш	DET	Pszl-s1fd	Definite=Def|Gender=Fem|Number=Sing|Person=1|Poss=Yes|PronType=Prs	4	det	_	_
+4	градина	градина	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	1	nmod	_	_
+5	са	съм	AUX	Vxitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	6	cop	_	_
+6	сладки	сладък	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	0	root	_	_
+7	и	и	CCONJ	Cp	_	8	cc	_	_
+8	сочни	сочен	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	conj	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	6	punct	_	SpacesAfter=\n
+
+# sent_id = 14
+# text = Брат ми работи в голяма строителна фирма.
+1	Брат	брат	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+2	ми	аз	PRON	Psot--1	Person=1|Poss=Yes|PronType=Prs	3	iobj	_	_
+3	работи	работя	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	в	в	ADP	R	_	7	case	_	_
+5	голяма	голям	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	7	amod	_	_
+6	строителна	строителен	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	7	amod	_	_
+7	фирма	фирма	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 15
+# text = Организаторите отмениха концерта заради лошото време.
+1	Организаторите	организатор	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	nsubj	_	_
+2	отмениха	отменя	VERB	Vpptf-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	концерта	концерт	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	2	obj	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	лошото	лош	ADJ	Ansd	Definite=Def|Degree=Pos|Gender=Neut|Number=Sing	6	amod	_	_
+6	време	време	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 16
+# text = Мисля, че утре ще завали сняг.
+1	Мисля	мисля	VERB	Vpitf-r1s	Aspect=Imp|Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	SpaceAfter=No
+2	,	,	PUNCT	punct	_	6	punct	_	_
+3	че	че	SCONJ	Cs	_	6	mark	_	_
+4	утре	утре	ADV	Dt	Degree=Pos	6	advmod	_	_
+5	ще	ще	AUX	Tx	_	6	aux	_	_
+6	завали	заваля	VERB	Vpptf-r3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	1	ccomp	_	_
+7	сняг	сняг	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	6	nsubj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	1	punct	_	SpacesAfter=\n
+
+# sent_id = 17
+# text = В езерото плуват големи шарени риби.
+1	В	в	ADP	R	_	2	case	_	_
+2	езерото	езеро	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	_
+3	плуват	плувам	VERB	Vpiif-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	големи	голям	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+5	шарени	шарен	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+6	риби	риба	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	nsubj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 18
+# text = Петър забрави ключовете си в колата.
+1	Петър	петър	PROPN	Npmsi	Definite=Ind|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	забрави	забравя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	ключовете	ключ	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	obj	_	_
+4	си	свой	PRON	Psxto	Case=Nom|Poss=Yes|PronType=Prs|Reflex=Yes	3	det	_	_
+5	в	в	ADP	R	_	6	case	_	_
+6	колата	кола	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 19
+# text = Залата беше пълна с развълнувани зрители.
+1	Залата	зала	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	3	nsubj	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	cop	_	_
+3	пълна	пълен	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	0	root	_	_
+4	с	с	ADP	R	_	6	case	_	_
+5	развълнувани	развълнувам-(се)	ADJ	Vpptcv--p-i	Aspect=Perf|Definite=Ind|Degree=Pos|Number=Plur|VerbForm=Part|Voice=Pass	6	amod	_	_
+6	зрители	зрител	NOUN	Ncmpi	Definite=Ind|Gender=Masc|Number=Plur	3	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 20
+# text = Новият музей отвори врати в началото на май.
+1	Новият	нов	ADJ	Amsf	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	2	amod	_	_
+2	музей	музей	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+3	отвори	отворя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	врати	врата	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	obj	_	_
+5	в	в	ADP	R	_	6	case	_	_
+6	началото	начало	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	_
+7	на	на	ADP	R	_	8	case	_	_
+8	май	май	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	6	nmod	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 21
+# text = Високото момче свири на китара пред блока.
+1	Високото	висок	ADJ	Ansd	Definite=Def|Degree=Pos|Gender=Neut|Number=Sing	2	amod	_	_
+2	момче	момче	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	3	nsubj	_	_
+3	свири	свиря	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	на	на	ADP	R	_	5	case	_	_
+5	китара	китар	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	3	iobj	_	_
+6	пред	пред	ADP	R	_	7	case	_	_
+7	блока	блок	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	3	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 22
+# text = Родителите изпратиха децата на лагер в планината.
+1	Родителите	родител	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	nsubj	_	_
+2	изпратиха	изпратя	VERB	Vpptf-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	децата	дете	NOUN	Ncnpd	Definite=Def|Gender=Neut|Number=Plur	2	obj	_	_
+4	на	на	ADP	R	_	5	case	_	_
+5	лагер	лагер	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	iobj	_	_
+6	в	в	ADP	R	_	7	case	_	_
+7	планината	планина	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	5	nmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 23
+# text = Чаят стана студен, докато говорехме по телефона.
+1	Чаят	чая	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	стана	стана	VERB	Vppif-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	студен	студен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	2	obj	_	SpaceAfter=No
+4	,	,	PUNCT	punct	_	6	punct	_	_
+5	докато	докато	SCONJ	Cs	_	6	mark	_	_
+6	говорехме	говоря	VERB	Vpitf-m1p	Aspect=Imp|Mood=Ind|Number=Plur|Person=1|Tense=Past|VerbForm=Fin|Voice=Act	2	advcl	_	_
+7	по	по	ADP	R	_	8	case	_	_
+8	телефона	телефон	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	6	obl	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 24
+# text = Над полето летят ята прелетни птици.
+1	Над	над	ADP	R	_	2	case	_	_
+2	полето	поле	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	iobj	_	_
+3	летят	летя	VERB	Vpiif-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	ята	я	ADJ	Ncnpd	Definite=Def|Gender=Neut|Number=Plur	6	amod	_	_
+5	прелетни	прелетен	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+6	птици	птик	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	nsubj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 25
+# text = Фирмата търси опитен счетоводител с английски език.
+1	Фирмата	фирма	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	2	nsubj	_	_
+2	търси	търся	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	опитен	опитен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	4	amod	_	_
+4	счетоводител	счетоводител	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	_
+5	с	с	ADP	R	_	7	case	_	_
+6	английски	английски	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	7	amod	_	_
+7	език	език	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	4	nmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 26
+# text = Влакът от Варна пристигнаха с голямо закъснение.
+1	Влакът	влак	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	4	nsubj	_	_
+2	от	от	ADP	R	_	3	case	_	_
+3	Варна	варна	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	1	nmod	_	_
+4	пристигнаха	пристигна	VERB	Vppif-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+5	с	с	ADP	R	_	7	case	_	_
+6	голямо	голям	ADJ	Ansi	Definite=Ind|Degree=Pos|Gender=Neut|Number=Sing	7	amod	_	_
+7	закъснение	закъснение	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	4	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	4	punct	_	SpacesAfter=\n
+
+# sent_id = 27
+# text = Съседите ми чете вестник на балкона.
+1	Съседите	съсед	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	3	nsubj	_	_
+2	ми	мой	PRON	Psot--1	Person=1|Poss=Yes|PronType=Prs	1	det	_	_
+3	чете	чета	VERB	Vpitf-o3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	вестник	вестник	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	obj	_	_
+5	на	на	ADP	R	_	6	case	_	_
+6	балкона	балкон	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	4	nmod	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 28
+# text = Властите затвори пътя заради падналите дървета.
+1	Властите	власт	NOUN	Ncfpd	Definite=Def|Gender=Fem|Number=Plur	2	nsubj	_	_
+2	затвори	затворя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	пътя	път	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	2	obj	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	падналите	паднал	ADJ	Vppicao-p-d	Aspect=Perf|Definite=Def|Degree=Pos|Number=Plur|Tense=Past|VerbForm=Part|Voice=Act	6	amod	_	_
+6	дървета	дърво	NOUN	Ncnpi	Definite=Ind|Gender=Neut|Number=Plur	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 29
+# text = Цветята в градината расте бързо след дъжд.
+1	Цветята	цветя	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	4	nsubj	_	_
+2	в	в	ADP	R	_	3	case	_	_
+3	градината	градина	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	1	nmod	_	_
+4	расте	раста	VERB	Vpiif-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+5	бързо	бързо	ADV	Dm	Degree=Pos	4	advmod	_	_
+6	след	след	ADP	R	_	7	case	_	_
+7	дъжд	дъжд	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	4	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	4	punct	_	SpacesAfter=\n
+
+# sent_id = 30
+# text = Малките деца обича сладолед през лятото.
+1	Малките	малък	ADJ	A-pd	Definite=Def|Degree=Pos|Number=Plur	2	amod	_	_
+2	деца	дете	NOUN	Ncnpi	Definite=Ind|Gender=Neut|Number=Plur	3	nsubj	_	_
+3	обича	обичам	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	сладолед	сладолед	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	obj	_	_
+5	през	през	ADP	R	_	6	case	_	_
+6	лятото	лято	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 31
+# text = В езерото плува големи шарени риби.
+1	В	в	ADP	R	_	2	case	_	_
+2	езерото	езеро	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	_
+3	плува	плувам	VERB	Vpiif-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	големи	голям	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+5	шарени	шарен	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+6	риби	риба	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	nsubj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 32
+# text = Родителите изпрати децата на лагер в планината.
+1	Родителите	родител	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	nsubj	_	_
+2	изпрати	изпратя	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	децата	дете	NOUN	Ncnpd	Definite=Def|Gender=Neut|Number=Plur	2	obj	_	_
+4	на	на	ADP	R	_	5	case	_	_
+5	лагер	лагер	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	iobj	_	_
+6	в	в	ADP	R	_	7	case	_	_
+7	планината	планина	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	5	nmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 33
+# text = Брат ми работят в голяма строителна фирма.
+1	Брат	бра	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+2	ми	аз	PRON	Psot--1	Person=1|Poss=Yes|PronType=Prs	1	det	_	_
+3	работят	работя	VERB	Vpitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	в	в	ADP	R	_	7	case	_	_
+5	голяма	голям	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	7	amod	_	_
+6	строителна	строителен	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	7	amod	_	_
+7	фирма	фирма	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 34
+# text = Фирмата търсят опитен счетоводител.
+1	Фирмата	фирма	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	2	nsubj	_	_
+2	търсят	търся	VERB	Vpitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	опитен	опитен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	4	amod	_	_
+4	счетоводител	счетоводител	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	SpaceAfter=No
+5	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 35
+# text = Майсторът поправят счупения прозорец.
+1	Майсторът	майстор	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	поправят	поправя-(се)	VERB	Vpitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	счупения	счупя	ADJ	Vpptcv--smh	Aspect=Perf|Definite=Def|Degree=Pos|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	4	amod	_	_
+4	прозорец	прозорец	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	SpaceAfter=No
+5	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 36
+# text = Миналото лято купихме малък къща на село.
+1	Миналото	минало	ADJ	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	2	amod	_	_
+2	лято	лято	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	3	obl	_	_
+3	купихме	купя	VERB	Vpptf-o1p	Aspect=Perf|Mood=Ind|Number=Plur|Person=1|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	малък	малък	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	5	amod	_	_
+5	къща	къща	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	obj	_	_
+6	на	на	ADP	R	_	7	case	_	_
+7	село	село	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	5	nmod	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 37
+# text = Мария написа дълга писмо на своята приятелка.
+1	Мария	мария	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	2	nsubj	_	_
+2	написа	напиша	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	дълга	дълъг	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	4	amod	_	_
+4	писмо	писмо	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	2	obj	_	_
+5	на	на	ADP	R	_	7	case	_	_
+6	своята	свой	DET	Psxlos-fd	Definite=Def|Gender=Fem|Number=Sing|Poss=Yes|PronType=Prs|Reflex=Yes	7	det	_	_
+7	приятелка	приятелка	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	2	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 38
+# text = Високият момче свири на китара пред блока.
+1	Високият	висок	ADJ	Amsf	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	2	amod	_	_
+2	момче	момче	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	3	nsubj	_	_
+3	свири	свиря	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	на	на	ADP	R	_	5	case	_	_
+5	китара	китар	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	3	iobj	_	_
+6	пред	пред	ADP	R	_	7	case	_	_
+7	блока	блок	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	3	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 39
+# text = Брат ми работи в голям строителна фирма.
+1	Брат	брат	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+2	ми	аз	PRON	Psot--1	Person=1|Poss=Yes|PronType=Prs	1	det	_	_
+3	работи	работя	VERB	Vpitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	в	в	ADP	R	_	7	case	_	_
+5	голям	голям	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	7	amod	_	_
+6	строителна	строителен	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	7	amod	_	_
+7	фирма	фирма	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 40
+# text = Филмът беше заснет в стария част на града.
+1	Филмът	филм	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	заснет	заснема	VERB	Vpptcv--smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	0	root	_	_
+4	в	в	ADP	R	_	6	case	_	_
+5	стария	стар	ADJ	Amsh	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	6	amod	_	_
+6	част	част	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	iobj	_	_
+7	на	на	ADP	R	_	8	case	_	_
+8	града	град	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	6	nmod	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 41
+# text = Организаторите отмениха концерта заради лошата време.
+1	Организаторите	организатор	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	nsubj	_	_
+2	отмениха	отменя	VERB	Vpptf-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	концерта	концерт	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	2	obj	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	лошата	лош	ADJ	Afsd	Definite=Def|Degree=Pos|Gender=Fem|Number=Sing	6	amod	_	_
+6	време	време	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 42
+# text = В езерото плуват големи шарен риби.
+1	В	в	ADP	R	_	2	case	_	_
+2	езерото	езеро	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	_
+3	плуват	плувам	VERB	Vpiif-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	големи	голям	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+5	шарен	шарен	ADJ	A-pi	Definite=Ind|Degree=Pos|Number=Plur	6	amod	_	_
+6	риби	риба	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	nsubj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 43
+# text = Новата музей отвори врати в началото на май.
+1	Новата	нов	ADJ	Afsd	Definite=Def|Degree=Pos|Gender=Fem|Number=Sing	2	amod	_	_
+2	музей	музей	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+3	отвори	отворя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	врати	врата	NOUN	Ncfpi	Definite=Ind|Gender=Fem|Number=Plur	3	obj	_	_
+5	в	в	ADP	R	_	6	case	_	_
+6	началото	начало	NOUN	Ncnsd	Definite=Def|Gender=Neut|Number=Sing	3	obl	_	_
+7	на	на	ADP	R	_	8	case	_	_
+8	май	май	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	6	nmod	_	SpaceAfter=No
+9	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 44
+# text = Майстора поправи счупения прозорец за един час.
+1	Майстора	майстор	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	поправи	поправя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	счупения	счупя	ADJ	Vpptcv--smh	Aspect=Perf|Definite=Def|Degree=Pos|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	4	amod	_	_
+4	прозорец	прозорец	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	_
+5	за	за	ADP	R	_	7	case	_	_
+6	един	един	NUM	Mcmsi	Definite=Ind|Gender=Masc|Number=Sing|NumType=Card	7	nummod	_	_
+7	час	час	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obl	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 45
+# text = Влака от Варна пристигна на трета линия.
+1	Влака	влака	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	4	nsubj	_	_
+2	от	от	ADP	R	_	3	case	_	_
+3	Варна	варна	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	1	nmod	_	_
+4	пристигна	пристигна	VERB	Vppif-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+5	на	на	ADP	R	_	7	case	_	_
+6	трета	трети	ADJ	Mofsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing|NumType=Ord	7	amod	_	_
+7	линия	линия	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	4	iobj	_	SpaceAfter=No
+8	.	.	PUNCT	punct	_	4	punct	_	SpacesAfter=\n
+
+# sent_id = 46
+# text = Филма беше заснет в стария град.
+1	Филма	филма	NOUN	Ncmsh	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	заснет	заснема	VERB	Vpptcv--smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	0	root	_	_
+4	в	в	ADP	R	_	6	case	_	_
+5	стария	стар	ADJ	Amsh	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	6	amod	_	_
+6	град	град	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	iobj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 47
+# text = Организаторите отмениха концертът заради лошото време.
+1	Организаторите	организатор	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	2	nsubj	_	_
+2	отмениха	отменя	VERB	Vpptf-o3p	Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	концертът	концерт	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	2	obj	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	лошото	лош	ADJ	Ansd	Definite=Def|Degree=Pos|Gender=Neut|Number=Sing	6	amod	_	_
+6	време	време	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	2	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 48
+# text = Филмът беше заснет в старият град.
+1	Филмът	филм	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	заснет	заснема	VERB	Vpptcv--smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	0	root	_	_
+4	в	в	ADP	R	_	6	case	_	_
+5	старият	стар	ADJ	Amsf	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	6	amod	_	_
+6	град	град	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	iobj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 49
+# text = Майсторът поправи счупеният прозорец.
+1	Майсторът	майстор	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	поправи	поправя-(се)	VERB	Vpptf-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	счупеният	счупен	ADJ	Vpptcv--smf	Aspect=Perf|Definite=Def|Degree=Pos|Gender=Masc|Number=Sing|VerbForm=Part|Voice=Pass	4	amod	_	_
+4	прозорец	прозорец	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	2	obj	_	SpaceAfter=No
+5	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 50
+# text = Чая стана студен, докато говорехме.
+1	Чая	чай	NOUN	Vpitf-r1s	Definite=Ind|Gender=Masc|Number=Sing	2	nsubj	_	_
+2	стана	стана	VERB	Vppif-o3s	Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+3	студен	студен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	2	obj	_	SpaceAfter=No
+4	,	,	PUNCT	punct	_	6	punct	_	_
+5	докато	докато	SCONJ	Cs	_	6	mark	_	_
+6	говорехме	говоря	VERB	Vpitf-m1p	Aspect=Imp|Mood=Ind|Number=Plur|Person=1|Tense=Imp|VerbForm=Fin|Voice=Act	2	advcl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	2	punct	_	SpacesAfter=\n
+
+# sent_id = 51
+# text = Дядо ми чете вестник на балконът.
+1	Дядо	дядо	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	nsubj	_	_
+2	ми	аз	PRON	Ppetds1	Case=Dat|Number=Sing|Person=1|PronType=Prs	3	iobj	_	_
+3	чете	чета	VERB	Vpitf-o3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4	вестник	вестник	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	obj	_	_
+5	на	на	ADP	R	_	6	case	_	_
+6	балконът	балкон	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	4	nmod	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 52
+# text = Котката на съседите е много любопитен.
+1	Котката	котка	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	6	nsubj	_	_
+2	на	на	ADP	R	_	3	case	_	_
+3	съседите	съсед	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	1	nmod	_	_
+4	е	съм	AUX	Vxitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	6	cop	_	_
+5	много	много	ADV	Md-pi	Definite=Ind|Degree=Pos|Number=Plur|NumType=Card	6	advmod	_	_
+6	любопитен	любопитен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	0	root	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	6	punct	_	SpacesAfter=\n
+
+# sent_id = 53
+# text = Ябълките от нашата градина са сладка.
+1	Ябълките	ябълка	NOUN	Ncfpd	Definite=Def|Gender=Fem|Number=Plur	6	nsubj	_	_
+2	от	от	ADP	R	_	4	case	_	_
+3	нашата	наш	DET	Pszl-s1fd	Definite=Def|Gender=Fem|Number=Sing|Person=1|Poss=Yes|PronType=Prs	4	det	_	_
+4	градина	градина	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	1	nmod	_	_
+5	са	съм	AUX	Vxitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	6	cop	_	_
+6	сладка	сладка	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	0	root	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	6	punct	_	SpacesAfter=\n
+
+# sent_id = 54
+# text = Залата беше пълен с развълнувани зрители.
+1	Залата	зала	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	3	nsubj	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	cop	_	_
+3	пълен	пълен	ADJ	Amsi	Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing	0	root	_	_
+4	с	с	ADP	R	_	6	case	_	_
+5	развълнувани	развълнувам-(се)	ADJ	Vpptcv--p-i	Aspect=Perf|Definite=Ind|Degree=Pos|Number=Plur|VerbForm=Part|Voice=Pass	6	amod	_	_
+6	зрители	зрител	NOUN	Ncmpi	Definite=Ind|Gender=Masc|Number=Plur	3	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 55
+# text = Филмът беше заснета в стария град.
+1	Филмът	филм	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	беше	съм	AUX	Vxitf-t3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	заснета	засне	VERB	Vpptcv--sfi	Aspect=Perf|Definite=Ind|Gender=Fem|Number=Sing|VerbForm=Part|Voice=Pass	0	root	_	_
+4	в	в	ADP	R	_	6	case	_	_
+5	стария	стар	ADJ	Amsh	Definite=Def|Degree=Pos|Gender=Masc|Number=Sing	6	amod	_	_
+6	град	град	NOUN	Ncmsi	Definite=Ind|Gender=Masc|Number=Sing	3	iobj	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 56
+# text = Пътят е затворени заради падналите дървета.
+1	Пътят	път	NOUN	Ncmsf	Definite=Def|Gender=Masc|Number=Sing	3	nsubj:pass	_	_
+2	е	съм	AUX	Vxitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	3	aux:pass	_	_
+3	затворени	затворя-(се)	VERB	Vpptcv--p-i	Aspect=Perf|Definite=Ind|Number=Plur|VerbForm=Part|Voice=Pass	0	root	_	_
+4	заради	заради	ADP	R	_	6	case	_	_
+5	падналите	паднал	ADJ	Vppicao-p-d	Aspect=Perf|Definite=Def|Degree=Pos|Number=Plur|Tense=Past|VerbForm=Part|Voice=Act	6	amod	_	_
+6	дървета	дърво	NOUN	Ncnpi	Definite=Ind|Gender=Neut|Number=Plur	3	obl	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 57
+# text = Мария е написал дълго писмо.
+1	Мария	мария	PROPN	Npfsi	Definite=Ind|Gender=Fem|Number=Sing	3	nsubj	_	_
+2	е	съм	AUX	Vxitf-r3s	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	3	aux	_	_
+3	написал	напиша	VERB	Vpptcao-smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|Tense=Past|VerbForm=Part|Voice=Act	0	root	_	_
+4	дълго	дълъг	ADJ	Ansi	Definite=Ind|Degree=Pos|Gender=Neut|Number=Sing	5	amod	_	_
+5	писмо	писмо	NOUN	Ncnsi	Definite=Ind|Gender=Neut|Number=Sing	3	obj	_	SpaceAfter=No
+6	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 58
+# text = Аз съм купили малка къща.
+1	Аз	аз	PRON	Ppe-os1	Case=Nom|Number=Sing|Person=1|PronType=Prs	3	nsubj	_	_
+2	съм	съм	AUX	Vxitf-r1s	Aspect=Imp|Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	3	aux	_	_
+3	купили	купя	VERB	Vpptcao-p-i	Aspect=Perf|Definite=Ind|Number=Plur|Tense=Past|VerbForm=Part|Voice=Act	0	root	_	_
+4	малка	малък	ADJ	Afsi	Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing	5	amod	_	_
+5	къща	къща	NOUN	Ncfsi	Definite=Ind|Gender=Fem|Number=Sing	3	obj	_	SpaceAfter=No
+6	.	.	PUNCT	punct	_	3	punct	_	SpacesAfter=\n
+
+# sent_id = 59
+# text = Те са забравил ключовете в колата.
+1	Те	аз	PRON	Ppe-op3	Case=Nom|Number=Plur|Person=3|PronType=Prs	3	nsubj	_	_
+2	са	съм	AUX	Vxitf-r3p	Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	3	aux	_	_
+3	забравил	забравя-(се)	VERB	Vpptcao-smi	Aspect=Perf|Definite=Ind|Gender=Masc|Number=Sing|Tense=Past|VerbForm=Part|Voice=Act	0	root	_	_
+4	ключовете	ключ	NOUN	Ncmpd	Definite=Def|Gender=Masc|Number=Plur	3	obj	_	_
+5	в	в	ADP	R	_	6	case	_	_
+6	колата	кола	NOUN	Ncfsd	Definite=Def|Gender=Fem|Number=Sing	4	nmod	_	SpaceAfter=No
+7	.	.	PUNCT	punct	_	3	punct	_	SpaceAfter=No
+

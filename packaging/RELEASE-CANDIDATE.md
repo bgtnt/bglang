@@ -1,11 +1,11 @@
-# Възпроизвеждане и пакетни профили (`v0.2.0-alpha.1`)
+# Възпроизвеждане и пакетни профили (`v0.2.0-alpha.2`)
 
-Това ръководство описва разликата между готовия пакет с данни и независимото пълно преизграждане от изходни данни за предварителното издание [`v0.2.0-alpha.1`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.1).
+Това ръководство описва разликата между готовия пакет с данни и независимото пълно преизграждане от изходни данни за предварителното издание [`v0.2.0-alpha.2`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.2).
 
 ## Готов пакет (`runtime.zip`) спрямо пълно преизграждане (`inputs.zip`)
 
-- **За директна употреба на библиотеката, конзолния пример или уеб хоста:** изтеглете [`bglang-v0.2.0-alpha.1-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-source.zip), готовия [`bglang-v0.2.0-alpha.1-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-runtime.zip) и [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/SHA256SUMS). Разархивирайте четирите runtime файла в `./runtime` и следвайте [началното ръководство](../README.md) и [ръководството на BgLang.Web](../apps/BgLang.Web/README.md). Не е нужно да изтегляте изходните речникови входове.
-- **За независимо байт-по-байт преизграждане на пакета:** изтеглете допълнително [`bglang-v0.2.0-alpha.1-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-inputs.zip), който съдържа заключения входен файл `lexemes.source.json`. Изисква се **.NET SDK 10.0.403** (зададен в [`global.json`](../global.json)).
+- **За директна употреба на библиотеката, конзолния пример или уеб хоста:** изтеглете [`bglang-v0.2.0-alpha.2-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-source.zip), готовия [`bglang-v0.2.0-alpha.2-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-runtime.zip) и [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/SHA256SUMS). Разархивирайте четирите runtime файла в `./runtime` и следвайте [началното ръководство](../README.md) и [ръководството на BgLang.Web](../apps/BgLang.Web/README.md). Не е нужно да изтегляте изходните речникови входове.
+- **За независимо байт-по-байт преизграждане на пакета:** изтеглете допълнително [`bglang-v0.2.0-alpha.2-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-inputs.zip), който съдържа заключения входен файл `lexemes.source.json`. Изисква се **.NET SDK 10.0.403** (зададен в [`global.json`](../global.json)).
 
 ## Профили за съвместимост на пакета
 
@@ -13,7 +13,7 @@
 
 | Профил | Идентификатор (`packageId`) | SHA-256 на `manifest.json` | Роля и съдържание |
 | --- | --- | --- | --- |
-| `CurrentGraphStress` | `bglang-neutral:9e9a4f441f679542` | `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` | Активният пакет в `v0.2.0-alpha.1-runtime.zip`. Включва редакционния слой за ударение и графовия профил за производни думи на `-ист`. |
+| `CurrentGraphStress` | `bglang-neutral:9e9a4f441f679542` | `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` | Активният пакет в `v0.2.0-alpha.2-runtime.zip`. Включва редакционния слой за ударение и графовия профил за производни думи на `-ист`. |
 | `Current` | `bglang-neutral:90bea7c5c799f04d` | `c718c78baaf244b0dfde39f9fe0e9295abb974cc254a94903e70a3014625bbc7` | Профилът по подразбиране в `Build-PublicPackage.ps1`. Прилага редакционния слой за ударение и служи като задължителна зависимост (`-ArticleCurrentManifest`) за контролите по членуване при `-Test`. |
 | `Baseline` | `bglang-neutral:36b0b69685d6d3e9` | `451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7` | Базовият профил за съвместимост без редакционния слой и без граф-стрес профила; използва се за запазените базови речникови, ударенски и HTTP контроли. |
 
@@ -32,9 +32,9 @@
 
 1. Проверете контролните суми на изтеглените архиви спрямо `SHA256SUMS`:
    ```powershell
-   Get-FileHash bglang-v0.2.0-alpha.1-source.zip, bglang-v0.2.0-alpha.1-inputs.zip, bglang-v0.2.0-alpha.1-runtime.zip -Algorithm SHA256
+   Get-FileHash bglang-v0.2.0-alpha.2-source.zip, bglang-v0.2.0-alpha.2-inputs.zip, bglang-v0.2.0-alpha.2-runtime.zip -Algorithm SHA256
    ```
-2. Разархивирайте `bglang-v0.2.0-alpha.1-inputs.zip` и поставете **само** заключения файл `lexemes.source.json` в `./authoring-input` (в пълния source пакет файлът може да се намира и под `public-inputs/preview7-auxiliary-repair-authoring-v5/lexemes.source.json`). Договорът [`public-input-lock.v1.json`](../data/dictionary/public-input-lock.v1.json) изисква точно **146 429 828** байта и SHA-256 `55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a`.
+2. Разархивирайте `bglang-v0.2.0-alpha.2-inputs.zip` и поставете **само** заключения файл `lexemes.source.json` в `./authoring-input` (в пълния source пакет файлът може да се намира и под `public-inputs/preview7-auxiliary-repair-authoring-v5/lexemes.source.json`). Договорът [`public-input-lock.v1.json`](../data/dictionary/public-input-lock.v1.json) изисква точно **146 429 828** байта и SHA-256 `55c79288eca912c08f297a790f73327f768a0c9e9ebd3924b84d81474253046a`.
 3. Уверете се, че в текущата PowerShell сесия променливите `TEMP` и `TMP` сочат към налична папка с права за запис, и задайте нови, несъществуващи целеви папки за изход и резултати:
 
 ```powershell
@@ -65,6 +65,10 @@ $ErrorActionPreference = 'Stop'
 - **Публичният списък от файлове:** [`Export-PublicSource.ps1`](Export-PublicSource.ps1) изнася точния списък от [`public-source-allowlist.v1.json`](public-source-allowlist.v1.json) след проверка на MSBuild проектите и референциите; с флаг `-SourceOnly` изходът пропуска `lexemes.source.json`.
 - **Проверка на редакционната възпроизводимост:** [`Test-EditorialReproduction.ps1`](Test-EditorialReproduction.ps1) проверява байт-по-байт възпроизводимостта на профилите `Current` и `Baseline` между пълен и `-SourceOnly` експорт.
 - **Проверка на JSON изхода на примера:** при `-Test` рецептата извиква автоматично `Verify-PublicConsumerJson.ps1` върху конзолните проби, включително `"😀 колажист!"` за `CurrentGraphStress`.
+- **Възпроизводима лингвистична оценка и сравнение с UDPipe 2:** [`Evaluate-PublicBenchmark.ps1`](Evaluate-PublicBenchmark.ps1) оценява [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv) (срещу [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu)) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv) чрез публичното `BulgarianLanguageSession.Open` и сверява [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json) (подробен анализ в [`LINGUISTIC-EVALUATION.md`](LINGUISTIC-EVALUATION.md)):
+  ```powershell
+  ./packaging/Evaluate-PublicBenchmark.ps1 -ManifestPath ./graph-a/manifest.json -OutputDir ./eval-out -VerifyExpected
+  ```
 - **Ръчно пускане на публичните тестове и примера срещу изградения пакет:**
   ```powershell
   dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -75,7 +79,7 @@ $ErrorActionPreference = 'Stop'
   Get-Content ./SHA256SUMS
   ```
 
-## CI проверки за `v0.2.0-alpha.1`
+## CI проверки за `v0.2.0-alpha.2`
 
 Работният процес [`.github/workflows/windows-public.yml`](../.github/workflows/windows-public.yml) изпълнява автоматично на Windows:
 - проверка на клиентския JavaScript синтаксис (`node --check` за `live-client.js`, `live-demo.js`, `demo-lab/demo.js`) с **Node.js 24**;
@@ -83,7 +87,13 @@ $ErrorActionPreference = 'Stop'
 - клиентски транспортни и DOM тестове (`node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs tests/BgLang.Web.Tests/Client/demo-lab.test.mjs`);
 - изтегляне и SHA-256 проверка на заключения `lexemes.source.json`, построяване на `Current` и `CurrentGraphStress` с `-Test` (и `-TestWeb` при push/PR или когато `test_web=true` при `workflow_dispatch`), както и второ сравнително изграждане с `-CompareWith` при ръчно пускане (`workflow_dispatch`). Забележка: самият push на tag не задейства този workflow, затова приемането на издание се проверява върху съответния публичен commit и ръчния `workflow_dispatch` с `test_web=true`.
 
-В сравнение с предишни издания `v0.2.0-alpha.1` включва разширения в ограниченото съгласуване (съставни и сложни подлози, нетекстови токъни като емоджи, предпазни проверки за `с`/`със` и именни конструкции, въздържание при епистемична модалност) и opt-in `context.includeGrammarEvidence` при непроменен `CurrentGraphStress` пакет с данни.
+В сравнение с `v0.2.0-alpha.1`, изданието **`v0.2.0-alpha.2`** добавя:
+- изолиране на предложното местоимение при несъвместим падеж без излишно предупреждение върху глагола (`"Заради аз закъсняхме."` маркира само `"аз"`);
+- коректно предаване на подчинени изречения с `"че/защото + местоимение + ще"` към `ClauseFusion`;
+- съгласуване при фамилия/лично име като подлог спрямо възвратно представяне с calling/naming предикат (`"Чорбанова се казвам."` остава чисто без `Subject` роля върху фамилията, докато `"Чорбанова четат."` и `"Чорбанова се смеят."` маркират глагола);
+- независимо съвместно действие на проверките за род/число и членуване (`"Чорбанова четат на червена пейката."`, `"Малките книгата..."`);
+- видимо предупреждение в `/demo` и `/demo-lab` без авто-поправка при `Ambiguous:disjoint_subject_predicate_locus` (`"Момичетата рисува пейзажи."`);
+- обяснение на четирите слоя на отговора, границите на вътрешния `VerbFrameCatalog` и възпроизводима оценка [`Evaluate-PublicBenchmark.ps1`](Evaluate-PublicBenchmark.ps1) + [`LINGUISTIC-EVALUATION.md`](LINGUISTIC-EVALUATION.md) при непроменен пакет `CurrentGraphStress` (`bglang-neutral:9e9a4f441f679542`).
 
 ## Предишни издания
 

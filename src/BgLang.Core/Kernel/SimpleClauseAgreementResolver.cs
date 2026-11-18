@@ -405,7 +405,8 @@ internal static class SimpleClauseAgreementResolver
                     ct.ThrowIfCancellationRequested();
                     int w = idx[bodyStart + pos];
                     WordSlot slot = slots[w];
-                    if (slot.Quoted || slot.HyphenatedCompoundNominal is not null || slot.ComparativeGraphModifier)
+                    if (slot.Quoted || slot.HyphenatedCompoundNominal is not null || slot.ComparativeGraphModifier ||
+                        slot.DerivedPersonName is not null || slot.PersonTitlePrefix)
                         return Outside(clause);
                     if (pos > 0 && (!m.AreClauseWordBridged(idx[bodyStart + pos - 1], w, ct) ||
                                     m.HasCommaBetween(idx[bodyStart + pos - 1], w)))
@@ -656,7 +657,8 @@ internal static class SimpleClauseAgreementResolver
         for (int p = bodyStart; p < idx.Length; p++)
         {
             WordSlot s = slots[idx[p]];
-            if (s.Quoted || s.HyphenatedCompoundNominal is not null || s.ComparativeGraphModifier)
+            if (s.Quoted || s.HyphenatedCompoundNominal is not null || s.ComparativeGraphModifier ||
+                s.DerivedPersonName is not null || s.PersonTitlePrefix)
                 return Outside(clause);
             if (p > bodyStart && (!map.AreClauseWordBridged(idx[p - 1], idx[p], ct) ||
                                   map.HasCommaBetween(idx[p - 1], idx[p])))
@@ -1552,6 +1554,9 @@ internal static class SimpleClauseAgreementResolver
                 return true;
 
             if (f.PartOfSpeech == MorphologicalPartOfSpeech.Preposition || Guard.IsExactAdposition(word))
+                return true;
+
+            if (!isCarrier && f.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun)
                 return true;
 
             if (Guard.TryGetDeterminerAxes(word, row, out _) ||

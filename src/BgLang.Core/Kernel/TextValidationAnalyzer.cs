@@ -715,9 +715,7 @@ internal static class TextValidationAnalyzer
             var updatedParticipants = binding.Participants.Take(binding.Participants.Count - 1).Append(updatedHead).ToArray();
             checkBinding = binding with { Participants = Array.AsReadOnly(updatedParticipants) };
         }
-        return NominalStructuralProjection.Measure(checkBinding, ct) is { } measured &&
-            measured.Heads.All(head => !head.Attributes.Where((rows, index) =>
-                rows.Length != checkBinding.Participants[index].RoleReadings.Count).Any());
+        return NominalStructuralProjection.Measure(checkBinding, ct) is not null;
     }
 
     private static bool HasUngovernedAgreeingPreverbalSubject(

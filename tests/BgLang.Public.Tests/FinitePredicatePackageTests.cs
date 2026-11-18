@@ -53,16 +53,33 @@ public sealed class FinitePredicatePackageTests
     [DataRow("Тя уточнява, че аз да работим.", -1)]
     [DataRow("„(“ Тя уточнява, че аз работим.", 23)]
     [DataRow("Тя уточнява, че аз работим по 5 кв. м.", 19)]
+    [DataRow("Тя уточнява, че аз ще работя.", -1)]
     public void Licensed_subordinate_prefix_keeps_original_carrier_and_scoped_warnings(string text, int start)
     {
         TextAnalysis actual = session.AnalyzeText(text);
-        (string Code, string Rule, int Start, int Length)[] expected = start < 0 ? [] : [(Agreement, PrefixRule, start, 7)];
+        bool fusionFuture = text == "Тя уточнява, че аз ще работим.";
+        (string Code, string Rule, int Start, int Length)[] expected = fusionFuture
+            ? [(Agreement, "clause_fusion_agreement.v1", 22, 7)]
+            : start < 0 ? [] : [(Agreement, PrefixRule, start, 7)];
         var scoped = actual.Diagnostics.Where(d => d.Code is Agreement or "pronoun_verb_agreement_mismatch"
             or "productive_attribute_agreement_mismatch" or "unseparated_finite_predications"
             or "full_article_expected_for_subject_candidate" or "short_article_expected_after_preposition_candidate").ToArray();
         CollectionAssert.AreEqual(expected, scoped.Select(d => (d.Code, d.RuleId, d.Start, d.Length)).ToArray());
         var proofs = actual.Context!.Sentences.SelectMany(s => s.Candidates).Where(c => c.AuthorityLane == PrefixRule).ToArray();
-        Assert.HasCount(expected.Length, proofs);
+        Assert.HasCount(start < 0 ? 0 : 1, proofs);
+        if (fusionFuture)
+        {
+            var fusionWarning = scoped.Single();
+            Assert.IsNull(fusionWarning.ProjectedText);
+            Assert.IsNull(fusionWarning.GraphReadings);
+            int futureSubject = actual.Tokens.Select((t, i) => (t, i)).Single(p => p.t.Start == 16).i;
+            int futureCarrier = actual.Tokens.Select((t, i) => (t, i)).Single(p => p.t.Start == 22).i;
+            CollectionAssert.AreEqual(new[] { new TextReadingReference(futureSubject, 0), new TextReadingReference(futureCarrier, 0) },
+                fusionWarning.Readings!.ToArray());
+            Assert.AreEqual(1, actual.Context.Sentences.SelectMany(s => s.Candidates).Count(c =>
+                c.AuthorityLane == "clause_fusion_agreement.v1" && c.PredicateTokenIndex == futureCarrier));
+            return;
+        }
         if (start < 0) return;
 
         var warning = scoped.Single();

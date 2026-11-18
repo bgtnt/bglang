@@ -2386,3 +2386,50 @@ test('/demo and /demo-lab share the single live-client diagnostic and warning-to
   assert.deepEqual([...marked], [predTok]);
   assert.equal(liveDemo.diagnosticPresentation(emojiRes.data, emojiRes.data.tokens[predTok]).tokenClass, 'check-warning');
 });
+
+test('Lab renders Ambiguous disjoint_subject_predicate_locus as one non-replaceable warning underlining only the verb', async () => {
+  const text = 'Момичетата рисува пейзажи.';
+  const env = await boot(text);
+  const response = analysis(text, {
+    lexicon: {
+      'Момичетата': [{raw: {lemma: 'момиче', partOfSpeech: 'Съществително:69,Среден,Множествено,Членуван'}, features: {partOfSpeech: 'Noun', gender: 'Neuter', number: 'Plural', article: 'Definite'}}],
+      'рисува': [VERB('рисува', 'рисувам', 'Third', 'Singular')],
+      'пейзажи': [{raw: {lemma: 'пейзаж', partOfSpeech: 'Съществително:7,Мъжки,Множествено'}, features: {partOfSpeech: 'Noun', gender: 'Masculine', number: 'Plural', article: 'Indefinite'}}]
+    }
+  });
+  response.data.grammar = {
+    version: 'typed-grammar.v1',
+    rules: [{
+      id: 'clause_fusion_agreement.v1',
+      diagnosticCode: 'productive_morphology_agreement_mismatch',
+      pattern: 'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+      constraint: 'PersonNumber',
+      explanation: 'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+      sourceSection: '§ 5.1',
+      sourceUrl: 'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+    }],
+    matches: [{
+      ruleId: 'clause_fusion_agreement.v1',
+      start: 0, length: 25,
+      controllerTokenIndices: [0, 2],
+      dependentTokenIndices: [1],
+      assessment: 'Ambiguous',
+      conflicts: [
+        {tokenIndex: 1, actual: [{tokenIndex: 1, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 0, completeReadingIndex: 0}]},
+        {tokenIndex: 1, actual: [{tokenIndex: 1, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 2, completeReadingIndex: 0}]}
+      ],
+      repairs: [],
+      reason: 'disjoint_subject_predicate_locus'
+    }]
+  };
+  await respond(env, env.host.calls[0], 200, response);
+
+  assert.equal(env.editor.value, text);
+  assert.match(env.$('lab-checks').textContent, /Предупреждения: 1\./);
+  assert.match(env.$('lab-checks').textContent, /Противоречи на правило R3.*двусмислен подлог.*„Момичетата“.*„пейзажи“.*„рисува“/);
+  assert.match(env.$('lab-checks').textContent, /Двусмислен конфликт при избор на подлог/);
+  assert.doesNotMatch(env.$('lab-checks').textContent, /При прочит като една именна група/);
+  assert.equal(enabledButtons(env.$('lab-checks')).some(b => b.textContent.startsWith('Замени с')), false);
+  const warned = env.$('lab-backdrop').querySelectorAll('span').filter(s => s.className.includes('w-warning')).map(s => s.textContent);
+  assert.deepEqual(warned, ['рисува']);
+});

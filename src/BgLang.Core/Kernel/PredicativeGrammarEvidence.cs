@@ -227,9 +227,11 @@ internal static class PredicativeGrammarEvidence
                             ? Array.AsReadOnly(m.Concat(seRefs).ToArray())
                             : seRefs
                     };
-                bool hasSe = seRefs is not null || hasAuxGroupSe;
-
                 Dependent firstPart = extended.Dependents[0];
+                bool hasSe = (seRefs is not null || hasAuxGroupSe) &&
+                    firstPart.Rows.Length > 0 &&
+                    firstPart.Rows.All(r => !VerbalComplexBinder.IsLinkingOrSemiCopularLemma(firstPart.Word.Readings[r].Lemma));
+
                 bool intransitiveOrCopular = firstPart.Rows.All(r =>
                     firstPart.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive ||
                     TextPredicateLinkAnalyzer.CopularLemma(firstPart.Word.Readings[r].Lemma));

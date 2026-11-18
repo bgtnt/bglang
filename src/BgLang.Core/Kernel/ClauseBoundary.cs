@@ -41,7 +41,9 @@ internal sealed record WordSlot(
     int[] Active,
     bool Quoted,
     bool ComparativeGraphModifier,
-    (MorphologicalNumber Number, MorphologicalGender? Gender, MorphologicalArticle Article)? HyphenatedCompoundNominal = null);
+    (MorphologicalNumber Number, MorphologicalGender? Gender, MorphologicalArticle Article)? HyphenatedCompoundNominal = null,
+    (MorphologicalNumber Number, MorphologicalGender? Gender)? DerivedPersonName = null,
+    bool PersonTitlePrefix = false);
 
 internal sealed record ClauseSpan(
     int ClauseId,
@@ -153,8 +155,32 @@ internal sealed class SentenceClauseMap
         bool[] peripheral = Guard.MarkPeripheralWords(analysis.Text, sentence, words, ct);
         bool QuotedWord(TokenView w) =>
             protectedSpans.Any(s => s.Start < w.Token.Start + w.Token.Length && w.Token.Start < s.End);
+        bool[] spaceNext = new bool[Math.Max(0, count - 1)];
+        bool[] clauseBridgeNext = new bool[Math.Max(0, count - 1)];
+        bool[] horizontalBridgeNext = new bool[Math.Max(0, count - 1)];
+        for (int i = 0; i + 1 < count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            spaceNext[i] = LocalClauseRoleLinker.Connected(analysis, words[i], words[i + 1], symbols: false, ct);
+            clauseBridgeNext[i] = spaceNext[i] || Guard.WordOrPictographBridge(analysis, words[i], words[i + 1], ct, horizontalOnly: false);
+            horizontalBridgeNext[i] = Guard.WordOrPictographBridge(analysis, words[i], words[i + 1], ct, horizontalOnly: true);
+        }
+
+        (MorphologicalNumber Number, MorphologicalGender? Gender)?[]? derivedPersonNames = null;
+        for (int wi = 0; wi < count; wi++)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (peripheral[wi] || QuotedWord(words[wi])) continue;
+            if (ProperNameAnalyzer.TryResolveContextualSurname(analysis, sentence, words, wi, out var surnameAxes, lookup, ct))
+            {
+                derivedPersonNames ??= new (MorphologicalNumber, MorphologicalGender?)?[count];
+                derivedPersonNames[wi] = surnameAxes;
+            }
+        }
+
         bool allExactOrDegree = true;
         (MorphologicalNumber Number, MorphologicalGender? Gender, MorphologicalArticle Article)?[]? hyphenCompounds = null;
+        bool[]? personTitles = null;
         for (int wi = 0; wi < count; wi++)
         {
             ct.ThrowIfCancellationRequested();
@@ -167,6 +193,21 @@ internal sealed class SentenceClauseMap
                 hyphenCompounds[wi] = compAxes;
                 continue;
             }
+            if (ProperNameEvidenceAnalyzer.IsPersonTitle(w.Token) &&
+                wi + 1 < count && spaceNext[wi] && !peripheral[wi + 1] && !QuotedWord(words[wi + 1]))
+            {
+                TokenView nextW = words[wi + 1];
+                if (derivedPersonNames?[wi + 1] is not null ||
+                    ProperNameEvidenceAnalyzer.IsBulgarianTitleCase(nextW.Token.Text) &&
+                    nextW.Readings.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun &&
+                        r.Features.NameKind != MorphologicalNameKind.PlaceName))
+                {
+                    (personTitles ??= new bool[count])[wi] = true;
+                    continue;
+                }
+            }
+            if (derivedPersonNames?[wi] is not null)
+                continue;
             if (w.UsesGraph && !IsDegreeGraphModifier(w) ||
                 !w.UsesGraph && (!w.Complete || w.Readings.Count == 0))
             {
@@ -175,19 +216,8 @@ internal sealed class SentenceClauseMap
             }
         }
 
-        bool[] spaceNext = new bool[Math.Max(0, count - 1)];
-        bool[] clauseBridgeNext = new bool[Math.Max(0, count - 1)];
-        bool[] horizontalBridgeNext = new bool[Math.Max(0, count - 1)];
-        for (int i = 0; i + 1 < count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            spaceNext[i] = LocalClauseRoleLinker.Connected(analysis, words[i], words[i + 1], symbols: false, ct);
-            clauseBridgeNext[i] = spaceNext[i] || Guard.WordOrPictographBridge(analysis, words[i], words[i + 1], ct, horizontalOnly: false);
-            horizontalBridgeNext[i] = Guard.WordOrPictographBridge(analysis, words[i], words[i + 1], ct, horizontalOnly: true);
-        }
-
         int[] commaTokenBefore = ComputeCommaTokensBefore(analysis, sentence, words, ct);
-        WordSlot[] slots = FilterSlots(analysis, sentence, words, protectedSpans, spaceNext, clauseBridgeNext, hyphenCompounds, ct);
+        WordSlot[] slots = FilterSlots(analysis, sentence, words, protectedSpans, spaceNext, clauseBridgeNext, hyphenCompounds, derivedPersonNames, personTitles, ct);
 
         ClauseBoundary[] prepByPrep = new ClauseBoundary[count];
         int[] prepByIntroducer = new int[count];
@@ -422,7 +452,7 @@ internal sealed class SentenceClauseMap
     }
 
     internal static bool HasNominalHeadReading(WordSlot slot) =>
-        slot.HyphenatedCompoundNominal is not null || NominalHeadReadings(slot).Length > 0;
+        slot.HyphenatedCompoundNominal is not null || slot.DerivedPersonName is not null || NominalHeadReadings(slot).Length > 0;
 
     internal static bool IsNominalModifierOrDeterminer(WordSlot slot) =>
         !slot.Word.UsesGraph && slot.Active.Any(r =>
@@ -497,6 +527,8 @@ internal sealed class SentenceClauseMap
         bool[] spaceNext,
         bool[] clauseBridgeNext,
         (MorphologicalNumber Number, MorphologicalGender? Gender, MorphologicalArticle Article)?[]? hyphenCompounds,
+        (MorphologicalNumber Number, MorphologicalGender? Gender)?[]? derivedPersonNames,
+        bool[]? personTitles,
         CancellationToken ct)
     {
         var rawActive = new List<int>[words.Count];
@@ -669,7 +701,8 @@ internal sealed class SentenceClauseMap
 
         var result = new WordSlot[words.Count];
         for (int i = 0; i < words.Count; i++)
-            result[i] = new(i, words[i], rawActive[i].ToArray(), quoted[i], IsDegreeGraphModifier(words[i]), hyphenCompounds?[i]);
+            result[i] = new(i, words[i], rawActive[i].ToArray(), quoted[i], IsDegreeGraphModifier(words[i]),
+                hyphenCompounds?[i], derivedPersonNames?[i], personTitles?[i] == true);
         return result;
     }
 

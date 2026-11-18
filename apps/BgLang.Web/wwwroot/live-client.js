@@ -487,6 +487,62 @@ export function describeGrammarViolation(data, records, start, length) {
   return findExplanation(false) ?? (hasSubjectPredicateAlias ? findExplanation(true) : null);
 }
 
+function disjointSubjectPredicateWarnings(data, existingRecords) {
+  const env = bindGrammarEnv(data);
+  if (!env) return [];
+  const coveredSpans = [];
+  for (const record of Array.isArray(existingRecords) ? existingRecords : []) {
+    if (!record || !WARNING_CODES.has(record.code) || !Number.isInteger(record.start) || !Number.isInteger(record.length) || record.length <= 0) continue;
+    coveredSpans.push([record.start, record.start + record.length]);
+  }
+  const coveredPredicates = new Set();
+  const extra = [];
+  for (const match of env.grammar.matches) {
+    if (match?.assessment !== 'Ambiguous' || match.reason !== 'disjoint_subject_predicate_locus'
+      || !replaceableSpan(data.text, match.start, match.length)) continue;
+    const rule = env.rules.get(match.ruleId), meta = GRAMMAR_RULE_META[rule?.id];
+    if (!rule || !meta || !Array.isArray(match.dependentTokenIndices) || match.dependentTokenIndices.length !== 1
+      || !Array.isArray(match.controllerTokenIndices) || match.controllerTokenIndices.length < 2) continue;
+    const predIndex = match.dependentTokenIndices[0], predToken = env.sourceWord(predIndex);
+    if (!predToken || coveredPredicates.has(predIndex)) continue;
+    const predEnd = predToken.start + predToken.length;
+    if (coveredSpans.some(([s, e]) => s < predEnd && e > predToken.start)) continue;
+    const conflicts = env.boundConflicts(match);
+    if (!conflicts || conflicts.length < 2) continue;
+    coveredPredicates.add(predIndex);
+    const candidateDescriptions = match.controllerTokenIndices.map(ctrlIdx => {
+      const tok = env.sourceWord(ctrlIdx);
+      const conflictIdx = match.conflicts.findIndex(c => Array.isArray(c?.expectedFrom) && c.expectedFrom.some(r => r?.tokenIndex === ctrlIdx));
+      const feat = conflictIdx >= 0 ? env.features(conflicts[conflictIdx].expected, rule.constraint, match.reason, true) : '';
+      return '„' + tok.text + '“' + (feat ? ' (' + feat + ')' : '');
+    });
+    const actualFeat = env.features(conflicts[0].actual, rule.constraint, match.reason, false);
+    const predDesc = '„' + predToken.text + '“' + (actualFeat ? ' (' + actualFeat + ')' : '');
+    const summary = 'Противоречи на правило ' + meta.code + ' (' + meta.title + '): двусмислен подлог — нито един от кандидатите за подлог ('
+      + candidateDescriptions.join(' и ') + ') не се съгласува със сказуемото ' + predDesc
+      + '; автоматична замяна не се избира. Правило: ' + rule.explanation;
+    const expectedRefs = [], seenRefs = new Set();
+    for (const c of match.conflicts) {
+      for (const ref of c?.expectedFrom || []) {
+        const refKey = ref?.tokenIndex + ':' + ref?.completeReadingIndex + ':' + ref?.graphCandidateIndex;
+        if (!seenRefs.has(refKey)) { seenRefs.add(refKey); expectedRefs.push(ref); }
+      }
+    }
+    const actualRefs = Array.isArray(match.conflicts[0]?.actual) ? [...match.conflicts[0].actual] : [];
+    const diagnostic = {
+      code: 'disjoint_subject_predicate_locus',
+      start: predToken.start,
+      length: predToken.length,
+      ruleId: match.ruleId,
+      basis: 'grammar.ambiguous.disjoint_subject_predicate_locus',
+      projectedText: null,
+      readings: [...expectedRefs, ...actualRefs]
+    };
+    extra.push({diagnostic, summary});
+  }
+  return extra;
+}
+
 export function renderGrammarReview(data, doc) {
   const env = bindGrammarEnv(data);
   if (!env) return null;
@@ -589,9 +645,18 @@ export function renderGrammarReview(data, doc) {
     alternatives.append(node('summary', 'Условни проверки (' + conditional.length + ')'));
     const list = node('ul');
     for (const match of conditional) {
-      const scope = match.reason === 'address_number_gender_unresolved' ? 'При обръщение към едно лице с установен род' :
-        match.reason === 'competing_predicate_group' ? 'При прочит като глаголна група' :
-        match.reason === 'competing_predicative_role' ? 'При прочит със сказуемно прилагателно' : 'При прочит като една именна група';
+      const controllersList = (match.controllerTokenIndices || [])
+        .map(i => sourceWord(i)?.text)
+        .filter(Boolean)
+        .map(w => '„' + w + '“')
+        .join(', ');
+      const predWord = sourceWord(match.dependentTokenIndices?.[0])?.text;
+      const scope = match.reason === 'disjoint_subject_predicate_locus'
+        ? 'Двусмислен конфликт при избор на подлог' + (controllersList && predWord ? ' (кандидати ' + controllersList + ' спрямо „' + predWord + '“; без автоматична замяна)' : '')
+        : match.reason === 'address_number_gender_unresolved' ? 'При обръщение към едно лице с установен род'
+        : match.reason === 'competing_predicate_group' ? 'При прочит като глаголна група'
+        : match.reason === 'competing_predicative_role' ? 'При прочит със сказуемно прилагателно'
+        : 'При прочит като една именна група';
       list.append(node('li', scope + ' · „' + data.text.slice(match.start, match.start + match.length) +
         '“ · ' + rules.get(match.ruleId).explanation));
     }
@@ -855,7 +920,8 @@ export const WARNING_CODES = new Set([
   'personal_numeral_selection_mismatch',
   'particle_participle_verb_form_mismatch',
   'pronoun_case_governance_mismatch',
-  'deictic_temporal_tense_mismatch'
+  'deictic_temporal_tense_mismatch',
+  'disjoint_subject_predicate_locus'
 ]);
 export const UNSUPPORTED_CODES = new Set(['full_short_article_check_not_ready']);
 const AGREEMENT_CODES = new Set([
@@ -868,7 +934,8 @@ const AGREEMENT_CODES = new Set([
   'personal_numeral_selection_mismatch',
   'particle_participle_verb_form_mismatch',
   'pronoun_case_governance_mismatch',
-  'deictic_temporal_tense_mismatch'
+  'deictic_temporal_tense_mismatch',
+  'disjoint_subject_predicate_locus'
 ]);
 const REPLACEABLE_CODES = new Set([
   UNIQUE_SPELLING_CODE,
@@ -890,6 +957,7 @@ export const MESSAGES = {
   particle_participle_verb_form_mismatch: 'Неправилна глаголна форма в сложната глаголна конструкция или на мястото на личното сказуемо.',
   pronoun_case_governance_mismatch: 'Неправилна падежна форма на личното местоимение в тази синтактична позиция.',
   deictic_temporal_tense_mismatch: 'Времето на глаголната форма противоречи на темпоралното наречие в същото просто изречение.',
+  disjoint_subject_predicate_locus: 'Сказуемото не се съгласува с нито един от възможните подлози в изречението; изборът на подлог е двусмислен.',
   full_article_expected_for_subject_candidate: 'Ако думата е подлог, се очаква пълен член.',
   short_article_expected_after_preposition_candidate: 'В проверената предложна група се очаква кратък член.',
   nominal_article_on_noninitial_member: 'Членът се поставя на първото определение в тази именна група.',
@@ -996,9 +1064,11 @@ function supportTokens(records) {
 export function collectChecks(data) {
   const text = typeof data?.text === 'string' ? data.text : '';
   const groups = new Map();
+  const allRawRecords = [];
   for (const [source, list] of diagnosticSources(data)) {
     for (const record of Array.isArray(list) ? list : []) {
       if (!record || typeof record.code !== 'string') continue;
+      allRawRecords.push(record);
       const key = record.code + '\u0001' + record.start + '\u0001' + record.length;
       let group = groups.get(key);
       if (!group) groups.set(key, group = {code: record.code, start: record.start, length: record.length, records: []});
@@ -1025,6 +1095,21 @@ export function collectChecks(data) {
       replaceable: REPLACEABLE_CODES.has(code) && projected !== null && validSpan && replaceableSpan(text, start, length),
       replacement: projected === null ? null : matchCase(original, projected),
       original
+    });
+  }
+  for (const {diagnostic, summary} of disjointSubjectPredicateWarnings(data, allRawRecords)) {
+    const {code, start, length} = diagnostic;
+    const records = [{source: 'grammar', record: diagnostic}];
+    checks.push({
+      code, start, length, severity: 'warning', validSpan: true, records, projected: null,
+      words: supportTokens(records).map(index => data.tokens?.[index]?.text).filter(word => typeof word === 'string' && word.length),
+      known: true,
+      message: MESSAGES[code],
+      grammarMessage: summary,
+      graph: false,
+      replaceable: false,
+      replacement: null,
+      original: text.slice(start, start + length)
     });
   }
   return checks.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
@@ -1079,6 +1164,13 @@ export function diagnosticPresentation(data, token = null) {
         + graphSupportLabel([diagnostic]) + description
     };
   });
+  for (const {diagnostic, summary} of disjointSubjectPredicateWarnings(data, rawRecords)) {
+    const classification = 'warning', label = LIVE_LABELS[classification];
+    messages.push({
+      diagnostic, classification, label, summary,
+      text: label + ' · ' + diagnostic.code + ' · ' + diagnostic.start + '+' + diagnostic.length + ' · ' + summary
+    });
+  }
   const strongest = token && ['warning', 'unsupported-check', 'information'].find(classification =>
     messages.some(row => row.classification === classification
       && row.diagnostic.length > 0

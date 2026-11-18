@@ -1,0 +1,34 @@
+# BgLang edge, multi-error, extra-warning trap, and ambiguity controls (30 sentences)
+# Format: E|<kind>|<comma_separated_targets>|<sentence>  or  C|-|-|<sentence>
+# Clean & explicit abstention controls (12):
+C|-|-|Чорбанова се казвам.
+C|-|-|Знам, че аз ще закъснея.
+C|-|-|Чорбанова чете.
+C|-|-|Чорбанова и Петрова четат.
+C|-|-|Видях хората, които живеят тук.
+C|-|-|Книгата на хората, които живеят тук, излезе вчера.
+C|-|-|Студентът чете книгата в стаята.
+C|-|-|Може да беше прав.
+C|-|-|Четат на червена 📚 пейката.
+C|-|-|Децата гледат птиците.
+C|-|-|Писмата носят куриерите.
+C|-|-|Аз не знам отговора.
+# Error controls: single-error spurious-warning traps, multi-error, subordinate future, surname, disjoint ambiguous locus (18):
+E|PRON_CASE|аз|Заради аз закъсняхме.
+E|PRON_CASE|ти|Без ти тръгнахме.
+E|REL_CLAUSE|живее|Видях хората, които живее тук.
+E|REL_CLAUSE|пристигна|Книгите, за които говорихме вчера, пристигна навреме.
+E|REL_MATRIX_SV|излезе|Книгите на хората, които живеят тук, излезе вчера.
+E|SUBORD_FUTURE_SV|закъснеем|Знам, че аз ще закъснеем.
+E|SUBORD_FUTURE_SV|дойдат|Мисля, че ти ще дойдат.
+E|SUBORD_FUTURE_SV|останат|Виждам, че той ще останат.
+E|SURNAME_SV|четат|Чорбанова четат.
+E|SURNAME_SV|смеят|Чорбанова се смеят.
+E|SURNAME_SV|отиват|Петрова отиват на работа.
+E|MULTI_SV_ART|четат,пейката|Чорбанова четат на червена пейката.
+E|MULTI_AN_ART|Малките,книгата|Малките книгата пътува с мен.
+E|MULTI_AN_ART|червените,пейката|Седим на червените пейката.
+E|AMBIG_DISJOINT_SV|рисува|Момичетата рисува пейзажи.
+E|AMBIG_DISJOINT_SV|поздравиха|Майката поздравиха дъщерята.
+E|JOINED_NEG|незнам|Аз незнам отговора.
+E|COUNT_NOUN|столове|Купих два столове.
