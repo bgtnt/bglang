@@ -2,11 +2,18 @@
 <html lang="bg">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HTTP договор · BgLang</title><link rel="stylesheet" href="/site.css"></head>
 <body>
-<header><a class="brand" href="/demo">BgLang</a><nav><a href="/demo">Демо</a></nav></header>
+<header><a class="brand" href="/demo">BgLang</a><nav><a href="/demo">Демо</a> · <a href="/demo-lab/index.html">Live Lab</a></nav></header>
 <main>
 <h1>HTTP API v2 и съвместимост с v1</h1>
-<p>Всяка операция извиква съществуващата <code>BulgarianLanguageSession</code> върху един строго идентифициран пакет. <a href="/api/v2/">GET /api/v2/</a> връща действителни assembly версии, package provenance и ограниченията на host-а. <a href="/api/v1/">GET /api/v1/</a> пази предходната HTTP версия.</p>
-<p class="notice">Версиите и matching пакети са в <a href="https://github.com/bgtnt/bglang/releases">публичните издания на BgLang</a>. Метаданните на този host посочват действително заредения пакет.</p>
+<p class="intro">Локалният HTTP сървър <code>BgLang.Web</code> предоставя JSON API за морфологичен анализ, речникови справки, словообразуване, ударения и ограничени граматични проверки на български текст върху един строго идентифициран пакет чрез <code>BulgarianLanguageSession</code>.</p>
+<p class="notice"><strong>Локален хост (без публична облачна услуга):</strong> тази страница се обслужва от вашия собствен локален процес <code>BgLang.Web</code> (по подразбиране <code>http://127.0.0.1:5070</code>), а не от споделен публичен сървър. <a href="/api/v2/">GET /api/v2/</a> връща действителните версии, идентификатора на заредения пакет и ефективните ограничения на хоста; <a href="/api/v1/">GET /api/v1/</a> пази предходната HTTP версия. Версиите и готовите пакети са в <a href="https://github.com/bgtnt/bglang/releases">публичните издания на BgLang</a>.</p>
+<section class="card" aria-label="Бърз проверен пример">
+<h2>Бърз проверен пример</h2>
+<p>Заявка към локалния <code>POST /api/v2/analyze-text</code> (<code>Content-Type: application/json</code>):</p>
+<pre>POST /api/v2/analyze-text
+{"text":"Аз 😀 чете."}</pre>
+<p>Ключови полета в отговора: <code>data.text</code> остава непроменен (<code>"Аз 😀 чете."</code>), а <code>data.diagnostics</code> съдържа предупреждение с <code>code: "productive_morphology_agreement_mismatch"</code>, <code>start: 6</code> (UTF-16 отместване, тъй като <code>😀</code> е 2 UTF-16 единици), <code>length: 4</code> (<code>"чете"</code>) и <code>ruleId: "clause_fusion_agreement.v1"</code>. При <code>"Аз 😀 чета."</code> и <code>"Може да беше прав."</code> се връщат <code>0</code> предупреждения.</p>
+</section>
 <p><code>GenerateForms(lemma)</code> връща краен набор словоформи по лема от пакета. Продуктивният анализ с <code>AnalyzeWord</code> и <code>DecomposeWord</code> може да намери допустим графов път за незаписано новообразувание. <code>DeriveWords</code> извършва ограничено търсене от основа. Тези операции не изброяват всички възможни новообразувания и не доказват продуктивно покритие само с краен списък словоформи.</p>
 <h2>Заявки</h2>
 <p>POST с <code>Content-Type: application/json</code>. Поле <code>text</code> е задължително. Непознати полета се отхвърлят. При колекционните public операции изричният <code>limit</code> от 1–256 се предава директно на API. Без поле limit: GenerateForms използва 128; Lookup, AnalyzeWord и DeriveWords използват Web default 32. Explorer-ът изпраща избрания лимит; началният избор за словоформи е 256 и може да бъде намален.</p>
@@ -67,7 +74,7 @@ POST /api/v2/lexical-entry
 <p>Forwarded/X-Forwarded-* headers се игнорират. Rate limit използва непосредствения peer IP. Публичният deployment трябва да използва Kestrel HTTPS или отделно прегледан proxy trust profile; зад proxy този default ще брои неговия IP като един клиент. Няма CORS или cross-origin достъп по подразбиране.</p>
 
 <section id="text-composition">
-<h2>Text composition — 2026-10-21</h2>
+<h2>Състав на анализа за текст</h2>
 <p><code>AnalyzeText</code> добавя <code>readingInventory</code>, <code>metrics</code>, <code>spelling</code>, <code>profile</code> и <code>properNames</code> и в трите response формата. Пълният exact inventory пази original reading order и duplicates преди показваните първи 32 прочита. Supports сочат original <code>tokenIndex</code>/<code>completeReadingIndex</code>, включително след индекс 31.</p>
 <p><code>metrics</code> съдържа девет описателни брояча и отношения върху raw tokens и съществуващите sentence spans. <code>spelling</code> използва ordinary forward-index distance 2/limit 10 и показва отделно search disposition, reason и ranked alternatives със source UTF-16 spans. Score е ranking. <code>profile</code> описва typed reading groups, coverage и projection issues; nullable full counts запазват разграничението между непълна и пълна празна оценка.</p>
 <p><code>properNames</code> включва exact typed PROPN supports и maximal compatible groups. Unknown-context advice се включва изрично:</p>

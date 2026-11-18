@@ -1384,8 +1384,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 74763,
-      "sha256": "7bad6f81fa564b19c4ff4b9498aff03f1b50e32b6d4efec062abeb10103dc6c0"
+      "bytes": 12673,
+      "sha256": "02fb26d50cfcd6705a2a0ea81e5ec072d6fbaaeeeb9b2e16795ffbf7a5642c31"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1419,8 +1419,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 99123,
-      "sha256": "c6799f6c6f8d51df908f62cad2f1d801f2c5ef6b30602a4af30d994b3dd3e3d3"
+      "bytes": 10573,
+      "sha256": "e57415826a3276be16ca61911c9f5002f267fbb17778ebe3760b16294c226637"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1474,8 +1474,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/README.md",
-      "bytes": 12198,
-      "sha256": "97a7fcd920bca2214589a7afff0c32619cc9b4e5a78ea0a7970e1915f470542c"
+      "bytes": 12523,
+      "sha256": "5c4ef0d58eded3efe702f5f25ec32995995bcfdccfe3ee32d52518ee4656f642"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.html",
@@ -1484,13 +1484,13 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.js",
-      "bytes": 32154,
-      "sha256": "e4c4c752166e57ea1e62941e1ce8c924f4c173a0843e29c7dfa9954cb9a4fc6a"
+      "bytes": 31800,
+      "sha256": "fe205ba2ebbccf3d96caf446f6bf7c42b13598e026c221dcb3433c1d0c92457c"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/docs.html",
-      "bytes": 35770,
-      "sha256": "760b668a2188f637389e6633da35ccf40e515fad0548c2849cd1f32791739b26"
+      "bytes": 37421,
+      "sha256": "240aa482282f03126dc342e4c50e604f0f1538ed7c00e1390f8cc2acd8cfebc9"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/site.css",
@@ -1499,8 +1499,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 59289,
-      "sha256": "65f60e62a5ed89b31f61acf15234c5b4d5c35b03f27bfa23f6bbcdfd6f82cb8e"
+      "bytes": 62483,
+      "sha256": "d0631cfc819c61f2055d1b5602d3dde8fa753daa5e2dfad337f645769e2c0197"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
@@ -1549,8 +1549,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 64950,
-      "sha256": "1b20a4835d944199fcaa5d32669c3a238d83767c377a1ae650b9adf3c47dd2b9"
+      "bytes": 12394,
+      "sha256": "31742e50f3c188126aa2e3342e27d4be1315fe913214288d538a90264f63dd82"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -2459,8 +2459,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 178409,
-      "sha256": "3236b5431dcfea6472aebbe388cc68adabe7c56906e3a25da6f80152a708a9a5"
+      "bytes": 181107,
+      "sha256": "8a27b58fab332c0da0f47abf4b0892eaf0dd78199eea6fa12f637a6d0d0ec472"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
@@ -2529,8 +2529,8 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/README.md",
-      "bytes": 27165,
-      "sha256": "5a64f11d94ed2a3e94abc7792c02d004ff3a7f900c78ceb1539644e3c7db5f74"
+      "bytes": 27667,
+      "sha256": "59bb58d9403c140f13998b4c3af1193cdb24ace1c5d254e7df56649afbf3f9c7"
     },
     {
       "path": "tools/BgLang.SourceBuilder/StoredLemmaMigration.cs",
@@ -2794,8 +2794,8 @@
     },
     {
       "path": "packaging/GRAPH-STRESS.md",
-      "bytes": 3511,
-      "sha256": "21978be0ffe52d0cc40edce9e3a96d22b7bb46f53077560bd275b9faedfc2397"
+      "bytes": 5618,
+      "sha256": "56b18c2a7dee85961c14f5bfe9ed8a110ab386088926e780920d0502185a44a5"
     },
     {
       "path": "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",

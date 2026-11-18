@@ -1,4 +1,4 @@
-import {createPostLane, livePayload} from "/live-client.js";
+import {createPostLane, explorerCSharpSnippet, livePayload} from "/live-client.js";
 import {initLiveDemo, diagnosticPresentation} from "/live-demo.js";
 
 const postLane = createPostLane();
@@ -331,8 +331,9 @@ async function search(operation, text) {
   document.querySelector("#json-context").hidden = true;
   status.textContent = "Изпълнение…";
   input.value = text;
+  const heuristics = document.querySelector("#live-heuristics")?.checked ?? true;
   const request = operation === "analyze-text"
-    ? livePayload(text, document.querySelector("#live-heuristics")?.checked ?? true)
+    ? livePayload(text, heuristics)
     : { text };
   if (!limitField.disabled) request.limit = Number(limitField.value);
   try {
@@ -352,10 +353,10 @@ async function search(operation, text) {
       ? `Достигнат е ефективният лимит ${response.limits.effective}. Възможни са пропуснати резултати; пълнотата не е доказана.`
       : coverage.complete === false ? "Kernel evidence показва ограничена или незавършена проверка."
       : "Пълнотата на езиковото търсене не е удостоверена от този public резултат.";
-    const methods = { "analyze-word": "AnalyzeWord", "analyze-text": "AnalyzeText",
-      "generate-forms": "GenerateForms", "derive-words": "DeriveWords", "decompose-word": "DecomposeWord" };
-    const bound = request.limit ? `, ${response.limits.effective}` : "";
-    document.querySelector("#code").textContent = `using BgLang.Api;\n\nusing var session = BulgarianLanguageSession.Open("manifest.json");\nvar result = session.${methods[operation]}(${JSON.stringify(text)}${bound});`;
+    document.querySelector("#code").textContent = explorerCSharpSnippet(operation, text, {
+      heuristics,
+      effectiveLimit: request.limit ? response.limits.effective : null
+    });
     status.textContent = "Отговорът е получен. Избери прочит или щракни върху форма за нейния анализ.";
   } catch {
     status.textContent = "Няма достъпен HTTP отговор. Провери връзката и readiness на host-а.";
@@ -387,7 +388,8 @@ function showTokenDetails(token, originalText, response) {
   document.querySelector("#coverage").textContent = limited(tokenAnalysis(token, response)).length
     ? "Този токен има kernel limit flags. Пълнотата на lemma търсенето не е доказана."
     : "Показан е оригиналният токен с неговия evidence; не е извършено контекстно разрешаване.";
-  document.querySelector("#code").textContent = `using BgLang.Api;\nusing System.Linq;\n\nusing var session = BulgarianLanguageSession.Open("manifest.json");\nvar text = session.AnalyzeText(${JSON.stringify(originalText)});\nvar token = text.Tokens.Single(t => t.Start == ${token.start} && t.Length == ${token.length});\nvar analysis = token.Analysis;`;
+  const heuristics = Boolean((response?.data?.textAnalysis ?? response?.data)?.properNames?.unknownContextEvaluated);
+  document.querySelector("#code").textContent = explorerCSharpSnippet("analyze-text", originalText, {heuristics, token});
 }
 
 function showHit(hit, response) {

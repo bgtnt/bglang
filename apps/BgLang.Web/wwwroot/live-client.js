@@ -1095,3 +1095,86 @@ export function diagnosticPresentation(data, token = null) {
     coverage
   };
 }
+
+export function csharpStringLiteral(value) {
+  let out = '"';
+  const text = String(value ?? '');
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code === 0x22) out += '\\"';
+    else if (code === 0x5c) out += '\\\\';
+    else if (code === 0x00) out += '\\0';
+    else if (code === 0x08) out += '\\b';
+    else if (code === 0x0c) out += '\\f';
+    else if (code === 0x0a) out += '\\n';
+    else if (code === 0x0d) out += '\\r';
+    else if (code === 0x09) out += '\\t';
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      const next = i + 1 < text.length ? text.charCodeAt(i + 1) : 0;
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        out += text[i] + text[i + 1];
+        i++;
+      } else {
+        out += '\\u' + code.toString(16).padStart(4, '0');
+      }
+    } else if ((code >= 0xdc00 && code <= 0xdfff) || code < 0x20 || (code >= 0x7f && code <= 0x9f) || code === 0x2028 || code === 0x2029) {
+      out += '\\u' + code.toString(16).padStart(4, '0');
+    } else {
+      out += text[i];
+    }
+  }
+  return out + '"';
+}
+
+const EXPLORER_CSHARP_METHODS = {
+  'analyze-word': 'AnalyzeWord',
+  'analyze-text': 'AnalyzeText',
+  'generate-forms': 'GenerateForms',
+  'derive-words': 'DeriveWords',
+  'decompose-word': 'DecomposeWord'
+};
+
+export function explorerCSharpSnippet(operation, text, {heuristics = true, effectiveLimit = null, token = null} = {}) {
+  const literal = csharpStringLiteral(text);
+  if (operation === 'analyze-text' || token) {
+    const enabled = Boolean(heuristics);
+    const usings = [
+      ...(token ? ['using System.Linq;'] : []),
+      'using System.Threading;',
+      'using BgLang.Api;',
+      'using BgLang.Contracts;'
+    ].join('\n');
+    const optionsBlock = enabled
+      ? [
+          'var options = new TextContextOptions',
+          '{',
+          '    IncludeAdditionalRoleHeuristics = true,',
+          '    IncludeSubordinateCommaDiagnostics = true,',
+          '    IncludeFragmentDiagnostics = true,',
+          '    IncludeSpacingDiagnostics = true,',
+          '    IncludeWordConstructions = true,',
+          '    IncludeNominalConstructions = true,',
+          '    IncludeGrammarEvidence = true',
+          '};'
+        ].join('\n')
+      : 'var options = new TextContextOptions();';
+    const callVar = token ? 'text' : 'result';
+    const lines = [
+      usings,
+      '',
+      'using var session = BulgarianLanguageSession.Open("manifest.json");',
+      optionsBlock,
+      `var ${callVar} = session.AnalyzeText(${literal}, includeUnknownContextProperNames: ${enabled}, options, CancellationToken.None);`
+    ];
+    if (token) {
+      lines.push(
+        `var token = text.Tokens.Single(t => t.Start == ${token.start} && t.Length == ${token.length});`,
+        'var analysis = token.Analysis;'
+      );
+    }
+    return lines.join('\n');
+  }
+  const method = EXPLORER_CSHARP_METHODS[operation];
+  const bound = effectiveLimit ? `, ${effectiveLimit}` : '';
+  return `using BgLang.Api;\n\nusing var session = BulgarianLanguageSession.Open("manifest.json");\nvar result = session.${method}(${literal}${bound});`;
+}

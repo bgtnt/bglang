@@ -10,7 +10,8 @@ const source = process.env.BGLANG_CLIENT_SOURCE_ROOT
   : new URL('../../../apps/BgLang.Web/wwwroot/live-client.js', import.meta.url);
 const {createPostLane, livePayload, createLiveController, completeReadings,
   caretWord, completionSpan, applyCompletion, renderTokenText, continuationSnapshot, bindContinuation, applyContinuation,
-  renderGrammarReview, MESSAGES, RELATIVE_ANTECEDENT_MESSAGE, diagnosticMessage, collectChecks} = await import(source.href);
+  renderGrammarReview, MESSAGES, RELATIVE_ANTECEDENT_MESSAGE, diagnosticMessage, collectChecks,
+  csharpStringLiteral, explorerCSharpSnippet} = await import(source.href);
 const drain = () => new Promise(resolve => setImmediate(resolve));
 const RAW = '😀 по-ле\u0300сен.\r\n<img src=x onerror=alert(1)>&';
 
@@ -2466,4 +2467,45 @@ test('deictic temporal-adverb tense mismatch renders Bulgarian grammar warning i
     assert.equal(presentation.messages.length, 1, text);
     assert.equal(presentation.messages[0].summary, expectedMessage, text);
   }
+});
+
+test('explorer C# snippet reproduces checked and unchecked analyze-text options and token queries', () => {
+  const checked = explorerCSharpSnippet('analyze-text', 'Малката книгата пътува.\n"Тест" 😀', {heuristics: true});
+  assert.match(checked, /using System\.Threading;/);
+  assert.match(checked, /using BgLang\.Api;/);
+  assert.match(checked, /using BgLang\.Contracts;/);
+  assert.match(checked, /IncludeAdditionalRoleHeuristics = true/);
+  assert.match(checked, /IncludeSubordinateCommaDiagnostics = true/);
+  assert.match(checked, /IncludeFragmentDiagnostics = true/);
+  assert.match(checked, /IncludeSpacingDiagnostics = true/);
+  assert.match(checked, /IncludeWordConstructions = true/);
+  assert.match(checked, /IncludeNominalConstructions = true/);
+  assert.match(checked, /IncludeGrammarEvidence = true/);
+  assert.match(checked, /session\.AnalyzeText\("Малката книгата пътува\.\\n\\"Тест\\" 😀", includeUnknownContextProperNames: true, options, CancellationToken\.None\);/);
+
+  const unchecked = explorerCSharpSnippet('analyze-text', 'Малката книга пътува.', {heuristics: false});
+  assert.match(unchecked, /var options = new TextContextOptions\(\);/);
+  assert.doesNotMatch(unchecked, /= true/);
+  assert.match(unchecked, /session\.AnalyzeText\("Малката книга пътува\.", includeUnknownContextProperNames: false, options, CancellationToken\.None\);/);
+
+  const tokenChecked = explorerCSharpSnippet('analyze-text', 'Петров чете.', {
+    heuristics: true,
+    token: {start: 0, length: 6}
+  });
+  assert.match(tokenChecked, /using System\.Linq;/);
+  assert.match(tokenChecked, /includeUnknownContextProperNames: true, options, CancellationToken\.None\);/);
+  assert.match(tokenChecked, /t\.Start == 0 && t\.Length == 6/);
+
+  const tokenUnchecked = explorerCSharpSnippet('analyze-text', 'Петров чете.', {
+    heuristics: false,
+    token: {start: 7, length: 4}
+  });
+  assert.match(tokenUnchecked, /var options = new TextContextOptions\(\);/);
+  assert.match(tokenUnchecked, /includeUnknownContextProperNames: false, options, CancellationToken\.None\);/);
+  assert.match(tokenUnchecked, /t\.Start == 7 && t\.Length == 4/);
+
+  const bounded = explorerCSharpSnippet('generate-forms', 'книга', {effectiveLimit: 256});
+  assert.equal(bounded, 'using BgLang.Api;\n\nusing var session = BulgarianLanguageSession.Open("manifest.json");\nvar result = session.GenerateForms("книга", 256);');
+
+  assert.equal(csharpStringLiteral('a\\b"\0\u2028\r\n\t'), '"a\\\\b\\"\\0\\u2028\\r\\n\\t"');
 });

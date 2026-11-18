@@ -1,21 +1,22 @@
-# Изграждане на neutral source пакет
+# Изграждане на неутрален пакет от данни (`BgLang.SourceBuilder`)
 
-Този отделен инструмент за Windows/.NET 10 превръща редактируем neutral authoring source
-и изрично подаден reviewed graph в пакет, който се отваря с
-`BulgarianLanguageSession.Open`. Той използва съществуващия graph и strict loader.
-Няма автоматично одобрение на лингвистичните данни или зависимост от Legacy.
+`BgLang.SourceBuilder` е отделен конзолен инструмент за Windows / .NET 10 (SDK **10.0.403** по [`global.json`](../../global.json)), който преобразува редактируем изходен речник и изрично подаден граф за словообразуване в пакет от данни, отварян с `BulgarianLanguageSession.Open`. Инструментът използва същия граф и строгия модул за проверка при зареждане и не одобрява лингвистични данни автоматично.
 
-## Current: default public reproduction профил
+## Публични профили за изграждане (`Current`, `CurrentGraphStress`, `Baseline`)
 
-The public recipe defaults to Current: the unchanged locked public authoring input plus the committed editorial stress overlay is materialized to a fresh source directory, then the existing build command produces the exact measured current four-file candidate. No new large authoring download is required. -Profile Baseline selects the old four-file pins explicitly. Both are new SDK 10.0.403 reproduction runs; the immutable root SDK 10.0.402 field and receipts remain historical factory provenance. global.json selects 10.0.403 with rollForward patch.
+Публичната рецепта [`Build-PublicPackage.ps1`](../../packaging/Build-PublicPackage.ps1) поддържа три профила:
 
-apply-stress-overlay <authoring.json> <graph.json> <overlay.json> <new-source-directory> uses existing AuthoringDocument/Entry with/Serialize to change only stress/accentParadigm/stressPattern on one preimage-bound owner. Publication requires both owner and whole derived-input predeclared SHA, so any serializer change to an unselected byte fails before publication; pins must not be refreshed to hide it. Its output is source preparation (NativeBindingVerified=false); existing build remains the complete-package binding/identity authority. Stale bindings are never recalculated.
+- **`Current`** *(профил по подразбиране в `Build-PublicPackage.ps1`)*: взема заключения базов изходен речник (`lexemes.source.json`), прилага включения редакционен слой за ударение ([`cheta-editorial-stress-overlay.v1.json`](../../data/dictionary/cheta-editorial-stress-overlay.v1.json)) и изгражда 4-файловия редакционен пакет (`bglang-neutral:90bea7c5c799f04d`). Не се изисква ново голямо изтегляне извън заключения входен файл.
+- **`CurrentGraphStress`** *(профилът на готовия runtime пакет за `v0.2.0-alpha.1`)*: прилага същия редакционен слой за ударение и след това изгражда пакета с отделния граф [`automatic-graph-stress-ist.v1.json`](../../data/word-formation/automatic-graph-stress-ist.v1.json) (`bglang-neutral:9e9a4f441f679542`).
+- **`Baseline`**: изгражда базовия 4-файлов пакет за съвместимост (`bglang-neutral:36b0b69685d6d3e9`) директно от заключения вход и [`word-formation-source.v0.json`](../../data/word-formation/word-formation-source.v0.json), без редакционния слой и без граф-стрес профила.
 
-packaging/Test-EditorialReproduction.ps1 declares required Current/Baseline Full/SourceOnly reconstruction checks. Current -Test reproduces an explicit strict Baseline for the preserved legacy Public/Web assertions; separate required editorial Public/Web gates and the example validate the primary Current output. The private Full data profile separately requires strict Current M1 row16 style, both row19 bodies and the new editorial semantic controls, alongside the unchanged Baseline controls. BGLANG_EDITORIAL_STRESS_MANIFEST, BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST=1 and canonical BGLANG_EDITORIAL_STRESS_PROFILE identify the editorial target. Exact output equality alone is not linguistic acceptance; all requested gates must pass before accepting this data batch.
+Командата `apply-stress-overlay <authoring.json> <graph.json> <overlay.json> <new-source-directory>` използва съществуващия сериализатор на `AuthoringDocument`, за да промени единствено `stress`, `accentParadigm` и `stressPattern` за конкретен предварително обвързан собственик. Записът изисква съвпадение на предварително декларираните SHA-256 хешове както за собственика, така и за целия производен входен файл — при неочаквана промяна на сериализацията операцията отказва преди публикация. Резултатът е само подготовка на изходния файл (`NativeBindingVerified=false`), а окончателната проверка и идентичност на пакета се установяват едва от последващия `build` и пълното отваряне на пакета.
+
+Скриптът [`Test-EditorialReproduction.ps1`](../../packaging/Test-EditorialReproduction.ps1) проверява байт-по-байт възпроизводимостта на профилите `Current` и `Baseline` (при пълен и SourceOnly експорт). При `-Test` променливите `BGLANG_EDITORIAL_STRESS_MANIFEST`, `BGLANG_EDITORIAL_STRESS_REQUIRE_MANIFEST=1` и `BGLANG_EDITORIAL_STRESS_PROFILE` насочват контролите за ударение и членуване към съответния целеви пакет, докато запазените базови публични и HTTP контроли се изпълняват върху паралелно възпроизведен `Baseline` пакет. Подробните команди са описани в [`packaging/RELEASE-CANDIDATE.md`](../../packaging/RELEASE-CANDIDATE.md).
 
 ## Директен low-level build
 
-От корена на repository, с нова изходна директория и съществуващ родител:
+От корена на хранилището, с нова изходна директория и съществуващ родител:
 
 ```powershell
 dotnet run --project tools/BgLang.SourceBuilder -c Release -- build tools/BgLang.SourceBuilder/example.source.jsonl data/word-formation/word-formation-source.v0.json artifacts/my-new-package
@@ -68,7 +69,7 @@ productiveRuleId не се заменя с друг; при null и няколк
 `measure-open <manifest.json>` измерва едно публично `Open` и връща JSON с
 provenance, време, наличните runtime фази и peak working set на целия процес.
 За process-cold сравнение стартирайте командата в нов процес за всеки пакет.
-Няма заявки или принудителен GC в измерването; OS disk cache не се изчиства.
+Няма заявки или принудилен GC в измерването; OS disk cache не се изчиства.
 Малкият размер на generated source не означава по-малка runtime материализация.
 
 Всеки непразен ред е един от три варианта с `schemaVersion` равен на
@@ -297,10 +298,3 @@ successor и отделно текущия graph.
 `BgLang.SourceBuilder.Checks`. Те проверяват точни preimages, пълна корекция,
 foreign-owner unions/route, RAW/order preservation, reproducible twins,
 отказ на грешни maps/generated вход и create-only publication.
-
-## Compact stress source за preview.6
-
-Release recipe използва exact locked `bglang-neutral-authoring.v5` source с required `stressPattern.bindingId` и qualified `accentParadigm`. Подайте `lexemes.source.json` и exact locked graph към съществуващия `build`. Runtime annotations source е v4, а manifest schema е v2; тези версии имат различни роли.
-
-`export` пази bindingId. Редакция на complete form/full-tag inventory, owner/source, captured reading index или WordId с остарял binding се отказва при build/open; physical reorder се канонизира. Не пресмятайте нов binding върху променени данни, за да прехвърлите стар sparse capture. Липсващ capture остава Unknown. Legacy import/compact-stress са offline authoring операции и не са нужни за публичното reproduction на вече подготвения input. Qualified fit не е нормативна гаранция за нова дума.
-
