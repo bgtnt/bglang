@@ -9,7 +9,8 @@ const source = process.env.BGLANG_CLIENT_SOURCE_ROOT
   ? pathToFileURL(path.resolve(process.env.BGLANG_CLIENT_SOURCE_ROOT, 'apps/BgLang.Web/wwwroot/live-client.js'))
   : new URL('../../../apps/BgLang.Web/wwwroot/live-client.js', import.meta.url);
 const {createPostLane, livePayload, createLiveController, completeReadings,
-  caretWord, completionSpan, applyCompletion, renderTokenText, continuationSnapshot, bindContinuation, applyContinuation} = await import(source.href);
+  caretWord, completionSpan, applyCompletion, renderTokenText, continuationSnapshot, bindContinuation, applyContinuation,
+  renderGrammarReview, MESSAGES, RELATIVE_ANTECEDENT_MESSAGE, diagnosticMessage, collectChecks} = await import(source.href);
 const drain = () => new Promise(resolve => setImmediate(resolve));
 const RAW = '😀 по-ле\u0300сен.\r\n<img src=x onerror=alert(1)>&';
 
@@ -85,11 +86,84 @@ function posted(call) {assert.equal(call.init.method,'POST');return JSON.parse(c
 
 test('payload preserves raw Unicode and explicitly carries every independent opt-in',()=>{
   const context={includeAdditionalRoleHeuristics:true,includeSubordinateCommaDiagnostics:true,
-    includeFragmentDiagnostics:true,includeSpacingDiagnostics:true,includeWordConstructions:true,includeNominalConstructions:true};
+    includeFragmentDiagnostics:true,includeSpacingDiagnostics:true,includeWordConstructions:true,includeNominalConstructions:true,
+    includeGrammarEvidence:true};
   assert.deepEqual(livePayload(RAW),{text:RAW,evidenceFormat:'shared-analyses-v1',
     includeUnknownContextProperNames:true,context});
   assert.deepEqual(livePayload('  '+RAW+'\t',false),{text:'  '+RAW+'\t',evidenceFormat:'shared-analyses-v1',
     includeUnknownContextProperNames:false,context:Object.fromEntries(Object.keys(context).map(k=>[k,false]))});
+});
+
+function grammarFixture(){
+  const doc={createElement:tag=>({tag,textContent:'',children:[],attributes:{},
+    append(...values){this.children.push(...values);},setAttribute(key,value){this.attributes[key]=value;}})};
+  const rule={id:'local_exact_attribute_agreement.v1',diagnosticCode:'productive_attribute_agreement_mismatch',
+    pattern:'П+ С',constraint:'NumberGender',explanation:'Съгласуване по род и число.',sourceSection:'Източник',
+    sourceUrl:'https://example.test/rule'};
+  const text='🙂 Малките книга';
+  const tokens=[{kind:'Symbol',start:0,length:2,text:'🙂'},{kind:'Word',start:3,length:7,text:'Малките'},
+    {kind:'Word',start:11,length:5,text:'книга'}];
+  const readingInventory={occurrences:tokens.slice(1).map(({text,start,length},index)=>({text,start,length,
+    tokenIndex:index+1,readingSetIndex:index})),sets:[
+    {canonicalReadings:[{features:{number:'Plural'}}]},
+    {canonicalReadings:[{features:{number:'Singular',gender:'Feminine'}}]}]};
+  const match={ruleId:rule.id,start:3,length:13,assessment:'Mismatch',controllerTokenIndices:[2],dependentTokenIndices:[1],
+    conflicts:[{tokenIndex:1,actual:[{tokenIndex:1,completeReadingIndex:0}],expectedFrom:[{tokenIndex:2,completeReadingIndex:0}]}],
+    repairs:[{edits:[{tokenIndex:1,start:3,length:7,replacement:'Малката'}]},
+      {edits:[{tokenIndex:2,start:11,length:5,replacement:'книги'}],qualifications:['clause_relation_unverified']},
+      {edits:[{tokenIndex:1,start:1,length:7,replacement:'Невалидно'}]}]};
+  const data={text,tokens,readingInventory,grammar:{rules:[rule],matches:[match]}};
+  const all=element=>[element,...element.children.flatMap(all)];
+  const render=(response=data)=>all(renderGrammarReview(response,doc));
+  const renderedText=()=>render().map(element=>element.textContent);
+  return {data,match,rule,render,renderedText};
+}
+
+test('grammar review renders separate source-bound repair alternatives after a surrogate pair',()=>{
+  const {data,rule,render,renderedText}=grammarFixture();
+  assert.ok(render().some(element=>element.attributes.href===rule.sourceUrl));
+  const textNodes=renderedText();
+  assert.ok(textNodes.includes('Малката книга'));
+  assert.ok(textNodes.includes('Малките книги · Проверете и съгласуването със сказуемото.'));
+  assert.ok(textNodes.includes('Изписано · мн. ч. | Контролер · ед. ч. · ж. р.'));
+  const [symbol,first,last]=data.tokens;
+  const rebound=render({...data,tokens:[symbol,{...first,text:'Различни'},last]}).map(element=>element.textContent);
+  assert.ok(!rebound.includes('Малката книга'));
+  assert.ok(textNodes.every(value=>!value.includes('Невалидно')));
+});
+
+test('grammar review declines conflicts with foreign or invalid complete-reading references',()=>{
+  const mutate=[
+    ({match})=>{match.conflicts[0].actual[0].tokenIndex=2;},
+    ({match})=>{match.conflicts[0].expectedFrom[0].tokenIndex=1;},
+    ({match})=>{match.conflicts[0].actual[0].completeReadingIndex=1;},
+    ({match})=>{match.dependentTokenIndices=[0];},
+    ({data})=>{data.readingInventory.occurrences[0].start=1;}
+  ];
+  for(const change of mutate){
+    const f=grammarFixture(); change(f);
+    assert.ok(!f.renderedText().some(value=>value.includes('Изписано') || value==='Малката книга'));
+  }
+});
+
+test('grammar review preserves qualifications it cannot interpret',()=>{
+  const {match,renderedText}=grammarFixture();
+  match.repairs[0].qualifications=['future_condition','future_condition'];
+  assert.ok(renderedText().includes('Малката книга · Вариантът има условие, което изисква допълнителна проверка.'));
+  assert.ok(!renderedText().includes('Малката книга'));
+});
+
+test('grammar review binds an article governor outside the local phrase span',()=>{
+  const {data,match,rule,renderedText}=grammarFixture();
+  rule.constraint='MasculineArticle';
+  match.start=11; match.length=5;
+  match.controllerTokenIndices=[1]; match.dependentTokenIndices=[2];
+  match.conflicts=[{tokenIndex:2,actual:[{tokenIndex:2,completeReadingIndex:0}],
+    expectedFrom:[{tokenIndex:1,completeReadingIndex:0}]}];
+  match.repairs=[{edits:[{tokenIndex:2,start:11,length:5,replacement:'книги'}]}];
+  data.readingInventory.sets[1].canonicalReadings[0].features.article='Full';
+  assert.ok(renderedText().includes('Изписано · пълен член'));
+  assert.ok(renderedText().includes('книги'));
 });
 
 test('typing burst debounces to exactly the latest raw payload and invalidates synchronously',async()=>{
@@ -191,9 +265,9 @@ test('IME suppresses intermediate requests and commits the final composition exa
 
 test('pause, empty input and UTF-16 oversize clear pending work and make active results stale',async()=>{
   const f=liveFixture();
-  f.controller.edit('😀'.repeat(2048)+'a');await f.clock.advance(10000);
+  f.controller.edit('😀'.repeat(8192)+'a');await f.clock.advance(10000);
   assert.equal(f.net.calls.length,0);assert.equal(f.states.at(-1).name,'oversize');
-  f.controller.edit('😀'.repeat(2048));f.controller.flush();assert.equal(f.net.calls.length,1);
+  f.controller.edit('😀'.repeat(8192));f.controller.flush();assert.equal(f.net.calls.length,1);
   f.controller.edit(' \r\n\t');assert.equal(f.states.at(-1).name,'empty');
   await f.net.finish(0);assert.equal(f.commits.length,0);
   f.controller.edit('книга');f.controller.setEnabled(false);await f.clock.advance(10000);
@@ -923,6 +997,62 @@ test('copied article advice appears once while independent support remains visib
   assert.strictEqual(actual.messages[1].diagnostic,independent);
   assert.equal(diagnosticPresentation({diagnostics:[],validation:{diagnostics:[mirror]}}).messages.length,1);
 });
+
+test('grammar review and Live diagnostics render R6 subject full article rule and constituent groups for Човека пее.',()=>{
+  const doc={createElement:tag=>({tag,textContent:'',children:[],attributes:{},
+    append(...values){this.children.push(...values);},setAttribute(key,value){this.attributes[key]=value;}})};
+  const text='Човека пее.';
+  const tokens=[
+    {kind:'Word',text:'Човека',start:0,length:6},
+    {kind:'Whitespace',text:' ',start:6,length:1},
+    {kind:'Word',text:'пее',start:7,length:3},
+    {kind:'Punctuation',text:'.',start:10,length:1}
+  ];
+  const readingInventory={
+    occurrences:[
+      {tokenIndex:0,start:0,length:6,text:'Човека',readingSetIndex:0},
+      {tokenIndex:2,start:7,length:3,text:'пее',readingSetIndex:1}
+    ],
+    sets:[
+      {canonicalReadings:[{features:{partOfSpeech:'Noun',gender:'Masculine',number:'Singular',article:'Definite'}}]},
+      {canonicalReadings:[{features:{partOfSpeech:'Verb',verbForm:'Finite',person:'Third',number:'Singular'}}]}
+    ]
+  };
+  const grammar={
+    rules:[{
+      id:'grammar.full_article.clause_subject.v1',
+      diagnosticCode:'full_article_expected_for_subject_candidate',
+      pattern:'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+      constraint:'MasculineArticle',
+      explanation:'Групата на подлога в мъжки род, единствено число, изисква пълен член на първия членуван член.',
+      sourceSection:'БЕРОН § 17.6.1',
+      sourceUrl:'https://beron.mon.bg/rechnik/362'
+    }],
+    matches:[{
+      ruleId:'grammar.full_article.clause_subject.v1',
+      start:0,length:10,
+      controllerTokenIndices:[2],
+      dependentTokenIndices:[0],
+      assessment:'Mismatch',
+      conflicts:[{tokenIndex:0,actual:[{tokenIndex:0,completeReadingIndex:0}],expectedFrom:[{tokenIndex:2,completeReadingIndex:0}]}],
+      repairs:[{edits:[{tokenIndex:0,start:0,length:6,replacement:'Човекът'}]}],
+      reason:null
+    }]
+  };
+  const data={text,tokens,readingInventory,grammar,diagnostics:[{
+    code:'full_article_expected_for_subject_candidate',start:0,length:6,
+    ruleId:'grammar.full_article.clause_subject.v1',projectedText:'Човекът'
+  }],validation:{available:true,diagnostics:[]}};
+  const all=element=>[element,...element.children.flatMap(all)];
+  const nodes=all(renderGrammarReview(data,doc)).map(e=>e.textContent);
+  assert.ok(nodes.some(t=>t.includes('R6 · Пълен член на групата на подлога')));
+  assert.ok(nodes.includes('Конструкция: групата на сказуемото „пее“ ↔ групата на подлога „Човека“'));
+  assert.ok(nodes.includes('Изписано · кратък член'));
+  assert.ok(nodes.includes('Човекът пее'));
+  const pres=diagnosticPresentation(data);
+  assert.ok(pres.messages[0].text.includes('Противоречи на правило R6'));
+  assert.ok(pres.messages[0].text.includes('групата на подлога „Човека“ пред групата на сказуемото „пее“ изисква пълен член („Човекът“)'));
+});
 function checksWire(diagnostics = [], validation = {available:true,diagnostics:[]}) {
   return {text:'Аз чете.',tokens:[{kind:'Word',start:0,length:2},CHECK_TOKEN,{kind:'Punctuation',start:7,length:1}],diagnostics,validation};
 }
@@ -932,7 +1062,7 @@ test('diagnostic presentation warns only for the explicit supported warning code
     'digit_shape_ocr_known_candidate','accent_sensitive_i_grave',
     'pronoun_verb_agreement_mismatch','preposition_missing_complement','full_article_expected_for_subject_candidate',
     'productive_morphology_agreement_mismatch','productive_attribute_agreement_mismatch',
-    'short_article_expected_after_preposition_candidate'];
+    'short_article_expected_after_preposition_candidate','nominal_article_on_noninitial_member'];
   for(const code of codes){
     const diagnostic=Object.freeze({...CHECK_WARNING,code});
     const actual=diagnosticPresentation(checksWire([diagnostic]),CHECK_TOKEN);
@@ -1791,7 +1921,7 @@ test('actual Live shows known-word structural advice through the same POST with 
     assert.match(f.spelling.textContent,/Структурни предложения за „сипя“/);
     assert.match(f.spelling.textContent,/Оригиналът „сипя“ остава възможен/);
     assert.match(f.spelling.textContent,/не доказва грешка или замислен смисъл/);
-    assert.ok(f.spelling.textContent.includes('при замяна: съвместима именна група с „'+row.head+'“'));
+    assert.match(f.spelling.textContent, new RegExp('при замяна: съгласуване по (?:род и )?число с „'+row.head+'“'));
     assert.match(f.spelling.textContent,/сипя · буквено разстояние 0.*без промяна/);
     assert.deepEqual(nominalButtonForms(f),['синя','кипя'],'Only the contextual tie changes; zero-distance no-change is informational.');
     assert.deepEqual(reply,before);assert.equal(f.editor.value,row.text);assert.equal(f.editor.setRangeTextCalls.length,0);
@@ -1887,7 +2017,7 @@ test('actual Live requires coherent compatible head evidence for the structural 
   ])await withLiveLifecycle(async f=>{
     const reply=lifecycleNominalReply();mutate(reply.data.nominalConstructions.reviews[0].alternatives[2].phrase);
     await f.first(reply);assert.deepEqual(nominalButtonForms(f),['синя','кипя']);
-    assert.doesNotMatch(f.spelling.textContent,/при замяна: съвместима/);assert.match(nominalCandidate(f).textContent,/неустановена/);
+    assert.doesNotMatch(f.spelling.textContent,/при замяна: съгласуване по/);assert.match(nominalCandidate(f).textContent,/неустановена/);
     assert.equal(f.editor.setRangeTextCalls.length,0);
   },{text:'Спирам пред сипя къща.',caret:22});
 });
@@ -1913,7 +2043,7 @@ test('actual Live resolves exact complete ordinals and graph full tags at the or
     const button=nominalCandidate(f);
     assert.ok(button);
     if(kind==='missing-graph-tag')assert.match(button.textContent,/неустановена/);
-    else assert.match(button.textContent,/съвместима именна група с „къща“/);
+    else assert.match(button.textContent,/съгласуване по род и число с „къща“/);
     assert.equal(f.editor.value,text);
     assert.equal(f.editor.setRangeTextCalls.length,0);
   },{text,caret:text.length});
@@ -1933,6 +2063,13 @@ test('finite predicate diagnostic is a Live warning with its original evidence',
   assert.equal(result.messages[0].classification, 'warning');
   assert.strictEqual(result.messages[0].diagnostic, diagnostic);
   assert.equal(result.messages[0].diagnostic.projectedText, null);
+});
+
+test('active participle agreement is a known Live warning', () => {
+  const diagnostic={code:'auxiliary_participle_agreement_mismatch',start:8,length:8};
+  const result=diagnosticPresentation({text:'Ние сме работила.',diagnostics:[diagnostic]});
+  assert.equal(result.messages[0].classification,'warning');
+  assert.ok(result.messages[0].text.includes('разминават по число'));
 });
 
 test('unknown diagnostic remains Live information after finite predicate catalog support', () => {
@@ -2057,4 +2194,276 @@ test('INV-LABEL malformed inverse references stay unassessed while valid mixed w
       ...sample.supported.previousModifierMatches];
     await f.first(sample.reply);assert.match(inverseLabelButton(f).textContent,/съвместим прочит с „Нова“/);
   },{text:raw,caret:raw.length});
+});
+
+test('count construction diagnostics classify as warnings with descriptions and deduplicate validation mirrors',()=>{
+  const qOrig={code:'quantified_noun_form_mismatch',start:10,length:7,ruleId:'grammar.lexical_count_form.v1',projectedText:'стола',
+    readings:[{tokenIndex:1,completeReadingIndex:0},{tokenIndex:2,completeReadingIndex:0}]};
+  const qMirror={code:qOrig.code,start:10,length:7,
+    basis:'reviewed_lexical_quantity;complete_exact_readings;grammar.lexical_count_form.v1;known_counterpart=стола;candidate_only;no_automatic_rewrite',
+    supports:qOrig.readings};
+  const pOrig={code:'personal_numeral_selection_mismatch',start:6,length:5,ruleId:'grammar.personal_numeral_selection.v1',projectedText:'три',
+    readings:[{tokenIndex:1,completeReadingIndex:0},{tokenIndex:2,completeReadingIndex:0}]};
+  const pMirror={code:pOrig.code,start:6,length:5,
+    basis:'reviewed_lexical_quantity;complete_exact_readings;grammar.personal_numeral_selection.v1;known_counterpart=три;candidate_only;no_automatic_rewrite',
+    supports:pOrig.readings};
+  const pres=diagnosticPresentation({diagnostics:[qOrig,pOrig],validation:{available:true,diagnostics:[qMirror,pMirror]}},{start:10,length:7});
+  assert.equal(pres.messages.length,2);
+  assert.equal(pres.tokenClass,'check-warning');
+  assert.equal(pres.messages[0].classification,'warning');
+  assert.equal(pres.messages[1].classification,'warning');
+  assert.match(pres.messages[0].text,/бройна или множествена форма/);
+  assert.match(pres.messages[1].text,/лице\/нелице/);
+});
+
+test('null-ruleId article not-ready mirror deduplicates once in Live presentation',()=>{
+  const orig={code:'full_short_article_check_not_ready',start:0,length:4,ruleId:null};
+  const mirror={code:orig.code,start:0,length:4,basis:'existing_diagnostic=;bounded_article_advice',supports:[]};
+  const pres=diagnosticPresentation({text:'Коня язди.',diagnostics:[orig],validation:{available:true,diagnostics:[mirror]}});
+  assert.equal(pres.messages.length,1);
+  assert.strictEqual(pres.messages[0].diagnostic,orig);
+  assert.equal(pres.messages[0].classification,'unsupported-check');
+});
+
+test('exact agreement and pronoun-verb lanes bind R3 grammar explanations and surface in Live inspector and panel',async()=>{
+  const text='Децата играе.';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleReply(text);
+    reply.data.readingInventory.occurrences[0]={tokenIndex:0,start:0,length:6,text:'Децата',readingSetIndex:0};
+    reply.data.readingInventory.occurrences[1]={tokenIndex:1,start:7,length:5,text:'играе',readingSetIndex:1};
+    reply.data.readingInventory.sets[0]={canonicalReadings:[{raw:{form:'Децата',lemma:'дете',partOfSpeech:'Съществително:69,Среден,Множествено,Членуван'},
+      features:{partOfSpeech:'Noun',gender:'Neuter',number:'Plural',article:'Definite'}}],supportReadings:null};
+    reply.data.readingInventory.sets[1]={canonicalReadings:[{raw:{form:'играе',lemma:'играя',partOfSpeech:'Глагол:160,Трето,Единствено,Сегашно'},
+      features:{partOfSpeech:'Verb',verbForm:'Finite',person:'Third',number:'Singular',tense:'Present'}}],supportReadings:null};
+    reply.data.diagnostics=[{
+      code:'productive_morphology_agreement_mismatch',start:7,length:5,ruleId:'closed_exact_agreement.v1',
+      readings:[{tokenIndex:0,completeReadingIndex:0},{tokenIndex:1,completeReadingIndex:0}]
+    }];
+    reply.data.grammar={
+      version:'typed-grammar.v1',
+      rules:[{
+        id:'clause_fusion_agreement.v1',
+        diagnosticCode:'productive_morphology_agreement_mismatch',
+        pattern:'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+        constraint:'PersonNumber',
+        explanation:'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+        sourceSection:'§ 5.1',
+        sourceUrl:'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+      }],
+      matches:[{
+        ruleId:'clause_fusion_agreement.v1',
+        start:0,length:12,
+        controllerTokenIndices:[0],
+        dependentTokenIndices:[1],
+        assessment:'Mismatch',
+        conflicts:[{tokenIndex:1,actual:[{tokenIndex:1,completeReadingIndex:0}],expectedFrom:[{tokenIndex:0,completeReadingIndex:0}]}],
+        repairs:[],
+        reason:'no_verified_single_token_repair'
+      }]
+    };
+    await f.first(reply);
+    assert.match(f.panels.textContent,/Противоречи на правило R3/);
+    assert.match(f.inspector.textContent,/Проверки за думата/);
+    assert.match(f.inspector.textContent,/Противоречи на правило R3/);
+  },{text,caret:9});
+
+  const pronText='Аз ли четем?';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleReply(pronText);
+    reply.data.readingInventory.occurrences=[
+      {tokenIndex:0,start:0,length:2,text:'Аз',readingSetIndex:0},
+      {tokenIndex:1,start:3,length:2,text:'ли',readingSetIndex:1},
+      {tokenIndex:2,start:6,length:5,text:'четем',readingSetIndex:2}
+    ];
+    reply.data.readingInventory.sets=[
+      {canonicalReadings:[{raw:{form:'Аз',lemma:'аз',partOfSpeech:'Лично_местоимение:92,Именителен,Първо,Единствено'},
+        features:{partOfSpeech:'PersonalPronoun',person:'First',number:'Singular'}}],supportReadings:null},
+      {canonicalReadings:[{raw:{form:'ли',lemma:'ли',partOfSpeech:'Частица:191'},
+        features:{partOfSpeech:'Particle'}}],supportReadings:null},
+      {canonicalReadings:[{raw:{form:'четем',lemma:'чета',partOfSpeech:'Глагол:160,Първо,Множествено,Сегашно'},
+        features:{partOfSpeech:'Verb',verbForm:'Finite',person:'First',number:'Plural',tense:'Present'}}],supportReadings:null}
+    ];
+    reply.data.diagnostics=[{
+      code:'pronoun_verb_agreement_mismatch',start:6,length:5,ruleId:'pronoun_verb_agreement',readings:null
+    }];
+    reply.data.grammar={
+      version:'typed-grammar.v1',
+      rules:[{
+        id:'clause_fusion_agreement.v1',
+        diagnosticCode:'productive_morphology_agreement_mismatch',
+        pattern:'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+        constraint:'PersonNumber',
+        explanation:'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+        sourceSection:'§ 5.1',
+        sourceUrl:'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+      }],
+      matches:[{
+        ruleId:'clause_fusion_agreement.v1',
+        start:0,length:11,
+        controllerTokenIndices:[0],
+        dependentTokenIndices:[2],
+        assessment:'Mismatch',
+        conflicts:[{tokenIndex:2,actual:[{tokenIndex:2,completeReadingIndex:0}],expectedFrom:[{tokenIndex:0,completeReadingIndex:0}]}],
+        repairs:[],
+        reason:'no_verified_single_token_repair'
+      }]
+    };
+    await f.first(reply);
+    assert.match(f.panels.textContent,/Противоречи на правило R3/);
+    assert.match(f.inspector.textContent,/Противоречи на правило R3/);
+  },{text:pronText,caret:8});
+
+  const condText='Тази задача биха решил.';
+  await withLiveLifecycle(async f=>{
+    const reply=lifecycleReply(condText);
+    reply.data.readingInventory.occurrences=[
+      {tokenIndex:0,start:0,length:4,text:'Тази',readingSetIndex:0},
+      {tokenIndex:1,start:5,length:6,text:'задача',readingSetIndex:1},
+      {tokenIndex:2,start:12,length:4,text:'биха',readingSetIndex:2},
+      {tokenIndex:3,start:17,length:5,text:'решил',readingSetIndex:3}
+    ];
+    reply.data.readingInventory.sets=[
+      {canonicalReadings:[{raw:{form:'Тази',lemma:'този',partOfSpeech:'Показателно_местоимение:102,Женски,Единствено'},
+        features:{partOfSpeech:'Pronoun',gender:'Feminine',number:'Singular'}}],supportReadings:null},
+      {canonicalReadings:[{raw:{form:'задача',lemma:'задача',partOfSpeech:'Съществително:40,Женски,Единствено,Нечленувано'},
+        features:{partOfSpeech:'Noun',gender:'Feminine',number:'Singular',article:'Indefinite'}}],supportReadings:null},
+      {canonicalReadings:[{raw:{form:'биха',lemma:'съм',partOfSpeech:'Глагол:187,Трето,Множествено,Минало_свършено'},
+        features:{partOfSpeech:'Verb',verbForm:'Finite',person:'Third',number:'Plural',tense:'Aorist'}}],supportReadings:null},
+      {canonicalReadings:[{raw:{form:'решил',lemma:'реша',partOfSpeech:'Глагол:160,Минало_деятелно_свършено_причастие,Мъжки,Единствено,Нечленувано'},
+        features:{partOfSpeech:'Verb',verbForm:'Participle',participleKind:'PastAoristActive',gender:'Masculine',number:'Singular',article:'Indefinite'}}],supportReadings:null}
+    ];
+    reply.data.diagnostics=[{
+      code:'auxiliary_participle_agreement_mismatch',start:17,length:5,ruleId:'clause_fusion_agreement.v1',readings:null
+    }];
+    reply.data.grammar={
+      version:'typed-grammar.v1',
+      rules:[{
+        id:'grammar.agreement.auxiliary_active_participle.v1',
+        diagnosticCode:'auxiliary_participle_agreement_mismatch',
+        pattern:'Г_СПОМАГАТЕЛЕН ПРИЧ_ДЕЯТЕЛНО_Л',
+        constraint:'NumberGender',
+        explanation:'Спомагателният глагол и деятелното причастие на -л се съгласуват по число.',
+        sourceSection:'§ 6.2',
+        sourceUrl:'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=60'
+      }],
+      matches:[{
+        ruleId:'grammar.agreement.auxiliary_active_participle.v1',
+        start:12,length:10,
+        controllerTokenIndices:[2],
+        dependentTokenIndices:[3],
+        assessment:'Mismatch',
+        conflicts:[{tokenIndex:3,actual:[{tokenIndex:3,completeReadingIndex:0}],expectedFrom:[{tokenIndex:2,completeReadingIndex:0}]}],
+        repairs:[],
+        reason:'no_verified_single_token_repair'
+      }]
+    };
+    await f.first(reply);
+    assert.match(f.panels.textContent,/Противоречи на правило R5/);
+    assert.match(f.inspector.textContent,/Противоречи на правило R5/);
+  },{text:condText,caret:19});
+});
+
+test('relative-pronoun antecedent diagnostic uses Bulgarian agreement copy while preserving locked MESSAGES entries', () => {
+  // 1. Locked MESSAGES dictionary entries (L889 & L891) remain byte-identical for demo-lab.test.mjs:287 and clitic/prepositional cases.
+  assert.equal(
+    MESSAGES.short_article_expected_after_preposition_candidate,
+    'В проверената предложна група се очаква кратък член.'
+  );
+  assert.equal(
+    MESSAGES.pronoun_case_governance_mismatch,
+    'Неправилна падежна форма на личното местоимение в тази синтактична позиция.'
+  );
+  assert.equal(
+    RELATIVE_ANTECEDENT_MESSAGE,
+    'Относителното местоимение не се съгласува по род или число с определяемото си.'
+  );
+
+  // 2. Relative pronoun spans ("който", "която", "което", "които") receive relative-agreement copy in diagnosticMessage, collectChecks, and diagnosticPresentation.
+  for (const [text, surface] of [
+    ['Момчето влезе в стаята, който беше тъмна.', 'който'],
+    ['Човекът, която дойде вчера, донесе документа.', 'която'],
+    ['Книгата, което чета сега, е интересна.', 'което'],
+    ['Жените говориха за филма, които гледаха вчера.', 'които']
+  ]) {
+    const start = text.indexOf(surface);
+    const diag = {
+      code: 'pronoun_case_governance_mismatch',
+      ruleId: 'clause_fusion_agreement.v1',
+      start,
+      length: surface.length
+    };
+    const payload = {
+      text,
+      diagnostics: [diag],
+      validation: {available: true, diagnostics: []}
+    };
+
+    assert.equal(diagnosticMessage(diag, text), RELATIVE_ANTECEDENT_MESSAGE, text);
+
+    const checks = collectChecks(payload);
+    assert.equal(checks.length, 1, text);
+    assert.equal(checks[0].message, RELATIVE_ANTECEDENT_MESSAGE, text);
+
+    const presentation = diagnosticPresentation(payload);
+    assert.equal(presentation.messages.length, 1, text);
+    assert.equal(presentation.messages[0].summary, RELATIVE_ANTECEDENT_MESSAGE, text);
+    assert.match(presentation.messages[0].text, /Относителното местоимение не се съгласува по род или число с определяемото си\./);
+  }
+
+  // 3. Prepositional/clitic/oblique pronoun governance mismatches keep MESSAGES.pronoun_case_governance_mismatch unchanged.
+  for (const [text, surface] of [
+    ['Разчитам на я и работя.', 'я'],
+    ['Учителят извика ме пред целия клас.', 'ме'],
+    ['Тях строят високата сграда до гарата.', 'Тях']
+  ]) {
+    const start = text.indexOf(surface);
+    const diag = {
+      code: 'pronoun_case_governance_mismatch',
+      ruleId: 'clause_fusion_agreement.v1',
+      start,
+      length: surface.length
+    };
+    const payload = {
+      text,
+      diagnostics: [diag],
+      validation: {available: true, diagnostics: []}
+    };
+
+    assert.equal(diagnosticMessage(diag, text), MESSAGES.pronoun_case_governance_mismatch, text);
+    assert.equal(collectChecks(payload)[0].message, MESSAGES.pronoun_case_governance_mismatch, text);
+    assert.equal(diagnosticPresentation(payload).messages[0].summary, MESSAGES.pronoun_case_governance_mismatch, text);
+  }
+});
+
+test('deictic temporal-adverb tense mismatch renders Bulgarian grammar warning in live-client', () => {
+  const expectedMessage = 'Времето на глаголната форма противоречи на темпоралното наречие в същото просто изречение.';
+  assert.equal(MESSAGES.deictic_temporal_tense_mismatch, expectedMessage);
+
+  for (const [text, surface] of [
+    ['Вчера гостът ще дойде навреме.', 'дойде'],
+    ['Утре пристигнах с ранния влак.', 'пристигнах']
+  ]) {
+    const start = text.indexOf(surface);
+    const diag = {
+      code: 'deictic_temporal_tense_mismatch',
+      ruleId: 'grammar.tense.deictic_temporal_adverb.v1',
+      start,
+      length: surface.length
+    };
+    const payload = {
+      text,
+      diagnostics: [diag],
+      validation: {available: true, diagnostics: []}
+    };
+
+    assert.equal(diagnosticMessage(diag, text), expectedMessage, text);
+
+    const checks = collectChecks(payload);
+    assert.equal(checks.length, 1, text);
+    assert.equal(checks[0].message, expectedMessage, text);
+
+    const presentation = diagnosticPresentation(payload);
+    assert.equal(presentation.messages.length, 1, text);
+    assert.equal(presentation.messages[0].summary, expectedMessage, text);
+  }
 });

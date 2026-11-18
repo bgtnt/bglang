@@ -59,9 +59,10 @@ public sealed class HttpBoundaryTests
     public void Text_query_contract_keeps_separate_utf16_bounds_and_rejects_unsupported_fields()
     {
         ApiOperations.Validate("find-forms-in-text", new("ред 1\r\nред 2\tкрай 📚", Query: "книга"));
-        ApiOperations.Validate("find-forms-in-text", new(new string('к', 4096), Query: new string('к', 256)));
+        ApiOperations.Validate("analyze-text", new(new string('к', 10_000)));
+        ApiOperations.Validate("find-forms-in-text", new(new string('к', 16_384), Query: new string('к', 256)));
         Assert.AreEqual("text-too-long", Assert.Throws<ApiRequestException>(() =>
-            ApiOperations.Validate("find-forms-in-text", new(new string('к', 4097), Query: "книга"))).Code);
+            ApiOperations.Validate("find-forms-in-text", new(new string('к', 16_385), Query: "книга"))).Code);
         foreach (string? query in new string?[] { null, "", " ", "две думи", "книга\n", "\0", new string('к', 257) })
             Assert.AreEqual("invalid-query", Assert.Throws<ApiRequestException>(() =>
                 ApiOperations.Validate("find-forms-in-text", new("книгите", Query: query))).Code);

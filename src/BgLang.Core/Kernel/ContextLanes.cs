@@ -71,11 +71,11 @@ internal static class ContextLanes
     // Diagnostic evidence only; never fed into ContextJointSelection or Syntax selection.
     internal static ContextOverlayInput? CalculateExactAgreement(string text, SentenceSpan sentence,
         IReadOnlyList<TokenView> words, Func<IReadOnlyList<ContextOverlayRoleSelection>, string> sourceKey,
-        CancellationToken ct)
+        CancellationToken ct, bool includeFiniteAgreement = true)
     {
         ct.ThrowIfCancellationRequested();
         Validate(text, sentence, words, ct);
-        return new Calculation(text, sentence, words, sourceKey, ct).ExactAgreement();
+        return new Calculation(text, sentence, words, sourceKey, ct).ExactAgreement(includeFiniteAgreement);
     }
 
     internal const string ExactPronounPrefixLane = "licensed_personal_pronoun_prefix_agreement.v1";
@@ -106,7 +106,7 @@ internal static class ContextLanes
         NominalMembers(words, head, ct, allowAdnominalReadings: false);
 
     internal static NominalPhrase? NominalMembers(IReadOnlyList<TokenView> words, int head, CancellationToken ct,
-        bool allowAdnominalReadings)
+        bool allowAdnominalReadings, bool sentenceInitialFirst = false)
     {
         ct.ThrowIfCancellationRequested();
         if (head < 0 || head >= words.Count) return null;
@@ -114,19 +114,41 @@ internal static class ContextLanes
         {
             TokenView word = words[token];
             if (!word.Complete || word.Readings.Count == 0 || word.Readings.Any(r => r.Features.HasConflictingFeatures)) return null;
+            bool hasNonPlaceholder = allowAdnominalReadings && word.Readings.Any(r => !Guard.IsSourcePlaceholder(word, r));
+            bool sentenceInitial = allowAdnominalReadings && token == 0 && sentenceInitialFirst;
             List<int> found = [];
             for (int i = 0; i < word.Readings.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 ReadingView row = word.Readings[i];
+                if (allowAdnominalReadings && (hasNonPlaceholder && Guard.IsSourcePlaceholder(word, row) ||
+                    Guard.IsUnwrittenCapitalizedReading(word, row, sentenceInitial) ||
+                    Guard.IsSuppressedPresentActiveNounHomograph(word, row) ||
+                    Guard.IsSyncreticVocativeCompanion(word, row) ||
+                    token == 0 && category == Category.Adjective && Guard.IsSuppressedDeterminerHomograph(word, row)))
+                    continue;
                 if (allowAdnominalReadings && category == Category.Noun && row.Category == Category.Noun &&
                     row.Features.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun) continue;
                 bool passive = allowAdnominalReadings && category == Category.Adjective &&
                     row.Category == Category.Verb && Guard.IsPassiveAttributeShape(row.Features);
-                if (row.Category != category && !passive) { if (word.UsesGraph) return null; continue; }
+                bool presentActive = allowAdnominalReadings && category == Category.Adjective &&
+                    row.Category == Category.Verb && Guard.IsPresentActiveAttributeShape(row.Features);
+                bool ordinal = allowAdnominalReadings && category == Category.Adjective &&
+                    Guard.TryGetOrdinalAxes(row, out _);
+                bool determiner = allowAdnominalReadings && token == 0 && category == Category.Adjective &&
+                    Guard.TryGetDeterminerAxes(word, row, out _);
+                if (row.Category != category && !passive && !presentActive && !ordinal && !determiner) { if (word.UsesGraph) return null; continue; }
                 if (passive)
                 {
                     if (!Guard.IsMeasuredPassiveAttribute(row.Features)) return null;
+                }
+                else if (presentActive)
+                {
+                    if (!Guard.IsMeasuredPresentActiveAttribute(row.Features)) return null;
+                }
+                else if (ordinal || determiner)
+                {
+                    // Ordinal and determiner axes already validated by TryGetOrdinalAxes / TryGetDeterminerAxes.
                 }
                 else if (row.Features.PartOfSpeech != (category == Category.Noun
                     ? MorphologicalPartOfSpeech.Noun : MorphologicalPartOfSpeech.Adjective) || !Guard.HasNominalAxes(row.Features)) return null;
@@ -154,8 +176,8 @@ internal static class ContextLanes
             var matching = new int[head][];
             for (int a = 0; a < head; a++)
             {
-                matching[a] = attributes[a].Where(i => { ct.ThrowIfCancellationRequested(); return Guard.AttributeAgreement(
-                    words[a].Readings[i].Features, words[head].Readings[members[0]].Features, allowAdnominalReadings); }).ToArray();
+                matching[a] = attributes[a].Where(i => { ct.ThrowIfCancellationRequested(); return Guard.ModifierAgreement(
+                    words[a], words[a].Readings[i], words[head].Readings[members[0]], allowAdnominalReadings, phraseInitial: a == 0); }).ToArray();
                 anyAttributeMatch[a] |= matching[a].Length > 0;
             }
             heads.Add(new(group.Key.Number, group.Key.Gender, members, matching));
@@ -336,12 +358,15 @@ internal static class ContextLanes
                 words.Where(word => word.UsesGraph && word.Readings.Count > 1).Select(word => word.OriginalIndex).ToArray());
         }
 
-        internal ContextOverlayInput? ExactAgreement()
+        internal ContextOverlayInput? ExactAgreement(bool includeFiniteAgreement)
         {
             Check();
-            if (words.Count < 2 || words.Any(w => w.UsesGraph || !w.Complete || w.Readings.Count == 0 ||
-                w.Readings.Any(r => r.Features.HasConflictingFeatures)) || !Closed()) return null;
-            int predicate = words.Count - 1;
+            // 2-word Pronoun+Verb R3 is retired in favor of SimpleClauseAgreementResolver.
+            // ExactAgreement retains R1 ProductiveAttributeMismatch and, when !matrixOwnedByR3, 3p nominal SV for OutsideScope/deferred families.
+            if ((!includeFiniteAgreement && words.Count < 3) || words.Count < 2 ||
+                words.Any(w => w.UsesGraph || !w.Complete || w.Readings.Count == 0 ||
+                    w.Readings.Any(r => r.Features.HasConflictingFeatures)) || !Closed()) return null;
+            int head = words.Count - 2, predicate = words.Count - 1;
             List<int> finite = [], personal = [];
             for (int i = 0; i < T(predicate).Readings.Count; i++)
             {
@@ -355,45 +380,38 @@ internal static class ContextLanes
                 if (row.Features.VerbForm == MorphologicalVerbForm.Finite) finite.Add(i);
             }
             if (finite.Count == 0) return null;
-            Group[] predicates = PredicateGroups(finite), competing = PredicateGroups(personal);
-            if (words.Count == 2 && T(0).Readings.Any(r => r.SourcePersonalPronoun))
+            if (NominalStructuralProjection.AssessPartition(text, words, 0, head, cancel) !=
+                NominalStructuralProjection.Partition.None) return null;
+            NominalPhrase? phrase = NominalMembers(words, head, cancel);
+            if (phrase is null) return null;
+            if (includeFiniteAgreement)
             {
-                int[] pronoun = T(0).Readings.Select((row, i) => (row, i)).Where(x =>
-                    x.row.Category == Category.Pronoun && x.row.SourcePersonalPronoun &&
-                    x.row.Features.Case is null && x.row.Features.IsShortForm != true &&
-                    Norm(x.row.Lemma) == T(0).CanonicalText).Select(x => x.i).ToArray();
-                if (pronoun.Length == 0 || pronoun.Any(i => !Guard.LicensedSubject(T(0).CanonicalText, T(0).Readings[i]))) return null;
-                List<Group> subjects = pronoun.GroupBy(i => (T(0).Readings[i].Features.Person, T(0).Readings[i].Features.Number))
-                    .Select(g => new Group(0, Category.Pronoun, g.Key.Person, g.Key.Number, g.ToArray())).ToList();
-                if (T(0).Readings.Any(r => r.Category == Category.Noun))
-                {
-                    NominalPhrase? homographs = NominalMembers(words, 0, cancel);
-                    if (homographs is null) return null;
-                    subjects.AddRange(homographs.Heads.Select(h => new Group(0, Category.Noun, null, h.Number, h.Members)));
-                }
-                if (subjects.Any(s => competing.Any(p => Agreement(s, p) != Guard.Agreement.Mismatch))) return null;
-                foreach (Group subject in subjects)
-                    foreach (Group verb in predicates) Add(subject, verb.Members, [], ProductiveGraphMismatch, null);
-            }
-            else
-            {
-                int head = words.Count - 2;
-                NominalPhrase? phrase = NominalMembers(words, head, cancel);
-                if (phrase is null) return null;
+                Group[] predicates = PredicateGroups(finite), competing = PredicateGroups(personal);
                 Group[] heads = phrase.Heads.Select(h => new Group(head, Category.Noun, null, h.Number, h.Members)).ToArray();
-                bool finiteMismatch = heads.All(h => competing.All(p => Agreement(h, p) == Guard.Agreement.Mismatch));
-                if (finiteMismatch)
+                // Retained under !matrixOwnedByR3: markedSubject serves OutsideScope temporal-head full-article masculine singular NPs
+                // (both head == 0 'Месецът започнаха.' and head > 0 'Новият месец започнаха.') and copular/linking carriers;
+                // closedIntransitive serves the prospectively deferred 3p unclosed-valency single-NP family.
+                bool markedSubject = head == 0 ? FullSubject(head) : All(0, Category.Adjective) &&
+                    T(0).Readings.All(r => Guard.HasNominalAxes(r.Features) &&
+                        r.Features.Article == MorphologicalArticle.Full &&
+                        r.Features.Number == MorphologicalNumber.Singular && r.Features.Gender == MorphologicalGender.Masculine);
+                bool closedIntransitive = finite.All(i => T(predicate).Readings[i].Features is
+                    { Person: MorphologicalPerson.Third, DeclaredTransitivity: MorphologicalVerbTransitivity.Intransitive });
+                if ((markedSubject || closedIntransitive) &&
+                    heads.All(h => competing.All(p => Agreement(h, p) == Guard.Agreement.Mismatch)))
+                {
                     foreach (NominalHead h in phrase.Heads.Where(h => h.Attributes.All(a => a.Length > 0)))
                         foreach (Group verb in predicates)
                             Add(new(head, Category.Noun, null, h.Number, h.Members), verb.Members,
                                 h.Attributes, ProductiveGraphMismatch, null);
-                for (int a = 0; a < head; a++)
-                {
-                    Check();
-                    if (!phrase.AnyAttributeMatch[a])
-                        Add(new(head, Category.Noun, null, null, phrase.NounMembers), finite.ToArray(),
-                            phrase.AttributeMembers, ProductiveAttributeMismatch, a);
                 }
+            }
+            for (int a = 0; a < head; a++)
+            {
+                Check();
+                if (!phrase.AnyAttributeMatch[a])
+                    Add(new(head, Category.Noun, null, null, phrase.NounMembers), finite.ToArray(),
+                        phrase.AttributeMembers, ProductiveAttributeMismatch, a);
             }
             return candidates.Count == 0 ? null : new(true, false, null, candidates.ToArray(), [], []);
 
@@ -420,13 +438,17 @@ internal static class ContextLanes
         internal ContextOverlayInput? ExactPronounPrefix()
         {
             Check();
-            // Two-word shapes remain exclusively governed by the existing closed lane.
+            // Migrated non-PP pronoun+verb clauses are gated off at dispatch (!matrixOwnedByR3);
+            // retain short accusative clitic prefixes and OutsideScope PP-tail prefixes ('Аз четат в парка.').
             if (words.Count < 3 || !Space(sentence.Start, T(0).Token.Start)) return null;
-            foreach (TokenView word in words)
-            {
-                if (!PrefixReady(word)) return null;
-            }
-            return PronounPrefix(0, ExactPronounPrefixLane) is { } prefix
+            int[] clitic = WordBridge(0, 1) && WordBridge(1, 2) && PrefixReady(T(2))
+                ? Guard.AccusativeCliticReadings(T(1), cancel) : [];
+            if (clitic.Length == 0)
+                foreach (TokenView word in words)
+                {
+                    if (!PrefixReady(word)) return null;
+                }
+            return PronounPrefix(0, ExactPronounPrefixLane, clitic) is { } prefix
                 ? new(true, false, null, [prefix], [], []) : null;
         }
 
@@ -444,25 +466,12 @@ internal static class ContextLanes
                 if (key is not ("че" or "защото") || commaIndex < 0 ||
                     tokens[commaIndex] is not { Kind: TokenKind.Punctuation, Text: "," } comma ||
                     comma.Start < sentence.Start || !Space(comma.Start + comma.Length, connector.Token.Start) ||
-                    !WordBridge(marker, marker + 1) || !PrefixReady(connector)) continue;
+                    !WordBridge(marker, marker + 1)) continue;
                 while (scope < protectedSpans.Count && protectedSpans[scope].End <= comma.Start) scope++;
                 if (scope < protectedSpans.Count && protectedSpans[scope].Start < connector.Token.Start + connector.Token.Length) continue;
 
-                List<int> supports = [];
-                for (int row = 0; row < connector.Readings.Count; row++)
-                {
-                    Check();
-                    ReadingView reading = connector.Readings[row];
-                    if (Norm(reading.Lemma) != key) { supports.Clear(); break; }
-                    if (reading.SourceConjunction && reading.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Conjunction, RawTag: "Съюз:189" } ||
-                        key == "защото" && reading.SourceAdverb &&
-                        reading.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Adverb, RawTag: "Наречие:188" })
-                        supports.Add(row);
-                    else if (key != "че" || reading.Category != Category.Particle ||
-                        reading.Features is not { PartOfSpeech: MorphologicalPartOfSpeech.Particle, RawTag: "Частица:191" })
-                    { supports.Clear(); break; }
-                }
-                if (supports.Count == 0 || PronounPrefix(marker + 1, SubordinatePronounPrefixLane) is not { } prefix) continue;
+                int[] supports = Guard.SubordinateConnectorReadings(connector, cancel);
+                if (supports.Length == 0 || PronounPrefix(marker + 1, SubordinatePronounPrefixLane) is not { } prefix) continue;
                 int end = prefix.Roles[0].Start + prefix.Roles[0].Length;
                 if (scope < protectedSpans.Count && protectedSpans[scope].Start < end) continue;
 
@@ -491,13 +500,14 @@ internal static class ContextLanes
             return true;
         }
 
-        private ContextOverlayCandidate? PronounPrefix(int first, string lane)
+        private ContextOverlayCandidate? PronounPrefix(int first, string lane, int[]? clitic = null)
         {
             if (!PrefixReady(T(first))) return null;
             foreach (ReadingView row in T(first).Readings)
             { Check(); if (!Guard.LicensedSubject(T(first).CanonicalText, row)) return null; }
-            int predicate = first + 1;
-            while (predicate < words.Count && WordBridge(predicate - 1, predicate))
+            bool withClitic = clitic is { Length: > 0 };
+            int predicate = first + (withClitic ? 2 : 1);
+            while (!withClitic && predicate < words.Count && WordBridge(predicate - 1, predicate))
             {
                 Check();
                 if (!PrefixReady(T(predicate))) return null;
@@ -505,6 +515,14 @@ internal static class ContextLanes
                 predicate++;
             }
             if (predicate == words.Count || !WordBridge(predicate - 1, predicate)) return null;
+            string predCanon = T(predicate).CanonicalText;
+            if (predCanon is "трябва" or "трябваше" or "бива" or "биваше") return null;
+            if (!withClitic && predCanon is "няма" or "нямаше" &&
+                predicate + 1 < words.Count && WordBridge(predicate, predicate + 1) &&
+                (T(predicate + 1).CanonicalText == "да" ||
+                 T(predicate + 1).CanonicalText == "ли" && predicate + 2 < words.Count &&
+                 WordBridge(predicate + 1, predicate + 2) && T(predicate + 2).CanonicalText == "да"))
+                return null;
             MorphologicalFeatures subject = T(first).Readings[0].Features;
             // Every licensed row has the same canonical cell tuple; retain every original row below.
             foreach (ReadingView row in T(predicate).Readings)
@@ -512,6 +530,7 @@ internal static class ContextLanes
                 Check();
                 if (row.Category != Category.Verb || !Guard.IsPersonalPredicate(row.Features) ||
                     row.Features.VerbForm != MorphologicalVerbForm.Finite ||
+                    withClitic && row.Features.DeclaredTransitivity != MorphologicalVerbTransitivity.Transitive ||
                     Guard.PersonNumberTupleMatches((subject.Person, subject.Number), (row.Features.Person, row.Features.Number))) return null;
             }
             ContextOverlayRoleSelection[] roles =
@@ -519,10 +538,14 @@ internal static class ContextLanes
                 Role(ContextOverlayRole.Predicate, predicate, Enumerable.Range(0, T(predicate).Readings.Count).ToArray(), "complete_exact_reading"),
                 Role(ContextOverlayRole.Subject, first, Enumerable.Range(0, T(first).Readings.Count).ToArray(), "licensed_canonical_personal_subject")
             ];
+            string interposition = withClitic
+                ? FormattableString.Invariant($"short_accusative_clitic={T(first + 1).OriginalIndex}:") +
+                    string.Join(',', clitic!.Select(i => i.ToString(CultureInfo.InvariantCulture)))
+                : "pure_typed_transparent_prefix";
             Check();
             return new(T(predicate).OriginalIndex, false, lane, 0, sourceKey(roles), roles,
                 ["complete_exact_reading", ProductiveGraphMismatch, "all_complete_rows_licensed_canonical_personal_subject",
-                 "pure_typed_transparent_prefix", "all_finite_person_number_pairs_mismatch"]);
+                 interposition, "all_finite_person_number_pairs_mismatch"]);
 
             bool Transparent(int index)
             {
@@ -684,10 +707,10 @@ internal static class ContextLanes
             r.Features.Gender == MorphologicalGender.Masculine && r.Features.Number == MorphologicalNumber.Singular);
         private bool ThirdSubject(Group s) => s.Category == Category.Pronoun &&
             s.Person == MorphologicalPerson.Third && IsNumber(s.Number) &&
-            Norm(T(s.Token).CanonicalText) is "той" or "тя" or "то" or "те" &&
+            BulgarianFunctionWords.IsThirdSubjectPronoun(Norm(T(s.Token).CanonicalText)) &&
             s.Members.Length == T(s.Token).Readings.Count && Ready(s.Token) && T(s.Token).Readings.All(r =>
                 r.Category == Category.Pronoun && r.SourcePersonalPronoun &&
-                Norm(r.Lemma) is "той" or "тя" or "то" or "те" &&
+                BulgarianFunctionWords.IsThirdSubjectPronoun(Norm(r.Lemma)) &&
                 r.Features.Person == s.Person && r.Features.Number == s.Number);
         private bool Competition(Group p, Group s)
         {
@@ -718,7 +741,7 @@ internal static class ContextLanes
                 if (selected.Contains(i))
                 {
                     if (r.Category != Category.Pronoun || !r.SourcePersonalPronoun ||
-                        Norm(r.Lemma) is not ("аз" or "ти" or "ние" or "вие") ||
+                        !BulgarianFunctionWords.IsFirstOrSecondSubjectPronoun(Norm(r.Lemma), out _) ||
                         r.Features.Person != s.Person || r.Features.Number != s.Number) return false;
                 }
                 else

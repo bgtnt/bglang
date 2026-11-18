@@ -1,5 +1,5 @@
-import {createPostLane} from "/live-client.js";
-import {initLiveDemo} from "/live-demo.js";
+import {createPostLane, livePayload} from "/live-client.js";
+import {initLiveDemo, diagnosticPresentation} from "/live-demo.js";
 
 const postLane = createPostLane();
 async function requestApi(operation, payload) {
@@ -252,7 +252,14 @@ function render(operation, response) {
   if (operation === "analyze-word") showAnalysis(data, response);
   else if (operation === "analyze-text") {
     const node = card("Текстов анализ");
-    node.append(element("p", `${data.tokens.length} токена; ${data.diagnostics.length} диагностики. Избери дума за оригиналния ѝ анализ. Всички токени, source offsets и evidence са в JSON.`));
+    const checks = diagnosticPresentation(data);
+    const warnings = checks.messages.filter(row => row.classification === "warning");
+    node.append(element("p", `${data.tokens.length} токена; ${checks.messages.length} съобщения (${warnings.length} предупреждения). Избери дума за оригиналния ѝ анализ. Всички токени, source offsets и evidence са в JSON.`));
+    if (warnings.length) {
+      const warnList = element("ul");
+      for (const row of warnings) warnList.append(element("li", row.summary ?? row.text, "warning"));
+      node.append(warnList);
+    }
     const list = element("ul");
     const selection = element("section");
     for (const token of data.tokens) {
@@ -304,7 +311,7 @@ function updateExplorerControls() {
   limitControls.hidden = !hasLimit;
   limitField.disabled = !hasLimit;
   limitField.value = mode.value === "generate-forms" ? "256" : "32";
-  input.maxLength = mode.value === "analyze-text" ? 4096 : 256;
+  input.maxLength = mode.value === "analyze-text" ? 16384 : 256;
 }
 
 async function search(operation, text) {
@@ -324,7 +331,9 @@ async function search(operation, text) {
   document.querySelector("#json-context").hidden = true;
   status.textContent = "Изпълнение…";
   input.value = text;
-  const request = { text };
+  const request = operation === "analyze-text"
+    ? livePayload(text, document.querySelector("#live-heuristics")?.checked ?? true)
+    : { text };
   if (!limitField.disabled) request.limit = Number(limitField.value);
   try {
     const {http, response} = await requestApi(operation, request);

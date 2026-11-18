@@ -1,8 +1,8 @@
-# BgLang Live — Preview16 локален старт
+# BgLang Live — v0.2.0-alpha.1 локален старт
 
-Това е локалният старт за [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
+Това е локалният старт за [v0.2.0-alpha.1](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.1) (prerelease). Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-runtime.zip), [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/SHA256SUMS), [authoring inputs](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-inputs.zip) и [tagged release guide](https://github.com/bgtnt/bglang/blob/v0.2.0-alpha.1/packaging/RELEASE-CANDIDATE.md).
 
-Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Публикуваният runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
+Проверете SHA256SUMS и поставете четирите matching runtime файла в `./runtime`. SDK е **10.0.403** от `global.json`. Публикуваният runtime ZIP за v0.2.0-alpha.1 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), с manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime не изисква authoring input. От source папката:
 
 ~~~powershell
 $env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
@@ -12,9 +12,9 @@ dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 
 Default адресът е `http://127.0.0.1:5070`, с `/demo` и `/docs`; експерименталната лаборатория е `/demo-lab/index.html`. [Root quickstart](../../README.md) и [release guide](../../packaging/RELEASE-CANDIDATE.md) описват готовия runtime и изричното му възпроизвеждане с `-Profile CurrentGraphStress`. Builder default остава отделният **Current** профил.
 
-В Live и Lab изричният избор при курсор в началото на дума заменя точно това срещане. Например `Нова |книга.` може да стане `Нова аба.`. При курсор след интервал в края на текста предложението се вмъква.
+Live (`/demo`) и Lab (`/demo-lab/index.html`) проверяват въведения текст чрез общия runtime (съгласуване с нетекстови токъни, именни конструкции, предпазни с/със проверки и въздържание при неясен контекст) и запазват UTF-16 графемната замяна за `context.continuation`.
 
-Предишно издание [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15).
+Предишни издания: [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16), [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15).
 
 ## Исторически snapshots — Preview14 и по-стари
 
@@ -397,7 +397,7 @@ Envelope:
   защото липсва explicit exhaustive-result proof. Никога не се измисля true.
 
 При `find-forms-in-text` се подава `{"text":"...", "query":"книга"}` без
-limit; text е до 4096, query до 256 UTF-16 символа, единична дума/лема без
+limit; text е до 16384, query до 256 UTF-16 символа, единична дума/лема без
 whitespace. Host-ът последователно извиква AnalyzeWord(query, 32) и AnalyzeText.
 Двете действителни analyses остават в JSON. Малка typed projection сравнява
 цели Word tokens с query чрез ordinal case-sensitive равенство и joins всички
@@ -447,12 +447,12 @@ M2 productive coverage: held-out незаписани комбинации, forw
 
 ## Ресурсни и HTTP граници
 
-UTF-16: дума/лема <=256, текст <=4096. HTTP request body <=32768 bytes,
+UTF-16: дума/лема <=256, текст <=16384. HTTP request body <=131072 bytes,
 включително JSON whitespace/escaping; Kestrel прилага границата и при chunked
 transfer. Непознати JSON полета, празен/whitespace вход и невалидни limits
 дават 400; content type дава 415; body size дава 413.
 
-Кандидатният response profile допуска до **32 MiB (33554432 UTF-8 body bytes)**
+Кандидатният response profile допуска до **64 MiB (67108864 UTF-8 body bytes)**
 за успешен language ApiEnvelope, конфигурируем чрез положителен
 `BgLang:ResponseByteLimit`. Това е host engineering setting, не owner-imposed
 или универсален acceptance таван. Всички routes/формати, включително raw,

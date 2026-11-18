@@ -35,7 +35,7 @@
       </div>
       <div class="editor-shell">
         <div id="lab-backdrop" class="editor-surface backdrop" aria-hidden="true"></div>
-        <textarea id="lab-editor" class="editor-surface" maxlength="4096" rows="9" spellcheck="false" autocomplete="off" aria-describedby="lab-help lab-state">Малката книга 📚 пътува с мен.
+        <textarea id="lab-editor" class="editor-surface" maxlength="16384" rows="9" spellcheck="false" autocomplete="off" aria-describedby="lab-help lab-state">Малката книга пътува с мен. 📚
 Децата играе. Чорбанова чете на пейката.</textarea>
         <div id="lab-menu" class="menu" hidden></div>
       </div>
@@ -46,7 +46,7 @@
         <span class="note">или Ctrl+Space в текста · ред по речников score, не вероятност</span>
       </div>
       <div id="lab-legend" class="legend" aria-label="Легенда на цветовете"></div>
-      <p class="status"><span id="lab-state" role="status" aria-live="polite">Подготовка…</span> <span id="lab-counts"></span> <span id="lab-length" class="length">0 / 4096</span></p>
+      <p class="status"><span id="lab-state" role="status" aria-live="polite">Подготовка…</span> <span id="lab-counts"></span> <span id="lab-length" class="length">0 / 16384</span></p>
       <p id="lab-help" class="help">Цветовете под текста показват върнатия анализ. Вълнообразната линия отбелязва предупреждение; всички предупреждения са изброени в „Проверки“. Постави курсора в дума, за да видиш прочитите ѝ.</p>
       <div class="examples" aria-label="Примерни текстове">
         <span>Примери:</span>
@@ -67,7 +67,7 @@
   </div>
   <section class="checks-card" aria-labelledby="lab-checks-title">
     <h2 id="lab-checks-title">Проверки</h2>
-    <p class="note">Съгласуването по лице и число засега се проверява само в кратки изречения като „Децата играе.“ или „Аз чете.“: подлог и веднага след него сказуемо, без други думи или знаци в изречението. В по-дълги изречения несъгласуване още не се открива.</p>
+    <p class="note">Проверките за съгласуване и членуване използват локално установимите връзки. При няколко допустими прочита анализът може да остави случая неустановен.</p>
     <p id="lab-stale-checks" class="stale" hidden>Текстът е променен; списъкът е от предишния анализ и действията са неактивни.</p>
     <div id="lab-checks"></div>
   </section>

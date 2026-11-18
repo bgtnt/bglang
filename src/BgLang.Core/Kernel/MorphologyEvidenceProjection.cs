@@ -10,7 +10,7 @@ internal static class MorphologyEvidenceProjection
     internal sealed record Rows(IReadOnlyList<ContextLanes.ReadingView> Lanes,
         ImmutableArray<WordReading> Raw, ImmutableArray<SyntaxRoleCalculator.Projection> Syntax,
         IReadOnlyList<string> Identities, string Canonical, IReadOnlyList<GraphCell> Graph,
-        string? GraphUnavailableReason = null)
+        string? GraphUnavailableReason = null, bool Complete = true)
     {
         internal bool UsesGraph => Graph.Count > 0;
         internal int Count => UsesGraph ? Graph.Count : Raw.Length;

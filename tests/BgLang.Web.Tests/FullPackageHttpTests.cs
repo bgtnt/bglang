@@ -234,7 +234,7 @@ public sealed class FullPackageHttpTests
             await Invalid("decompose-word", "{\"text\":\"книга\",\"limit\":32}", HttpStatusCode.BadRequest);
             await Invalid("find-forms-in-text", "{\"text\":\"книга\"}", HttpStatusCode.BadRequest);
             await Invalid("analyze-word", JsonSerializer.Serialize(new { text = new string('а', 257) }), HttpStatusCode.BadRequest);
-            await Invalid("analyze-text", JsonSerializer.Serialize(new { text = new string('а', 4097) }), HttpStatusCode.BadRequest);
+            await Invalid("analyze-text", JsonSerializer.Serialize(new { text = new string('а', 16385) }), HttpStatusCode.BadRequest);
             await Invalid("analyze-word", "книга", HttpStatusCode.UnsupportedMediaType, "text/plain");
             string excessiveBody = new string(' ', HttpContract.BodyBytes) + "{\"text\":\"книга\"}";
             await Invalid("analyze-word", excessiveBody, HttpStatusCode.RequestEntityTooLarge);

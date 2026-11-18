@@ -97,16 +97,9 @@ internal static class PronounVerbAgreementAnalyzer
         out AgreementFeatures features)
     {
         string normalized = Normalized(token);
-        (bool Supported, AgreementFeatures Features) subject = normalized switch
-        {
-            "аз" => (true, new AgreementFeatures(MorphologicalPerson.First, MorphologicalNumber.Singular)),
-            "ти" => (true, new AgreementFeatures(MorphologicalPerson.Second, MorphologicalNumber.Singular)),
-            "ние" => (true, new AgreementFeatures(MorphologicalPerson.First, MorphologicalNumber.Plural)),
-            "вие" => (true, new AgreementFeatures(MorphologicalPerson.Second, MorphologicalNumber.Plural)),
-            _ => default
-        };
-        features = subject.Features;
-        if (!subject.Supported ||
+        bool supported = BulgarianFunctionWords.IsFirstOrSecondSubjectPronoun(normalized, out PersonalSubjectPronounSpec spec);
+        features = supported ? new AgreementFeatures(spec.Person, spec.Number) : default;
+        if (!supported ||
             !TryGetCompleteReadings(token, lexicon, completeReadings, out IReadOnlyList<WordReading> readings))
             return false;
 
@@ -116,13 +109,13 @@ internal static class PronounVerbAgreementAnalyzer
             if (!IsPersonalPronoun(reading.PartOfSpeech))
                 continue;
             if (!TryParsePersonalPronounAgreement(reading.PartOfSpeech, out AgreementFeatures candidate) ||
-                candidate != subject.Features ||
+                candidate != features ||
                 !string.Equals(BulgarianTextNormalizer.NormalizeKey(reading.Lemma), normalized, StringComparison.Ordinal))
                 return false;
             selected = candidate;
         }
 
-        return selected == subject.Features;
+        return selected == features;
     }
 
     private static bool HasInterveningRole(

@@ -2,6 +2,12 @@ using BgLang.Contracts;
 
 namespace BgLang.Core;
 
+internal enum OwnerVerbValency
+{
+    OpenUnattested = 0,
+    AttestedTransitiveAny = 1
+}
+
 /// <summary>Validated owner metadata; exact lookup shares the package's forward/routed payloads.</summary>
 internal sealed class PackageLexicalCatalog
 {
@@ -65,6 +71,186 @@ internal sealed class PackageLexicalCatalog
     internal LexicalEntryResult Find(string entryId) => new(true, _entries.GetValueOrDefault(entryId)) { PackageHasUnresolvedRelations = _incomplete };
 
     internal int OwnerCount => _owners.Length;
+
+    internal OwnerVerbValency ClassifyVerbOwnerValency(
+        int ordinal,
+        IRuntimeLexicon lexicon,
+        VerbFrameCatalog? verbFrames,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if ((uint)ordinal >= (uint)_owners.Length)
+            return OwnerVerbValency.OpenUnattested;
+
+        LexicalEntry[] aliases = _owners[ordinal];
+        if (verbFrames is not null)
+        {
+            foreach (LexicalEntry alias in aliases)
+            {
+                if (verbFrames.TryGetByLexemeKey(alias.LexemeKey, out VerbFrameLexemeEntry? vf) &&
+                    vf is not null && vf.NonReflexiveDirectObjectFrameRatio is > 0.0)
+                    return OwnerVerbValency.AttestedTransitiveAny;
+            }
+        }
+
+        if (DeclaresSingleDirectObjectFrame(ordinal, ct))
+            return OwnerVerbValency.AttestedTransitiveAny;
+
+        bool sawDirectObjectQuestion = false;
+        HashSet<int>? visited = null;
+        InspectOrdinal(ordinal, depth: 0);
+
+        return sawDirectObjectQuestion
+            ? OwnerVerbValency.AttestedTransitiveAny
+            : OwnerVerbValency.OpenUnattested;
+
+        void InspectOrdinal(int currentOrdinal, int depth)
+        {
+            ct.ThrowIfCancellationRequested();
+            if ((uint)currentOrdinal >= (uint)_owners.Length || sawDirectObjectQuestion) return;
+            visited ??= [];
+            if (!visited.Add(currentOrdinal)) return;
+
+            foreach (LexicalEntry entry in _owners[currentOrdinal])
+            {
+                IReadOnlyList<string> m = entry.Meaning;
+                if (m.Count == 0) continue;
+
+                int sectionStart = 0;
+                while (sectionStart < m.Count && !sawDirectObjectQuestion)
+                {
+                    int sectionEnd = sectionStart;
+                    while (sectionEnd < m.Count && m[sectionEnd] != "----")
+                        sectionEnd++;
+
+                    InspectSection(m, sectionStart, sectionEnd, depth);
+                    sectionStart = sectionEnd + 1;
+                }
+            }
+        }
+
+        void InspectSection(IReadOnlyList<string> lines, int start, int end, int depth)
+        {
+            if (start >= end) return;
+            string header = lines[start];
+            // Skip non-verb homograph sections in ---- split articles (e.g., noun section of 'чета').
+            if (lines.Count > end - start &&
+                (header.Contains("+м.", StringComparison.Ordinal) ||
+                 header.Contains("+ж.", StringComparison.Ordinal) ||
+                 header.Contains("+ср.", StringComparison.Ordinal)) &&
+                !header.Contains("+несв.", StringComparison.Ordinal) &&
+                !header.Contains("+св.", StringComparison.Ordinal) &&
+                !header.Contains("+мин.", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            for (int i = start; i < end && !sawDirectObjectQuestion; i++)
+            {
+                string line = lines[i];
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (line.StartsWith("__", StringComparison.Ordinal) &&
+                    (line.Contains(" се.", StringComparison.Ordinal) ||
+                     line.Contains(" се__", StringComparison.Ordinal) ||
+                     line.Contains(" си.", StringComparison.Ordinal) ||
+                     line.Contains(" си__", StringComparison.Ordinal)))
+                {
+                    break;
+                }
+                if (line.StartsWith("* ", StringComparison.Ordinal) ||
+                    line.StartsWith("+същ.", StringComparison.Ordinal) ||
+                    line.StartsWith("+прил.", StringComparison.Ordinal) ||
+                    line.StartsWith("+нареч.", StringComparison.Ordinal) ||
+                    line.StartsWith("+межд.", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (ContainsBareDirectObjectQuestion(line))
+                {
+                    sawDirectObjectQuestion = true;
+                    return;
+                }
+
+                if (depth < 2 && TryExtractSeeAlsoTarget(line, out string? targetLemma) && targetLemma is not null)
+                {
+                    foreach (int targetOrd in lexicon.FindExactLexemeOrdinals(targetLemma))
+                        InspectOrdinal(targetOrd, depth + 1);
+                }
+            }
+        }
+    }
+
+    private static readonly string[] DirectObjectQuestionMarkers =
+        ["+Кого", "+Какво", "+кого", "+какво", "_Кого", "_Какво"];
+
+    private static bool ContainsBareDirectObjectQuestion(string line)
+    {
+        foreach (string marker in DirectObjectQuestionMarkers)
+        {
+            int from = 0;
+            while (from < line.Length)
+            {
+                int idx = line.IndexOf(marker, from, StringComparison.Ordinal);
+                if (idx < 0) break;
+                // Exclude prepositional object questions such as '#4 С +Кого.' or 'За +какво.'.
+                bool precededByWordAndSpace = idx >= 2 && line[idx - 1] == ' ' && char.IsLetter(line[idx - 2]);
+                if (!precededByWordAndSpace)
+                    return true;
+                from = idx + marker.Length;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryExtractSeeAlsoTarget(string line, out string? normalizedTarget)
+    {
+        normalizedTarget = null;
+        int marker = line.IndexOf("+вж.", StringComparison.Ordinal);
+        if (marker < 0) return false;
+        ReadOnlySpan<char> after = line.AsSpan(marker + 4);
+        int open = after.IndexOf("[[", StringComparison.Ordinal);
+        if (open < 0) return false;
+        after = after[(open + 2)..];
+        int close = after.IndexOf("]]", StringComparison.Ordinal);
+        if (close <= 0) return false;
+        string raw = after[..close].ToString().Replace("`", "", StringComparison.Ordinal);
+        int bar = raw.IndexOf('|');
+        if (bar > 0) raw = raw[..bar];
+        normalizedTarget = BulgarianTextNormalizer.NormalizeKey(raw);
+        return normalizedTarget.Length > 0;
+    }
+
+    // One explicit direct-object sense with its source example. Multi-sense,
+    // cross-reference and reflexive definitions do not establish this frame.
+    internal bool DeclaresSingleDirectObjectFrame(int ordinal, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if ((uint)ordinal >= (uint)_owners.Length)
+            throw new InvalidOperationException("Frame owner is outside the loaded catalog.");
+        return _owners[ordinal] is { Length: 1 } owners && owners[0].Meaning is { Count: 1 } meanings &&
+            IsSingleDirectObjectMeaning(meanings[0]);
+    }
+
+    internal static bool IsSingleDirectObjectMeaning(string meaning)
+    {
+        const string objectQuestion = "+Кого, какво. ";
+        const string thingQuestion = "+Какво. ";
+        ReadOnlySpan<char> row = meaning.AsSpan();
+        int frame = row.IndexOf("; ", StringComparison.Ordinal);
+        if (frame <= 0 || row[..frame].IndexOfAny('_', '#', ';') >= 0) return false;
+        row = row[(frame + 2)..];
+        if (row.StartsWith(objectQuestion, StringComparison.Ordinal)) row = row[objectQuestion.Length..];
+        else if (row.StartsWith(thingQuestion, StringComparison.Ordinal)) row = row[thingQuestion.Length..];
+        else return false;
+
+        int example = row.IndexOf(" _", StringComparison.Ordinal);
+        if (example < 2 || row[example - 1] != '.' || !char.IsUpper(row[0]) ||
+            row[..example].IndexOfAny("+;#_[]") >= 0) return false;
+        ReadOnlySpan<char> quotation = row[(example + 2)..];
+        return quotation.Length > 2 && quotation.EndsWith("._", StringComparison.Ordinal) &&
+            quotation[..^1].IndexOfAny("_+#[]") < 0;
+    }
 
     internal LexemeAnnotations.StressRow? GetStress(string entryId, WordReading reading)
     {

@@ -72,6 +72,12 @@ internal static class TextPredicateLinkAnalyzer
                                 kind = "coordinated_da_boundary";
                                 AddMarker(words[i + 1]); AddMarker(words[i + 2]);
                             }
+                            else if (relevant.Length >= 2 && left.Rows.Lanes.Any(CopularCarrier) && right.Rows.Lanes.Any(Participle) &&
+                                AllAuxBridgeTokens(words, i + 1, j - 1))
+                            {
+                                kind = "auxiliary_participle";
+                                for (int m = i + 1; m < j; m++) AddAuxBridgeMarker(words[m]);
+                            }
                         }
                         if (kind is null || (j > i + 1 && markers.Select(m => m.Word.Index).Distinct().Count() != j - i - 1)) continue;
                         // Each emitted tuple cites real rows. Marker alternatives are not silently selected.
@@ -83,10 +89,7 @@ internal static class TextPredicateLinkAnalyzer
                                 bool accepted = kind switch
                                 {
                                     "future_marker" => FutureMarker(l) && Finite(r) && r.Features.Tense == MorphologicalTense.Present,
-                                    "auxiliary_participle" => Finite(l) && CopularLemma(l.Lemma) &&
-                                        r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
-                                            HasConflictingFeatures: false, HasUnrecognizedFeatures: false } &&
-                                        l.Features.Number == r.Features.Number,
+                                    "auxiliary_participle" => CopularCarrier(l) && Participle(r) && l.Features.Number == r.Features.Number,
                                     _ => Finite(l) && Finite(r)
                                 };
                                 if (!accepted) continue;
@@ -115,9 +118,22 @@ internal static class TextPredicateLinkAnalyzer
                             for (int row = 0; row < marker.Rows.Count; row++)
                             {
                                 var reading = marker.Rows.Lanes[row];
-                                if (!reading.Features.HasConflictingFeatures && !reading.Features.HasUnrecognizedFeatures &&
-                                    (marker.Rows.Canonical == "и" && reading.SourceConjunction ||
-                                     marker.Rows.Canonical == "да" && (reading.SourceConjunction || reading.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle)))
+                                if (marker.Rows.Canonical == "и" && reading.SourceConjunction && Clean(reading) ||
+                                    marker.Rows.Canonical == "да" && DaMarker(reading))
+                                    markers.Add((marker, row));
+                            }
+                        }
+                        void AddAuxBridgeMarker(Word marker)
+                        {
+                            for (int row = 0; row < marker.Rows.Count; row++)
+                            {
+                                var reading = marker.Rows.Lanes[row];
+                                if (reading.SourceGenericUnknown || !Clean(reading)) continue;
+                                var pos = reading.Features.PartOfSpeech;
+                                if (marker.Rows.Canonical == "ли"
+                                    ? pos == MorphologicalPartOfSpeech.Particle
+                                    : pos is MorphologicalPartOfSpeech.PersonalPronoun or MorphologicalPartOfSpeech.Pronoun ||
+                                        marker.Rows.Canonical == "се" && pos == MorphologicalPartOfSpeech.Particle)
                                     markers.Add((marker, row));
                             }
                         }
@@ -192,7 +208,7 @@ internal static class TextPredicateLinkAnalyzer
         return !words[2].Rows.Lanes.Any(r => firstLemmas.Contains(BulgarianTextNormalizer.NormalizeKey(r.Lemma)));
     }
 
-    private static bool Finite(ContextLanes.ReadingView row) =>
+    internal static bool Finite(ContextLanes.ReadingView row) =>
         row.Category == ContextLanes.Category.Verb && !row.SourceGenericUnknown && !row.Features.HasUnrecognizedFeatures &&
         Guard.IsPersonalPredicate(row.Features) && row.Features.VerbForm == MorphologicalVerbForm.Finite;
     private static string Kind(ContextLanes.ReadingView row) => row.Features.PartOfSpeech != MorphologicalPartOfSpeech.Verb ? "other" :
@@ -203,7 +219,23 @@ internal static class TextPredicateLinkAnalyzer
         };
     // Candidates, never selected lexical senses. These source lemmas can head compound/copular forms.
     private static bool Auxiliary(string lemma) => BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда" or "ща" or "имам" or "нямам";
-    private static bool CopularLemma(string lemma) => BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда";
+    internal static bool CopularLemma(string lemma) => BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда";
+    internal static bool CopularCarrier(ContextLanes.ReadingView row) => Finite(row) && CopularLemma(row.Lemma);
+    internal static bool Participle(ContextLanes.ReadingView row) => row.Features is
+        { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
+            HasConflictingFeatures: false, HasUnrecognizedFeatures: false };
+    internal static bool DaMarker(ContextLanes.ReadingView row) => Clean(row) &&
+        (row.SourceConjunction || row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle);
+    private static bool Clean(ContextLanes.ReadingView row) => !row.Features.HasConflictingFeatures && !row.Features.HasUnrecognizedFeatures;
+    private static bool IsAuxBridgeToken(Word word) =>
+        BulgarianFunctionWords.HasAny(word.Rows.Canonical,
+            FunctionWordClasses.InterrogativeParticle | FunctionWordClasses.ReflexiveAccusativeSe | FunctionWordClasses.PronominalVerbalClitic);
+    private static bool AllAuxBridgeTokens(Word[] words, int first, int last)
+    {
+        for (int i = first; i <= last; i++)
+            if (!IsAuxBridgeToken(words[i])) return false;
+        return true;
+    }
     private static bool FutureMarker(ContextLanes.ReadingView row) =>
         !row.Features.HasConflictingFeatures && !row.Features.HasUnrecognizedFeatures && row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle;
     private static TextGraphReadingReference GraphReference(Word word, int row) =>
@@ -214,7 +246,7 @@ internal static class TextPredicateLinkAnalyzer
             if (!Horizontal(text[(words[i].Token.Start + words[i].Token.Length)..words[i + 1].Token.Start])) return false;
         return true;
     }
-    private static bool Horizontal(string value, bool allowEmpty = false) =>
+    internal static bool Horizontal(string value, bool allowEmpty = false) =>
         (allowEmpty || value.Length > 0) && value.All(c => c is ' ' or '\t');
     private static IReadOnlyList<T> Freeze<T>(IEnumerable<T> rows) => Array.AsReadOnly(rows.ToArray());
     internal static List<(int Start, int End)> QuoteSpans(string text, CancellationToken ct, bool protectBackticks = false, bool protectBrackets = false)

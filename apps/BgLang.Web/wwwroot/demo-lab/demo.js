@@ -1,71 +1,10 @@
 // BgLang Live Lab: an experimental UI over the unchanged shared transport in ../live-client.js.
 // The textarea is the only editable text. The coloured backdrop behind it is decorative and aria-hidden;
 // the checks list and the word card carry the same information as text.
-import {createPostLane, createLiveController, completeReadings, caretWord, bindContinuation, applyContinuation, replaceableSpan, supportedNominalPhrase} from '../live-client.js';
-export {replaceableSpan} from '../live-client.js';
+import {MAX_TEXT_LENGTH, createPostLane, createLiveController, completeReadings, caretWord, bindContinuation, applyContinuation, replaceableSpan, supportedNominalPhrase, renderGrammarReview, describeGrammarViolation, UNIQUE_SPELLING_CODE, MESSAGES, GENERIC_MESSAGE, matchCase, collectChecks, warningTokens} from '../live-client.js';
+export {replaceableSpan, MESSAGES, GENERIC_MESSAGE, matchCase, collectChecks, warningTokens} from '../live-client.js';
 
-export const MAX_LENGTH = 4096;
-const UNIQUE_SPELLING_CODE = 'spelling_unknown_word_unique_distance_one_candidate';
-
-// Presentation only: the warning set matches the current /demo allowlist. Unknown codes stay information.
-const WARNING_CODES = new Set([
-  'missing_terminal_punctuation',
-  'sentence_initial_lowercase',
-  'mixed_script_ocr_known_candidate',
-  'digit_shape_ocr_known_candidate',
-  'accent_sensitive_i_grave',
-  'joined_verb_negation_should_be_separate',
-  'pronoun_verb_agreement_mismatch',
-  'unseparated_finite_predications',
-  'preposition_missing_complement',
-  'full_article_expected_for_subject_candidate',
-  'short_article_expected_after_preposition_candidate',
-  'productive_morphology_agreement_mismatch',
-  'productive_attribute_agreement_mismatch'
-]);
-const UNSUPPORTED_CODES = new Set(['full_short_article_check_not_ready']);
-const AGREEMENT_CODES = new Set([
-  'pronoun_verb_agreement_mismatch',
-  'productive_morphology_agreement_mismatch',
-  'productive_attribute_agreement_mismatch'
-]);
-// Codes whose projectedText is offered as an explicit, user-confirmed replacement of the original span.
-const REPLACEABLE_CODES = new Set([
-  UNIQUE_SPELLING_CODE,
-  'joined_verb_negation_should_be_separate',
-  'accent_sensitive_i_grave',
-  'mixed_script_ocr_known_candidate',
-  'digit_shape_ocr_known_candidate'
-]);
-
-export const MESSAGES = {
-  unseparated_finite_predications: 'Две лични глаголни форми в проверената конструкция изискват свързване или пунктуационно разделяне.',
-  productive_morphology_agreement_mismatch: 'Несъгласуване по лице/число в поддържаната конструкция.',
-  pronoun_verb_agreement_mismatch: 'Несъгласуване по лице/число между местоимение и глагол в поддържаната конструкция.',
-  productive_attribute_agreement_mismatch: 'Несъгласуване по род/число между определение и съществително в поддържаната конструкция.',
-  full_article_expected_for_subject_candidate: 'Ако думата е подлог, се очаква пълен член.',
-  short_article_expected_after_preposition_candidate: 'В проверената предложна група се очаква кратък член.',
-  preposition_missing_complement: 'След предлога не е намерена дума, към която да се отнася.',
-  [UNIQUE_SPELLING_CODE]: 'Няма точен речников прочит. Намерената близка форма е предложение за преглед.',
-  joined_verb_negation_should_be_separate: 'Ако е отрицателна глаголна форма, „не“ се пише отделно.',
-  accent_sensitive_i_grave: 'Ако е местоимение, се пише „ѝ“.',
-  mixed_script_ocr_known_candidate: 'Думата смесва кирилица и латиница; възможна грешка при въвеждане или разпознаване.',
-  digit_shape_ocr_known_candidate: 'Цифра на мястото на буква; възможна грешка при разпознаване.',
-  missing_terminal_punctuation: 'Изречението няма завършващ препинателен знак.',
-  sentence_initial_lowercase: 'Изречението започва с малка буква.',
-  full_short_article_check_not_ready: 'Проверката за членуване е частична; тук няма установено решение.',
-  clause_missing_predicate: 'Не е намерено сказуемо в проверения фрагмент; възможно заглавие.',
-  missing_comma_before_subordinate_conjunction: 'Възможно е да липсва запетая пред подчинено изречение.',
-  missing_space_after_punctuation: 'Липсва интервал след препинателния знак.',
-  space_before_punctuation: 'Има интервал пред препинателния знак.',
-  style_repetition_evidence: 'В текста има повторена речникова форма.',
-  reviewed_word_formation_evidence: 'Сложна или производна дума.',
-  hyphenated_degree_morphology_evidence: 'Степенувана форма с „по-“ или „най-“.',
-  contextual_morphology_reading_evidence: 'Контекстно сведение за прочита на думата.'
-};
-export const GENERIC_MESSAGE = 'Друго наблюдение от анализа.';
-
-const SEVERITY_ORDER = {warning: 0, unsupported: 1, information: 2};
+export const MAX_LENGTH = MAX_TEXT_LENGTH;
 
 const POS_NAMES = {
   Noun: 'съществително', Adjective: 'прилагателно', Verb: 'глагол', PersonalPronoun: 'лично местоимение',
@@ -181,71 +120,6 @@ export function readingGroups(rows) {
   return groups;
 }
 
-function supportTokens(records) {
-  const indices = new Set();
-  for (const {record} of records) {
-    for (const list of [record.readings, record.graphReadings, record.supports]) {
-      for (const ref of Array.isArray(list) ? list : []) if (Number.isInteger(ref?.tokenIndex)) indices.add(ref.tokenIndex);
-    }
-  }
-  return [...indices].sort((a, b) => a - b);
-}
-
-// Returns returned diagnostic records only (evidence codes never become messages), grouped by code and span.
-export function collectChecks(data) {
-  const text = typeof data?.text === 'string' ? data.text : '';
-  const v = data?.validation;
-  const sources = [
-    ['diagnostics', data?.diagnostics], ['validation', v?.diagnostics], ['spacing', v?.spacingDiagnostics],
-    ['comma', v?.subordinateCommaDiagnostics], ['fragment', v?.fragmentDiagnostics]
-  ];
-  const groups = new Map();
-  for (const [source, list] of sources) {
-    for (const record of Array.isArray(list) ? list : []) {
-      if (!record || typeof record.code !== 'string') continue;
-      const key = record.code + '\u0001' + record.start + '\u0001' + record.length;
-      let group = groups.get(key);
-      if (!group) groups.set(key, group = {code: record.code, start: record.start, length: record.length, records: []});
-      group.records.push({source, record});
-    }
-  }
-  const checks = [];
-  for (const group of groups.values()) {
-    const {code, start, length, records} = group;
-    const validSpan = Number.isInteger(start) && Number.isInteger(length) && start >= 0 && length >= 0 && start + length <= text.length;
-    const original = validSpan ? text.slice(start, start + length) : '';
-    const severity = WARNING_CODES.has(code) ? 'warning' : UNSUPPORTED_CODES.has(code) ? 'unsupported' : 'information';
-    const projected = records.map(({record}) => record.projectedText).find(value => typeof value === 'string' && value.length) ?? null;
-    const words = AGREEMENT_CODES.has(code)
-      ? supportTokens(records).map(index => data.tokens?.[index]?.text).filter(word => typeof word === 'string' && word.length)
-      : [];
-    checks.push({
-      code, start, length, severity, validSpan, records, projected, words,
-      known: Object.hasOwn(MESSAGES, code),
-      message: MESSAGES[code] ?? GENERIC_MESSAGE,
-      graph: records.some(({record}) => Array.isArray(record.graphReadings) && record.graphReadings.length > 0),
-      replaceable: REPLACEABLE_CODES.has(code) && projected !== null && validSpan && replaceableSpan(text, start, length),
-      replacement: projected === null ? null : matchCase(original, projected),
-      original
-    });
-  }
-  return checks.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
-    || (Number.isInteger(a.start) ? a.start : Infinity) - (Number.isInteger(b.start) ? b.start : Infinity)
-    || a.code.localeCompare(b.code));
-}
-
-// Only warnings underline words. Zero-length checks stay in the list without marking a neighbour.
-export function warningTokens(data, checks) {
-  const marked = new Set();
-  for (const check of checks) {
-    if (check.severity !== 'warning' || !check.validSpan || check.length === 0) continue;
-    (data.tokens || []).forEach((token, index) => {
-      if (token.kind === 'Word' && check.start < token.start + token.length && check.start + check.length > token.start) marked.add(index);
-    });
-  }
-  return marked;
-}
-
 export function possibleName(data, tokenIndex) {
   const token = data?.tokens?.[tokenIndex];
   const evidence = (data?.properNames?.candidates || []).some(candidate => candidate?.tokenIndex === tokenIndex);
@@ -277,34 +151,6 @@ export function spellingAlternatives(word) {
     });
 }
 
-// The case policy of /demo (b1011704b): a lowercase Cyrillic candidate copies a simple title-case or
-// all-caps original; mixed case and capitals from the dictionary keep the raw form. Unlike /demo, the
-// original may contain cased letters of any script, so the OCR projection of „Kнига“ (Latin K) is „Книга“.
-export function matchCase(original, form) {
-  const letters = (text, cyrillic) => {
-    const result = [];
-    for (const char of text) {
-      if (/^\p{M}$/u.test(char) && result.length) continue;
-      if (!/^[\p{Ll}\p{Lu}]$/u.test(char) || (cyrillic && !/^\p{Script=Cyrillic}$/u.test(char))) return null;
-      result.push(char);
-    }
-    return result;
-  };
-  const source = letters(original, false), candidate = letters(form, true);
-  if (!source || source.length < 2 || !candidate?.length || !candidate.every(char => /^\p{Ll}$/u.test(char))) return form;
-  const caps = source.every(char => /^\p{Lu}$/u.test(char));
-  const title = /^\p{Lu}$/u.test(source[0]) && source.slice(1).every(char => /^\p{Ll}$/u.test(char));
-  if (!caps && !title) return form;
-  let index = 0, result = '';
-  for (const char of form) {
-    if (/^\p{M}$/u.test(char)) { result += char; continue; }
-    const proposed = caps || index++ === 0 ? char.toUpperCase() : char;
-    if (!/^\p{Script=Cyrillic}$/u.test(proposed) || !/^[\p{Ll}\p{Lu}]$/u.test(proposed)) return form;
-    result += proposed;
-  }
-  return result;
-}
-
 const listOrAbsent = value => value === undefined || value === null || Array.isArray(value);
 // The identity of the package behind an API envelope (its manifest hash, else its id); null when not reported.
 export const packageOf = envelope => envelope?.package?.manifestSha256 ?? envelope?.package?.packageId ?? null;
@@ -317,7 +163,7 @@ export function responseShapeValid(response) {
   if (response.evidenceFormat === 'shared-analyses-v1' && !Array.isArray(response.wordAnalyses)) return false;
   return [data.sentences, data.diagnostics, v?.diagnostics, v?.spacingDiagnostics, v?.subordinateCommaDiagnostics,
     v?.fragmentDiagnostics, v?.unavailableChecks, data.spelling?.words, data.properNames?.candidates, data.lexical?.tokens,
-    data.readingInventory?.occurrences, data.readingInventory?.sets].every(listOrAbsent)
+    data.readingInventory?.occurrences, data.readingInventory?.sets, data.grammar?.rules, data.grammar?.matches].every(listOrAbsent)
     && (response.wordAnalyses || []).every(analysis => listOrAbsent(analysis?.graphCandidates))
     && (data.readingInventory?.sets || []).every(set => listOrAbsent(set?.canonicalReadings) && listOrAbsent(set?.supportReadings))
     && (data.lexical?.tokens || []).every(token => listOrAbsent(token?.owners?.entries)
@@ -486,7 +332,7 @@ const STATE_TEXT = {
   ready: 'Анализът е актуален.',
   paused: 'Живият анализ е изключен. Натисни ↻ за анализ.',
   composing: 'Въвеждане…',
-  oversize: 'Текстът е над 4096 знака и не се анализира.',
+  oversize: 'Текстът е над ' + MAX_LENGTH + ' знака и не се анализира.',
   error: 'Анализаторът не отговори.'
 };
 
@@ -749,7 +595,7 @@ export function initLab(doc, {
     const context = Number.isInteger(item.context) && data.tokens[item.context]?.kind === 'Word' ? data.tokens[item.context].text : null;
     head.append(button('„' + item.original + '“', 'check-word', () => jump(item.start, item.length, item.original)),
       el('span', 'Позната дума. ' + (item.pattern === 'preposition+NP' ? 'След предлога' : 'След глагола')
-        + (context ? ' „' + context + '“' : '') + ' би имало съгласувана именна група с близка дума:', 'check-message'));
+        + (context ? ' „' + context + '“' : '') + ' близка дума би дала съгласуване на формите в именната група:', 'check-message'));
     row.append(head);
     for (const choice of item.supported) {
       const replacement = matchCase(item.original, choice.form), preview = advicePreview(data, item, replacement, choice.phrase);
@@ -785,8 +631,8 @@ export function initLab(doc, {
       const before = data.text.slice(Math.max(0, check.start - 12), check.start).replace(/\s+/g, ' ');
       head.append(button('…' + before + '▸', 'check-word', () => jump(check.start, 0, '')));
     }
-    let message = check.message;
-    if (check.words.length > 1) message += ' Думи: ' + check.words.map(word => '„' + word + '“').join(' · ') + '.';
+    let message = check.grammarMessage ?? check.message;
+    if (!check.grammarMessage && check.words.length > 1) message += ' Думи: ' + check.words.map(word => '„' + word + '“').join(' · ') + '.';
     if (check.projected && check.code === UNIQUE_SPELLING_CODE) message += ' Предложение: „' + check.projected + '“.';
     if (check.projected && check.code === 'reviewed_word_formation_evidence') message += ' Основа: „' + check.projected + '“.';
     if (check.projected && check.code === 'hyphenated_degree_morphology_evidence') message += ' Основна форма: „' + check.projected + '“.';
@@ -872,6 +718,8 @@ export function initLab(doc, {
       for (const check of warnings) list.append(checkRow(check));
       parts.push(list);
     }
+    const grammar = renderGrammarReview(data, doc);
+    if (grammar) parts.push(grammar);
     // Advice is not a warning: its own heading, after the warnings, and no claim that the text is wrong.
     if (display.advice.length) {
       parts.push(el('h3', 'Съвети по конструкцията'));
@@ -1238,7 +1086,7 @@ export function initLab(doc, {
       const block = el('section', undefined, 'word-checks');
       block.append(el('h3', 'Проверки за думата'));
       const list = el('ul');
-      for (const check of own) list.append(el('li', check.message, 'check-' + check.severity));
+      for (const check of own) list.append(el('li', check.grammarMessage ?? check.message, 'check-' + check.severity));
       if (advice) list.append(el('li', 'Съвет: близка дума допълва конструкцията (' + advice.supported.map(choice =>
         '„' + matchCase(advice.original, choice.form) + '“').join(', ') + '); вижте „Проверки“.', 'check-advice'));
       block.append(list);

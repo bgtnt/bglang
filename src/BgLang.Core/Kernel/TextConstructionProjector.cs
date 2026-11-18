@@ -221,8 +221,9 @@ public static class TextConstructionProjector
         if (lemma == "не" && f.PartOfSpeech == MorphologicalPartOfSpeech.Particle) return "NEG";
         if (lemma == "да" && f.PartOfSpeech is MorphologicalPartOfSpeech.Particle or MorphologicalPartOfSpeech.Conjunction) return "LINK:da";
         if (f.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction)
-            return lemma switch { "и" or "или" or "а" or "но" => "LINK:coord:" + lemma,
-                "че" or "ако" or "когато" or "защото" or "понеже" or "докато" => "LINK:sub:" + lemma, _ => "LINK:" + lemma };
+            return BulgarianFunctionWords.HasAny(lemma, FunctionWordClasses.CoreCoordinatingConjunction) ? "LINK:coord:" + lemma :
+                BulgarianFunctionWords.HasAny(lemma, FunctionWordClasses.CoreSubordinatingConjunction) ? "LINK:sub:" + lemma :
+                "LINK:" + lemma;
         return f.PartOfSpeech switch
         {
             MorphologicalPartOfSpeech.Verb => "V:" + (f.VerbForm?.ToString() ?? "unassessed") + (lemma is "съм" or "бъда" ? ":be" : ""),

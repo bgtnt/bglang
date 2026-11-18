@@ -11,14 +11,14 @@ namespace BgLang.Web;
 internal static class HttpContract
 {
     internal const int WordLength = 256;
-    internal const int TextLength = 4096;
+    internal const int TextLength = 16384;
     internal const int DefaultResultLimit = 32;
     internal const int GenerateFormsDefaultLimit = 128;
     internal const int MaximumResultLimit = 256;
     internal const int TextWordAnalysisLimit = 32;
     internal const int QueryAnalysisLimit = 32;
-    internal const int BodyBytes = 32 * 1024;
-    internal const long DefaultResponseBytes = 32 * 1024 * 1024;
+    internal const int BodyBytes = 128 * 1024;
+    internal const long DefaultResponseBytes = 64L * 1024 * 1024;
     internal const string RawFormat = "raw-v1";
     internal const int QueueCapacity = 4;
     internal const int RequestsPerMinute = 30;

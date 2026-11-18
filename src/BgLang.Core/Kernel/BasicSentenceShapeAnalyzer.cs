@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Text;
 using BgLang.Contracts;
 
 namespace BgLang.Core;
@@ -20,6 +22,9 @@ internal static class BasicSentenceShapeAnalyzer
         List<TextDiagnostic> diagnostics = [];
         foreach (SentenceSpan sentence in sentences)
         {
+            if (IsDecorativePictographOnlySpan(text.AsSpan(sentence.Start, sentence.Length)))
+                continue;
+
             int initial = FindInitialCharacter(text, sentence);
             if (initial >= 0 && IsLowercaseCyrillic(text[initial]))
             {
@@ -78,4 +83,21 @@ internal static class BasicSentenceShapeAnalyzer
 
     private static bool IsLowercaseCyrillic(char character) =>
         character is >= '\u0400' and <= '\u052F' && char.IsLower(character);
+
+    private static bool IsDecorativePictographOnlySpan(ReadOnlySpan<char> span)
+    {
+        bool sawPictograph = false;
+        while (!span.IsEmpty)
+        {
+            if (Rune.DecodeFromUtf16(span, out Rune rune, out int consumed) != OperationStatus.Done)
+                return false;
+            span = span[consumed..];
+            if (Rune.IsWhiteSpace(rune))
+                continue;
+            if (!ContextEvidenceGuards.IsDecorativePictographScalar(rune))
+                return false;
+            sawPictograph = true;
+        }
+        return sawPictograph;
+    }
 }

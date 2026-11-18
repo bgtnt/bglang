@@ -48,7 +48,8 @@ public sealed class ConstructionHttpTests
     public void Construction_switch_is_a_fifth_strict_boolean_with_all_defaults_disabled()
     {
         string[] fields = ["IncludeAdditionalRoleHeuristics", "IncludeSubordinateCommaDiagnostics",
-            "IncludeFragmentDiagnostics", "IncludeSpacingDiagnostics", "IncludeWordConstructions", "IncludeNominalConstructions"];
+            "IncludeFragmentDiagnostics", "IncludeSpacingDiagnostics", "IncludeWordConstructions", "IncludeNominalConstructions",
+            "IncludeGrammarEvidence"];
         var properties = typeof(TextContextOptions).GetProperties();
         CollectionAssert.AreEquivalent(fields.Append(nameof(TextContextOptions.Continuation)).ToArray(),
             properties.Select(property => property.Name).ToArray());
@@ -58,7 +59,8 @@ public sealed class ConstructionHttpTests
             property.Name == nameof(TextContextOptions.Continuation)).PropertyType);
         Assert.IsNull(default(TextContextOptions).Continuation);
         Assert.IsFalse(default(TextContextOptions).IncludeNominalConstructions);
-        foreach (string context in new[] { "null", "{}", "{\"includeWordConstructions\":false}" })
+        Assert.IsFalse(default(TextContextOptions).IncludeGrammarEvidence);
+        foreach (string context in new[] { "null", "{}", "{\"includeWordConstructions\":false}", "{\"includeGrammarEvidence\":false}" })
         {
             WebInput input = JsonSerializer.Deserialize<WebInput>("{\"text\":\"знаме.\",\"context\":" + context + "}", HttpContract.Json)!;
             ApiOperations.Validate("analyze-text", input); Assert.AreEqual(default(TextContextOptions), input.Context ?? default);
@@ -68,9 +70,13 @@ public sealed class ConstructionHttpTests
         Assert.IsFalse(enabled.Context.Value.IncludeAdditionalRoleHeuristics);
         Assert.IsFalse(enabled.Context.Value.IncludeSubordinateCommaDiagnostics);
         Assert.IsFalse(enabled.Context.Value.IncludeFragmentDiagnostics); Assert.IsFalse(enabled.Context.Value.IncludeSpacingDiagnostics);
+        WebInput grammar = JsonSerializer.Deserialize<WebInput>("{\"text\":\"знаме.\",\"context\":{\"includeGrammarEvidence\":true}}", HttpContract.Json)!;
+        ApiOperations.Validate("analyze-text", grammar);
+        Assert.AreEqual(new TextContextOptions { IncludeGrammarEvidence = true }, grammar.Context);
+        foreach (string option in new[] { "includeWordConstructions", "includeGrammarEvidence" })
         foreach (string value in new[] { "null", "\"true\"", "0", "[]", "{}" })
             Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<WebInput>(
-                "{\"text\":\"знаме.\",\"context\":{\"includeWordConstructions\":" + value + "}}", HttpContract.Json));
+                "{\"text\":\"знаме.\",\"context\":{\"" + option + "\":" + value + "}}", HttpContract.Json));
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<WebInput>("{\"text\":\"id\",\"entryId\":\"id\"}", HttpContract.Json));
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<WebInput>("{\"text\":1}", HttpContract.Json));
     }

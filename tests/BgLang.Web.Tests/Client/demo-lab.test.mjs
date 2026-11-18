@@ -288,6 +288,23 @@ test('prepositional article candidate is a warning with one mirrored record and 
   assert.equal(check.projected,'учителя'); assert.equal(check.records.length,2); assert.equal(check.replaceable,false);
 });
 
+test('late definite article warning keeps both evidence records and cannot rewrite the editor', () => {
+  const text = '📚. Четат на червена пейката';
+  const start = text.indexOf('пейката'), length = 'пейката'.length;
+  const code = 'nominal_article_on_noninitial_member';
+  const ruleId = 'grammar.article.first_prepositional_nominal_member.v1';
+  const readings = [{tokenIndex:3,completeReadingIndex:0},{tokenIndex:4,completeReadingIndex:0},
+    {tokenIndex:4,completeReadingIndex:2},{tokenIndex:5,completeReadingIndex:0}];
+  const diagnostic = {code,start,length,ruleId,projectedText:null,readings};
+  const data = {text,diagnostics:[diagnostic],validation:{available:true,diagnostics:[
+    {code,start,length,basis:'existing_diagnostic='+ruleId+';bounded_article_advice',supports:readings}]}};
+  const [check] = collectChecks(data);
+  assert.equal(check.severity,'warning');
+  assert.equal(check.message,'Членът се поставя на първото определение в тази именна група.');
+  assert.equal(check.records.length,2);
+  assert.equal(check.replaceable,false);
+});
+
 test('feature chips are short Bulgarian labels and identical lines are counted', () => {
   assert.deepEqual(featureChips({person: 'Third', number: 'Plural', tense: 'Aorist', verbForm: 'Finite'}), ['3 л.', 'мн.ч.', 'мин. свършено']);
   assert.deepEqual(featureChips({number: 'Singular', article: 'Full', isShortForm: true, futureAxis: 'x'}), ['ед.ч.', 'пълен член', 'кратка форма']);
@@ -1679,7 +1696,7 @@ test('construction advice: a known word whose phrase agrees with a near form is 
   assert.match(box, /Съвети по конструкцията/);
   assert.equal(adviceRows(env).length, 1);
   const row = adviceRows(env)[0].textContent;
-  assert.match(row, /„сипя“Позната дума\. След глагола „Рисувам“ би имало съгласувана именна група с близка дума:/);
+  assert.match(row, /„сипя“Позната дума\. След глагола „Рисувам“ близка дума би дала съгласуване на формите в именната група:/);
   assert.match(row, /При „синя“: Рисувам синя река\./, 'the sentence as it would read');
   assert.match(row, /Подкрепа: една буква разлика · „синя“ пояснява „река“ · съгласувани по род и число \(ж\.р\., ед\.ч\.\)\./);
   assert.match(row, /„сипя“ също остава възможна: съветът не е грешка и не доказва какво е искал авторът\./);
@@ -1722,7 +1739,7 @@ test('construction advice: the preposition pattern names the preposition and kee
     'пред': [{raw: {form: 'пред', lemma: 'пред', partOfSpeech: 'Предлог'}, features: {partOfSpeech: 'Preposition'}}], 'къща': [NOUN('къща')]};
   const env = await adviceOn(text, [sipyaReview(2, 12, 3, {pattern: 'preposition+NP', context: 1, headReading: 0})], lexicon);
   const row = adviceRows(env)[0].textContent;
-  assert.match(row, /След предлога „пред“ би имало съгласувана именна група/);
+  assert.match(row, /След предлога „пред“ близка дума би дала съгласуване на формите в именната група/);
   assert.match(row, /При „синя“: Спирам пред синя къща\./);
   assert.match(row, /„синя“ пояснява „къща“ · съгласувани по род и число \(ж\.р\., ед\.ч\.\)/);
 });
@@ -2111,7 +2128,261 @@ test('finite predicate diagnostic is a known Lab warning without a replacement',
   assert.strictEqual(check.records[0].record, diagnostic);
 });
 
+test('active participle agreement is a known Lab warning', () => {
+  const data={text:'Ние сме работила.',diagnostics:[{code:'auxiliary_participle_agreement_mismatch',start:8,length:8}]};
+  const [check]=collectChecks(data);
+  assert.equal(check.severity,'warning');
+  assert.ok(check.message.includes('разминават по число'));
+});
+
 test('unknown diagnostic remains Lab information after finite predicate catalog support', () => {
   const data = {text: 'а', diagnostics: [{code: 'test_unknown_code', start: 0, length: 1}], validation: {available: true}};
   assert.equal(collectChecks(data)[0].severity, 'information');
+});
+
+test('count construction diagnostics are known non-replaceable Lab warnings with agreement support words', () => {
+  const data = {
+    text: 'Купих два столове.',
+    tokens: [
+      {kind: 'Word', text: 'Купих', start: 0, length: 5},
+      {kind: 'Whitespace', text: ' ', start: 5, length: 1},
+      {kind: 'Word', text: 'два', start: 6, length: 3},
+      {kind: 'Whitespace', text: ' ', start: 9, length: 1},
+      {kind: 'Word', text: 'столове', start: 10, length: 7},
+      {kind: 'Punctuation', text: '.', start: 17, length: 1}
+    ],
+    diagnostics: [{
+      code: 'quantified_noun_form_mismatch', start: 10, length: 7,
+      ruleId: 'grammar.lexical_count_form.v1', projectedText: 'стола',
+      readings: [{tokenIndex: 2, completeReadingIndex: 0}, {tokenIndex: 4, completeReadingIndex: 0}]
+    }],
+    validation: {available: true, diagnostics: []}
+  };
+  const [check] = collectChecks(data);
+  assert.equal(check.severity, 'warning');
+  assert.equal(check.known, true);
+  assert.equal(check.replaceable, false);
+  assert.equal(check.projected, 'стола');
+  assert.deepEqual(check.words, ['два', 'столове']);
+  assert.match(check.message, /бройна или множествена форма/);
+});
+
+test('bound grammar violations render rule number, human rule and constituent groups in Lab checks', async () => {
+  const text = 'Малката книга пътувам с мен.';
+  const env = await boot(text);
+  const response = analysis(text, {
+    lexicon: {
+      'Малката': [{raw: {lemma: 'малък', partOfSpeech: 'Прилагателно:79,Женски,Членуван'}, features: {partOfSpeech: 'Adjective', gender: 'Feminine', number: 'Singular', article: 'Definite'}}],
+      'книга': [NOUN('книга')],
+      'пътувам': [VERB('пътувам', 'пътувам', 'First', 'Singular')]
+    },
+    diagnostics: [{
+      code: 'productive_morphology_agreement_mismatch', start: 14, length: 7,
+      ruleId: 'clause_fusion_agreement.v1',
+      readings: [{tokenIndex: 0, completeReadingIndex: 0}, {tokenIndex: 1, completeReadingIndex: 0}, {tokenIndex: 2, completeReadingIndex: 0}]
+    }]
+  });
+  response.data.grammar = {
+    version: 'typed-grammar.v1',
+    rules: [{
+      id: 'clause_fusion_agreement.v1',
+      diagnosticCode: 'productive_morphology_agreement_mismatch',
+      pattern: 'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+      constraint: 'PersonNumber',
+      explanation: 'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+      sourceSection: '§ 5.1',
+      sourceUrl: 'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+    }],
+    matches: [{
+      ruleId: 'clause_fusion_agreement.v1',
+      start: 0, length: 21,
+      controllerTokenIndices: [0, 1],
+      dependentTokenIndices: [2],
+      assessment: 'Mismatch',
+      conflicts: [{
+        tokenIndex: 2,
+        actual: [{tokenIndex: 2, completeReadingIndex: 0}],
+        expectedFrom: [{tokenIndex: 1, completeReadingIndex: 0}]
+      }],
+      repairs: [],
+      reason: 'no_verified_single_token_repair'
+    }]
+  };
+  await respond(env, env.host.calls[0], 200, response);
+  const checksText = env.$('lab-checks').textContent;
+  assert.match(checksText, /Противоречи на правило R3/);
+  assert.match(checksText, /групата на подлога „Малката книга“ \(3 л\. · ед\. ч\.\) не е съгласувана с групата на сказуемото „пътувам“ \(1 л\. · ед\. ч\.\)/);
+  assert.match(checksText, /Конструкция: групата на подлога „Малката книга“ ↔ групата на сказуемото „пътувам“/);
+  env.editor.selectionStart = env.editor.selectionEnd = 16;
+  env.editor.dispatch('keyup', {key: 'ArrowRight'});
+  assert.match(env.$('lab-word').textContent, /Противоречи на правило R3/);
+});
+
+test('/demo diagnosticPresentation and /demo-lab collectChecks produce identical warning counts, spans and R-rule explanations', async () => {
+  const {diagnosticPresentation} = await import(new URL('../live-demo.js', labUrl).href);
+  const rules = [
+    {
+      id: 'local_exact_attribute_agreement.v1',
+      diagnosticCode: 'productive_attribute_agreement_mismatch',
+      pattern: 'П+ С',
+      constraint: 'NumberGender',
+      explanation: 'Определението и съществителното трябва да съвпадат по число, а в единствено число и по род.',
+      sourceSection: '§ 1',
+      sourceUrl: 'https://www.balgarskiezik.eu/1-2015/0_0_7_ILIYANA%20KUNEVA_str.%2075-81.pdf'
+    },
+    {
+      id: 'clause_fusion_agreement.v1',
+      diagnosticCode: 'productive_morphology_agreement_mismatch',
+      pattern: 'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО',
+      constraint: 'PersonNumber',
+      explanation: 'Групата на подлога и групата на сказуемото трябва да се съгласуват по лице и число.',
+      sourceSection: '§ 5.1',
+      sourceUrl: 'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+    },
+    {
+      id: 'grammar.agreement.copular_finite.v1',
+      diagnosticCode: 'productive_morphology_agreement_mismatch',
+      pattern: 'ЯВЕН ПОДЛОГ КОПУЛА П',
+      constraint: 'PersonNumber',
+      explanation: 'Личната форма на глагола се съгласува с явния подлог по лице и число.',
+      sourceSection: '§ 5.1',
+      sourceUrl: 'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+    }
+  ];
+
+  // Case 1: Exact-lane ruleIds ('closed_exact_agreement.v1', 'pronoun_verb_agreement', 'licensed_personal_pronoun_prefix_agreement.v1') + copular R3 + null-ruleId article mirror
+  const text = 'Децата играе. Аз четем. Той четат. Той са радостни. Коня язди.';
+  const response = analysis(text, {
+    lexicon: {
+      'Децата': [{raw: {lemma: 'дете', partOfSpeech: 'Съществително:69,Среден,Множествено,Членуван'}, features: {partOfSpeech: 'Noun', gender: 'Neuter', number: 'Plural', article: 'Definite'}}],
+      'играе': [VERB('играе', 'играя', 'Third', 'Singular')],
+      'Аз': [{raw: {lemma: 'аз', partOfSpeech: 'Лично_местоимение:92,Именителен,Първо,Единствено'}, features: {partOfSpeech: 'PersonalPronoun', person: 'First', number: 'Singular'}}],
+      'четем': [VERB('четем', 'чета', 'First', 'Plural')],
+      'Той': [{raw: {lemma: 'той', partOfSpeech: 'Лично_местоимение:92,Именителен,Трето,Единствено,Мъжки'}, features: {partOfSpeech: 'PersonalPronoun', person: 'Third', number: 'Singular', gender: 'Masculine'}}],
+      'четат': [VERB('четат', 'чета', 'Third', 'Plural')],
+      'са': [VERB('са', 'съм', 'Third', 'Plural')],
+      'радостни': [{raw: {lemma: 'радостен', partOfSpeech: 'Прилагателно:79,Множествено'}, features: {partOfSpeech: 'Adjective', number: 'Plural', article: 'Indefinite'}}],
+      'Коня': [{raw: {lemma: 'кон', partOfSpeech: 'Съществително:1,Мъжки,Единствено,Кратък'}, features: {partOfSpeech: 'Noun', gender: 'Masculine', number: 'Singular', article: 'Short'}}],
+      'язди': [VERB('язди', 'яздя', 'Third', 'Singular')]
+    },
+    diagnostics: [
+      {code: 'productive_morphology_agreement_mismatch', start: 7, length: 5, ruleId: 'closed_exact_agreement.v1',
+        readings: [{tokenIndex: 0, completeReadingIndex: 0}, {tokenIndex: 1, completeReadingIndex: 0}]},
+      {code: 'pronoun_verb_agreement_mismatch', start: 17, length: 5, ruleId: 'pronoun_verb_agreement', readings: null},
+      {code: 'productive_morphology_agreement_mismatch', start: 28, length: 5, ruleId: 'licensed_personal_pronoun_prefix_agreement.v1',
+        readings: [{tokenIndex: 4, completeReadingIndex: 0}, {tokenIndex: 5, completeReadingIndex: 0}]},
+      {code: 'productive_morphology_agreement_mismatch', start: 39, length: 2, ruleId: 'licensed_personal_pronoun_prefix_agreement.v1',
+        readings: [{tokenIndex: 6, completeReadingIndex: 0}, {tokenIndex: 7, completeReadingIndex: 0}]},
+      {code: 'full_short_article_check_not_ready', start: 52, length: 4, ruleId: null}
+    ],
+    validation: {
+      available: true,
+      diagnostics: [{code: 'full_short_article_check_not_ready', start: 52, length: 4, basis: 'existing_diagnostic=;bounded_article_advice', supports: []}],
+      spacingDiagnostics: [], subordinateCommaDiagnostics: [], fragmentDiagnostics: []
+    }
+  });
+  response.data.grammar = {
+    version: 'typed-grammar.v1',
+    rules,
+    matches: [
+      {
+        ruleId: 'clause_fusion_agreement.v1', start: 0, length: 12,
+        controllerTokenIndices: [0], dependentTokenIndices: [1], assessment: 'Mismatch',
+        conflicts: [{tokenIndex: 1, actual: [{tokenIndex: 1, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 0, completeReadingIndex: 0}]}],
+        repairs: [], reason: 'no_verified_single_token_repair'
+      },
+      {
+        ruleId: 'clause_fusion_agreement.v1', start: 14, length: 8,
+        controllerTokenIndices: [2], dependentTokenIndices: [3], assessment: 'Mismatch',
+        conflicts: [{tokenIndex: 3, actual: [{tokenIndex: 3, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 2, completeReadingIndex: 0}]}],
+        repairs: [], reason: 'no_verified_single_token_repair'
+      },
+      {
+        ruleId: 'clause_fusion_agreement.v1', start: 24, length: 9,
+        controllerTokenIndices: [4], dependentTokenIndices: [5], assessment: 'Mismatch',
+        conflicts: [{tokenIndex: 5, actual: [{tokenIndex: 5, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 4, completeReadingIndex: 0}]}],
+        repairs: [], reason: 'no_verified_single_token_repair'
+      },
+      {
+        ruleId: 'grammar.agreement.copular_finite.v1', start: 35, length: 15,
+        controllerTokenIndices: [6], dependentTokenIndices: [7], assessment: 'Mismatch',
+        conflicts: [{tokenIndex: 7, actual: [{tokenIndex: 7, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 6, completeReadingIndex: 0}]}],
+        repairs: [{edits: [{start: 39, length: 2, replacement: 'е'}], qualifications: []}], reason: null
+      }
+    ]
+  };
+
+  const demoView = diagnosticPresentation(response.data);
+  const labChecks = collectChecks(response.data);
+  assert.equal(demoView.messages.length, labChecks.length, 'deduplicated check counts match across /demo and /demo-lab');
+  assert.equal(demoView.messages.filter(m => m.classification === 'warning').length, labChecks.filter(c => c.severity === 'warning').length);
+
+  for (let i = 0; i < labChecks.length; i++) {
+    const labMsg = labChecks[i].grammarMessage ?? labChecks[i].message;
+    const demoMsg = demoView.messages[i].summary;
+    if (labChecks[i].severity === 'warning') {
+      assert.equal(demoMsg, labMsg, 'identical R-rule explanation for warning #' + i);
+      assert.match(demoMsg, /^Противоречи на правило R3/);
+    }
+  }
+
+  // Case 2: R1 gendered numeral agreement uses neuter 'не е съгласувано с' identically in /demo and /demo-lab
+  const numText = 'Два книги.';
+  const numRes = analysis(numText, {
+    lexicon: {
+      'Два': [{raw: {lemma: 'два', partOfSpeech: 'Числително:100,Мъжки,Множествено'}, features: {partOfSpeech: 'Numeral', gender: 'Masculine', number: 'Plural'}}],
+      'книги': [{raw: {lemma: 'книга', partOfSpeech: 'Съществително:41,Женски,Множествено'}, features: {partOfSpeech: 'Noun', gender: 'Feminine', number: 'Plural', article: 'Indefinite'}}]
+    },
+    diagnostics: [{
+      code: 'productive_attribute_agreement_mismatch', start: 0, length: 3, ruleId: 'local_exact_attribute_agreement.v1',
+      readings: [{tokenIndex: 0, completeReadingIndex: 0}, {tokenIndex: 1, completeReadingIndex: 0}]
+    }]
+  });
+  numRes.data.grammar = {
+    version: 'typed-grammar.v1',
+    rules,
+    matches: [{
+      ruleId: 'local_exact_attribute_agreement.v1', start: 0, length: 9,
+      controllerTokenIndices: [1], dependentTokenIndices: [0], assessment: 'Mismatch',
+      conflicts: [{tokenIndex: 0, actual: [{tokenIndex: 0, completeReadingIndex: 0}], expectedFrom: [{tokenIndex: 1, completeReadingIndex: 0}]}],
+      repairs: [], reason: 'no_verified_single_token_repair'
+    }]
+  };
+  const numDemo = diagnosticPresentation(numRes.data);
+  const numLab = collectChecks(numRes.data);
+  assert.equal(numDemo.messages[0].summary, numLab[0].grammarMessage);
+  assert.match(numDemo.messages[0].summary, /Противоречи на правило R1.*опорното съществително „книги“.*не е съгласувано с определението „Два“/);
+});
+
+test('/demo and /demo-lab share the single live-client diagnostic and warning-token engine including inline emoji spans', async () => {
+  const shared = await import(new URL('../live-client.js', labUrl).href);
+  const liveDemo = await import(new URL('../live-demo.js', labUrl).href);
+  assert.strictEqual(collectChecks, shared.collectChecks);
+  assert.strictEqual(warningTokens, shared.warningTokens);
+  assert.strictEqual(MESSAGES, shared.MESSAGES);
+  assert.strictEqual(GENERIC_MESSAGE, shared.GENERIC_MESSAGE);
+  assert.strictEqual(matchCase, shared.matchCase);
+  assert.strictEqual(liveDemo.diagnosticPresentation, shared.diagnosticPresentation);
+  assert.strictEqual(liveDemo.graphSupportLabel, shared.graphSupportLabel);
+
+  const emojiText = 'Малката книга 📚 пътуваме с мен.';
+  const start = emojiText.indexOf('пътуваме');
+  const emojiRes = analysis(emojiText, {
+    lexicon: {
+      'Малката': [{raw: {lemma: 'малък', partOfSpeech: 'Прилагателно:79,Женски,Единствено,Членуван'}, features: {partOfSpeech: 'Adjective', gender: 'Feminine', number: 'Singular', article: 'Definite'}}],
+      'книга': [{raw: {lemma: 'книга', partOfSpeech: 'Съществително:41,Женски,Единствено'}, features: {partOfSpeech: 'Noun', gender: 'Feminine', number: 'Singular', article: 'Indefinite'}}],
+      'пътуваме': [{raw: {lemma: 'пътувам', partOfSpeech: 'Глагол:186,Първо,Множествено,Сегашно'}, features: {partOfSpeech: 'Verb', verbForm: 'Finite', person: 'First', number: 'Plural', tense: 'Present'}}],
+      'с': [{raw: {lemma: 'с', partOfSpeech: 'Предлог:190'}, features: {partOfSpeech: 'Preposition'}}],
+      'мен': [{raw: {lemma: 'аз', partOfSpeech: 'Лично_местоимение:92,Първо,Единствено'}, features: {partOfSpeech: 'PersonalPronoun', person: 'First', number: 'Singular'}}]
+    },
+    diagnostics: [{
+      code: 'productive_morphology_agreement_mismatch', start, length: 8, ruleId: 'clause_fusion_agreement.v1',
+      readings: [{tokenIndex: 1, completeReadingIndex: 0}, {tokenIndex: 3, completeReadingIndex: 0}]
+    }]
+  });
+  const predTok = emojiRes.data.tokens.findIndex(t => t.text === 'пътуваме');
+  const checks = collectChecks(emojiRes.data);
+  const marked = warningTokens(emojiRes.data, checks);
+  assert.deepEqual([...marked], [predTok]);
+  assert.equal(liveDemo.diagnosticPresentation(emojiRes.data, emojiRes.data.tokens[predTok]).tokenClass, 'check-warning');
 });

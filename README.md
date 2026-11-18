@@ -1,10 +1,10 @@
-# BgLang — Preview16 quickstart
+# BgLang — v0.2.0-alpha.1 quickstart
 
-Този quickstart описва локалния старт с [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16). Проверете изтеглените файлове със `SHA256SUMS` от release-а.
+Този quickstart описва локалния старт с [v0.2.0-alpha.1](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.1) (prerelease). Проверете изтеглените файлове със `SHA256SUMS` от release-а.
 
-Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.1.0-preview.16/bglang-v0.1.0-preview.16-inputs.zip) и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.1.0-preview.16/packaging/RELEASE-CANDIDATE.md).
+Използвайте matching [source ZIP](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-source.zip), [runtime ZIP](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-runtime.zip) и [SHA256SUMS](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/SHA256SUMS). За rebuild са отделните [inputs ZIP](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.1/bglang-v0.2.0-alpha.1-inputs.zip) и [tag-pinned guide](https://github.com/bgtnt/bglang/blob/v0.2.0-alpha.1/packaging/RELEASE-CANDIDATE.md).
 
-SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Публикуваният runtime ZIP за Preview16 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
+SDK е **10.0.403** от matching `global.json`. Проверете hashes, разархивирайте source в нова папка, а четирите runtime файла — в нейната подпапка `runtime`. Публикуваният runtime ZIP за v0.2.0-alpha.1 е **CurrentGraphStress** (`bglang-neutral:9e9a4f441f679542`), manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`. Готовият runtime се използва без authoring input. От source папката:
 
 ~~~powershell
 dotnet build examples/BgLang.PublicExample/BgLang.PublicExample.csproj -c Release
@@ -13,11 +13,11 @@ dotnet run --project examples/BgLang.PublicExample/BgLang.PublicExample.csproj -
 if ($LASTEXITCODE -ne 0) { throw 'Example failed.' }
 ~~~
 
-[Web guide](apps/BgLang.Web/README.md) описва локалния HTTP host. `Build-PublicPackage.ps1` запазва default **Current** (`bglang-neutral:90bea7c5c799f04d`); за matching Preview16 runtime изберете изрично **CurrentGraphStress** по [reproduction guide](packaging/RELEASE-CANDIDATE.md). **Baseline** (`bglang-neutral:36b0b69685d6d3e9`) остава отделен профил.
+[Web guide](apps/BgLang.Web/README.md) описва локалния HTTP host. `Build-PublicPackage.ps1` запазва default **Current** (`bglang-neutral:90bea7c5c799f04d`); за matching v0.2.0-alpha.1 runtime изберете изрично **CurrentGraphStress** по [reproduction guide](packaging/RELEASE-CANDIDATE.md). **Baseline** (`bglang-neutral:36b0b69685d6d3e9`) остава отделен профил.
 
-BgLang анализира български текст и словоформи чрез C# API и локалните Live и Lab. В Preview16 изричният избор при курсор в началото на дума заменя цялата дума. Например `Аз |чета.` може да стане `Аз абдикирам.`. След интервал в края на текста предложението се вмъква. Диапазонът използва оригиналните UTF-16 позиции и граници на графемни групи.
+BgLang анализира български текст, словоформи и ограничено съгласуване чрез C# API и локалните Live и Lab (включително `context.continuation` с UTF-16 графемна замяна и `context.includeGrammarEvidence`). При неясни или епистемични контексти (например `Може да беше прав.`) ядрото се въздържа от подвеждащо предупреждение.
 
-Предишно издание [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15).
+Предишни издания: [Preview16](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.16), [Preview15](https://github.com/bgtnt/bglang/releases/tag/v0.1.0-preview.15).
 
 ## Исторически snapshots — Preview14 и по-стари
 

@@ -92,7 +92,7 @@ public sealed class WebAdapterHttpTests
                 Assert.AreEqual(2, limits.GetProperty("requestsPerMinutePerIp").GetInt32());
                 Assert.AreEqual(1, limits.GetProperty("concurrency").GetInt32());
                 Assert.AreEqual(4, limits.GetProperty("queueCapacity").GetInt32());
-                Assert.AreEqual(4096, limits.GetProperty("textUtf16").GetInt32());
+                Assert.AreEqual(16384, limits.GetProperty("textUtf16").GetInt32());
                 Assert.AreEqual(10000d, limits.GetProperty("responseTimeoutMilliseconds").GetDouble());
                 Assert.AreEqual(1024, limits.GetProperty("retainedIpMaximum").GetInt32());
             }
@@ -163,6 +163,19 @@ public sealed class WebAdapterHttpTests
             }
 
             time.Now = time.Now.AddMinutes(1);
+            using (var noRedirect = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+                { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(20) })
+            {
+                foreach (string labAlias in new[] { "/demo-lab", "/demo-lab/" })
+                {
+                    using HttpResponseMessage redirect = await noRedirect.GetAsync(labAlias);
+                    Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode, labAlias);
+                    Assert.AreEqual("/demo-lab/index.html", redirect.Headers.Location?.OriginalString, labAlias);
+                }
+            }
+            using HttpResponseMessage labPage = await client.GetAsync("/demo-lab");
+            Assert.AreEqual(HttpStatusCode.OK, labPage.StatusCode);
+
             for (int request = 0; request < 2; request++)
             {
                 using HttpResponseMessage accepted = await client.PostAsJsonAsync("/api/v2/lookup-prefix", new WebInput(prefix, 1));

@@ -10,13 +10,32 @@ public sealed class BulgarianLanguageSession : IDisposable
     private const int MaximumBound = 256;
     private const int MaximumTextLength = 65_536;
     private readonly BulgarianTokenizer _tokenizer = new();
+    private readonly VerbFrameCatalog? _verbFrames;
+    private readonly double _postverbalDirectObjectMaxRatio = VerbFrameCatalog.DefaultPostverbalDirectObjectMaxRatio;
     private RuntimePackageState? _package;
 
     private BulgarianLanguageSession(RuntimePackageState package) => _package = package;
 
+    private BulgarianLanguageSession(RuntimePackageState package, VerbFrameCatalog? verbFrames, double postverbalDirectObjectMaxRatio)
+    {
+        _package = package;
+        _verbFrames = verbFrames;
+        _postverbalDirectObjectMaxRatio = postverbalDirectObjectMaxRatio;
+    }
+
     /// <summary>Opens and fully validates a runtime session package.</summary>
     public static BulgarianLanguageSession Open(string manifestPath) =>
         new(RuntimePackageState.Open(manifestPath));
+
+    internal static BulgarianLanguageSession Open(
+        string manifestPath,
+        VerbFrameCatalog? verbFrames,
+        double postverbalDirectObjectMaxRatio = VerbFrameCatalog.DefaultPostverbalDirectObjectMaxRatio) =>
+        new(RuntimePackageState.Open(manifestPath), verbFrames, postverbalDirectObjectMaxRatio);
+
+    internal string? VerbFramesCatalogSha256 => GetPackage() is not null ? _verbFrames?.CatalogSha256 : null;
+
+    internal string? VerbFramesSourceSha256 => GetPackage() is not null ? _verbFrames?.Data.Provenance.SourceSha256 : null;
 
     /// <summary>Deterministic identity of the validated package and both runtime components.</summary>
     public PackageProvenance Provenance => GetPackage().Provenance;
@@ -290,6 +309,7 @@ public sealed class BulgarianLanguageSession : IDisposable
         UnknownMorphologyAnalyzer.ReplayBudget baseTypeBudget = new(
             UnknownMorphologyAnalyzer.BaseTypeReplayLimit * UnknownMorphologyAnalyzer.TextAnalysisLimit,
             UnknownMorphologyAnalyzer.TextAnalysisLimit, UnknownMorphologyAnalyzer.BaseTypeReplayLimit, cancellationToken);
+        bool capturesOwners = contextOptions.IncludeWordConstructions || contextOptions.IncludeGrammarEvidence;
         WordAnalysis AnalyzeCached(string surface)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -297,7 +317,7 @@ public sealed class BulgarianLanguageSession : IDisposable
             {
                 WordAnalysis display = AnalyzeWordCore(surface, 32, candidateBudget, knownBaseBudget, baseTypeBudget, binaryBudget, graphBudget,
                     cancellationToken, out var exact, donorCache, captureCompleteExact: true,
-                    captureOwnerPairing: contextOptions.IncludeWordConstructions);
+                    captureOwnerPairing: capturesOwners);
                 cancellationToken.ThrowIfCancellationRequested();
                 cached = (display, exact!);
                 memo.Add(surface, cached);
@@ -372,36 +392,88 @@ public sealed class BulgarianLanguageSession : IDisposable
             NominalConstructions = TextNominalConstructionAnalyzer.Calculate(analysis, morphology, spellingCache, cancellationToken)
         };
         analysis = analysis with { Spelling = TextSpellingAnalyzer.WithContext(analysis, morphology, cancellationToken) };
-        (TextContextEvidence context, TextSyntaxEvidence syntax) =
-            TextContextAnalyzer.Calculate(analysis, contextOptions, cancellationToken, morphology);
-        TextContinuationEvidence? continuation = contextOptions.Continuation is { } requested
-            ? TextContinuationAnalyzer.Calculate(analysis, morphology, package.Lexicon, requested, cancellationToken) : null;
-        IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(
-            context, cancellationToken, analysis.Diagnostics);
-        IReadOnlyList<TextDiagnostic> localAttributeDiagnostics =
-            TextContextAnalyzer.LocalAttributeAgreementDiagnostics(analysis, cancellationToken, morphology);
-        var existingTargets = analysis.Diagnostics.Concat(graphDiagnostics)
-            .Select(d => (d.Code, d.Start, d.Length)).ToHashSet();
-        TextDiagnostic[] relationDiagnostics = graphDiagnostics.Concat(localAttributeDiagnostics.Where(d =>
-            !existingTargets.Contains((d.Code, d.Start, d.Length)))).ToArray();
-        if (relationDiagnostics.Length > 0) analysis = analysis with
+        Dictionary<string, BulgarianStressLookup.ExactInventory>? frameOwners = null;
+        Dictionary<int, OwnerVerbValency>? valencyMemo = null;
+        BulgarianStressLookup.ExactInventory? TryGetOwnerPairedExact(string surfaceWord)
         {
-            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(relationDiagnostics).OrderBy(d => d.Start)
-                .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
-        };
+            if (!memo.TryGetValue(surfaceWord, out var acquired)) return null;
+            var exact = acquired.Exact;
+            if (!capturesOwners)
+            {
+                frameOwners ??= new(StringComparer.Ordinal);
+                if (!frameOwners.TryGetValue(surfaceWord, out exact))
+                {
+                    _ = BulgarianStressLookup.LookupExact(package.Lexicon, surfaceWord, int.MaxValue, true,
+                        out _, out var paired, cancellationToken, captureOwnerPairing: true);
+                    exact = paired!;
+                    if (exact.ResolvedKey != acquired.Exact.ResolvedKey ||
+                        exact.ResolvedReadings.Count != acquired.Exact.ResolvedReadings.Count)
+                        throw new InvalidOperationException("Frame owner lookup did not preserve the original exact route.");
+                    frameOwners.Add(surfaceWord, exact);
+                }
+            }
+            return exact;
+        }
+        bool DirectObjectFrame(ContextLanes.TokenView predicate, IReadOnlyList<int> readings)
+        {
+            if (package.LexicalCatalog is not { } catalog || predicate.Token.Analysis is not { } original ||
+                TryGetOwnerPairedExact(original.Word) is not { } exact) return false;
+            return readings.Count > 0 && readings.All(index =>
+                predicate.Readings[index].Reading is { } row &&
+                exact.RequireOwnerOrdinal(index, row, cancellationToken) is int owner &&
+                catalog.DeclaresSingleDirectObjectFrame(owner, cancellationToken));
+        }
+        (int? OwnerOrdinal, OwnerVerbValency Valency) VerbAuthority(
+            ContextLanes.TokenView verbWord, int completeReadingIndex, CancellationToken ct)
+        {
+            ContextLanes.ReadingView row = verbWord.Readings[completeReadingIndex];
+            if (verbWord.Token.Analysis is { } original &&
+                row.Reading is { } raw &&
+                TryGetOwnerPairedExact(original.Word) is { } exact &&
+                exact.RequireOwnerOrdinal(completeReadingIndex, raw, ct) is int owner)
+            {
+                if (package.LexicalCatalog is { } catalog)
+                {
+                    valencyMemo ??= [];
+                    if (!valencyMemo.TryGetValue(owner, out OwnerVerbValency cached))
+                    {
+                        cached = catalog.ClassifyVerbOwnerValency(owner, package.Lexicon, _verbFrames, ct);
+                        valencyMemo[owner] = cached;
+                    }
+                    return (owner, cached);
+                }
+                if (_verbFrames is not null &&
+                    _verbFrames.GetByLemma(row.Lemma).Any(e => e.NonReflexiveDirectObjectFrameRatio is > 0.0))
+                {
+                    return (owner, OwnerVerbValency.AttestedTransitiveAny);
+                }
+                return (owner, OwnerVerbValency.OpenUnattested);
+            }
+            if (_verbFrames is not null &&
+                _verbFrames.GetByLemma(row.Lemma).Any(e => e.NonReflexiveDirectObjectFrameRatio is > 0.0))
+            {
+                return (null, OwnerVerbValency.AttestedTransitiveAny);
+            }
+            return (null, OwnerVerbValency.OpenUnattested);
+        }
         Dictionary<string, IReadOnlyList<TextReadingSnapshot>> counterpartMemo = new(StringComparer.Ordinal);
+        Dictionary<string, BulgarianStressLookup.ExactInventory>? repairMemo =
+            contextOptions.IncludeGrammarEvidence ? new(StringComparer.Ordinal) : null;
+        BulgarianStressLookup.ExactInventory Acquire(string surface)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (memo.TryGetValue(surface, out var acquired)) return acquired.Exact;
+            if (repairMemo is not null && repairMemo.TryGetValue(surface, out var exact)) return exact;
+            _ = BulgarianStressLookup.LookupExact(package.Lexicon, surface, int.MaxValue, true,
+                out _, out var complete, cancellationToken, captureOwnerPairing: repairMemo is not null);
+            repairMemo?.Add(surface, complete!);
+            return complete!;
+        }
         IReadOnlyList<TextReadingSnapshot> ExactCounterpart(string surface)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (counterpartMemo.TryGetValue(surface, out var captured)) return captured;
-            BulgarianStressLookup.ExactInventory exact;
-            if (memo.TryGetValue(surface, out var acquired)) exact = acquired.Exact;
-            else
-            {
-                _ = BulgarianStressLookup.LookupExact(package.Lexicon, surface, int.MaxValue, true,
-                    out _, out var complete, cancellationToken);
-                exact = complete!;
-            }
+            var exact = Acquire(surface);
             List<TextReadingSnapshot> rows = [];
             foreach (WordReading reading in exact.ResolvedReadings)
             {
@@ -412,6 +484,41 @@ public sealed class BulgarianLanguageSession : IDisposable
             counterpartMemo.Add(surface, captured);
             return captured;
         }
+        var (context, syntax, clauseMaps, articleTargets) =
+            TextContextAnalyzer.CalculateWithArtifacts(analysis, contextOptions, cancellationToken, morphology,
+                _verbFrames, _postverbalDirectObjectMaxRatio, DirectObjectFrame, ExactCounterpart, VerbAuthority);
+        TextContinuationEvidence? continuation = contextOptions.Continuation is { } requested
+            ? TextContinuationAnalyzer.Calculate(analysis, morphology, package.Lexicon, requested, cancellationToken) : null;
+        IReadOnlyList<TextDiagnostic> graphDiagnostics = TextContextAnalyzer.GraphAgreementDiagnostics(
+            context, cancellationToken, analysis.Diagnostics);
+        var predicative = PredicativeGrammarEvidence.Bind(analysis, morphology, includeNominalReview: true, cancellationToken, sharedClauseMaps: clauseMaps);
+        List<NominalGrammarRules.AttributeMatch>? attributeGrammar = contextOptions.IncludeGrammarEvidence ? [] : null;
+        List<TextGrammarMatch>? numeralGrammar = contextOptions.IncludeGrammarEvidence ? [] : null;
+        IReadOnlyList<TextDiagnostic> localAttributeDiagnostics =
+            TextContextAnalyzer.LocalAttributeAgreementDiagnostics(analysis, cancellationToken, morphology, attributeGrammar,
+                includeOpenNominal: contextOptions.IncludeGrammarEvidence, predicativeFrames: predicative,
+                numeralGrammar: numeralGrammar);
+        var primaryGraph = graphDiagnostics.Where(d => d.RuleId != ClauseFusionAnalyzer.AgreementLane).ToArray();
+        var fusionGraph = graphDiagnostics.Where(d => d.RuleId == ClauseFusionAnalyzer.AgreementLane).ToArray();
+        var primaryTargets = analysis.Diagnostics.Concat(primaryGraph)
+            .Select(d => (d.Code, d.Start, d.Length)).ToHashSet();
+        var predicativeDiagnostics = predicative.SelectMany(PredicativeGrammarEvidence.Diagnostics).Where(d =>
+            !primaryTargets.Contains((d.Code, d.Start, d.Length)) &&
+            !(d.Code == ContextLanes.ProductiveGraphMismatch &&
+                primaryTargets.Contains(("pronoun_verb_agreement_mismatch", d.Start, d.Length)))).ToArray();
+        var preFusionTargets = primaryTargets.Concat(predicativeDiagnostics.Select(d => (d.Code, d.Start, d.Length))).ToHashSet();
+        var retainedFusionGraph = fusionGraph.Where(d => !preFusionTargets.Contains((d.Code, d.Start, d.Length))).ToArray();
+        var existingTargets = preFusionTargets.Concat(retainedFusionGraph.Select(d => (d.Code, d.Start, d.Length))).ToHashSet();
+        TextDiagnostic[] relationDiagnostics = primaryGraph
+            .Concat(predicativeDiagnostics)
+            .Concat(retainedFusionGraph)
+            .Concat(localAttributeDiagnostics.Where(d => !existingTargets.Contains((d.Code, d.Start, d.Length))))
+            .ToArray();
+        if (relationDiagnostics.Length > 0) analysis = analysis with
+        {
+            Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(relationDiagnostics).OrderBy(d => d.Start)
+                .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
+        };
         IReadOnlyList<TextDiagnostic> countDiagnostics = TextCountConstructionAnalyzer.Calculate(
             analysis, morphology, ExactCounterpart, cancellationToken);
         if (countDiagnostics.Count > 0) analysis = analysis with
@@ -419,10 +526,47 @@ public sealed class BulgarianLanguageSession : IDisposable
             Diagnostics = Array.AsReadOnly(analysis.Diagnostics.Concat(countDiagnostics).OrderBy(d => d.Start)
                 .ThenBy(d => d.Length).ThenBy(d => d.Code, StringComparer.Ordinal).ToArray())
         };
-        var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, ExactCounterpart, cancellationToken, morphology);
+        List<TextGrammarMatch>? grammarMatches = null;
+        if (attributeGrammar is not null)
+        {
+            var selectedSubjects = context.Sentences.SelectMany(sentence => sentence.SelectedRoles)
+                .Where(role => role.Role == TextContextRole.Subject).Select(role => role.TokenIndex).ToHashSet();
+            var framesByController = predicative.Where(frame => frame.Controller?.Phrase is not null)
+                .GroupBy(frame => frame.Controller!.Head.OriginalIndex)
+                .ToDictionary(group => group.Key, group => group.First());
+            grammarMatches = attributeGrammar.Select(match =>
+            {
+                int head = match.Binding.Head.Word.OriginalIndex;
+                return NominalGrammarEvidence.Explain(match, package.Lexicon, Acquire, selectedSubjects.Contains(head),
+                    framesByController.GetValueOrDefault(head), cancellationToken);
+            }).ToList();
+            grammarMatches.AddRange(numeralGrammar!);
+            grammarMatches.AddRange(predicative.SelectMany(frame =>
+                PredicativeGrammarEvidence.Explain(frame, package.Lexicon, Acquire, cancellationToken)));
+            var fusionGrammar = ClauseFusionAnalyzer.ExplainGrammar(analysis, context, grammarMatches).ToArray();
+            var provenAttrPairs = fusionGrammar
+                .Where(m => m.RuleId == NominalGrammarRules.AttributeId && m.Assessment == TextGrammarAssessment.Mismatch)
+                .SelectMany(m => m.ControllerTokenIndices.SelectMany(c => m.DependentTokenIndices.Select(d => (c, d))))
+                .ToHashSet();
+            if (provenAttrPairs.Count > 0)
+                grammarMatches.RemoveAll(m => m.RuleId == NominalGrammarRules.AttributeId &&
+                    m.Assessment == TextGrammarAssessment.Ambiguous &&
+                    m.ControllerTokenIndices.Any(c => m.DependentTokenIndices.Any(d => provenAttrPairs.Contains((c, d)))));
+            var provenPredDeps = fusionGrammar
+                .Where(m => m.RuleId != NominalGrammarRules.AttributeId && m.Assessment == TextGrammarAssessment.Mismatch)
+                .SelectMany(m => m.DependentTokenIndices.Select(d => (m.RuleId, d)))
+                .ToHashSet();
+            if (provenPredDeps.Count > 0)
+                grammarMatches.RemoveAll(m => m.Assessment == TextGrammarAssessment.Ambiguous &&
+                    m.DependentTokenIndices.Any(d => provenPredDeps.Contains((m.RuleId, d))));
+            grammarMatches.AddRange(fusionGrammar);
+        }
+        var article = TextValidationAnalyzer.ApplyPrepositionalArticles(analysis, ExactCounterpart, cancellationToken, morphology, grammarMatches, precomputedArticleTargets: articleTargets);
         analysis = article.Analysis;
         TextValidationEvidence validation = TextValidationAnalyzer.Analyze(analysis, context, syntax,
-            contextOptions, cancellationToken, ExactCounterpart, localArticleFacts: article.LocalFacts);
+            contextOptions, cancellationToken, ExactCounterpart, localArticleFacts: article.LocalFacts,
+            directObjectFrame: DirectObjectFrame, verbAuthority: VerbAuthority,
+            verbFrames: _verbFrames, postverbalDirectObjectMaxRatio: _postverbalDirectObjectMaxRatio);
         if (countDiagnostics.Count > 0) validation = validation with
         {
             Diagnostics = Array.AsReadOnly(validation.Diagnostics.Concat(countDiagnostics.Select(d => new TextValidationDiagnostic(
@@ -436,7 +580,13 @@ public sealed class BulgarianLanguageSession : IDisposable
                     throw new InvalidOperationException("Construction acquisition is outside the actual text memo."), cancellationToken)
             : null;
         cancellationToken.ThrowIfCancellationRequested();
-        return analysis with { Context = context, Syntax = syntax, Validation = validation, WordConstructions = constructions, Continuation = continuation };
+        return analysis with
+        {
+            Context = context, Syntax = syntax, Validation = validation, WordConstructions = constructions, Continuation = continuation,
+            Grammar = grammarMatches is null ? null : new("typed-grammar.v1", NominalGrammarRules.Catalog,
+                Array.AsReadOnly(grammarMatches.OrderBy(match => match.Start).ThenBy(match => match.Length)
+                    .ThenBy(match => match.RuleId, StringComparer.Ordinal).ToArray()))
+        };
     }
 
     /// <summary>Returns reviewed typed graph segmentation evidence for a surface.</summary>

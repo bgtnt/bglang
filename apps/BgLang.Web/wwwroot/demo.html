@@ -12,7 +12,7 @@
 <body class="live-page">
 <header class="live-header">
   <a class="brand" href="/demo" aria-label="BgLang Live — начало"><span class="brand-symbol" aria-hidden="true">бг</span> BgLang <span class="live-badge">LIVE</span></a>
-  <nav aria-label="Основна навигация"><a href="#lab">Лаборатория</a><a href="/docs">API справка ↗</a><button id="theme-toggle" type="button" aria-label="Смени цветната тема">◐ <span>Тема</span></button></nav>
+  <nav aria-label="Основна навигация"><a href="#lab">Лаборатория</a><a href="/demo-lab/index.html">Live Lab</a><a href="/docs">API справка ↗</a><button id="theme-toggle" type="button" aria-label="Смени цветната тема">◐ <span>Тема</span></button></nav>
 </header>
 <main class="live-main">
   <section class="hero" aria-labelledby="live-title">
@@ -24,8 +24,8 @@
     <div class="workspace">
       <div class="text-workspace">
         <section class="editor-card" aria-labelledby="editor-label">
-          <div class="card-top"><label id="editor-label" for="live-text">ТВОЯТ ТЕКСТ</label><span id="live-length">0 / 4096</span></div>
-          <textarea id="live-text" maxlength="4096" rows="6" spellcheck="false" aria-describedby="live-privacy">Малката книга пътува с мен. 📚
+          <div class="card-top"><label id="editor-label" for="live-text">ТВОЯТ ТЕКСТ</label><span id="live-length">0 / 16384</span></div>
+          <textarea id="live-text" maxlength="16384" rows="6" spellcheck="false" aria-describedby="live-privacy">Малката книга пътува с мен. 📚
 Пиша, откривам, разбирам.</textarea>
           <div class="editor-bottom"><div class="input-examples" aria-label="Примерни входове"><button type="button" data-live-example="Книга, книгата и книгите са тук. 📚">📚 Книга</button><button type="button" data-live-example="Тя пила вода. До нея имало пила.">↔ Прочити</button><button type="button" data-live-example="😀 по-лѐсен текст.&#10;Писал съм и ще пиша.">✦ Форми</button></div><button id="live-refresh" class="icon-button" type="button" aria-label="Обнови анализа">↻</button></div>
           <div class="editor-bottom"><label for="live-continuation-target">Продължения</label><select id="live-continuation-target" aria-describedby="live-continuation-help"><option value="Auto" selected>Авто</option><option value="Finite">Глаголи</option><option value="Noun">Съществителни</option></select></div>
@@ -54,7 +54,7 @@
   <h2>Текст и отделна заявка</h2>
   <form id="text-search">
     <label for="source-text">Твоят текст</label>
-    <textarea id="source-text" rows="5" maxlength="4096" required>Книга, книга, книгата и книгите са тук. 📚</textarea>
+    <textarea id="source-text" rows="5" maxlength="16384" required>Книга, книга, книгата и книгите са тук. 📚</textarea>
     <label for="query">Отделна заявка — дума или лема</label>
     <input id="query" maxlength="256" value="книга" required aria-describedby="match-rules">
     <p id="match-rules" class="tag">Точното изписване сравнява цял токен, включително регистъра. По лема сравнява всички върнати прочити и хипотези, без контекстно разрешаване на многозначността.</p>
@@ -84,7 +84,7 @@
       <option value="analyze-text">Анализ на текст</option>
     </select>
     <label for="input">Дума, лема или собствен текст</label>
-    <textarea id="input" rows="3" maxlength="4096" required>книга</textarea>
+    <textarea id="input" rows="3" maxlength="16384" required>книга</textarea>
     <div id="limit-controls">
       <label for="limit">Лимит на резултатите (1–256)</label>
       <input id="limit" type="number" min="1" max="256" step="1" value="32" required aria-describedby="limit-help">

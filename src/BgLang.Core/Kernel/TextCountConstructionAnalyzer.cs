@@ -8,7 +8,7 @@ internal static class TextCountConstructionAnalyzer
     private enum Denotation { Nonperson, Person }
     private sealed record Noun(string Lemma, string Count, string Plural, Denotation Denotation);
     private sealed record Numeral(string Lemma, string Paradigm, string Ordinary, string Personal,
-        bool IsPersonal, bool IsDefinite);
+        bool IsPersonal, bool IsDefinite, bool PersonPluralQuantifierOnly = false);
 
     internal static IReadOnlyList<TextDiagnostic> Calculate(TextAnalysis analysis,
         MorphologyEvidenceProjection.View morphology,
@@ -29,13 +29,13 @@ internal static class TextCountConstructionAnalyzer
                 ct.ThrowIfCancellationRequested();
                 ContextLanes.TokenView numeral = words[i];
                 Numeral? form = NumeralForm(numeral.CanonicalText);
-                if (form is null || !Exact(numeral) || UnsupportedLeft(i)) continue;
+                if (form is null || !Exact(numeral) || !TryGetGovernorWordIndex(i, out int govWordIndex, out bool finiteGov)) continue;
                 int head = i + 1;
                 List<int[]> modifierMembers = [];
                 bool modifierUsesFiniteContext = false;
                 while (head < words.Count && Exact(words[head]) && Adjacent(head - 1, head))
                 {
-                    int[]? members = QuantityModifierMembers(words[head], i > 0, out bool usesContext, ct);
+                    int[]? members = QuantityModifierMembers(words[head], finiteGov, out bool usesContext, ct);
                     if (members is null) break;
                     modifierMembers.Add(members);
                     modifierUsesFiniteContext |= usesContext;
@@ -44,10 +44,11 @@ internal static class TextCountConstructionAnalyzer
                 if (head >= words.Count || !Adjacent(head - 1, head) || !Exact(words[head])) continue;
                 ContextLanes.TokenView noun = words[head];
                 Noun? lexical = ReviewedNoun(noun.Readings[0].Lemma);
-                if (lexical is null || !NounRows(noun.Readings, lexical, out string? paradigm)) continue;
+                if (lexical is null || form.PersonPluralQuantifierOnly && lexical.Denotation != Denotation.Person ||
+                    !NounRows(noun.Readings, lexical, out string? paradigm)) continue;
                 // Companion rows are considered only inside this independently bound local quantity frame.
                 int[]? numeralMembers = NumeralMembers(numeral.Readings, form, numeral.CanonicalText, numeral.Token.Text,
-                    i > 0, out bool finiteContextUsed, ct);
+                    finiteGov, out bool finiteContextUsed, ct, sentenceInitial: i == 0);
                 if (numeralMembers is null) continue;
                 finiteContextUsed |= modifierUsesFiniteContext;
                 MorphologicalNumber expected = lexical.Denotation == Denotation.Person
@@ -59,7 +60,7 @@ internal static class TextCountConstructionAnalyzer
                         ? modifierMembers[slot - 1].AsEnumerable() : Enumerable.Range(0, w.Readings.Count))
                         .Select(r => new TextReadingReference(w.OriginalIndex, r))).ToArray();
                 // Both obligations are independent. C04 must retain both targets and both projections.
-                if (numeral.CanonicalText != wantedNumeral && CounterpartNumeral(wantedNumeral))
+                if (!form.PersonPluralQuantifierOnly && numeral.CanonicalText != wantedNumeral && CounterpartNumeral(wantedNumeral))
                     Add(numeral, "personal_numeral_selection_mismatch", "grammar.count.reviewed_numeral_selection.v1", wantedNumeral);
                 if (!noun.Readings.Any(r => r.Features.Number == expected && r.Features.Article == MorphologicalArticle.Indefinite) &&
                     CounterpartNoun(wantedNoun))
@@ -73,7 +74,7 @@ internal static class TextCountConstructionAnalyzer
                     Numeral? target = NumeralForm(key);
                     if (target is null || rows.Count == 0 || rows.Any(r => Key(r.Raw.Form) != key || r.Features != r.Raw.Features)) return false;
                     int[]? targetMembers = NumeralMembers(rows.Select(r => ContextReadingProjection.Create(r, key).Lane).ToArray(), target, key,
-                        CaseLike(numeral.Token.Text, key), i > 0, out bool targetUsesFiniteContext, ct);
+                        CaseLike(numeral.Token.Text, key), finiteGov, out bool targetUsesFiniteContext, ct, sentenceInitial: i == 0);
                     if (targetMembers is null) return false;
                     finiteContextUsed |= targetUsesFiniteContext;
                     return true;
@@ -91,28 +92,67 @@ internal static class TextCountConstructionAnalyzer
                 void Add(ContextLanes.TokenView target, string code, string rule, string replacement)
                 {
                     // Cite the original complete governor only when a real finite companion needed it.
-                    IEnumerable<TextReadingReference> proof = finiteContextUsed
-                        ? Enumerable.Range(0, words[i - 1].Readings.Count).Select(r => new TextReadingReference(words[i - 1].OriginalIndex, r)).Concat(supports)
+                    IEnumerable<TextReadingReference> proof = finiteContextUsed && govWordIndex >= 0
+                        ? Enumerable.Range(0, words[govWordIndex].Readings.Count).Select(r => new TextReadingReference(words[govWordIndex].OriginalIndex, r)).Concat(supports)
                         : supports;
                     output.Add(new(code, target.Token.Start, target.Token.Length, rule)
                         { ProjectedText = CaseLike(target.Token.Text, replacement), Readings = Array.AsReadOnly(proof.ToArray()) });
                 }
                 bool Adjacent(int left, int right) => Whitespace(analysis.Text,
                     words[left].Token.Start + words[left].Token.Length, words[right].Token.Start);
-                bool UnsupportedLeft(int index)
+                bool TryGetGovernorWordIndex(int index, out int foundGovWordIndex, out bool foundFiniteGov)
                 {
-                    // Supported left boundaries are NP start or an adjacent complete finite predicate.
-                    // All original left rows must qualify; a nominal/label competitor cannot be discarded.
-                    int previousIndex = numeral.OriginalIndex - 1;
+                    foundGovWordIndex = -1;
+                    foundFiniteGov = false;
+                    ContextLanes.TokenView current = words[index];
+                    int previousIndex = current.OriginalIndex - 1;
                     while (previousIndex >= 0 && analysis.Tokens[previousIndex].Kind == TokenKind.Whitespace) previousIndex--;
-                    if (previousIndex < 0 || analysis.Tokens[previousIndex].Start < sentence.Start) return index != 0;
+                    if (previousIndex < 0 || analysis.Tokens[previousIndex].Start < sentence.Start) return index == 0;
                     TokenAnalysis previous = analysis.Tokens[previousIndex];
-                    if (previous.Text.Any(char.IsDigit) || previous.Kind != TokenKind.Word || index == 0) return true;
+                    if (previous.Text.Any(char.IsDigit) || index == 0) return false;
+                    if (form.PersonPluralQuantifierOnly && previous.Kind == TokenKind.Punctuation && previous.Text == ",")
+                        return true;
+                    if (previous.Kind != TokenKind.Word) return false;
                     ContextLanes.TokenView left = words[index - 1];
-                    return !Exact(left) || !Whitespace(analysis.Text, previous.Start + previous.Length, numeral.Token.Start) ||
-                        left.Readings.Any(r => r.Features.HasUnrecognizedFeatures ||
-                            !ContextEvidenceGuards.IsPersonalPredicate(r.Features) ||
-                            r.Features.VerbForm != MorphologicalVerbForm.Finite);
+                    if (!Exact(left) || !Whitespace(analysis.Text, previous.Start + previous.Length, current.Token.Start)) return false;
+                    if (left.Readings.All(r => !r.Features.HasUnrecognizedFeatures &&
+                        ContextEvidenceGuards.IsPersonalPredicate(r.Features) &&
+                        r.Features.VerbForm == MorphologicalVerbForm.Finite))
+                    {
+                        foundGovWordIndex = index - 1;
+                        foundFiniteGov = true;
+                        return true;
+                    }
+                    if (ContextEvidenceGuards.IsExactAdposition(left) &&
+                        (left.CanonicalText != "на" || form.PersonPluralQuantifierOnly))
+                    {
+                        foundGovWordIndex = index - 1;
+                        return true;
+                    }
+                    if (form.PersonPluralQuantifierOnly &&
+                        (left.CanonicalText is "че" or "ако" or "когато" or "защото" or "докато" or "и" or "а" or "но" ||
+                         left.Readings.All(r => r.Category == ContextLanes.Category.Verb &&
+                             !r.Features.HasUnrecognizedFeatures && !r.Features.HasConflictingFeatures)))
+                        return true;
+                    if (left.CanonicalText == "и" && index >= 3 && Exact(words[index - 2]) && Adjacent(index - 2, index - 1))
+                    {
+                        ContextLanes.TokenView prevHead = words[index - 2];
+                        if (!prevHead.Readings.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Numeral) &&
+                            prevHead.Readings.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
+                                !r.Features.HasConflictingFeatures && !r.Features.HasUnrecognizedFeatures) &&
+                            ReviewedNoun(prevHead.Readings[0].Lemma) is not null)
+                        {
+                            int q = index - 3;
+                            while (q > 0 && Exact(words[q]) && Adjacent(q, q + 1) && NumeralForm(words[q].CanonicalText) is null &&
+                                   QuantityModifierMembers(words[q], finiteContext: true, out _, ct) is not null)
+                            {
+                                q--;
+                            }
+                            if (q >= 0 && Exact(words[q]) && Adjacent(q, q + 1) && NumeralForm(words[q].CanonicalText) is not null)
+                                return TryGetGovernorWordIndex(q, out foundGovWordIndex, out foundFiniteGov);
+                        }
+                    }
+                    return false;
                 }
             }
         }
@@ -126,7 +166,31 @@ internal static class TextCountConstructionAnalyzer
     {
         "стол" => new("стол", "стола", "столове", Denotation.Nonperson),
         "компютър" => new("компютър", "компютъра", "компютри", Denotation.Nonperson),
+        "прозорец" => new("прозорец", "прозореца", "прозорци", Denotation.Nonperson),
+        "въпрос" => new("въпрос", "въпроса", "въпроси", Denotation.Nonperson),
+        "доклад" => new("доклад", "доклада", "доклади", Denotation.Nonperson),
+        "документ" => new("документ", "документа", "документи", Denotation.Nonperson),
+        "филм" => new("филм", "филма", "филми", Denotation.Nonperson),
+        "роман" => new("роман", "романа", "романи", Denotation.Nonperson),
+        "магазин" => new("магазин", "магазина", "магазини", Denotation.Nonperson),
+        "кабинет" => new("кабинет", "кабинета", "кабинети", Denotation.Nonperson),
+        "автобус" => new("автобус", "автобуса", "автобуси", Denotation.Nonperson),
+        "мост" => new("мост", "моста", "мостове", Denotation.Nonperson),
         "ученик" => new("ученик", "ученика", "ученици", Denotation.Person),
+        "директор" => new("директор", "директора", "директори", Denotation.Person),
+        "лекар" => new("лекар", "лекаря", "лекари", Denotation.Person),
+        "пациент" => new("пациент", "пациента", "пациенти", Denotation.Person),
+        "учител" => new("учител", "учителя", "учители", Denotation.Person),
+        "студент" => new("студент", "студента", "студенти", Denotation.Person),
+        "работник" => new("работник", "работника", "работници", Denotation.Person),
+        "гражданин" => new("гражданин", "гражданина", "граждани", Denotation.Person),
+        "инженер" => new("инженер", "инженера", "инженери", Denotation.Person),
+        "приятел" => new("приятел", "приятеля", "приятели", Denotation.Person),
+        "турист" => new("турист", "туриста", "туристи", Denotation.Person),
+        "специалист" => new("специалист", "специалиста", "специалисти", Denotation.Person),
+        "журналист" => new("журналист", "журналиста", "журналисти", Denotation.Person),
+        "служител" => new("служител", "служителя", "служители", Denotation.Person),
+        "експерт" => new("експерт", "експерта", "експерти", Denotation.Person),
         _ => null
     };
 
@@ -149,6 +213,12 @@ internal static class TextCountConstructionAnalyzer
 
     private static Numeral? NumeralForm(string key)
     {
+        if (key == "няколко")
+            return new("няколко", "188", "няколко", "няколко", false, false, PersonPluralQuantifierOnly: true);
+        if (key is "мнозина" or "мнозината")
+            return new("мнозина", "137a", key, key, true, key == "мнозината", PersonPluralQuantifierOnly: true);
+        if (key is "малцина" or "малцината")
+            return new("малцина", "137a", key, key, true, key == "малцината", PersonPluralQuantifierOnly: true);
         // Simple 2–6 only. Compound alternatives are deliberately not interpreted by this lane.
         (string Lemma, string Paradigm, string Ordinary, string Personal) tuple = key switch
         {
@@ -168,7 +238,8 @@ internal static class TextCountConstructionAnalyzer
     }
 
     private static int[]? NumeralMembers(IReadOnlyList<ContextLanes.ReadingView> rows, Numeral numeral,
-        string surface, string spelling, bool finiteContext, out bool usesFiniteContext, CancellationToken ct)
+        string surface, string spelling, bool finiteContext, out bool usesFiniteContext, CancellationToken ct,
+        bool sentenceInitial = false)
     {
         usesFiniteContext = false;
         List<int> members = [];
@@ -187,10 +258,12 @@ internal static class TextCountConstructionAnalyzer
             if (Key(row.Lemma) != surface || f.HasConflictingFeatures) return null;
             // Exact reviewed source identities, not arbitrary unknown/name alternatives.
             // These remain in the inventory and never become numeral proof.
-            if (surface is "двама" or "трима" && row.SourceGenericUnknown &&
+            if (surface is "двама" or "трима" or "четирима" or "петима" or "шестима" && row.SourceGenericUnknown &&
                 f.PartOfSpeech == MorphologicalPartOfSpeech.Unknown && f.RawTag == "unknown:500") continue;
-            if (surface == "три" && spelling.Any(char.IsLetter) &&
-                spelling.All(c => !char.IsLetter(c) || char.IsLower(c)) && f.RawTag == "Място:195" &&
+            if (surface is "три" or "пет" &&
+                (spelling.Any(char.IsLetter) && spelling.All(c => !char.IsLetter(c) || char.IsLower(c)) ||
+                 sentenceInitial && spelling.Length > 1 && char.IsUpper(spelling[0]) && spelling.Skip(1).All(char.IsLower)) &&
+                f.RawTag == "Място:195" &&
                 f.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun && f.NameKind == MorphologicalNameKind.PlaceName &&
                 !f.HasUnrecognizedFeatures) continue;
             return null;
@@ -216,6 +289,11 @@ internal static class TextCountConstructionAnalyzer
                 f.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun && f.NameKind == MorphologicalNameKind.PlaceName &&
                 !f.HasUnrecognizedFeatures && !f.HasConflictingFeatures)
             { usesFiniteContext = true; continue; }
+            if (word.CanonicalText != "нови" &&
+                ContextEvidenceGuards.IsUnwrittenCapitalizedReading(word, row, sentenceInitial: false) &&
+                f.RawTag == "Място:195" && f.PartOfSpeech == MorphologicalPartOfSpeech.ProperNoun &&
+                f.NameKind == MorphologicalNameKind.PlaceName && !f.HasUnrecognizedFeatures && !f.HasConflictingFeatures)
+                continue;
             return null;
         }
         if (members.Count == 0 || usesFiniteContext && members.Any(i => Key(word.Readings[i].Lemma) != "нов" ||
@@ -237,12 +315,28 @@ internal static class TextCountConstructionAnalyzer
     private static bool NumeralRow(ContextLanes.ReadingView r, Numeral numeral)
     {
         MorphologicalFeatures f = r.Features;
+        if (numeral.PersonPluralQuantifierOnly)
+        {
+            if (numeral.Lemma == "няколко")
+                return Key(r.Lemma) == "няколко" && f.PartOfSpeech == MorphologicalPartOfSpeech.Adverb &&
+                    f.ParadigmId == "188" && !f.HasConflictingFeatures && !f.HasUnrecognizedFeatures &&
+                    f.RawTag == "Наречие:188";
+            if (Key(r.Lemma) != numeral.Lemma || f.PartOfSpeech != MorphologicalPartOfSpeech.Numeral ||
+                f.ParadigmId != "137a" || f.HasConflictingFeatures || f.RawTag is null ||
+                f.Gender != MorphologicalGender.Masculine) return false;
+            string[] approxAtoms = f.RawTag.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            return approxAtoms[0].Equals("Бройно_Числително:137a", StringComparison.OrdinalIgnoreCase) &&
+                approxAtoms.Skip(1).All(a => a is "Мъжки" or "Приблизителна" or "Членуван") &&
+                approxAtoms.Contains("Членуван", StringComparer.Ordinal) == numeral.IsDefinite;
+        }
         if (Key(r.Lemma) != numeral.Lemma || f.PartOfSpeech != MorphologicalPartOfSpeech.Numeral ||
-            f.ParadigmId != numeral.Paradigm || f.HasConflictingFeatures || f.RawTag is null || f.Gender is null ||
+            !(numeral.Lemma == "четири" ? f.ParadigmId is "133" or "134" : f.ParadigmId == numeral.Paradigm) ||
+            f.HasConflictingFeatures || f.RawTag is null || f.Gender is null ||
             numeral.IsPersonal && f.Gender != MorphologicalGender.Masculine) return false;
         string[] atoms = f.RawTag.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         // Consume only this source's explicit personal/definite atoms; Count never means personal.
-        return atoms[0].Equals("Бройно_Числително:" + numeral.Paradigm, StringComparison.OrdinalIgnoreCase) &&
+        return (atoms[0].Equals("Бройно_Числително:" + f.ParadigmId, StringComparison.OrdinalIgnoreCase) ||
+                atoms[0].Equals("Числително_бройно:" + f.ParadigmId, StringComparison.OrdinalIgnoreCase)) &&
             atoms.Skip(1).All(a => a is "Мъжки" or "Женски" or "Среден" or "мн.ч." or "Мъжколична" or "Членуван") &&
             atoms.Contains("Мъжколична", StringComparer.Ordinal) == numeral.IsPersonal &&
             atoms.Contains("Членуван", StringComparer.Ordinal) == numeral.IsDefinite;

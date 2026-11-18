@@ -39,12 +39,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -217,12 +217,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -348,12 +348,12 @@
         "ProjectReference|src/BgLang.Core/BgLang.Core.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -508,6 +508,7 @@
         "Compile|src/BgLang.Contracts/Kernel/TextContinuationRequest.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextContinuationTarget.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextDiagnostic.cs",
+        "Compile|src/BgLang.Contracts/Kernel/TextGrammarEvidence.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextGraphReadingReference.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextMetrics.cs",
         "Compile|src/BgLang.Contracts/Kernel/TextNominalConstructionEvidence.cs",
@@ -536,12 +537,12 @@
         "Project|src/BgLang.Contracts/BgLang.Contracts.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -649,7 +650,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 62,
+      "compileCount": 63,
       "projectReferenceCount": 0
     },
     {
@@ -665,11 +666,14 @@
         "Compile|src/BgLang.Core/Kernel/BlockRankedRangeSelector.cs",
         "Compile|src/BgLang.Core/Kernel/BoundedGraphCandidatePool.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianAbbreviationLexicon.cs",
+        "Compile|src/BgLang.Core/Kernel/BulgarianFunctionWords.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianOrthography.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianPhoneticAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianStressLookup.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianTextNormalizer.cs",
         "Compile|src/BgLang.Core/Kernel/BulgarianTokenizer.cs",
+        "Compile|src/BgLang.Core/Kernel/ClauseBoundary.cs",
+        "Compile|src/BgLang.Core/Kernel/ClauseFusionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalRootProof.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSeedIndex.cs",
         "Compile|src/BgLang.Core/Kernel/ConditionalSupportInventory.cs",
@@ -686,6 +690,7 @@
         "Compile|src/BgLang.Core/Kernel/ExactLookupResult.cs",
         "Compile|src/BgLang.Core/Kernel/ExactWordSegmenter.cs",
         "Compile|src/BgLang.Core/Kernel/GeneratedLexemeSource.cs",
+        "Compile|src/BgLang.Core/Kernel/GrammarRepairForms.cs",
         "Compile|src/BgLang.Core/Kernel/GraphAccentProfile.cs",
         "Compile|src/BgLang.Core/Kernel/GraphSearchBudget.cs",
         "Compile|src/BgLang.Core/Kernel/GraphSegmentation.cs",
@@ -703,11 +708,14 @@
         "Compile|src/BgLang.Core/Kernel/LexemeStressPattern.cs",
         "Compile|src/BgLang.Core/Kernel/LexicalCliticProjection.cs",
         "Compile|src/BgLang.Core/Kernel/LexicalIdentity.cs",
+        "Compile|src/BgLang.Core/Kernel/LocalClauseRoleLinker.cs",
         "Compile|src/BgLang.Core/Kernel/MorphologyEvidenceProjection.cs",
         "Compile|src/BgLang.Core/Kernel/MorphologyProposal.cs",
         "Compile|src/BgLang.Core/Kernel/NeutralDictionaryPackageLoader.cs",
         "Compile|src/BgLang.Core/Kernel/NeutralPackageSnapshot.cs",
         "Compile|src/BgLang.Core/Kernel/NeutralSourceFormInventory.cs",
+        "Compile|src/BgLang.Core/Kernel/NominalGrammarEvidence.cs",
+        "Compile|src/BgLang.Core/Kernel/NominalGrammarRules.cs",
         "Compile|src/BgLang.Core/Kernel/NominalStructuralProjection.cs",
         "Compile|src/BgLang.Core/Kernel/OrdinaryBaseProofCache.cs",
         "Compile|src/BgLang.Core/Kernel/OrdinaryParadigmAlias.cs",
@@ -717,6 +725,7 @@
         "Compile|src/BgLang.Core/Kernel/ParadigmReverseIndex.cs",
         "Compile|src/BgLang.Core/Kernel/ParadigmRuntime.cs",
         "Compile|src/BgLang.Core/Kernel/PathMorphologyProjectionPolicy.cs",
+        "Compile|src/BgLang.Core/Kernel/PredicativeGrammarEvidence.cs",
         "Compile|src/BgLang.Core/Kernel/PrefixDiscoveryResult.cs",
         "Compile|src/BgLang.Core/Kernel/PrepositionComplementAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/PronounVerbAgreementAnalyzer.cs",
@@ -726,6 +735,7 @@
         "Compile|src/BgLang.Core/Kernel/ReviewedVerbCliticPredicateGroupAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/RuntimePackageState.cs",
         "Compile|src/BgLang.Core/Kernel/SentenceBoundaryDetector.cs",
+        "Compile|src/BgLang.Core/Kernel/SimpleClauseAgreementResolver.cs",
         "Compile|src/BgLang.Core/Kernel/SpellingCandidateCache.cs",
         "Compile|src/BgLang.Core/Kernel/SpellingProjectionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/StressEvidenceAnalyzer.cs",
@@ -743,6 +753,8 @@
         "Compile|src/BgLang.Core/Kernel/TextSpellingAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
+        "Compile|src/BgLang.Core/Kernel/VerbalComplex.cs",
+        "Compile|src/BgLang.Core/Kernel/VerbFrameCatalog.cs",
         "Compile|src/BgLang.Core/Kernel/WordConstructionAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/WordFormationAnalyzer.cs",
         "Compile|src/BgLang.Core/Kernel/WordFormationEvidenceAnalyzer.cs",
@@ -755,12 +767,12 @@
         "ProjectReference|src/BgLang.Contracts/BgLang.Contracts.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -868,7 +880,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 92,
+      "compileCount": 103,
       "projectReferenceCount": 1
     },
     {
@@ -886,7 +898,9 @@
         "Compile|tests/BgLang.Public.Tests/GraphStressSuccessorPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/JoinedNegationPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/LocalPrepositionalArticleGraphPackageTests.cs",
+        "Compile|tests/BgLang.Public.Tests/NaturalSentenceFusionPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/NominalConstructionPackageTests.cs",
+        "Compile|tests/BgLang.Public.Tests/NominalDiagnosticsPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/PrepositionalArticleGeneratedPackageTests.cs",
         "Compile|tests/BgLang.Public.Tests/PrepositionalArticlePackageTests.cs",
@@ -917,12 +931,12 @@
         "ProjectReference|src/BgLang.Api/BgLang.Api.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -1030,7 +1044,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 23,
+      "compileCount": 25,
       "projectReferenceCount": 1
     },
     {
@@ -1079,12 +1093,12 @@
         "ProjectReference|apps/BgLang.Web/BgLang.Web.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -1220,12 +1234,12 @@
         "ProjectReference|src/BgLang.Core/BgLang.Core.csproj"
       ],
       "externalSdkInputs": [
-        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.118/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.5.10315/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.110/WorkloadManifest.targets",
-        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.5.10315/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.ios/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maccatalyst/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.macos/26.0.11017/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.0/WorkloadManifest.targets",
+        "sdk-manifests/10.0.100/microsoft.net.sdk.tvos/26.0.11017/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.current/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net6/10.0.114/WorkloadManifest.targets",
         "sdk-manifests/10.0.100/microsoft.net.workload.emscripten.net7/10.0.114/WorkloadManifest.targets",
@@ -1350,8 +1364,8 @@
     },
     {
       "path": ".gitignore",
-      "bytes": 1525,
-      "sha256": "8a6f0f2f3a27b9401089dd42cc69e23506b16247e589866e5d87b881095e41d2"
+      "bytes": 1546,
+      "sha256": "50e9592e8812a81dccb620baafb7ad27885b98d715eeff1dfc1813e73150566c"
     },
     {
       "path": "BgLang.Public.slnx",
@@ -1370,8 +1384,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 74188,
-      "sha256": "30e4b77cb2b2e83610dc0040923d6324665685824898161510e10fff998af34b"
+      "bytes": 74763,
+      "sha256": "7bad6f81fa564b19c4ff4b9498aff03f1b50e32b6d4efec062abeb10103dc6c0"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1395,8 +1409,8 @@
     },
     {
       "path": "apps/BgLang.Web/HttpContract.cs",
-      "bytes": 3649,
-      "sha256": "2caa1ba670e2d3d8afd4102b6eacf80fc5c801b83c13564be6d214ba37ec3b22"
+      "bytes": 3652,
+      "sha256": "c0bb45fec4cf969335c4a06f7ec9ed4f6700d6626a02e73667f48bd51c809985"
     },
     {
       "path": "apps/BgLang.Web/Program.cs",
@@ -1405,8 +1419,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 98208,
-      "sha256": "1ce2e11a654bf7bbbce38a74259c0e46d514e207392fbeb2e1e65514e94e0594"
+      "bytes": 99123,
+      "sha256": "c6799f6c6f8d51df908f62cad2f1d801f2c5ef6b30602a4af30d994b3dd3e3d3"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1435,8 +1449,8 @@
     },
     {
       "path": "apps/BgLang.Web/WebHostFactory.cs",
-      "bytes": 10388,
-      "sha256": "b523261b16a0e3055e247903d154c23abc0a7791bd575e5a9a33e198b359c4f1"
+      "bytes": 10471,
+      "sha256": "57c5c261360e31d81b79eef0994f96c2f2e1f85a230176006d55588374722d66"
     },
     {
       "path": "apps/BgLang.Web/scope-metrics.json",
@@ -1450,33 +1464,33 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/demo.js",
-      "bytes": 113905,
-      "sha256": "e4ebe2f8270da32cb8d468d1e5c25c9aff4aedfaf35cf0c65ccba64a3a2526a3"
+      "bytes": 104670,
+      "sha256": "67905407e36046128a3b9800f1b1782bd8ebe01a9394733c6ef0fc5778f89610"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/index.html",
-      "bytes": 7806,
-      "sha256": "bca49ca1b188c32f2dc7ff4d39e0f5dfb3544fd6761e6ead4706eea1a5ff76e3"
+      "bytes": 7647,
+      "sha256": "d9e4b17a970b6391c1ba35af91274f96e11855c7331e13962f6b1edda3799453"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-lab/README.md",
-      "bytes": 12221,
-      "sha256": "d5d5c561298e134b058894e9fb2f9e33f2649082f3e784b9c72121483f48ab71"
+      "bytes": 12198,
+      "sha256": "97a7fcd920bca2214589a7afff0c32619cc9b4e5a78ea0a7970e1915f470542c"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.html",
-      "bytes": 15068,
-      "sha256": "a240e5bfca3a81414ab3759c29fdae392c583908e95ff63bd20b1b853057e02f"
+      "bytes": 15115,
+      "sha256": "f28358305b063c93871604e51c2bd933ed32c52574b8793ed8d44345382ca98c"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo.js",
-      "bytes": 31605,
-      "sha256": "ab630bba6ba7cabe43d8fc5f23bf01430e3ec1e28a7df182fc6aa774a6550236"
+      "bytes": 32154,
+      "sha256": "e4c4c752166e57ea1e62941e1ce8c924f4c173a0843e29c7dfa9954cb9a4fc6a"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/docs.html",
-      "bytes": 35594,
-      "sha256": "e3c0cb3024391cb73c4786e8d10eec0fa14998b6d0122ecb0100f9a3cd9f4695"
+      "bytes": 35770,
+      "sha256": "760b668a2188f637389e6633da35ccf40e515fad0548c2849cd1f32791739b26"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/site.css",
@@ -1485,18 +1499,18 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 23154,
-      "sha256": "233f4b432dcb75bce2b4b20c3b4095ea3c7e28e0cd5b36aaf58d97ba5449b040"
+      "bytes": 59289,
+      "sha256": "65f60e62a5ed89b31f61acf15234c5b4d5c35b03f27bfa23f6bbcdfd6f82cb8e"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
-      "bytes": 54860,
-      "sha256": "3d61e9ad4ae0577a3a9f2d55be3d8bfd286d31c6b6f8dd1013af6cf3bb80f6e8"
+      "bytes": 52907,
+      "sha256": "c7a889ec2e79e70811764883d45148ecdbb44efc85ef38e48fb295aa1ecf693c"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.css",
-      "bytes": 18554,
-      "sha256": "2bf2b7f3cb86710d0396f4e6e639e3ddb75d8e2eca277af817fe7988fc84c142"
+      "bytes": 18750,
+      "sha256": "ff327c4baad08ff6147a28a9be3da4b295fbccac81a72b132c4ee5bf00d1f4c6"
     },
     {
       "path": "data/dictionary/public-input-lock.v1.json",
@@ -1535,8 +1549,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 64228,
-      "sha256": "91917e121b4b99b91211d06d2cb6ca06dcd4cd81f14c40fd224b736ee28ee10a"
+      "bytes": 64950,
+      "sha256": "1b20a4835d944199fcaa5d32669c3a238d83767c377a1ae650b9adf3c47dd2b9"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -1545,8 +1559,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 17841,
-      "sha256": "43daffd08c4735450a6d455fc533265cfb73dc0656fe6b54f0196ec9086a351e"
+      "bytes": 18644,
+      "sha256": "e2148c29fc8c02d9be69deb527351b662d772db69938e62a81bb9b71800584f1"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -1555,13 +1569,13 @@
     },
     {
       "path": "src/BgLang.Api/Kernel/AssemblyInfo.cs",
-      "bytes": 186,
-      "sha256": "6c040ae8e848ac6da11933b9b2546742247d073515d55315f15b3bad64c26676"
+      "bytes": 239,
+      "sha256": "120dd611a1fa24abc79d90ed6487efa3448794c00bde3b32dc60045e1c733314"
     },
     {
       "path": "src/BgLang.Api/Kernel/BulgarianLanguageSession.cs",
-      "bytes": 28741,
-      "sha256": "4d71025d4a2c229f037af3ca41e1ad4e5c0d3b5860b67a228a30d27bcffd3bfc"
+      "bytes": 38746,
+      "sha256": "5917a2977f9bb96ad55975dfcf8d3c57901dbc513a43e50cd01802deffccec2a"
     },
     {
       "path": "src/BgLang.Api/Kernel/TextReadingInventorySnapshot.cs",
@@ -1715,8 +1729,13 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextAnalysis.cs",
-      "bytes": 3533,
-      "sha256": "0a66a4d94a65aa3be245e6f06a033f64bd89c3a915898f3ec742990a8c239a16"
+      "bytes": 3833,
+      "sha256": "e08ab54e7c0c37aad635539e69c8b8b147f13d99b278d445f086bec93b720c59"
+    },
+    {
+      "path": "src/BgLang.Contracts/Kernel/TextGrammarEvidence.cs",
+      "bytes": 1722,
+      "sha256": "8e0c369a206fbd6c77f12e602c274326e1fa554f113f07be32cecb2dd457febe"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContextEvidence.cs",
@@ -1730,8 +1749,8 @@
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextContextOptions.cs",
-      "bytes": 623,
-      "sha256": "e0fb09932c5d779f6b689f14f74a39f909fb4f7d6695c8445b6010104abcd3c3"
+      "bytes": 678,
+      "sha256": "3cfbf8a695b6d513749931386db257548ec20b772ac90db506e0d59c71c8c5cc"
     },
     {
       "path": "src/BgLang.Contracts/Kernel/TextDiagnostic.cs",
@@ -1860,13 +1879,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/AssemblyInfo.cs",
-      "bytes": 192,
-      "sha256": "00a52c565a63b86615827261539d8b3b1662038722eaf1c82ff481196c3c1dd2"
+      "bytes": 245,
+      "sha256": "76603dac71d3c796a65d2d063659ac176a663e9b176825dba47a15870924dcc0"
     },
     {
       "path": "src/BgLang.Core/Kernel/BasicSentenceShapeAnalyzer.cs",
-      "bytes": 2878,
-      "sha256": "587004ba30f2c85072d3ff0afa2ee5d2f76b213fdfab46719b5c1ca1251bfbb4"
+      "bytes": 3645,
+      "sha256": "e6b85848f83af475aa0d9325eadf18e76609d12a0dd5c29c41e1f2a2ec1c5050"
     },
     {
       "path": "src/BgLang.Core/Kernel/BinaryProofBudget.cs",
@@ -1940,8 +1959,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextEvidenceGuards.cs",
-      "bytes": 7129,
-      "sha256": "9c361b4e1b6b795ce36744009dbbb20452311c799f706208b12ede1e52d6e1ad"
+      "bytes": 47536,
+      "sha256": "5f3fb0dd5037c383faa77f606bbd022246bc121e8d5dc2d45f22b36905389047"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextJointSelection.cs",
@@ -1950,13 +1969,38 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextLanes.cs",
-      "bytes": 62703,
-      "sha256": "708362203ad0ec742c837bf4491ef3dab4cac85629c6761d08d4b7ce6108699b"
+      "bytes": 65069,
+      "sha256": "f149a85781c85be7c705e0707612321619846b84589b75a5317f16d8e959e033"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/LocalClauseRoleLinker.cs",
+      "bytes": 11247,
+      "sha256": "f03c221641d8a883efe82597b0cd73446390494a6d51120d4071f3371ce0a01a"
     },
     {
       "path": "src/BgLang.Core/Kernel/NominalStructuralProjection.cs",
-      "bytes": 10983,
-      "sha256": "262d0a1f2ed2a8a8f7bb59ec1859b43a27885ddf63d7d86c02475f905a1a9179"
+      "bytes": 61291,
+      "sha256": "450ad585c7a20923298c5530c1384454aee01e2ef6b6c42043eb84a1a890eef5"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/NominalGrammarRules.cs",
+      "bytes": 8857,
+      "sha256": "54c11cbd162d1b753deabab2c36ca98cc577d2d3c3b543fb6f69b856a9523961"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/NominalGrammarEvidence.cs",
+      "bytes": 10488,
+      "sha256": "b637415bda732918db1636649108b65d5381f119d934c29bbc21190815dce35f"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/GrammarRepairForms.cs",
+      "bytes": 13684,
+      "sha256": "8802eaa9401d00746ac7e45f782ffb97cdaa5bd42c20e51c37d22a9630f8493e"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/PredicativeGrammarEvidence.cs",
+      "bytes": 84593,
+      "sha256": "479322bb647386e44598fbfdb760cc45c39d9b27a2266b3467be2b71866ebd91"
     },
     {
       "path": "src/BgLang.Core/Kernel/ContextReadingProjection.cs",
@@ -2100,8 +2144,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/PackageLexicalCatalog.cs",
-      "bytes": 11383,
-      "sha256": "ad9af58608896fc7f2685b12c78c33d2964bca24534d819510f65d21877f0fdb"
+      "bytes": 19597,
+      "sha256": "16f4147f328b5b887385c7828d9242a14825bb29ffd380f061b9cb10f4925c03"
     },
     {
       "path": "src/BgLang.Core/Kernel/PackageLoadEvents.cs",
@@ -2130,13 +2174,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/PrepositionComplementAnalyzer.cs",
-      "bytes": 7014,
-      "sha256": "870141e7d786bc8e782e6cb418e400f6df31db71160d9c9481c771cb0a50fad7"
+      "bytes": 6792,
+      "sha256": "575d5bbdd10a8bb9be474cd667d51cbf97c3de372a4493039ec7fa2f29d07d37"
     },
     {
       "path": "src/BgLang.Core/Kernel/PronounVerbAgreementAnalyzer.cs",
-      "bytes": 9601,
-      "sha256": "aab09969936f7a6cd9d207a18041555563d9c56457170efde50e5d58079f5c7a"
+      "bytes": 9182,
+      "sha256": "bf115c5e67e9c8650349bcf11e5585114d9c9653ce568982fc5e53d4c99ce339"
     },
     {
       "path": "src/BgLang.Core/Kernel/ProperNameAnalyzer.cs",
@@ -2150,8 +2194,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ReviewedCliticPolicy.cs",
-      "bytes": 1238,
-      "sha256": "f20f8b4d42c0b1c29d63cdc2549a650a5cc292bcb900797f3a0e408e71545552"
+      "bytes": 1167,
+      "sha256": "e6873dd2442138e83f02fc79ccd5bc7c0b638845b94ac9703a99a84a2f4d7e0f"
     },
     {
       "path": "src/BgLang.Core/Kernel/ReviewedVerbCliticPredicateGroupAnalyzer.cs",
@@ -2167,6 +2211,11 @@
       "path": "src/BgLang.Core/Kernel/SentenceBoundaryDetector.cs",
       "bytes": 12087,
       "sha256": "28924c2917dfc0d486b80e027661f539d06aaa58aa706a209907332cb189a771"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/SimpleClauseAgreementResolver.cs",
+      "bytes": 89672,
+      "sha256": "465332a0b7d7f8eb5a0e141fba066d93cb3b2bcea2e0426d5d696a2728eccca4"
     },
     {
       "path": "src/BgLang.Core/Kernel/SpellingCandidateCache.cs",
@@ -2200,18 +2249,18 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
-      "bytes": 36792,
-      "sha256": "f4ec31390bbb797b2bf0b29b0261bcef6bed9b0a22babe36a437e344ccc6159d"
+      "bytes": 43077,
+      "sha256": "1ddc318b396275516487579ee3a6339a0ea2c68a0fb1fc89db52939b9e1eedaf"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
-      "bytes": 25799,
-      "sha256": "fbb702ff85f98d36dacac19f2a1fab352736e0fbda972b340ef9ead9e0eea31a"
+      "bytes": 67339,
+      "sha256": "7e0a1ff85f49878a2b6d66bdff1340a45b492bfb8b90b55e6c2e0fc4c16aae28"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextNominalConstructionAnalyzer.cs",
-      "bytes": 14979,
-      "sha256": "ae501655747356dc5280208fd61574189d6693d7b6864a2ebb9a2652fb9de5ec"
+      "bytes": 14502,
+      "sha256": "ff513f76d6e1792b93fa2179fb7762f1119829e985fd569abfdda59828ec7422"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextMetricsAnalyzer.cs",
@@ -2225,8 +2274,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 76939,
-      "sha256": "d7ddfa7ee5e77708a8e936c007f66f55e0258e5a5d12bffd32de16973abc399d"
+      "bytes": 137109,
+      "sha256": "aeac86c77eb53795581ab9137a9deaad0e78c876d9d7d21fc18d3758e5cfdd3f"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2310,8 +2359,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/ConstructionHttpTests.cs",
-      "bytes": 17056,
-      "sha256": "544811404d1698e57c1e229b68829d3f285c46453b7d91a2c1ad0b2ab1014e58"
+      "bytes": 17620,
+      "sha256": "915568276f860903761f84f8ae68b004217e86648287bc52d8c2946f688ff36a"
     },
     {
       "path": "tests/BgLang.Web.Tests/ConstructionResponseTests.cs",
@@ -2345,13 +2394,13 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/FullPackageHttpTests.cs",
-      "bytes": 20962,
-      "sha256": "aec70cdc3ba838057678bda9f24b4b71a722a51cfa35ffb1354c23f05dea7e58"
+      "bytes": 20963,
+      "sha256": "605be8778871b621834eb100f4a02b4699623660094f176508212045324602a2"
     },
     {
       "path": "tests/BgLang.Web.Tests/HttpBoundaryTests.cs",
-      "bytes": 4217,
-      "sha256": "5701d8626c06cb6888301042e4ae40a0804751dc71ffff85915ee52f07e95f20"
+      "bytes": 4301,
+      "sha256": "224c33e40f1525505a2302c3f5747b1b94d498b3ef914da8e87e840f127f46e2"
     },
     {
       "path": "tests/BgLang.Web.Tests/JoinedNegationHttpTests.cs",
@@ -2410,13 +2459,13 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 154099,
-      "sha256": "2c38e536426b41969246cfa357c812bcfb9928660b51934ab29e7e3c8cea23a3"
+      "bytes": 178409,
+      "sha256": "3236b5431dcfea6472aebbe388cc68adabe7c56906e3a25da6f80152a708a9a5"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
-      "bytes": 11881,
-      "sha256": "c0445026e7cdc19bc65861718020485581556375e2a55663ddf764599f40f18a"
+      "bytes": 12686,
+      "sha256": "568b67602ce7f66f8770141e9f7e39fae92c8edd9efd0aa286d4593cabf80ae3"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContinuationHttpTests.cs",
@@ -2480,8 +2529,8 @@
     },
     {
       "path": "tools/BgLang.SourceBuilder/README.md",
-      "bytes": 26859,
-      "sha256": "760a7c294864cdb4e04e35e62b0c69f93d3880db066c325863cd949ca9f5521e"
+      "bytes": 27165,
+      "sha256": "5a64f11d94ed2a3e94abc7792c02d004ff3a7f900c78ceb1539644e3c7db5f74"
     },
     {
       "path": "tools/BgLang.SourceBuilder/StoredLemmaMigration.cs",
@@ -2525,8 +2574,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/MorphologyEvidenceProjection.cs",
-      "bytes": 9978,
-      "sha256": "a9c7a0534396361f0b8afab7c65ee6182a8d3f0db64c385d792bc7851ebfaf96"
+      "bytes": 10000,
+      "sha256": "ffdcef79b263a73ebfd3c91b8e2e50a655b850846174cf273e5659a56e0d3315"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContinuationAnalyzer.cs",
@@ -2540,8 +2589,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/ClosedAgreementPackageTests.cs",
-      "bytes": 36804,
-      "sha256": "09da195e1c3bad3004420f1906e42561b5cae5651aff275dfe1f677a7ac6738d"
+      "bytes": 36826,
+      "sha256": "4e6d203c5527aeb29378e647f05fa29ab81db1487be78ae4fd3db59d713aaa4b"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalConstructionPackageTests.cs",
@@ -2555,8 +2604,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/AgreementHttpTests.cs",
-      "bytes": 30143,
-      "sha256": "ed69c0c51ccbe2a0c0ac995fc8446c21b2c42d40f2ee7212a92bed6e56cab5f3"
+      "bytes": 35922,
+      "sha256": "5ed7097e5f4784a0ac17e8710a4cb68e49d423ea5b9c672d135f444ac7e79bf0"
     },
     {
       "path": "tests/BgLang.Web.Tests/NominalConstructionHttpTests.cs",
@@ -2645,8 +2694,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/demo-lab.test.mjs",
-      "bytes": 148579,
-      "sha256": "b0e493d62703bf7c9cc7becc2bc0391f8e7abf378a09891cd6d7ae8c6d4bb8e6"
+      "bytes": 166209,
+      "sha256": "c06e718cf65aeb8426236754d41f91f572e4192a60784c34f2e592f15080a226"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",
@@ -2665,8 +2714,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextCountConstructionAnalyzer.cs",
-      "bytes": 18166,
-      "sha256": "7ddb2a8d3e6130c1f23dda64317d9e1a472ab3657d6bd62cb5bcafcdced86703"
+      "bytes": 26315,
+      "sha256": "2cf151a71dd159efc45d2648c876a08db6c981fc4fe67d6a2388b880e03a2c2f"
     },
     {
       "path": "tests/BgLang.Public.Tests/CountConstructionPackageTests.cs",
@@ -2725,13 +2774,18 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/TextConstructionProjectorBoundaryTests.cs",
-      "bytes": 5178,
-      "sha256": "620dc45df7b91d9d62ae16f3164fb05c377f18ad48d22d6f4465285644f1c4c1"
+      "bytes": 5280,
+      "sha256": "8eb197dcc023183e24809a453bc7f46ebfb26d77a5fc7917aa275cf44553a81b"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/NominalDiagnosticsPackageTests.cs",
+      "bytes": 62505,
+      "sha256": "212af8d69dd541e360fb6bc17829b5106dee1ec981640fd9a3dc9e85ecf7f32b"
     },
     {
       "path": "tools/check-md-links.mjs",
-      "bytes": 2353,
-      "sha256": "fb993315d0690ba52142efe13546ac0f04958b1652eae1fba92abd05f1e3c332"
+      "bytes": 2412,
+      "sha256": "e52aee0f32008d82ebdaaf043865cac786483fc99f5e33a890dbffbbf36cf2aa"
     },
     {
       "path": "tests/BgLang.Web.Tests/GraphStressSuccessorHttpTests.cs",
@@ -2760,8 +2814,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextPredicateLinkAnalyzer.cs",
-      "bytes": 16885,
-      "sha256": "588fc32c4c6bc04d9eb303fcf32c5e38c759677d69a45066a2cd22cda06016b6"
+      "bytes": 18975,
+      "sha256": "d26ab16dce88fb6a4c627d2621b4082ea9c316d2762f8aa60c31c8d2f7942363"
     },
     {
       "path": "tests/Shared/FinitePredicateAcceptance.cs",
@@ -2805,8 +2859,38 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextConstructionProjector.cs",
-      "bytes": 16150,
-      "sha256": "b6489ae2dd1b96ef3f773c43b605380e9dc7dea1b2022f9b7e32987c713722cc"
+      "bytes": 16192,
+      "sha256": "041ba46dc66ec33eaf9e5a9c90b6ad399c81dbc9faa98d737353009d9a181c28"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ClauseFusionAnalyzer.cs",
+      "bytes": 389594,
+      "sha256": "1c73980450e9f4edd1bb913bb69cb96da084f6b2ff0568edb19b192b30180436"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/BulgarianFunctionWords.cs",
+      "bytes": 21473,
+      "sha256": "8e11fe99e39630264afff422691d18b0b5b046ee155b8109457be6ae0f17a374"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/VerbFrameCatalog.cs",
+      "bytes": 10060,
+      "sha256": "77990ba03e79bbccb53cafa339a31974ac3f9f72c363f11347ed62f83eb7f77f"
+    },
+    {
+      "path": "tests/BgLang.Public.Tests/NaturalSentenceFusionPackageTests.cs",
+      "bytes": 212631,
+      "sha256": "6ebc9bef7fe8ec7ca5bf01fc06964192259755111c5de11c015659509dc1c0ec"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/ClauseBoundary.cs",
+      "bytes": 92297,
+      "sha256": "4f11cc38eabc519ecc7a9bbc59aa11b09d8b725dbf1a7dc639233a4468ef08ac"
+    },
+    {
+      "path": "src/BgLang.Core/Kernel/VerbalComplex.cs",
+      "bytes": 72458,
+      "sha256": "154f36f2118d92052126b4bfb1e90caf5e4c4d4a63099ec54eba79144b1112b7"
     }
   ],
   "publication": false

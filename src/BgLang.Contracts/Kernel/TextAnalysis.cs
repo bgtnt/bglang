@@ -56,4 +56,8 @@ public sealed record TextAnalysis(
     /// <summary>Opt-in nominal cores and conditional known-word alternatives; null means not requested.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public TextNominalConstructionEvidence? NominalConstructions { get; init; }
+
+    /// <summary>Opt-in grammar rules, measured constructions and verified local repair alternatives.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TextGrammarEvidence? Grammar { get; init; }
 }

@@ -18,16 +18,7 @@ internal static class TextNominalConstructionAnalyzer
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             ct.ThrowIfCancellationRequested();
-            List<ContextLanes.TokenView> words = [];
-            foreach (var entry in morphology.OrderedTokens)
-            {
-                ct.ThrowIfCancellationRequested();
-                TokenAnalysis token = analysis.Tokens[entry.Index];
-                if (token.Start < sentence.Start || (long)token.Start + token.Length > (long)sentence.Start + sentence.Length) continue;
-                Rows rows = entry.Rows;
-                words.Add(new(entry.Index, token, rows.Canonical, rows.Lanes, rows.GraphUnavailableReason is null)
-                    { UsesGraph = rows.UsesGraph });
-            }
+            IReadOnlyList<ContextLanes.TokenView> words = NominalStructuralProjection.SentenceWords(analysis, sentence, morphology, ct);
             // Emit maximal, nonoverlapping cores, not every nested homograph head.
             // Each bound member is visited once; all raw alternative readings remain in the response.
             List<TextNominalPhrase> sentencePhrases = [];

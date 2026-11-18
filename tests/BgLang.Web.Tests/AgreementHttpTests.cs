@@ -26,14 +26,14 @@ public sealed class AgreementHttpTests
             Assert.AreEqual("451e4f1bd85030d3c8d888084412644933ad6831b1314b4ee5106b4cd27963e7", session.Provenance.ManifestSha256.ToLowerInvariant());
             Example[] examples =
             [
-                new("Аз чете.", "productive_morphology_agreement_mismatch", 1, 3, 4, "0:0|1:0|1:1|1:2", "", 0, "SourceScan"),
-                new("Те спи.", "productive_morphology_agreement_mismatch", 1, 3, 3, "0:0|1:1", "", 0, "SourceScan"),
+                new("Аз чете.", "productive_morphology_agreement_mismatch", 1, 3, 4, "0:0|1:0|1:1|1:2", "Ambiguous", 0, "Abstained"),
+                new("Те спи.", "productive_morphology_agreement_mismatch", 1, 3, 3, "0:0|1:1", "Ambiguous", 0, "Abstained"),
                 new("Децата играе.", "productive_morphology_agreement_mismatch", 1, 7, 5, "0:0|1:0", "", 0, "SourceScan"),
                 new("Малкият дете плаче.", "productive_attribute_agreement_mismatch", 0, 0, 7, "0:0|1:0", "", 0, "SourceScan"),
                 new("Високите дървета шуми.", "productive_morphology_agreement_mismatch", 2, 17, 4, "1:1|2:2", "Ambiguous", 0, "Abstained"),
                 new("Аз работи.", "productive_morphology_agreement_mismatch", 1, 3, 6, "0:0|1:2|1:3|1:4", "Ambiguous", 0, "Abstained"),
-                new("Ти чете.", "", -1, -1, 0, "", "Ambiguous", 0, "Abstained"),
-                new("Ти работи.", "", -1, -1, 0, "", "Ambiguous", 0, "Abstained"),
+                new("Ти чете.", "", -1, -1, 0, "", "Selected", 2, "Selected"),
+                new("Ти работи.", "", -1, -1, 0, "", "Selected", 2, "Selected"),
                 new("Той работи.", "", -1, -1, 0, "", "Selected", 2, "Selected"),
                 new("Новите деца играят.", "", -1, -1, 0, "", "", 0, "SourceScan"),
             ];
@@ -348,6 +348,91 @@ public sealed class AgreementHttpTests
                 CollectionAssert.AreEquivalent(new[] { "tokenIndex", "completeReadingIndex" }, reference.EnumerateObject().Select(p => p.Name).ToArray());
                 Assert.AreEqual((nounToken, 0), (reference.GetProperty("tokenIndex").GetInt32(), reference.GetProperty("completeReadingIndex").GetInt32()));
                 AssertNoun(data, nounToken);
+            }
+        });
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public async Task Live_demo_agreement_and_active_participle_cases_roundtrip_over_v2_analyze_text()
+    {
+        await ContextCompositionHttpTests.WithPackage(async (_, _, client) =>
+        {
+            (string Text, string? ExpectedCode, string? ExpectedTarget)[] cases =
+            [
+                ("Моят сестра чете.", "productive_attribute_agreement_mismatch", "Моят"),
+                ("Два книги са на масата.", "productive_attribute_agreement_mismatch", "Два"),
+                ("Две стола са тук.", "productive_attribute_agreement_mismatch", "Две"),
+                ("Вие работя тук.", "productive_morphology_agreement_mismatch", "работя"),
+                ("Жените влезе в залата.", "productive_morphology_agreement_mismatch", "влезе"),
+                ("Мария и Иван дойде.", "productive_morphology_agreement_mismatch", "дойде"),
+                ("Малката книга пътувам с мен.", "productive_morphology_agreement_mismatch", "пътувам"),
+                ("Малката книга пътувам с мен", "productive_morphology_agreement_mismatch", "пътувам"),
+                ("Ех, малката книга пътувам с мен, разбира се.", "productive_morphology_agreement_mismatch", "пътувам"),
+                ("Човека пее.", "full_article_expected_for_subject_candidate", "Човека"),
+                ("Ех, човека пее, разбира се.", "full_article_expected_for_subject_candidate", "човека"),
+                ("Детето е паднал.", "productive_predicative_agreement_mismatch", "паднал"),
+                ("Ех, детето е паднал, разбира се.", "productive_predicative_agreement_mismatch", "паднал"),
+                ("Момичето се е върнал.", "productive_predicative_agreement_mismatch", "върнал"),
+                ("Купих два столове.", "quantified_noun_form_mismatch", "столове"),
+                ("Малката книга пътува с мен.", null, null),
+                ("Малката книга четем.", null, null),
+                ("Човека бие.", null, null),
+                ("Коня храни.", null, null),
+                ("Коня язди.", null, null),
+                ("Коня ще язди.", null, null),
+                ("Писмото е написал Иван.", null, null),
+                ("Книгата е прочел вчера.", null, null),
+                ("Двама души чакат пред входа.", null, null)
+            ];
+
+            foreach (var item in cases)
+            {
+                var body = new Dictionary<string, object?>
+                {
+                    ["text"] = item.Text,
+                    ["evidenceFormat"] = "shared-analyses-v1",
+                    ["includeUnknownContextProperNames"] = true,
+                    ["context"] = new
+                    {
+                        includeAdditionalRoleHeuristics = true,
+                        includeSubordinateCommaDiagnostics = true,
+                        includeFragmentDiagnostics = true,
+                        includeSpacingDiagnostics = true,
+                        includeWordConstructions = true,
+                        includeNominalConstructions = true,
+                        includeGrammarEvidence = true
+                    }
+                };
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v2/analyze-text")
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body, HttpContract.Json), Encoding.UTF8, "application/json")
+                };
+                using HttpResponseMessage response = await client.SendAsync(request);
+                string raw = await response.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, raw);
+                using JsonDocument doc = JsonDocument.Parse(raw);
+                JsonElement data = doc.RootElement.GetProperty("data");
+                Assert.IsTrue(data.GetProperty("validation").GetProperty("available").GetBoolean(), item.Text);
+
+                JsonElement[] diagnostics = data.GetProperty("diagnostics").EnumerateArray().ToArray();
+                if (item.ExpectedCode is not null)
+                {
+                    JsonElement match = diagnostics.FirstOrDefault(d => d.GetProperty("code").GetString() == item.ExpectedCode);
+                    Assert.AreNotEqual(JsonValueKind.Undefined, match.ValueKind, $"{item.Text} -> {raw}");
+                    int start = match.GetProperty("start").GetInt32(), length = match.GetProperty("length").GetInt32();
+                    Assert.AreEqual(item.ExpectedTarget, item.Text.Substring(start, length), item.Text);
+                }
+                else
+                {
+                    Assert.IsFalse(diagnostics.Any(d => d.GetProperty("code").GetString() is
+                        "productive_attribute_agreement_mismatch" or
+                        "productive_morphology_agreement_mismatch" or
+                        "productive_predicative_agreement_mismatch" or
+                        "auxiliary_participle_agreement_mismatch" or
+                        "quantified_noun_form_mismatch" or
+                        "personal_numeral_selection_mismatch" or
+                        "full_article_expected_for_subject_candidate"), item.Text);
+                }
             }
         });
     }

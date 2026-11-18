@@ -50,6 +50,7 @@ internal static class WebHostFactory
         app.MapGet("/", () => Results.Redirect("/demo"));
         app.MapGet("/demo", (IWebHostEnvironment environment) =>
             Results.File(Path.Combine(environment.WebRootPath, "demo.html"), "text/html; charset=utf-8"));
+        app.MapGet("/demo-lab", () => Results.Redirect("/demo-lab/index.html"));
         app.MapGet("/docs", (IWebHostEnvironment environment) =>
             Results.File(Path.Combine(environment.WebRootPath, "docs.html"), "text/html; charset=utf-8"));
         app.MapGet("/health/live", () => Results.Json(new { status = "live" }));
@@ -102,7 +103,7 @@ internal static class WebHostFactory
             if (!context.Request.HasJsonContentType())
                 throw new ApiRequestException(415, "json-required", "Използвай Content-Type: application/json.");
             if (context.Request.ContentLength > HttpContract.BodyBytes)
-                throw new ApiRequestException(413, "body-too-large", "HTTP тялото надвишава 32 KiB.");
+                throw new ApiRequestException(413, "body-too-large", "HTTP тялото надвишава 128 KiB.");
             WebInput? input = await JsonSerializer.DeserializeAsync<WebInput>(context.Request.Body, HttpContract.Json, deadline.Token);
             if (input is null) throw new ApiRequestException(400, "invalid-json", "Нужен е JSON обект с поле text.");
             ApiOperations.Validate(operation, input);

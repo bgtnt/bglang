@@ -36,7 +36,12 @@ internal static class SyntaxRoleCalculator
     internal sealed record Support(int TokenIndex, ImmutableArray<int> ReadingIndices, Basis Basis);
     internal sealed record Resolution(Route Route, int PredicateWordIndex, ImmutableArray<Support> Provenance)
     {
-        internal int SubjectWordIndex { get; init; } = -1;
+        internal IReadOnlyList<ContextOverlayRoleSelection> SelectedRoles { get; init; } = [];
+        internal int GraphSubjectWordIndex { get; init; } = -1;
+        internal int FusionPredicateWordIndex { get; init; } = -1;
+        internal int FusionSubjectFirstWordIndex { get; init; } = -1;
+        internal int FusionSubjectWordIndex { get; init; } = -1;
+        internal bool SuppressSourceScanSubject { get; init; }
     }
     internal sealed record Candidate(Role Role, Rule Rule, int Start, int Length,
         ImmutableArray<Support> Targets, ImmutableArray<Support> Context);
@@ -143,7 +148,12 @@ internal static class SyntaxRoleCalculator
         }
 
         int predicate = -1;
-        if (resolution.Route is Route.Selected or Route.ClosedThirdPersonMismatchPreview)
+        bool isSelected = resolution.Route == Route.Selected;
+        if (isSelected)
+        {
+            predicate = resolution.PredicateWordIndex;
+        }
+        else if (resolution.Route == Route.ClosedThirdPersonMismatchPreview)
         {
             predicate = resolution.PredicateWordIndex;
             if (!Predicate(predicate) && !Impersonal(predicate))
@@ -151,22 +161,45 @@ internal static class SyntaxRoleCalculator
         }
         else if (resolution.Route == Route.SourceScan)
         {
-            for (int i = 0; i < words.Length; i++)
+            if (Valid(resolution.FusionPredicateWordIndex) &&
+                (Predicate(resolution.FusionPredicateWordIndex) || Impersonal(resolution.FusionPredicateWordIndex)))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                // Source excludes a homographic short clitic before a known predicate.
-                if (opt && i > 0 && C(i - 1) == "да" && DaShort(C(i)) &&
-                    Predicate(i + 1) && Chain(i - 1, i + 1)) continue;
-                if (Predicate(i) || Impersonal(i)) { predicate = i; break; }
+                predicate = resolution.FusionPredicateWordIndex;
+            }
+            else
+            {
+                for (int i = 0; i < words.Length; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // Source excludes a homographic short clitic before a known predicate.
+                    if (opt && i > 0 && C(i - 1) == "да" && DaShort(C(i)) &&
+                        Predicate(i + 1) && Chain(i - 1, i + 1)) continue;
+                    if (Predicate(i) || Impersonal(i)) { predicate = i; break; }
+                }
             }
         }
         // Supplied abstention never silently falls back to first-VERB scanning.
         if (predicate < 0) return new(Status.Calculated, words, output.ToImmutable(), resolution);
         int p = predicate;
+        Support? selectedPredicate = null;
+        if (isSelected)
+        {
+            foreach (var role in resolution.SelectedRoles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (role.Role != ContextOverlayRole.Predicate) continue;
+                if (selectedPredicate is not null)
+                    throw new ArgumentException("Selected relation has multiple predicates.");
+                selectedPredicate = SelectedSupport(role, p);
+            }
+            if (selectedPredicate is null)
+                throw new ArgumentException("Selected relation needs a bound predicate.");
+        }
+        Support predicateSupport = selectedPredicate ?? PredicateRef(p);
         ImmutableArray<Support> predicateContext = resolution.Provenance;
         if (Impersonal(p)) predicateContext = predicateContext.AddRange(ImpersonalContext(p));
         Emit(Role.Predicate, Impersonal(p) ? Rule.ImpersonalDoshya : Rule.BasicPredicate,
-            p, p, [PredicateRef(p)], predicateContext);
+            p, p, [predicateSupport], predicateContext);
 
         // Closed speech/da subordinate routes: no generic subordinate parser.
         if (opt && Chain(p, p + 4) && C(p) == "казах" && Predicate(p) &&
@@ -175,41 +208,94 @@ internal static class SyntaxRoleCalculator
             C(p + 3) == "се" && Has(p + 3, SourcePos.Particle) &&
             C(p + 4) == "погрижиш" && Predicate(p + 4))
             Emit(Role.Predicate, Rule.DativeSpeech, p + 4, p + 4, [PredicateRef(p + 4)],
-                [PredicateRef(p), Ref(p + 1, SourcePos.Pronoun), Ref(p + 2, SourcePos.Particle), Ref(p + 3, SourcePos.Particle)]);
+                [predicateSupport, Ref(p + 1, SourcePos.Pronoun), Ref(p + 2, SourcePos.Particle), Ref(p + 3, SourcePos.Particle)]);
         if (opt && Chain(p, p + 3) && C(p + 1) == "да" && Has(p + 1, SourcePos.Particle) &&
             DaShort(C(p + 2)) && Has(p + 2, SourcePos.Pronoun) && Predicate(p) && Predicate(p + 3) &&
             DaTriple(C(p), C(p + 2), C(p + 3)))
         {
             Emit(Role.Object, Rule.DaSubpredicate, p + 2, p + 2, [Ref(p + 2, SourcePos.Pronoun)],
-                [PredicateRef(p), Ref(p + 1, SourcePos.Particle), PredicateRef(p + 3)]);
+                [predicateSupport, Ref(p + 1, SourcePos.Particle), PredicateRef(p + 3)]);
             Emit(Role.Predicate, Rule.DaSubpredicate, p + 3, p + 3, [PredicateRef(p + 3)],
-                [PredicateRef(p), Ref(p + 1, SourcePos.Particle), Ref(p + 2, SourcePos.Pronoun)]);
+                [predicateSupport, Ref(p + 1, SourcePos.Particle), Ref(p + 2, SourcePos.Pronoun)]);
         }
         if (opt)
             for (int i = 0; i < p && i + 1 < words.Length; i++)
                 if (Unknown(i) && Has(i + 1, SourcePos.Noun) && AttributeShape(C(i), cancellationToken) && Bridge(i, i + 1))
                     Emit(Role.Attribute, Rule.UnknownAttributeShape, i, i, [UnknownRef(i)],
-                        [Ref(i + 1, SourcePos.Noun), PredicateRef(p)]);
+                        [Ref(i + 1, SourcePos.Noun), predicateSupport]);
 
-        // Source subject boundary helpers for the named slice, not adjacent archive lanes.
-        int end = p - 1;
-        if (FutureCluster(p) || DaCluster(p) || Impersonal(p) || NeuterFrame(p)) end = p - 3;
-        else if (Reflexive(p) || Immediate(p) || (opt && C(p - 1) == "не" && Bridge(p - 1, p))) end = p - 2;
-        else if ((C(p - 1) == "ще" && Has(p - 1, SourcePos.Particle)) || Has(p - 1, SourcePos.Adverb)) end = p - 2;
-        while (end >= 0 && Preposition(C(end))) end--;
         bool subjectBefore = false;
-        if (end >= 0 && Nominal(end) && Chain(end, p))
+        bool postNominalHandled = false;
+        if (isSelected)
         {
-            int first = end;
-            while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
-            if (first == 0 || !Has(first - 1, SourcePos.Preposition) || !Bridge(first - 1, first))
+            bool subjectEmitted = false;
+            foreach (var role in resolution.SelectedRoles)
             {
-                ImmutableArray<Support> nominal = NominalRefs(first, end);
-                var modifiers = ShortMasculineRefs(first, end);
-                bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
-                Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
-                    first, end, nominal, BoundaryContext(end, p).AddRange(modifiers));
-                subjectBefore = !divert;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (role.Role != ContextOverlayRole.Subject) continue;
+                int head = WordIndex(role.TokenIndex);
+                if (head == p) throw new ArgumentException("Selected predicate cannot also be a subject.");
+                Support target = SelectedSupport(role, head);
+                // Fusion owns the phrase extent; only the selected head owns reading support.
+                int first = resolution.FusionSubjectFirstWordIndex;
+                if (resolution.FusionPredicateWordIndex != p || resolution.FusionSubjectWordIndex != head ||
+                    !Valid(first) || first > head || first <= p && p < head)
+                    first = head;
+                Emit(Role.Subject, Rule.BasicSubject, first, head, [target],
+                    head < p && Chain(head, p) ? BoundaryContext(head, p, predicateSupport) : [predicateSupport]);
+                subjectBefore |= head < p;
+                postNominalHandled |= first > p;
+                subjectEmitted = true;
+            }
+            if (!subjectEmitted && opt && Valid(resolution.FusionSubjectWordIndex) &&
+                resolution.FusionSubjectWordIndex != p)
+            {
+                int end = resolution.FusionSubjectWordIndex;
+                int first = Valid(resolution.FusionSubjectFirstWordIndex) && resolution.FusionSubjectFirstWordIndex <= end
+                    ? resolution.FusionSubjectFirstWordIndex : end;
+                var targets = ImmutableArray.CreateBuilder<Support>();
+                for (int i = first; i <= end; i++)
+                    targets.Add(words[i].Projection.Length == 0 && !WeakTitle(i) ? Surface(i) : NominalRef(i));
+                Emit(Role.Subject, Rule.BasicSubject, first, end, targets.ToImmutable(),
+                    end < p && Chain(end, p) ? BoundaryContext(end, p, predicateSupport) : [predicateSupport]);
+                subjectBefore = end < p;
+                postNominalHandled = first > p;
+            }
+        }
+        else if (resolution.Route == Route.SourceScan && Valid(resolution.FusionSubjectWordIndex) &&
+            resolution.FusionSubjectWordIndex != p)
+        {
+            int end = resolution.FusionSubjectWordIndex;
+            int first = Valid(resolution.FusionSubjectFirstWordIndex) && resolution.FusionSubjectFirstWordIndex <= end
+                ? resolution.FusionSubjectFirstWordIndex : end;
+            var targets = ImmutableArray.CreateBuilder<Support>();
+            for (int i = first; i <= end; i++)
+                targets.Add(words[i].Projection.Length == 0 && !WeakTitle(i) ? Surface(i) : NominalRef(i));
+            Emit(Role.Subject, Rule.BasicSubject, first, end, targets.ToImmutable(),
+                end < p && Chain(end, p) ? BoundaryContext(end, p, predicateSupport) : [predicateSupport]);
+            subjectBefore = end < p;
+            postNominalHandled = first > p;
+        }
+        else if (!resolution.SuppressSourceScanSubject)
+        {
+            int end = p - 1;
+            if (FutureCluster(p) || DaCluster(p) || Impersonal(p) || NeuterFrame(p)) end = p - 3;
+            else if (Reflexive(p) || Immediate(p) || (opt && C(p - 1) == "не" && Bridge(p - 1, p))) end = p - 2;
+            else if ((C(p - 1) == "ще" && Has(p - 1, SourcePos.Particle)) || Has(p - 1, SourcePos.Adverb)) end = p - 2;
+            while (end >= 0 && Preposition(C(end))) end--;
+            if (end >= 0 && Nominal(end) && Chain(end, p))
+            {
+                int first = end;
+                while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
+                if (first == 0 || !Has(first - 1, SourcePos.Preposition) || !Bridge(first - 1, first))
+                {
+                    ImmutableArray<Support> nominal = NominalRefs(first, end);
+                    var modifiers = ShortMasculineRefs(first, end);
+                    bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
+                    Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
+                        first, end, nominal, BoundaryContext(end, p, predicateSupport).AddRange(modifiers));
+                    subjectBefore = !divert;
+                }
             }
         }
 
@@ -226,41 +312,50 @@ internal static class SyntaxRoleCalculator
                 Rule rule = FutureCluster(p) ? Rule.FutureClitic : DaCluster(p) ? Rule.DaClitic :
                     Reflexive(p) ? Rule.ReflexiveClitic : Rule.ImmediateClitic;
                 var context = ImmutableArray.CreateBuilder<Support>();
-                context.Add(PredicateRef(p));
+                context.Add(predicateSupport);
                 if (FutureCluster(p) || DaCluster(p)) context.Add(Surface(p - 2));
                 else if (C(p - 1) == "те") context.Add(C(p - 2) == "да" ?
                     Ref(p - 2, SourcePos.Particle) : Ref(p - 2, SourcePos.Noun, SourcePos.Pronoun));
                 Emit(Role.Object, rule, p - 1, p - 1, [Surface(p - 1)], context.ToImmutable());
             }
         }
-        bool postSubject = false;
-        if (opt && !subjectBefore && p == 0 && C(p) == "чака" && C(p + 1) == "ни" &&
-            Valid(p + 2) && !Preposition(C(p + 2)) && Nominal(p + 2) && Chain(p, p + 2))
+        if (opt && !subjectBefore && (isSelected || !postNominalHandled) && p == 0 &&
+            C(p) == "чака" && C(p + 1) == "ни" && Valid(p + 2) && !Preposition(C(p + 2)) &&
+            Nominal(p + 2) && Chain(p, p + 2))
         {
             int last = ExtendNominal(p + 2);
-            Emit(Role.Object, Rule.PostverbalChaka, p + 1, p + 1, [Surface(p + 1)],
-                ImmutableArray.Create(PredicateRef(p)).AddRange(NominalRefs(p + 2, last)));
-            Emit(Role.Subject, Rule.PostverbalChaka, p + 2, last, NominalRefs(p + 2, last),
-                [PredicateRef(p), Surface(p + 1)]);
-            postSubject = true;
+            // Keep the clitic rule independent of main subject selection, but do not widen a selected head.
+            ImmutableArray<Support> nominal = isSelected && postNominalHandled
+                ? output.Where(c => c.Role == Role.Subject && c.Start >= words[p + 2].Start &&
+                    c.Start + c.Length <= words[last].Start + words[last].Length)
+                    .SelectMany(c => c.Targets).ToImmutableArray()
+                : NominalRefs(p + 2, last);
+            if (!nominal.IsEmpty)
+            {
+                Emit(Role.Object, Rule.PostverbalChaka, p + 1, p + 1, [Surface(p + 1)],
+                    ImmutableArray.Create(predicateSupport).AddRange(nominal));
+                if (!isSelected)
+                    Emit(Role.Subject, Rule.PostverbalChaka, p + 2, last, nominal, [predicateSupport, Surface(p + 1)]);
+                postNominalHandled = true;
+            }
         }
-        if (!postSubject && Valid(p + 1) && Bridge(p, p + 1) && !Preposition(C(p + 1)) && Nominal(p + 1))
+        if (!postNominalHandled && Valid(p + 1) && Bridge(p, p + 1) && !Preposition(C(p + 1)) && Nominal(p + 1))
         {
             int last = ExtendNominal(p + 1);
             bool copula = Copula(C(p));
             if (copula || !FullMasculineNominal(p + 1, last) &&
                 (resolution.Route != Route.SourceScan || subjectBefore || !PossiblePostposedSubject(last)))
                 Emit(copula ? Role.Complement : Role.Object, copula ? Rule.BasicComplement : Rule.BasicObject,
-                    p + 1, last, NominalRefs(p + 1, last), [PredicateRef(p)]);
+                    p + 1, last, NominalRefs(p + 1, last), [predicateSupport]);
         }
-        if (opt) AddAdverbials(p);
+        if (opt) AddAdverbials(p, predicateSupport);
         for (int i = p + 1; i + 1 < words.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!Preposition(C(i)) || !Nominal(i + 1) || !Bridge(i, i + 1)) continue;
             int last = ExtendNominal(i + 1);
             Emit(Role.PrepositionalObject, Rule.BasicPrepositionalObject, i, last,
-                ImmutableArray.Create(Ref(i, SourcePos.Preposition)).AddRange(NominalRefs(i + 1, last)), [PredicateRef(p)]);
+                ImmutableArray.Create(Ref(i, SourcePos.Preposition)).AddRange(NominalRefs(i + 1, last)), [predicateSupport]);
             break;
         }
         return new(Status.Calculated, words, output.ToImmutable(), resolution);
@@ -419,10 +514,10 @@ internal static class SyntaxRoleCalculator
         bool NeuterFrame(int i) => opt && Chain(i - 4, i) && C(i - 4) == "и" && Has(i - 4, SourcePos.Conjunction) &&
             C(i - 3) == "то" && Has(i - 3, SourcePos.Pronoun) && C(i - 2) == "ще" && Has(i - 2, SourcePos.Particle) &&
             C(i - 1) == "се" && Has(i - 1, SourcePos.Particle) && C(i) == "превърне" && Predicate(i);
-        ImmutableArray<Support> BoundaryContext(int endIndex, int i)
+        ImmutableArray<Support> BoundaryContext(int endIndex, int i, Support mainPredicate)
         {
             var refs = ImmutableArray.CreateBuilder<Support>();
-            refs.Add(PredicateRef(i));
+            refs.Add(mainPredicate);
             for (int k = endIndex + 1; k < i; k++) refs.Add(Surface(k));
             if (Impersonal(i)) refs.AddRange(ImpersonalContext(i));
             if (NeuterFrame(i))
@@ -470,14 +565,14 @@ internal static class SyntaxRoleCalculator
             }
             return refs.ToImmutable();
         }
-        void AddAdverbials(int i)
+        void AddAdverbials(int i, Support mainPredicate)
         {
             for (int a = 0; a < words.Length; a++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Rule? rule = null;
                 var context = ImmutableArray.CreateBuilder<Support>();
-                context.Add(PredicateRef(i));
+                context.Add(mainPredicate);
                 if (a > i && C(a) == "заднешком" && Preposition(C(a + 1)) && Bridge(a, a + 1))
                 { rule = Rule.Zadneshkom; context.Add(Ref(a + 1, SourcePos.Preposition)); }
                 else if (a + 2 == i && C(a) == "криво-ляво" && C(a + 1) == "ще" && Predicate(i) && Chain(a, i))
@@ -507,7 +602,7 @@ internal static class SyntaxRoleCalculator
         }
         Result ProductiveNominal()
         {
-            int head = resolution.SubjectWordIndex, predicate = resolution.PredicateWordIndex;
+            int head = resolution.GraphSubjectWordIndex, predicate = resolution.PredicateWordIndex;
             if (head < 1 || predicate != words.Length - 1 || head != predicate - 1 || !words.Any(w => w.UsesGraph) ||
                 resolution.Provenance.Length != words.Length)
                 throw new ArgumentException("Unsupported bound nominal phrase topology.");
@@ -540,22 +635,40 @@ internal static class SyntaxRoleCalculator
             return new(Status.Calculated, words, roles.ToImmutable(), resolution);
         }
 
+        int WordIndex(int tokenIndex)
+        {
+            for (int i = 0; i < words.Length; i++)
+                if (words[i].TokenIndex == tokenIndex) return i;
+            return -1;
+        }
+        Support SelectedSupport(ContextOverlayRoleSelection role, int wordIndex)
+        {
+            if (!Valid(wordIndex) || words[wordIndex].TokenIndex != role.TokenIndex ||
+                words[wordIndex].Start != role.Start || words[wordIndex].Length != role.Length ||
+                role.AlternativeIndices.Count == 0)
+                throw new ArgumentException("Selected role needs the original token span and readings.");
+            Support support = new(role.TokenIndex, role.AlternativeIndices.ToImmutableArray(), Basis.TypedFeatures);
+            ValidateReference(support, wordIndex);
+            return support;
+        }
         void ValidateReferences(ImmutableArray<Support> refs)
         {
             if (refs.IsDefault) throw new ArgumentException("Unbound resolution evidence.");
             foreach (Support support in refs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int found = -1;
-                for (int i = 0; i < words.Length; i++) if (words[i].TokenIndex == support.TokenIndex) { found = i; break; }
-                if (found < 0 || support.ReadingIndices.IsDefault) throw new ArgumentException("Foreign support reference.");
-                int previous = -1;
-                foreach (int index in support.ReadingIndices)
-                {
-                    if (index <= previous || index >= words[found].Projection.Length)
-                        throw new ArgumentException("Invalid original reading ordinal.");
-                    previous = index;
-                }
+                ValidateReference(support, WordIndex(support.TokenIndex));
+            }
+        }
+        void ValidateReference(Support support, int wordIndex)
+        {
+            if (!Valid(wordIndex) || support.ReadingIndices.IsDefault) throw new ArgumentException("Foreign support reference.");
+            int previous = -1;
+            foreach (int index in support.ReadingIndices)
+            {
+                if (index <= previous || index >= words[wordIndex].Projection.Length)
+                    throw new ArgumentException("Invalid original reading ordinal.");
+                previous = index;
             }
         }
     }
@@ -563,10 +676,10 @@ internal static class SyntaxRoleCalculator
     private static bool IsNominal(SourcePos pos) => pos is SourcePos.Adjective or SourcePos.Noun or SourcePos.Numeral or SourcePos.ProperNoun or SourcePos.Pronoun;
     private static bool Cyrillic(char c) => c is >= 'Ѐ' and <= 'ӿ' or >= 'Ԁ' and <= 'ԯ';
     private static bool Copula(string c) => c is "съм" or "си" or "е" or "сме" or "сте" or "са" or "бях" or "беше" or "бяха" or "бъда" or "бъде";
-    private static bool Preposition(string c) => c is "без" or "в" or "във" or "до" or "за" or "из" or "към" or "на" or "над" or "от" or "по" or "под" or "пред" or "през" or "при" or "с" or "със" or "след";
-    private static bool FutureClitic(string c) => c is "го" or "я" or "ги" or "ме" or "те" or "ни";
-    private static bool DaShort(string c) => c is "ти" or "си" or "ми" or "му" or "ви" or "им" or "ни";
-    private static bool Possessive(string c) => c is "си" or "ми" or "му" or "ви" or "им" or "ни";
+    private static bool Preposition(string c) => BulgarianFunctionWords.HasAny(c, FunctionWordClasses.SyntaxRolePreposition);
+    private static bool FutureClitic(string c) => BulgarianFunctionWords.HasAny(c, FunctionWordClasses.SyntaxFutureClitic);
+    private static bool DaShort(string c) => BulgarianFunctionWords.HasAny(c, FunctionWordClasses.SyntaxDaShortClitic);
+    private static bool Possessive(string c) => BulgarianFunctionWords.HasAny(c, FunctionWordClasses.SyntaxPossessiveClitic);
     private static bool DaTriple(string main, string clitic, string sub) => (main, clitic, sub) is
         ("искаха", "си", "върнат") or ("искаха", "ми", "кажат") or ("можеха", "си", "помогнат") or
         ("можеха", "му", "помогнат") or ("трябва", "им", "върнат");

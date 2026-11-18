@@ -1,12 +1,19 @@
 import {
+  MAX_TEXT_LENGTH,
   createLiveController,
   completeReadings,
   caretWord,
   bindContinuation,
   applyContinuation,
   supportedNominalPhrase,
-  renderTokenText
+  renderTokenText,
+  renderGrammarReview,
+  collectChecks,
+  warningTokens,
+  graphSupportLabel,
+  diagnosticPresentation
 } from './live-client.js';
+export {graphSupportLabel, diagnosticPresentation} from './live-client.js';
 
 const posNames = {
   Noun: 'Съществително',
@@ -45,6 +52,7 @@ const featureNames = {
 const words = {
   Singular: 'Единствено',
   Plural: 'Множествено',
+  Count: 'Бройна форма',
   Masculine: 'Мъжки',
   Feminine: 'Женски',
   Neuter: 'Среден',
@@ -52,12 +60,18 @@ const words = {
   Second: 'Второ',
   Third: 'Трето',
   Present: 'Сегашно',
+  Past: 'Минало',
+  Aorist: 'Минало свършено',
+  Imperfect: 'Минало несвършено',
+  Future: 'Бъдеще',
   Transitive: 'Преходен',
   Intransitive: 'Непреходен',
   Imperfective: 'Несвършен',
   Perfective: 'Свършен',
-  Past: 'Минало',
   Indefinite: 'Нечленувано',
+  Definite: 'Членувано',
+  Full: 'Пълен член',
+  Short: 'Кратък член',
   DefiniteFull: 'Пълен член',
   DefiniteShort: 'Кратък член'
 };
@@ -99,79 +113,6 @@ function facts(parent, object) {
     if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) parent.append(el('p', (featureNames[key]
       || key) + ': ' + show(value)));
   }
-}
-
-export function graphSupportLabel(supports) {
-  return supports.some(support => Array.isArray(support.graphReadings) && support.graphReadings.length > 0)
-    ? ' · Графова опора (хипотеза)' : '';
-}
-
-// Consumer presentation only: classify actual diagnostics, never context preview codes.
-const diagnosticWarningCodes = new Set([
-  "missing_terminal_punctuation",
-  "sentence_initial_lowercase",
-  "mixed_script_ocr_known_candidate",
-  "digit_shape_ocr_known_candidate",
-  "accent_sensitive_i_grave",
-  "joined_verb_negation_should_be_separate",
-  "pronoun_verb_agreement_mismatch",
-  "unseparated_finite_predications",
-  "preposition_missing_complement",
-  "full_article_expected_for_subject_candidate",
-  "short_article_expected_after_preposition_candidate",
-  "productive_morphology_agreement_mismatch",
-  "productive_attribute_agreement_mismatch"
-]);
-const diagnosticLabels = {
-  "warning": "Предупреждение",
-  "unsupported-check": "Неподдържана проверка",
-  "information": "Информация"
-};
-
-export function diagnosticPresentation(data, token = null) {
-  const validation = data?.validation;
-  const original = data?.diagnostics || [];
-  const mirroredArticle = diagnostic => original.some(old =>
-    old.code === diagnostic.code && old.start === diagnostic.start && old.length === diagnostic.length
-    && diagnostic.basis === 'existing_diagnostic=' + old.ruleId + ';bounded_article_advice');
-  const seen = new Set();
-  const messages = [
-    ...original,
-    ...(validation?.diagnostics || []).filter(diagnostic => !mirroredArticle(diagnostic)),
-    ...(validation?.spacingDiagnostics || []),
-    ...(validation?.subordinateCommaDiagnostics || []),
-    ...(validation?.fragmentDiagnostics || [])
-  ].filter(diagnostic => {
-    const key = JSON.stringify(diagnostic);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).map(diagnostic => {
-    const classification = diagnostic.code === 'full_short_article_check_not_ready'
-      ? 'unsupported-check' : diagnosticWarningCodes.has(diagnostic.code) ? 'warning' : 'information';
-    const label = diagnosticLabels[classification];
-    const description = diagnostic.code === 'spelling_unknown_word_unique_distance_one_candidate'
-      ? ' · Няма точен речников прочит. Намерената близка форма е предложение за преглед.' : '';
-    return {
-      diagnostic, classification, label,
-      text: label + ' · ' + diagnostic.code + ' · ' + diagnostic.start + '+' + diagnostic.length
-        + graphSupportLabel([diagnostic]) + description
-    };
-  });
-  const strongest = token && ['warning', 'unsupported-check', 'information'].find(classification =>
-    messages.some(row => row.classification === classification
-      && row.diagnostic.start < token.start + token.length
-      && row.diagnostic.start + row.diagnostic.length > token.start));
-  const coverage = validation === null ? 'Проверките не са върнати.'
-    : validation === undefined ? 'Проверките липсват в отговора.'
-      : validation.available === true
-        ? 'Кандидатни проверки в ограничения обхват; липсата на съобщение не удостоверява граматична правилност.'
-        : 'Проверките са недостъпни.' + (validation.unavailableReason ? ' ' + validation.unavailableReason : '');
-  return {
-    messages,
-    tokenClass: strongest ? 'check-' + strongest : validation?.available === true ? 'check-empty' : 'check-unavailable',
-    coverage
-  };
 }
 
 export function renderContextSyntaxSummary(parent, context, syntax) {
@@ -442,7 +383,8 @@ export function initLiveDemo({
         const row = alternatives[index], {alternative} = row;
         const supported = supportedNominalPhrase(row, review, data, analysisFor);
         const replacement = spellingReplacement(original, alternative.form);
-        const assessment = supported ? 'при замяна: съвместима именна група с „' + data.tokens[supported.head].text + '“'
+        const axes = supported?.witness?.features?.number === 'Plural' ? 'число' : 'род и число';
+        const assessment = supported ? 'при замяна: съгласуване по ' + axes + ' с „' + data.tokens[supported.head].text + '“'
           : 'съвместимост на конструкцията: неустановена';
         const label = replacement + ' · буквено разстояние ' + alternative.distance + ' · ' + assessment;
         rows.push(replacement === original ? el('p', label + ' · без промяна', 'word-meta')
@@ -559,7 +501,7 @@ export function initLiveDemo({
       ready: 'Анализът е тук',
       paused: 'Автоматичният анализ е на пауза',
       composing: 'Въвеждане с клавиатура…',
-      oversize: 'Текстът надхвърля 4096 UTF-16 позиции',
+      oversize: 'Текстът надхвърля ' + MAX_TEXT_LENGTH + ' UTF-16 позиции',
       error: 'HTTP отговорът не е достъпен'
     };
     stateNode.querySelector('span').textContent = extra.retryAfterMs ? 'Host-ът поиска изчакване (' + Math.ceil(extra.retryAfterMs / 1000)
@@ -577,7 +519,7 @@ export function initLiveDemo({
     completion.hidden = true;
     actionHost.hidden = true;
     if (!retainCurrent) spellingBinding = null;
-    document.querySelector('#live-length').textContent = text.length + ' / 4096';
+    document.querySelector('#live-length').textContent = text.length + ' / ' + MAX_TEXT_LENGTH;
     if (!text.trim()) {
       response = null;
       displayedSettings = null;
@@ -701,7 +643,9 @@ export function initLiveDemo({
   function paint() {
     if (!response) return;
     const frame = response;
-    renderTokenText(preview, response.data.text, response.data.tokens, classify, index => {
+    const flagged = warningTokens(frame.data, collectChecks(frame.data));
+    renderTokenText(preview, frame.data.text, frame.data.tokens, index =>
+      classify(index) + (flagged.has(index) ? ' live-warning' : ''), index => {
       if (!currentDisplay() || response !== frame) return;
       const token = frame.data.tokens[index];
       editor.setSelectionRange(token.start, token.start + token.length);
@@ -795,6 +739,16 @@ export function initLiveDemo({
     if (profile?.actualDisplayTruncated) inspector.append(el('p', 'Краткият display е ограничен. Тук следваме пълния inventory.', 'word-meta'));
     const roles = rolesFor(index);
     if (roles.length) inspector.append(el('p', 'Контекстни роли: ' + roles.map(r => r.role + graphSupportLabel([r])).join(' · '), 'word-meta'));
+    const wordChecks = diagnosticPresentation(response.data).messages.filter(row =>
+      row.diagnostic.length > 0
+      && row.diagnostic.start < token.start + token.length
+      && row.diagnostic.start + row.diagnostic.length > token.start);
+    if (wordChecks.length) {
+      const block = el('section', undefined, 'word-checks');
+      block.append(el('p', 'Проверки за думата', 'word-meta'));
+      for (const row of wordChecks) block.append(el('p', row.summary ?? row.text, 'word-summary check-' + row.classification));
+      inspector.append(block);
+    }
     if (rows === null) inspector.append(el('p', 'Пълният reading inventory е недостъпен.', 'word-meta'));
     const duplicateReadings = new Map();
     (rows || []).forEach((row, i) => {
@@ -880,7 +834,7 @@ export function initLiveDemo({
   function renderPanels() {
     const shown = response.data;
     const signature = JSON.stringify([shown.readingInventory, shown.lexical, shown.context, shown.syntax, shown.validation,
-      shown.diagnostics, shown.properNames, shown.wordConstructions, shown.phonetics, shown.metrics, shown.profile]);
+      shown.diagnostics, shown.properNames, shown.wordConstructions, shown.grammar, shown.phonetics, shown.metrics, shown.profile]);
     if (signature === panelsSignature) return;
     const saved = rememberView(panels);
     panels.replaceChildren();
@@ -917,13 +871,21 @@ export function initLiveDemo({
       s => s.status + ' · ' + s.candidates.length + ' кандидата · complete: ' + show(s.complete)
     );
     detailList(p, 'Синтактични кандидати', syntax?.sentences.flatMap(s => s.candidates) || [], c => c.role + ' · ' + c.ruleId + graphSupportLabel([...(c.targets || []), ...(c.context || [])]));
+    const activeWarnings = checks.messages.filter(row => row.classification === 'warning');
     p = panel(
       labels[2],
-      'Съобщения: ' + checks.messages.length,
+      'Съобщения: ' + checks.messages.length + ' · Предупреждения: ' + activeWarnings.length,
       checks.coverage,
       2
     );
+    if (activeWarnings.length) {
+      const warnList = el('ul');
+      for (const row of activeWarnings) warnList.append(el('li', row.summary ?? row.text));
+      p.append(warnList);
+    }
     detailList(p, 'Диагностики', checks.messages, r => r.text);
+    const grammar = renderGrammarReview(d, document);
+    if (grammar) p.append(grammar);
     for (const [key, title] of [
       ['spacingDiagnostics', 'Разстояния'],
       ['subordinateCommaDiagnostics', 'Запетаи'],

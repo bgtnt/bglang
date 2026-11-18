@@ -7,10 +7,6 @@ internal static class PrepositionComplementAnalyzer
     private const string DiagnosticCode = "preposition_missing_complement";
     private const string RuleId = "preposition_complement";
     private const string CanonicalTag = "Предлог:192";
-    private static readonly string[] ReviewedSurfaces =
-        ["без", "в", "във", "до", "за", "зад", "към", "между", "на", "над", "около", "от", "под", "пред",
-         "през", "при", "с", "след", "сред", "със"];
-    private static readonly string[] ReportSurfaces = ["върху", "покрай", "срещу"];
     internal static IReadOnlyList<TextDiagnostic> Analyze(
         IReadOnlyList<TokenAnalysis> tokens,
         IReadOnlyList<SentenceSpan> sentences,
@@ -80,7 +76,8 @@ internal static class PrepositionComplementAnalyzer
             return false;
         for (int current = first; current < index; current++)
             if (tokens[current].Kind != TokenKind.Word ||
-                tokens[current].Analysis?.NormalizedWord is "и" or "или" or "а" or "но")
+                tokens[current].Analysis?.NormalizedWord is { } conj &&
+                BulgarianFunctionWords.HasAny(conj, FunctionWordClasses.CoreCoordinatingConjunction))
                 return false;
         return true;
     }
@@ -141,9 +138,10 @@ internal static class PrepositionComplementAnalyzer
 
     // Preserve the original chain contract; expanded surfaces receive terminal advice only.
     private static bool IsLegacyChainSurface(string surface) =>
-        surface is "на" or "към" or "с" or "без" or "от" or "до" or "пред" or "след";
+        BulgarianFunctionWords.HasAny(surface, FunctionWordClasses.LegacyChainPreposition);
 
-    private static bool IsReportSurface(string surface) => ReportSurfaces.Contains(surface, StringComparer.Ordinal);
-    private static bool IsReviewed(string surface) => IsReportSurface(surface) ||
-        ReviewedSurfaces.Contains(surface, StringComparer.Ordinal);
+    private static bool IsReportSurface(string surface) =>
+        BulgarianFunctionWords.HasAny(surface, FunctionWordClasses.ReportComplementPreposition);
+    private static bool IsReviewed(string surface) =>
+        BulgarianFunctionWords.HasAny(surface, FunctionWordClasses.ReportComplementPreposition | FunctionWordClasses.ReviewedComplementPreposition);
 }

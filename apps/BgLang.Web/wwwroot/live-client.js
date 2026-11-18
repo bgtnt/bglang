@@ -1,4 +1,5 @@
 // One shared HTTP lane; budgets come from this host, never from a language guess.
+export const MAX_TEXT_LENGTH = 16384;
 
 export function createPostLane({
   fetchImpl = globalThis.fetch,
@@ -141,6 +142,7 @@ export function livePayload(text, heuristics = true, continuation = null) {
       includeSpacingDiagnostics: heuristics,
       includeWordConstructions: heuristics,
       includeNominalConstructions: heuristics,
+      includeGrammarEvidence: heuristics,
       ...(continuation ? {continuation: {caret: continuation.caret, limit: continuation.limit,
         ...(continuation.target == null ? {} : {target: continuation.target})}} : {})
     }
@@ -187,7 +189,7 @@ export function createLiveController({
 
   function send(force = false) {
     clear();
-    if ((!enabled && !force) || composing || !text.trim() || text.length > 4096) return;
+    if ((!enabled && !force) || composing || !text.trim() || text.length > MAX_TEXT_LENGTH) return;
     const expected = revision, capturedSelection = selection(), capturedTarget = target();
     const snapshot = capturedSelection ? continuationSnapshot(text, capturedSelection.start, capturedSelection.end, expected, capturedTarget) : null;
     lastSelection = capturedSelection;
@@ -219,7 +221,7 @@ export function createLiveController({
       state('empty');
       return;
     }
-    if (text.length > 4096) {
+    if (text.length > MAX_TEXT_LENGTH) {
       clear();
       state('oversize');
       return;
@@ -284,6 +286,319 @@ export function replaceableSpan(text, start, length) {
   if (!Number.isInteger(start) || !Number.isInteger(length) || start < 0 || length <= 0 || end > text.length) return false;
   const splits = offset => offset > 0 && offset < text.length && /[\uD800-\uDBFF]/.test(text[offset - 1]) && /[\uDC00-\uDFFF]/.test(text[offset]);
   return !splits(start) && !splits(end) && !/^\p{M}/u.test(text.slice(start, start + 2)) && !/^\p{M}/u.test(text.slice(end, end + 2));
+}
+
+
+export const GRAMMAR_RULE_META = {
+  'local_exact_attribute_agreement.v1': {
+    code: 'R1', title: 'Съгласуване в именната група',
+    controllerRole: 'опорното съществително', dependentRole: 'определението',
+    mismatchVerb: 'не е съгласувано с'
+  },
+  'grammar.article.first_prepositional_nominal_member.v1': {
+    code: 'R2', title: 'Място на определителния член в именната група',
+    controllerRole: 'предлога', dependentRole: 'именната група'
+  },
+  'grammar.article.first_initial_nominal_member.v1': {
+    code: 'R2', title: 'Място на определителния член в именната група',
+    controllerRole: 'опорното съществително', dependentRole: 'именната група'
+  },
+  'clause_fusion_agreement.v1': {
+    code: 'R3', title: 'Съгласуване на групата на подлога и групата на сказуемото',
+    controllerRole: 'групата на подлога', dependentRole: 'групата на сказуемото'
+  },
+  'grammar.agreement.copular_finite.v1': {
+    code: 'R3', title: 'Съгласуване на групата на подлога и групата на сказуемото',
+    controllerRole: 'групата на подлога', dependentRole: 'глаголната връзка'
+  },
+  'grammar.agreement.analytic_finite.v1': {
+    code: 'R3', title: 'Съгласуване на групата на подлога и групата на сказуемото',
+    controllerRole: 'групата на подлога', dependentRole: 'спомагателния глагол'
+  },
+  'grammar.agreement.copular_adjective.v1': {
+    code: 'R4', title: 'Съгласуване на сказуемното определение с групата на подлога',
+    controllerRole: 'групата на подлога', dependentRole: 'сказуемното прилагателно'
+  },
+  'grammar.agreement.passive_participle.v1': {
+    code: 'R4', title: 'Съгласуване на страдателното причастие с групата на подлога',
+    controllerRole: 'групата на подлога', dependentRole: 'страдателното причастие'
+  },
+  'grammar.agreement.active_participle_controller.v1': {
+    code: 'R4', title: 'Съгласуване на деятелното причастие с групата на подлога',
+    controllerRole: 'групата на подлога', dependentRole: 'причастието на -л'
+  },
+  'grammar.agreement.auxiliary_active_participle.v1': {
+    code: 'R5', title: 'Съгласуване в сложната глаголна група',
+    controllerRole: 'спомагателният глагол', dependentRole: 'причастието на -л',
+    mismatchVerb: 'не е съгласуван с'
+  },
+  'grammar.full_article.clause_subject.v1': {
+    code: 'R6', title: 'Пълен член на групата на подлога',
+    controllerRole: 'групата на сказуемото', dependentRole: 'групата на подлога'
+  },
+  'grammar.short_article.exact_prepositional_group.v1': {
+    code: 'R7', title: 'Кратък член на не-подлог (предложна група или допълнение)',
+    controllerRole: 'управляващата дума', dependentRole: 'именната група'
+  }
+};
+
+const SUBJECT_PREDICATE_LANE_ALIASES = new Set([
+  'closed_exact_agreement.v1',
+  'pronoun_verb_agreement',
+  'licensed_personal_pronoun_prefix_agreement.v1',
+  'licensed_subordinate_pronoun_prefix_agreement.v1',
+  'local_finite_clause_roles.v1',
+  'clause_fusion_agreement.v1'
+]);
+
+const SUBJECT_PREDICATE_GRAMMAR_RULES = new Set([
+  'clause_fusion_agreement.v1',
+  'grammar.agreement.copular_finite.v1',
+  'grammar.agreement.analytic_finite.v1'
+]);
+
+const GRAMMAR_LABELS = {Singular:'ед. ч.', Plural:'мн. ч.', Count:'бройна форма', Masculine:'м. р.', Feminine:'ж. р.', Neuter:'ср. р.',
+  First:'1 л.', Second:'2 л.', Third:'3 л.', Indefinite:'нечленувано', Definite:'членувано',
+  Full:'пълен член', Short:'кратък член'};
+
+function bindGrammarEnv(data) {
+  const grammar = data?.grammar;
+  if (typeof data?.text !== 'string' || !Array.isArray(data.tokens) ||
+      !Array.isArray(grammar?.rules) || !Array.isArray(grammar.matches)) return null;
+  const rules = new Map(grammar.rules.filter(rule => typeof rule?.id === 'string').map(rule => [rule.id, rule]));
+  const occurrences = new Map();
+  const inventory = data.readingInventory;
+  for (const occurrence of Array.isArray(inventory?.occurrences) ? inventory.occurrences : []) {
+    if (!occurrence) continue;
+    const index = occurrence.tokenIndex;
+    occurrences.set(index, occurrences.has(index) ? null : occurrence);
+  }
+  function sourceWord(index) {
+    if (!Number.isInteger(index) || index < 0) return null;
+    const token = data.tokens[index];
+    return token?.kind === 'Word' && replaceableSpan(data.text, token.start, token.length) &&
+      token.text === data.text.slice(token.start, token.start + token.length) ? token : null;
+  }
+  function readingFeatures(ref, allowed) {
+    if (!allowed.has(ref?.tokenIndex) || !Number.isInteger(ref.completeReadingIndex) || ref.completeReadingIndex < 0) return null;
+    const token = sourceWord(ref.tokenIndex), occurrence = occurrences.get(ref.tokenIndex);
+    if (!token || !occurrence || occurrence.start !== token.start || occurrence.length !== token.length ||
+        occurrence.text !== token.text || !Number.isInteger(occurrence.readingSetIndex) || occurrence.readingSetIndex < 0 ||
+        !Array.isArray(inventory.sets)) return null;
+    const set = inventory.sets[occurrence.readingSetIndex], rows = set?.supportReadings ?? set?.canonicalReadings;
+    const features = Array.isArray(rows) ? rows[ref.completeReadingIndex]?.features : null;
+    return features && typeof features === 'object' && !Array.isArray(features) ? features : null;
+  }
+  function boundConflicts(match) {
+    if (!Array.isArray(match.controllerTokenIndices) || !match.controllerTokenIndices.length ||
+        !Array.isArray(match.dependentTokenIndices) || !match.dependentTokenIndices.length ||
+        !Array.isArray(match.conflicts) || !match.conflicts.length) return null;
+    const controllers = new Set(match.controllerTokenIndices), dependents = new Set(match.dependentTokenIndices);
+    if ([...controllers].some(index => !sourceWord(index)) || [...dependents].some(index => {
+      const token = sourceWord(index);
+      return !token || token.start < match.start || token.start + token.length > match.start + match.length;
+    })) return null;
+    const result = [];
+    for (const conflict of match.conflicts) {
+      if (!dependents.has(conflict?.tokenIndex) || !Array.isArray(conflict.actual) || !conflict.actual.length ||
+          !Array.isArray(conflict.expectedFrom) || !conflict.expectedFrom.length) return null;
+      const target = new Set([conflict.tokenIndex]);
+      const actual = conflict.actual.map(ref => readingFeatures(ref, target));
+      const expected = conflict.expectedFrom.map(ref => readingFeatures(ref, controllers));
+      if (actual.includes(null) || expected.includes(null)) return null;
+      result.push({tokenIndex: conflict.tokenIndex, actual, expected});
+    }
+    return result;
+  }
+  function features(readings, constraint, matchReason = null, isExpected = false) {
+    if (isExpected && constraint === 'PersonNumber' && matchReason === 'coordinated_subject_clause_mismatch') {
+      return '3 л. · мн. ч.';
+    }
+    return [...new Set(readings.map(value => {
+      const articleLabel = key => constraint === 'MasculineArticle' && key === 'Definite' ? 'кратък член' : GRAMMAR_LABELS[key];
+      const fields = constraint === 'ArticlePlacement' || constraint === 'MasculineArticle' ? [value?.article] :
+        constraint === 'PersonNumber' ? [value?.person ?? (value?.partOfSpeech && value.partOfSpeech !== 'Verb' ? 'Third' : null), value?.number] :
+        [value?.number, value?.gender];
+      return fields.map(key => constraint === 'ArticlePlacement' || constraint === 'MasculineArticle' ? articleLabel(key) : GRAMMAR_LABELS[key])
+        .filter(Boolean).join(' · ');
+    }).filter(Boolean))].join(' / ');
+  }
+  function groupSlice(indices) {
+    if (!Array.isArray(indices) || !indices.length) return null;
+    const tokens = indices.map(sourceWord);
+    if (tokens.some(token => !token)) return null;
+    const start = Math.min(...tokens.map(token => token.start));
+    const end = Math.max(...tokens.map(token => token.start + token.length));
+    return replaceableSpan(data.text, start, end - start) ? data.text.slice(start, end) : null;
+  }
+  return {grammar, rules, sourceWord, boundConflicts, features, groupSlice};
+}
+
+export function describeGrammarViolation(data, records, start, length) {
+  const env = bindGrammarEnv(data);
+  if (!env || !Number.isInteger(start) || !Number.isInteger(length)) return null;
+  const recordRules = new Set((Array.isArray(records) ? records : []).map(item => item?.record?.ruleId).filter(Boolean));
+  const recordCodes = new Set((Array.isArray(records) ? records : []).map(item => item?.record?.code).filter(Boolean));
+  const hasSubjectPredicateAlias = [...recordRules].some(id => SUBJECT_PREDICATE_LANE_ALIASES.has(id))
+    || (!recordRules.size && (recordCodes.has('pronoun_verb_agreement_mismatch') || recordCodes.has('productive_morphology_agreement_mismatch')));
+
+  function findExplanation(allowAlias) {
+    for (const match of env.grammar.matches) {
+      const rule = env.rules.get(match?.ruleId);
+      if (!rule || match.assessment !== 'Mismatch' || !replaceableSpan(data.text, match.start, match.length)) continue;
+      if (allowAlias) {
+        if (!SUBJECT_PREDICATE_GRAMMAR_RULES.has(rule.id) &&
+            !(recordRules.has('clause_fusion_agreement.v1') && recordCodes.has(rule.diagnosticCode))) continue;
+      } else {
+        if (recordRules.size && !recordRules.has(rule.id)) continue;
+        if (!recordRules.size && recordCodes.size && !recordCodes.has(rule.diagnosticCode)) continue;
+      }
+      const conflicts = env.boundConflicts(match);
+      if (!conflicts) continue;
+      const targetConflict = conflicts.find(conflict => {
+        const token = env.sourceWord(conflict.tokenIndex);
+        return token && token.start === start && token.length === length;
+      });
+      if (!targetConflict) continue;
+      const meta = GRAMMAR_RULE_META[rule.id];
+      const controllerText = env.groupSlice(match.controllerTokenIndices);
+      const dependentText = env.groupSlice(match.dependentTokenIndices);
+      if (!meta || !controllerText || !dependentText) continue;
+      const actual = env.features(targetConflict.actual, rule.constraint, match.reason, false);
+      const expected = env.features(targetConflict.expected, rule.constraint, match.reason, true);
+      const header = 'Противоречи на правило ' + meta.code + ' (' + meta.title + '): ';
+      if (rule.id === 'grammar.full_article.clause_subject.v1') {
+        const repl = match.repairs?.[0]?.edits?.[0]?.replacement;
+        return header + meta.dependentRole + ' „' + dependentText + '“ пред ' + meta.controllerRole + ' „' + controllerText +
+          '“ изисква пълен член' + (repl ? ' („' + repl + '“)' : '') + '. Правило: ' + rule.explanation;
+      }
+      if (rule.constraint === 'MasculineArticle' || rule.constraint === 'ArticlePlacement') {
+        const repl = match.repairs?.[0]?.edits?.[0]?.replacement;
+        return header + meta.dependentRole + ' „' + dependentText + '“ при ' + meta.controllerRole + ' „' + controllerText +
+          '“ нарушава правилото за членуване' + (repl ? ' (очаква се „' + repl + '“)' : '') + '. Правило: ' + rule.explanation;
+      }
+      return header + meta.controllerRole + ' „' + controllerText + '“' + (expected ? ' (' + expected + ')' : '') +
+        ' ' + (meta.mismatchVerb ?? 'не е съгласувана с') + ' ' + meta.dependentRole + ' „' + dependentText + '“' + (actual ? ' (' + actual + ')' : '') +
+        '. Правило: ' + rule.explanation;
+    }
+    return null;
+  }
+
+  return findExplanation(false) ?? (hasSubjectPredicateAlias ? findExplanation(true) : null);
+}
+
+export function renderGrammarReview(data, doc) {
+  const env = bindGrammarEnv(data);
+  if (!env) return null;
+  const {grammar, rules, sourceWord, boundConflicts, features, groupSlice} = env;
+  const reason = {
+    multi_token_article_repair_not_measured:'Преместването на члена изисква съвместна проверка на няколко думи.',
+    article_placement_unresolved:'Поправката трябва да отчете и мястото на члена.',
+    no_verified_single_token_repair:'Поправката изисква допълнителна проверка.',
+    coordinated_subject_clause_mismatch:'Съчиненият подлог от няколко части изисква сказуемо в множествено число.'
+  };
+  const qualifications = {
+    masculine_article_form_requires_role:'Формата на мъжкия член зависи от ролята.',
+    clause_relation_unverified:'Проверете и съгласуването със сказуемото.',
+    controller_gender_unmeasured:'Родът зависи от лицето или предмета, за който се отнася формата.'
+  };
+  const node = (tag, value) => {
+    const item = doc.createElement(tag);
+    if (value !== undefined) item.textContent = value;
+    return item;
+  };
+  function sourceLink(rule) {
+    const source = node('a', rule.sourceSection);
+    try {
+      const url = new URL(rule.sourceUrl);
+      if (url.protocol === 'https:') source.setAttribute('href', url.href);
+    } catch {}
+    return source;
+  }
+  function repairedText(match, repair) {
+    if (!Array.isArray(repair?.edits) || !repair.edits.length || repair.edits.some(edit => !edit)) return null;
+    const edits = [...repair.edits].sort((a, b) => b.start - a.start);
+    let end = match.start + match.length;
+    let result = data.text.slice(match.start, end);
+    for (const edit of edits) {
+      const token = sourceWord(edit.tokenIndex);
+      if (!token || token.start !== edit.start || token.length !== edit.length ||
+          edit.start < match.start || edit.start + edit.length > end || typeof edit.replacement !== 'string' ||
+          !edit.replacement) return null;
+      const offset = edit.start - match.start;
+      result = result.slice(0, offset) + edit.replacement + result.slice(offset + edit.length);
+      end = edit.start;
+    }
+    return result;
+  }
+  const section = node('section');
+  const ambiguous = grammar.matches.filter(match => match?.assessment === 'Ambiguous').length;
+  const unassessed = grammar.matches.filter(match => match?.assessment === 'Unassessed').length;
+  section.append(node('h3', 'Граматични конструкции'),
+    node('p', grammar.matches.length + ' разпознати · ' + ambiguous + ' двусмислени · ' + unassessed + ' неизмерени'));
+  const catalog = node('details');
+  catalog.append(node('summary', 'Каталог на правилата (' + rules.size + ')'));
+  const ruleList = node('ul');
+  for (const rule of rules.values()) {
+    const meta = GRAMMAR_RULE_META[rule.id];
+    const prefix = meta ? meta.code + ' (' + meta.title + ') · ' : '';
+    const item = node('li', prefix + rule.pattern + ' · ' + rule.id + ' · ' + rule.explanation + ' ');
+    item.append(sourceLink(rule));
+    ruleList.append(item);
+  }
+  catalog.append(ruleList);
+  section.append(catalog);
+  for (const match of grammar.matches) {
+    const rule = rules.get(match?.ruleId);
+    if (!rule || match.assessment !== 'Mismatch' || !replaceableSpan(data.text, match.start, match.length)) continue;
+    const conflicts = boundConflicts(match);
+    if (!conflicts) continue;
+    const meta = GRAMMAR_RULE_META[rule.id];
+    const item = node('div');
+    item.append(node('p', '„' + data.text.slice(match.start, match.start + match.length) + '“ · ' +
+      (meta ? meta.code + ' · ' + meta.title + ' · ' : '') + rule.id));
+    const controllerText = groupSlice(match.controllerTokenIndices);
+    const dependentText = groupSlice(match.dependentTokenIndices);
+    if (meta && controllerText && dependentText) {
+      item.append(node('p', 'Конструкция: ' + meta.controllerRole + ' „' + controllerText + '“ ↔ ' +
+        meta.dependentRole + ' „' + dependentText + '“'));
+    }
+    item.append(node('p', rule.explanation), sourceLink(rule));
+    const article = rule.constraint === 'ArticlePlacement' || rule.constraint === 'MasculineArticle';
+    for (const conflict of conflicts) {
+      const actual = features(conflict.actual, rule.constraint, match.reason, false);
+      const expected = features(conflict.expected, rule.constraint, match.reason, true);
+      if (actual) item.append(node('p', 'Изписано · ' + actual + (expected && !article ? ' | Контролер · ' + expected : '')));
+    }
+    const repairs = (Array.isArray(match.repairs) ? match.repairs : []).map(repair => ({
+      text: repairedText(match, repair), notes: Array.isArray(repair?.qualifications)
+        ? [...new Set(repair.qualifications.map(key => Object.hasOwn(qualifications, key) ? qualifications[key] :
+          'Вариантът има условие, което изисква допълнителна проверка.'))] : []
+    })).filter(repair => repair.text);
+    if (repairs.length) {
+      const variants = node('ul');
+      for (const repair of repairs) variants.append(node('li', [repair.text, ...repair.notes].join(' · ')));
+      item.append(node('p', 'Варианти за тази конструкция'), variants);
+    } else if (reason[match.reason]) item.append(node('p', reason[match.reason]));
+    section.append(item);
+  }
+  const conditional = grammar.matches.filter(match => match?.assessment === 'Ambiguous' && rules.has(match.ruleId) &&
+    replaceableSpan(data.text, match.start, match.length) && boundConflicts(match));
+  if (conditional.length) {
+    const alternatives = node('details');
+    alternatives.append(node('summary', 'Условни проверки (' + conditional.length + ')'));
+    const list = node('ul');
+    for (const match of conditional) {
+      const scope = match.reason === 'address_number_gender_unresolved' ? 'При обръщение към едно лице с установен род' :
+        match.reason === 'competing_predicate_group' ? 'При прочит като глаголна група' :
+        match.reason === 'competing_predicative_role' ? 'При прочит със сказуемно прилагателно' : 'При прочит като една именна група';
+      list.append(node('li', scope + ' · „' + data.text.slice(match.start, match.start + match.length) +
+        '“ · ' + rules.get(match.ruleId).explanation));
+    }
+    alternatives.append(list);
+    section.append(alternatives);
+  }
+  return section;
 }
 
 const isCompatible = value => typeof value === 'string' && value.toLowerCase() === 'compatible';
@@ -514,4 +829,269 @@ export function applyContinuation(text, selectionStart, selectionEnd, revision, 
   if (!current || current.text !== snapshot.text || current.caret !== snapshot.caret || current.revision !== snapshot.revision
     || current.start !== snapshot.start || current.end !== snapshot.end || current.prefix !== snapshot.prefix) return null;
   return {text: text.slice(0, snapshot.start) + form + text.slice(snapshot.end), caret: snapshot.start + form.length};
+}
+
+export const UNIQUE_SPELLING_CODE = 'spelling_unknown_word_unique_distance_one_candidate';
+
+// Shared presentation classification across /demo and /demo-lab. Unknown codes remain informational.
+export const WARNING_CODES = new Set([
+  'missing_terminal_punctuation',
+  'sentence_initial_lowercase',
+  'mixed_script_ocr_known_candidate',
+  'digit_shape_ocr_known_candidate',
+  'accent_sensitive_i_grave',
+  'joined_verb_negation_should_be_separate',
+  'pronoun_verb_agreement_mismatch',
+  'unseparated_finite_predications',
+  'preposition_missing_complement',
+  'full_article_expected_for_subject_candidate',
+  'short_article_expected_after_preposition_candidate',
+  'nominal_article_on_noninitial_member',
+  'productive_morphology_agreement_mismatch',
+  'productive_attribute_agreement_mismatch',
+  'productive_predicative_agreement_mismatch',
+  'auxiliary_participle_agreement_mismatch',
+  'quantified_noun_form_mismatch',
+  'personal_numeral_selection_mismatch',
+  'particle_participle_verb_form_mismatch',
+  'pronoun_case_governance_mismatch',
+  'deictic_temporal_tense_mismatch'
+]);
+export const UNSUPPORTED_CODES = new Set(['full_short_article_check_not_ready']);
+const AGREEMENT_CODES = new Set([
+  'pronoun_verb_agreement_mismatch',
+  'productive_morphology_agreement_mismatch',
+  'productive_attribute_agreement_mismatch',
+  'productive_predicative_agreement_mismatch',
+  'auxiliary_participle_agreement_mismatch',
+  'quantified_noun_form_mismatch',
+  'personal_numeral_selection_mismatch',
+  'particle_participle_verb_form_mismatch',
+  'pronoun_case_governance_mismatch',
+  'deictic_temporal_tense_mismatch'
+]);
+const REPLACEABLE_CODES = new Set([
+  UNIQUE_SPELLING_CODE,
+  'joined_verb_negation_should_be_separate',
+  'accent_sensitive_i_grave',
+  'mixed_script_ocr_known_candidate',
+  'digit_shape_ocr_known_candidate'
+]);
+
+export const MESSAGES = {
+  unseparated_finite_predications: 'Две лични глаголни форми в проверената конструкция изискват свързване или пунктуационно разделяне.',
+  productive_morphology_agreement_mismatch: 'Несъгласуване по лице/число в поддържаната конструкция.',
+  pronoun_verb_agreement_mismatch: 'Несъгласуване по лице/число между местоимение и глагол в поддържаната конструкция.',
+  productive_attribute_agreement_mismatch: 'Несъгласуване по род/число между определение и съществително в поддържаната конструкция.',
+  productive_predicative_agreement_mismatch: 'Несъгласуване по число или род със свързания подлог.',
+  auxiliary_participle_agreement_mismatch: 'Спомагателният глагол и причастието на -л се разминават по число.',
+  quantified_noun_form_mismatch: 'След числителното се очаква съответната бройна или множествена форма на съществителното.',
+  personal_numeral_selection_mismatch: 'Числителното не съответства по лице/нелице на съществителното в бройната конструкция.',
+  particle_participle_verb_form_mismatch: 'Неправилна глаголна форма в сложната глаголна конструкция или на мястото на личното сказуемо.',
+  pronoun_case_governance_mismatch: 'Неправилна падежна форма на личното местоимение в тази синтактична позиция.',
+  deictic_temporal_tense_mismatch: 'Времето на глаголната форма противоречи на темпоралното наречие в същото просто изречение.',
+  full_article_expected_for_subject_candidate: 'Ако думата е подлог, се очаква пълен член.',
+  short_article_expected_after_preposition_candidate: 'В проверената предложна група се очаква кратък член.',
+  nominal_article_on_noninitial_member: 'Членът се поставя на първото определение в тази именна група.',
+  preposition_missing_complement: 'След предлога не е намерена дума, към която да се отнася.',
+  [UNIQUE_SPELLING_CODE]: 'Няма точен речников прочит. Намерената близка форма е предложение за преглед.',
+  joined_verb_negation_should_be_separate: 'Ако е отрицателна глаголна форма, „не“ се пише отделно.',
+  accent_sensitive_i_grave: 'Ако е местоимение, се пише „ѝ“.',
+  mixed_script_ocr_known_candidate: 'Думата смесва кирилица и латиница; възможна грешка при въвеждане или разпознаване.',
+  digit_shape_ocr_known_candidate: 'Цифра на мястото на буква; възможна грешка при разпознаване.',
+  missing_terminal_punctuation: 'Изречението няма завършващ препинателен знак.',
+  sentence_initial_lowercase: 'Изречението започва с малка буква.',
+  full_short_article_check_not_ready: 'Проверката за членуване е частична; тук няма установено решение.',
+  clause_missing_predicate: 'Не е намерено сказуемо в проверения фрагмент; възможно заглавие.',
+  missing_comma_before_subordinate_conjunction: 'Възможно е да липсва запетая пред подчинено изречение.',
+  missing_space_after_punctuation: 'Липсва интервал след препинателния знак.',
+  space_before_punctuation: 'Има интервал пред препинателния знак.',
+  style_repetition_evidence: 'В текста има повторена речникова форма.',
+  reviewed_word_formation_evidence: 'Сложна или производна дума.',
+  hyphenated_degree_morphology_evidence: 'Степенувана форма с „по-“ или „най-“.',
+  contextual_morphology_reading_evidence: 'Контекстно сведение за прочита на думата.'
+};
+export const GENERIC_MESSAGE = 'Друго наблюдение от анализа.';
+const RELATIVE_PRONOUN_SURFACES = new Set(['който', 'която', 'което', 'които']);
+export const RELATIVE_ANTECEDENT_MESSAGE =
+  'Относителното местоимение не се съгласува по род или число с определяемото си.';
+
+export function diagnosticMessage(d, sourceText = '') {
+  if (d && d.code === 'pronoun_case_governance_mismatch' && typeof sourceText === 'string' &&
+      Number.isInteger(d.start) && Number.isInteger(d.length) && d.start >= 0 && d.length > 0 &&
+      d.start + d.length <= sourceText.length) {
+    const surface = sourceText.slice(d.start, d.start + d.length)
+      .normalize('NFD').replace(/[\u0300\u0301]/g, '').normalize('NFC').trim().toLowerCase();
+    if (RELATIVE_PRONOUN_SURFACES.has(surface)) {
+      return RELATIVE_ANTECEDENT_MESSAGE;
+    }
+  }
+  return d ? MESSAGES[d.code] : undefined;
+}
+
+const SEVERITY_ORDER = {warning: 0, unsupported: 1, information: 2};
+const LIVE_LABELS = {
+  warning: 'Предупреждение',
+  'unsupported-check': 'Неподдържана проверка',
+  information: 'Информация'
+};
+const LIVE_COMPACT_CODES = new Set([
+  'missing_terminal_punctuation',
+  'full_short_article_check_not_ready',
+  'style_repetition_evidence',
+  'reviewed_word_formation_evidence',
+  'hyphenated_degree_morphology_evidence',
+  'contextual_morphology_reading_evidence'
+]);
+
+export function graphSupportLabel(supports) {
+  return supports.some(support => Array.isArray(support?.graphReadings) && support.graphReadings.length > 0)
+    ? ' · Графова опора (хипотеза)' : '';
+}
+
+export function matchCase(original, form) {
+  const letters = (text, cyrillic) => {
+    const result = [];
+    for (const char of text) {
+      if (/^\p{M}$/u.test(char) && result.length) continue;
+      if (!/^[\p{Ll}\p{Lu}]$/u.test(char) || (cyrillic && !/^\p{Script=Cyrillic}$/u.test(char))) return null;
+      result.push(char);
+    }
+    return result;
+  };
+  const source = letters(original, false), candidate = letters(form, true);
+  if (!source || source.length < 2 || !candidate?.length || !candidate.every(char => /^\p{Ll}$/u.test(char))) return form;
+  const caps = source.every(char => /^\p{Lu}$/u.test(char));
+  const title = /^\p{Lu}$/u.test(source[0]) && source.slice(1).every(char => /^\p{Ll}$/u.test(char));
+  if (!caps && !title) return form;
+  let index = 0, result = '';
+  for (const char of form) {
+    if (/^\p{M}$/u.test(char)) { result += char; continue; }
+    const proposed = caps || index++ === 0 ? char.toUpperCase() : char;
+    if (!/^\p{Script=Cyrillic}$/u.test(proposed) || !/^[\p{Ll}\p{Lu}]$/u.test(proposed)) return form;
+    result += proposed;
+  }
+  return result;
+}
+
+function diagnosticSources(data) {
+  const v = data?.validation;
+  return [
+    ['diagnostics', data?.diagnostics], ['validation', v?.diagnostics], ['spacing', v?.spacingDiagnostics],
+    ['comma', v?.subordinateCommaDiagnostics], ['fragment', v?.fragmentDiagnostics]
+  ];
+}
+
+function supportTokens(records) {
+  const indices = new Set();
+  for (const {record} of records) {
+    for (const list of [record.readings, record.graphReadings, record.supports]) {
+      for (const ref of Array.isArray(list) ? list : []) if (Number.isInteger(ref?.tokenIndex)) indices.add(ref.tokenIndex);
+    }
+  }
+  return [...indices].sort((a, b) => a - b);
+}
+
+// Returns returned diagnostic records only (evidence codes never become messages), grouped by code and span.
+export function collectChecks(data) {
+  const text = typeof data?.text === 'string' ? data.text : '';
+  const groups = new Map();
+  for (const [source, list] of diagnosticSources(data)) {
+    for (const record of Array.isArray(list) ? list : []) {
+      if (!record || typeof record.code !== 'string') continue;
+      const key = record.code + '\u0001' + record.start + '\u0001' + record.length;
+      let group = groups.get(key);
+      if (!group) groups.set(key, group = {code: record.code, start: record.start, length: record.length, records: []});
+      group.records.push({source, record});
+    }
+  }
+  const checks = [];
+  for (const group of groups.values()) {
+    const {code, start, length, records} = group;
+    const validSpan = Number.isInteger(start) && Number.isInteger(length) && start >= 0 && length >= 0 && start + length <= text.length;
+    const original = validSpan ? text.slice(start, start + length) : '';
+    const severity = WARNING_CODES.has(code) ? 'warning' : UNSUPPORTED_CODES.has(code) ? 'unsupported' : 'information';
+    const projected = records.map(({record}) => record.projectedText).find(value => typeof value === 'string' && value.length) ?? null;
+    const words = AGREEMENT_CODES.has(code)
+      ? supportTokens(records).map(index => data.tokens?.[index]?.text).filter(word => typeof word === 'string' && word.length)
+      : [];
+    const grammarMessage = describeGrammarViolation(data, records, start, length);
+    checks.push({
+      code, start, length, severity, validSpan, records, projected, words,
+      known: Object.hasOwn(MESSAGES, code),
+      message: diagnosticMessage({code, start, length}, text) ?? GENERIC_MESSAGE,
+      grammarMessage,
+      graph: records.some(({record}) => Array.isArray(record.graphReadings) && record.graphReadings.length > 0),
+      replaceable: REPLACEABLE_CODES.has(code) && projected !== null && validSpan && replaceableSpan(text, start, length),
+      replacement: projected === null ? null : matchCase(original, projected),
+      original
+    });
+  }
+  return checks.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+    || (Number.isInteger(a.start) ? a.start : Infinity) - (Number.isInteger(b.start) ? b.start : Infinity)
+    || a.code.localeCompare(b.code));
+}
+
+// Shared word-underline rule across /demo and /demo-lab. Zero-length checks stay in the list without marking a neighbour.
+export function warningTokens(data, checks) {
+  const marked = new Set();
+  for (const check of checks) {
+    if (check.severity !== 'warning' || !check.validSpan || check.length === 0) continue;
+    (data?.tokens || []).forEach((token, index) => {
+      if (token.kind === 'Word' && check.start < token.start + token.length && check.start + check.length > token.start) marked.add(index);
+    });
+  }
+  return marked;
+}
+
+export function diagnosticPresentation(data, token = null) {
+  const validation = data?.validation;
+  const original = Array.isArray(data?.diagnostics) ? data.diagnostics : [];
+  const mirroredValidation = diagnostic => original.some(old =>
+    old.code === diagnostic.code && old.start === diagnostic.start && old.length === diagnostic.length
+    && (diagnostic.basis === 'existing_diagnostic=' + (old.ruleId ?? '') + ';bounded_article_advice'
+      || typeof diagnostic.basis === 'string'
+        && diagnostic.basis.startsWith('reviewed_lexical_quantity;complete_exact_readings;' + (old.ruleId ?? '') + ';')));
+  const seen = new Set();
+  const rawRecords = [];
+  for (const [source, list] of diagnosticSources(data)) {
+    for (const diagnostic of Array.isArray(list) ? list : []) {
+      if (source === 'validation' && mirroredValidation(diagnostic)) continue;
+      const key = JSON.stringify(diagnostic);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rawRecords.push(diagnostic);
+    }
+  }
+  const messages = rawRecords.map(diagnostic => {
+    const classification = UNSUPPORTED_CODES.has(diagnostic.code)
+      ? 'unsupported-check' : WARNING_CODES.has(diagnostic.code) ? 'warning' : 'information';
+    const label = LIVE_LABELS[classification];
+    const grammarNote = describeGrammarViolation(data, [{record: diagnostic}], diagnostic.start, diagnostic.length);
+    const defaultNote = LIVE_COMPACT_CODES.has(diagnostic.code)
+      ? ''
+      : (diagnosticMessage(diagnostic, typeof data?.text === 'string' ? data.text : '') ?? '');
+    const summary = grammarNote ?? defaultNote;
+    const description = summary ? ' · ' + summary : '';
+    return {
+      diagnostic, classification, label, summary: summary || null,
+      text: label + ' · ' + diagnostic.code + ' · ' + diagnostic.start + '+' + diagnostic.length
+        + graphSupportLabel([diagnostic]) + description
+    };
+  });
+  const strongest = token && ['warning', 'unsupported-check', 'information'].find(classification =>
+    messages.some(row => row.classification === classification
+      && row.diagnostic.length > 0
+      && row.diagnostic.start < token.start + token.length
+      && row.diagnostic.start + row.diagnostic.length > token.start));
+  const coverage = validation === null ? 'Проверките не са върнати.'
+    : validation === undefined ? 'Проверките липсват в отговора.'
+      : validation.available === true
+        ? 'Кандидатни проверки в ограничения обхват; липсата на съобщение не удостоверява граматична правилност.'
+        : 'Проверките са недостъпни.' + (validation.unavailableReason ? ' ' + validation.unavailableReason : '');
+  return {
+    messages,
+    tokenClass: strongest ? 'check-' + strongest : validation?.available === true ? 'check-empty' : 'check-unavailable',
+    coverage
+  };
 }
