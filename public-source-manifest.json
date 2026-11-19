@@ -1539,8 +1539,8 @@
     },
     {
       "path": "packaging/Build-PublicPackage.ps1",
-      "bytes": 36197,
-      "sha256": "89516a2e393bc1301f48a33b78ad5a7ef439fac38af57696f8a834cd97a1ea28"
+      "bytes": 36416,
+      "sha256": "802f997929f8a7c9e63bdf456a574909fc429cd5774afe488fe086b3f0546fcb"
     },
     {
       "path": "packaging/Export-PublicSource.ps1",
