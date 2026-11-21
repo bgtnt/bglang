@@ -24,7 +24,7 @@ internal static class TextContextAnalyzer
         Func<string, IReadOnlyList<TextReadingSnapshot>>? lookup = null,
         SimpleClauseAgreementResolver.VerbReadingAuthority? verbAuthority = null)
     {
-        var (context, syntax, _, _) = CalculateWithArtifacts(
+        var (context, syntax, _, _, _) = CalculateWithArtifacts(
             analysis, options, cancellationToken, sharedMorphology,
             verbFrames, postverbalDirectObjectMaxRatio, directObjectFrame, lookup, verbAuthority);
         return (context, syntax);
@@ -32,7 +32,8 @@ internal static class TextContextAnalyzer
 
     internal static (TextContextEvidence Context, TextSyntaxEvidence Syntax,
         IReadOnlyList<SentenceClauseMap?> ClauseMaps,
-        IReadOnlyDictionary<(int Start, int Length), IReadOnlyList<ClauseFusionAnalyzer.ArticleTarget>> ArticleTargetsBySentence)
+        IReadOnlyDictionary<(int Start, int Length), IReadOnlyList<ClauseFusionAnalyzer.ArticleTarget>> ArticleTargetsBySentence,
+        IReadOnlyList<ClauseFusionAnalyzer.NominalArticleRole> NominalRepairArticles)
         CalculateWithArtifacts(
             TextAnalysis analysis, TextContextOptions options, CancellationToken cancellationToken,
             MorphologyEvidenceProjection.View? sharedMorphology = null,
@@ -49,7 +50,7 @@ internal static class TextContextAnalyzer
         {
             var (unavailableContext, unavailableSyntax) = Unavailable(unavailable, options);
             return (unavailableContext, unavailableSyntax, [],
-                new Dictionary<(int Start, int Length), IReadOnlyList<ClauseFusionAnalyzer.ArticleTarget>>());
+                new Dictionary<(int Start, int Length), IReadOnlyList<ClauseFusionAnalyzer.ArticleTarget>>(), []);
         }
         var byToken = morphology.ByToken;
         var orderedTokens = morphology.OrderedTokens;
@@ -57,6 +58,7 @@ internal static class TextContextAnalyzer
         var syntaxSentences = new List<TextSyntaxSentence>();
         var clauseMaps = new List<SentenceClauseMap?>(analysis.Sentences.Count);
         var articleTargetsBySentence = new Dictionary<(int Start, int Length), IReadOnlyList<ClauseFusionAnalyzer.ArticleTarget>>();
+        List<ClauseFusionAnalyzer.NominalArticleRole>? nominalRepairArticles = options.IncludeGrammarEvidence ? [] : null;
         int[] groupCounts = new int[AdditionalGroupIds.Length];
         bool hasComma = analysis.Text.Contains(',');
         IReadOnlyList<(int Start, int End)> protectedSpans =
@@ -119,10 +121,14 @@ internal static class TextContextAnalyzer
                 ? LocalClauseRoleLinker.Calculate(analysis, sentence, laneWords, CanonicalKey, cancellationToken) : null;
             var fusion = productive is null
                 ? ClauseFusionAnalyzer.Analyze(analysis, sentence, laneWords, protectedSpans, CanonicalKey, cancellationToken,
-                    verbFrames, postverbalDirectObjectMaxRatio, directObjectFrame, lookup, sharedMap, r3?.OwnedClauseIds) : null;
+                    verbFrames, postverbalDirectObjectMaxRatio, directObjectFrame, lookup, sharedMap, r3?.OwnedClauseIds,
+                    includeNominalRepairSupport: options.IncludeGrammarEvidence) : null;
             clauseMaps.Add(fusion?.ClauseMap ?? sharedMap);
             if (fusion is not null)
+            {
                 articleTargetsBySentence[(sentence.Start, sentence.Length)] = fusion.ArticleTargets;
+                nominalRepairArticles?.AddRange(fusion.NominalRepairArticles);
+            }
             ClauseFusionAnalyzer.MatrixSelection? selectedFusion = null;
             if (!matrixOwnedByR3 && options.IncludeAdditionalRoleHeuristics && selected is not null && selected.SelectedPredicateTokenIndex is null &&
                 selected.DiagnosticPredicateTokenIndex is null && fusion?.Selection is { } promoted)
@@ -218,11 +224,15 @@ internal static class TextContextAnalyzer
                     FusionPredicateWordIndex = extentPred,
                     FusionSubjectFirstWordIndex = extentSubjFirst,
                     FusionSubjectWordIndex = extentSubjHead,
+                    SubjectAfterGovernedPrefix = route == SyntaxRoleCalculator.Route.SourceScan &&
+                        clause?.Roles.FirstOrDefault(role => role.Role == ContextOverlayRole.Subject) is { } prefixSubject
+                        ? (clause.PredicateTokenIndex, prefixSubject.TokenIndex) : null,
                     SuppressSourceScanSubject = !matrixOwnedByR3 && route == SyntaxRoleCalculator.Route.SourceScan &&
                         fusionExtent is { SuppressHeuristicSubject: true }
                 };
                 result = SyntaxRoleCalculator.Calculate(analysis.Text, sentence.Start, sentence.Length,
-                    words, options.IncludeAdditionalRoleHeuristics, resolution, cancellationToken);
+                    words, options.IncludeAdditionalRoleHeuristics, resolution, cancellationToken,
+                    (fusion?.ClauseMap ?? sharedMap)?.Clauses);
             }
             TextSyntaxSupport MapSupport(SyntaxRoleCalculator.Support support) => new(support.TokenIndex,
                 support.Basis.ToString(), References(support.TokenIndex, support.ReadingIndices))
@@ -246,7 +256,7 @@ internal static class TextContextAnalyzer
             new("bounded-syntax-roles.v2", true, null, Freeze(syntaxSentences), options.IncludeAdditionalRoleHeuristics ?
                 Freeze(AdditionalGroupIds.Select((id, i) => new TextSyntaxGroupStatus(id, true, null, groupCounts[i]))) : null),
             Freeze(clauseMaps),
-            articleTargetsBySentence);
+            articleTargetsBySentence, nominalRepairArticles is null ? [] : nominalRepairArticles.AsReadOnly());
 
         IReadOnlyList<TextReadingReference> References(int token, IEnumerable<int> members)
         {

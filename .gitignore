@@ -4,6 +4,8 @@
 
 # IDE state
 /.vs/
+# Optional repository-local .NET SDK
+/.dotnet
 *.suo
 *.user
 

@@ -42,6 +42,7 @@ internal static class SyntaxRoleCalculator
         internal int FusionSubjectFirstWordIndex { get; init; } = -1;
         internal int FusionSubjectWordIndex { get; init; } = -1;
         internal bool SuppressSourceScanSubject { get; init; }
+        internal (int PredicateTokenIndex, int SubjectTokenIndex)? SubjectAfterGovernedPrefix { get; init; }
     }
     internal sealed record Candidate(Role Role, Rule Rule, int Start, int Length,
         ImmutableArray<Support> Targets, ImmutableArray<Support> Context);
@@ -68,7 +69,7 @@ internal static class SyntaxRoleCalculator
     // One opt-in switch mirrors the source option; it controls all nine named groups.
     internal static Result Calculate(string text, int sentenceStart, int sentenceLength,
         ImmutableArray<Word> words, bool includeContextualHints, Resolution resolution,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, IReadOnlyList<ClauseSpan>? clauses = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(resolution);
@@ -181,6 +182,12 @@ internal static class SyntaxRoleCalculator
         // Supplied abstention never silently falls back to first-VERB scanning.
         if (predicate < 0) return new(Status.Calculated, words, output.ToImmutable(), resolution);
         int p = predicate;
+        // A matrix clause can resume after a relative clause. Its word indices retain that gap.
+        int[]? predicateClauseWords = clauses is { Count: > 1 }
+            ? clauses.FirstOrDefault(c => Array.BinarySearch(c.WordIndices, p) >= 0)?.WordIndices ?? []
+            : null;
+        bool InPredicateClause(int index) =>
+            predicateClauseWords is null || Array.BinarySearch(predicateClauseWords, index) >= 0;
         Support? selectedPredicate = null;
         if (isSelected)
         {
@@ -289,9 +296,15 @@ internal static class SyntaxRoleCalculator
                 while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
                 if (first == 0 || !Has(first - 1, SourcePos.Preposition) || !Bridge(first - 1, first))
                 {
-                    ImmutableArray<Support> nominal = NominalRefs(first, end);
                     var modifiers = ShortMasculineRefs(first, end);
                     bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
+                    // This subject already qualifies. Its initial prepositional phrase ends before the pronoun.
+                    if (!divert && first < end && resolution.SubjectAfterGovernedPrefix == (words[p].TokenIndex, words[end].TokenIndex))
+                    {
+                        first = end;
+                        modifiers = ShortMasculineRefs(first, end);
+                    }
+                    ImmutableArray<Support> nominal = NominalRefs(first, end);
                     Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
                         first, end, nominal, BoundaryContext(end, p, predicateSupport).AddRange(modifiers));
                     subjectBefore = !divert;
@@ -321,7 +334,7 @@ internal static class SyntaxRoleCalculator
         }
         if (opt && !subjectBefore && (isSelected || !postNominalHandled) && p == 0 &&
             C(p) == "чака" && C(p + 1) == "ни" && Valid(p + 2) && !Preposition(C(p + 2)) &&
-            Nominal(p + 2) && Chain(p, p + 2))
+            InPredicateClause(p + 1) && InPredicateClause(p + 2) && Nominal(p + 2) && Chain(p, p + 2))
         {
             int last = ExtendNominal(p + 2);
             // Keep the clitic rule independent of main subject selection, but do not widen a selected head.
@@ -339,7 +352,8 @@ internal static class SyntaxRoleCalculator
                 postNominalHandled = true;
             }
         }
-        if (!postNominalHandled && Valid(p + 1) && Bridge(p, p + 1) && !Preposition(C(p + 1)) && Nominal(p + 1))
+        if (!postNominalHandled && Valid(p + 1) && InPredicateClause(p + 1) && Bridge(p, p + 1) &&
+            !Preposition(C(p + 1)) && Nominal(p + 1))
         {
             int last = ExtendNominal(p + 1);
             bool copula = Copula(C(p));
@@ -352,7 +366,8 @@ internal static class SyntaxRoleCalculator
         for (int i = p + 1; i + 1 < words.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!Preposition(C(i)) || !Nominal(i + 1) || !Bridge(i, i + 1)) continue;
+            if (!Preposition(C(i)) || !InPredicateClause(i) || !InPredicateClause(i + 1) ||
+                !Nominal(i + 1) || !Bridge(i, i + 1)) continue;
             int last = ExtendNominal(i + 1);
             Emit(Role.PrepositionalObject, Rule.BasicPrepositionalObject, i, last,
                 ImmutableArray.Create(Ref(i, SourcePos.Preposition)).AddRange(NominalRefs(i + 1, last)), [predicateSupport]);
@@ -462,7 +477,7 @@ internal static class SyntaxRoleCalculator
         int ExtendNominal(int first)
         {
             int last = first;
-            while (Valid(last + 1) && !Preposition(C(last + 1)) && Nominal(last + 1) &&
+            while (Valid(last + 1) && InPredicateClause(last + 1) && !Preposition(C(last + 1)) && Nominal(last + 1) &&
                 Bridge(last, last + 1)) last++;
             return last;
         }

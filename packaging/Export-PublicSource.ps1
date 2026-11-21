@@ -111,14 +111,19 @@ function Evaluate-Project([string] $project, [string] $kind, [string[]] $query) 
 }
 function Require-Input([string] $full, [string] $kind) {
     $full = [IO.Path]::GetFullPath($full)
-    if ($full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    $inSource = $full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)
+    # A checkout-local SDK owns its imports and analyzers even when its install root is a junction.
+    if ($kind -in @('Import', 'Analyzer') -and $full.StartsWith($sdkPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+        (!$inSource -or $sdkPrefix.Length -gt $rootPrefix.Length)) {
+        $sdkRelative = [IO.Path]::GetRelativePath($sdkPrefix, $full)
+        $null = $sdkInputs.Add($sdkRelative.Replace('\', '/'))
+        $full = Join-Path $sdkPhysicalRoot $sdkRelative
+    } elseif ($inSource) {
         $relative = [IO.Path]::GetRelativePath($root, $full).Replace('\', '/')
         if (!$paths.Contains($relative)) { throw "Missing evaluated $kind input: $relative" }
         $null = $required.Add($kind + '|' + $relative)
-    } elseif ($kind -notin @('Import', 'Analyzer') -or !$full.StartsWith($sdkPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "External build input is outside the SDK installation: $full"
     } else {
-        $null = $sdkInputs.Add([IO.Path]::GetRelativePath($sdkPrefix, $full).Replace('\', '/'))
+        throw "External build input is outside the SDK installation: $full"
     }
     if (!(Test-Path -LiteralPath $full -PathType Leaf)) { throw "Unresolved evaluated $kind input: $full" }
     Assert-NoReparsePath $full
@@ -144,6 +149,8 @@ foreach ($project in $projects) {
     if ($items.Properties.TargetFrameworks) { throw "Evaluate each target framework before exporting multi-target project: $project" }
     $sdkRoot = Split-Path (Split-Path $items.Properties.MSBuildToolsPath -Parent) -Parent
     $sdkPrefix = $sdkRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    $sdkTarget = [IO.Directory]::ResolveLinkTarget($sdkRoot, $true)
+    $sdkPhysicalRoot = if ($sdkTarget) { $sdkTarget.FullName } else { $sdkRoot }
     $sdkInputs = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     $required = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     Require-Input (Join-Path $root $project) 'Project'

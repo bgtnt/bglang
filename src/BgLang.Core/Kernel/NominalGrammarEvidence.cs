@@ -7,7 +7,8 @@ internal static class NominalGrammarEvidence
 {
     internal static TextGrammarMatch Explain(NominalGrammarRules.AttributeMatch match, IRuntimeLexicon lexicon,
         Func<string, BulgarianStressLookup.ExactInventory> acquire, bool selectedSubject,
-        PredicativeGrammarEvidence.Frame? frame, CancellationToken ct)
+        PredicativeGrammarEvidence.Frame? frame, CancellationToken ct,
+        ClauseFusionAnalyzer.ArticleExpectationKind? articleRole = null)
     {
         var binding = match.Binding;
         if (match.Reason == "numeral_count_attribute_mismatch" && binding.Participants.Count == 2)
@@ -60,7 +61,7 @@ internal static class NominalGrammarEvidence
         var conflicts = Conflicts(binding, phrase);
         bool articlePlaced = ArticlePlaced(binding);
         IReadOnlyList<TextGrammarRepair> repairs = articlePlaced && conflicts.Length > 0
-            ? FindRepairs(match, conflicts, lexicon, acquire, selectedSubject, frame, ct) : [];
+            ? FindRepairs(match, conflicts, lexicon, acquire, selectedSubject, frame, ct, articleRole) : [];
         return NominalGrammarRules.Match(NominalGrammarRules.AttributeId, binding, TextGrammarAssessment.Mismatch,
             Array.AsReadOnly(conflicts), repairs,
             repairs.Count > 0 ? null : !articlePlaced ? "article_placement_unresolved" : "no_verified_single_token_repair");
@@ -108,11 +109,13 @@ internal static class NominalGrammarEvidence
 
     private static IReadOnlyList<TextGrammarRepair> FindRepairs(NominalGrammarRules.AttributeMatch match,
         TextGrammarConflict[] conflicts, IRuntimeLexicon lexicon, Func<string, BulgarianStressLookup.ExactInventory> acquire,
-        bool selectedSubject, PredicativeGrammarEvidence.Frame? frame, CancellationToken ct)
+        bool selectedSubject, PredicativeGrammarEvidence.Frame? frame, CancellationToken ct,
+        ClauseFusionAnalyzer.ArticleExpectationKind? articleRole)
     {
         var binding = match.Binding;
         bool linked = frame is { Competing: false, Controller.Phrase: { } phrase } && phrase.Start == binding.Start;
         List<TextGrammarRepair> result = [];
+        HashSet<string> preferredSubjectForms = new(StringComparer.Ordinal);
         var editable = conflicts.Select(conflict => conflict.TokenIndex).Append(binding.Head.Word.OriginalIndex).ToHashSet();
         for (int index = 0; index < binding.Participants.Count; index++)
         {
@@ -146,20 +149,27 @@ internal static class NominalGrammarEvidence
                     activeRows.Any(original => original.Features.Number != replacement.Features.Number));
                 if (selectedSubject && !linked && changesHeadNumber ||
                     match.Governed && alternative.IntroducedFullArticle == true ||
+                    articleRole == ClauseFusionAnalyzer.ArticleExpectationKind.DirectObjectShort && alternative.IntroducedFullArticle == true ||
                     (selectedSubject || linked) && alternative.IntroducedFullArticle == false) continue;
                 var updated = GrammarRepairForms.Replace(binding, index, alternative);
+                var repaired = linked ? null : NominalStructuralProjection.Measure(updated, ct);
                 if (linked ? !PredicativeGrammarEvidence.RepairsController(frame!, updated, ct) :
-                    NominalStructuralProjection.Measure(updated, ct) is not { } repaired ||
+                    repaired is null ||
                     !repaired.Heads.Any(head => head.Attributes.All(rows => rows.Length > 0))) continue;
                 List<string> qualifications = [];
                 if (alternative.IntroducedFullArticle is not null && !match.Governed && !selectedSubject && !linked)
                     qualifications.Add("masculine_article_form_requires_role");
                 if (changesHeadNumber && match.HasFinite && !match.Governed && !linked)
                     qualifications.Add("clause_relation_unverified");
+                if (index == 0 && alternative.IntroducedFullArticle == true && !match.Governed &&
+                    !selectedSubject && !linked && articleRole == ClauseFusionAnalyzer.ArticleExpectationKind.SubjectFull &&
+                    repaired is not null && FullyAgrees(updated, repaired))
+                    preferredSubjectForms.Add(alternative.Surface);
                 result.Add(NominalGrammarRules.Repair(word, alternative.Surface) with { Qualifications = qualifications.AsReadOnly() });
             }
         }
         return Array.AsReadOnly(result.OrderBy(repair => repair.Edits[0].Start)
+            .ThenBy(repair => preferredSubjectForms.Contains(repair.Edits[0].Replacement) ? 0 : 1)
             .ThenBy(repair => repair.Edits[0].Replacement, StringComparer.Ordinal).ToArray());
     }
 }

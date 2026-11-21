@@ -13,7 +13,7 @@ internal static class FinitePredicateAcceptance
     internal static readonly JsonElement Gold = Load();
     private static readonly string[] ReadingKinds = ["finite", "imperative", "participle", "converb", "unmeasured_verb", "other"];
     private static readonly string[] CoverageKinds = ["local_link_candidate", "isolated_finite_candidate", "uncovered", "competing_alternative", "conflict_support"];
-    private static readonly string[] LinkKinds = ["comma_separation", "coordinating_conjunction", "da_boundary", "coordinated_da_boundary", "auxiliary_participle", "future_marker"];
+    private static readonly string[] LinkKinds = ["comma_separation", "coordinating_conjunction", "da_boundary", "coordinated_da_boundary", "auxiliary_participle", "conditional_auxiliary_participle", "future_marker", "reflexive_clitic"];
 
     private static JsonElement Load()
     {

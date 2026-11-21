@@ -22,8 +22,11 @@ internal static class ClauseFusionAnalyzer
     internal const string SelectionLane = "clause_fusion_selection.v1";
     internal const string AgreementLane = "clause_fusion_agreement.v1";
     internal const string SubjectArticleRule = "grammar.full_article.clause_subject.v1";
+    private const string CompatibleSubjectPredicate = "clause_subject_predicate_compatible";
 
     internal enum ArticleExpectationKind { SubjectFull, DirectObjectShort }
+
+    internal readonly record struct NominalArticleRole(int FirstTokenIndex, int HeadTokenIndex, ArticleExpectationKind Kind);
 
     internal sealed record ArticleTarget(
         ArticleExpectationKind Kind,
@@ -47,7 +50,10 @@ internal static class ClauseFusionAnalyzer
         MatrixSelection? Selection,
         IReadOnlyList<ContextOverlayCandidate> AgreementCandidates,
         IReadOnlyList<ArticleTarget> ArticleTargets,
-        SentenceClauseMap? ClauseMap = null);
+        SentenceClauseMap? ClauseMap = null)
+    {
+        internal IReadOnlyList<NominalArticleRole> NominalRepairArticles { get; init; } = [];
+    }
 
     private sealed record NominalChunk(
         int FirstWord,
@@ -77,7 +83,8 @@ internal static class ClauseFusionAnalyzer
         DirectObjectFrame? directObjectFrame = null,
         Func<string, IReadOnlyList<TextReadingSnapshot>>? lookup = null,
         SentenceClauseMap? sharedClauseMap = null,
-        IReadOnlySet<int>? r3OwnedClauseIds = null)
+        IReadOnlySet<int>? r3OwnedClauseIds = null,
+        bool includeNominalRepairSupport = false)
     {
         ct.ThrowIfCancellationRequested();
         if (words.Count == 0) return new(null, [], [], null);
@@ -86,6 +93,7 @@ internal static class ClauseFusionAnalyzer
         MatrixSelection? matrixSelection = null;
         List<ContextOverlayCandidate> agreement = [];
         List<ArticleTarget> articles = [];
+        List<NominalArticleRole>? nominalRepairArticles = includeNominalRepairSupport ? [] : null;
 
         if (map.AllExactOrDegree)
         {
@@ -96,7 +104,11 @@ internal static class ClauseFusionAnalyzer
                 bool skipOwnedR3 = r3OwnedClauseIds?.Contains(clause.ClauseId) == true;
                 AnalyzeClause(map, clause, !skipOwnedR3 && !matrixCaptured && clause.Matrix, skipOwnedR3,
                     canonicalKey, verbFrames, postverbalDirectObjectMaxRatio, directObjectFrame,
-                    ref matrixSelection, agreement, articles, ct);
+                    ref matrixSelection, agreement, articles, nominalRepairArticles, ct);
+                if (map.FindDelimitedReportingTail(clause, ct) is { } reportingTail)
+                    AnalyzeClause(map, reportingTail, false, false, canonicalKey, verbFrames,
+                        postverbalDirectObjectMaxRatio, directObjectFrame,
+                        ref matrixSelection, agreement, articles, nominalRepairArticles, ct);
                 if (clause.Matrix && matrixSelection is not null)
                     matrixCaptured = true;
             }
@@ -123,7 +135,8 @@ internal static class ClauseFusionAnalyzer
             ScanDeicticTemporalTenseMismatches(map, canonicalKey, agreement, ct);
         }
 
-        return new(matrixSelection, agreement, articles, map);
+        return new(matrixSelection, agreement, articles, map)
+        { NominalRepairArticles = nominalRepairArticles is null ? [] : nominalRepairArticles.AsReadOnly() };
     }
 
     private static void RemoveCascadingRelativeSubjectMismatches(List<ContextOverlayCandidate> agreement)
@@ -202,7 +215,7 @@ internal static class ClauseFusionAnalyzer
 
                 foreach (TextContextCandidate candidate in sentence.Candidates.Where(c => c.AuthorityLane == AgreementLane &&
                     c.EvidenceCodes.Contains(ContextLanes.ProductiveGraphMismatch)))
-                    if (TryProjectSubjectPredicateMismatch(analysis, candidate, coveredPredicates) is { } primary)
+                    if (TryProjectSubjectPredicateRelation(analysis, candidate, coveredPredicates) is { } primary)
                         yield return primary;
 
                 foreach (TextContextCandidate candidate in sentence.Candidates.Where(c => c.AuthorityLane == AgreementLane &&
@@ -211,8 +224,13 @@ internal static class ClauseFusionAnalyzer
                         yield return ambig;
 
                 foreach (TextContextCandidate candidate in sentence.Candidates.Where(IsExactSubjectPredicateFallbackLane))
-                    if (TryProjectSubjectPredicateMismatch(analysis, candidate, coveredPredicates) is { } fallback)
+                    if (TryProjectSubjectPredicateRelation(analysis, candidate, coveredPredicates) is { } fallback)
                         yield return fallback;
+
+                foreach (TextContextCandidate candidate in sentence.Candidates.Where(c => c.AuthorityLane == AgreementLane &&
+                    c.EvidenceCodes.Contains(CompatibleSubjectPredicate)))
+                    if (TryProjectSubjectPredicateRelation(analysis, candidate, coveredPredicates, compatible: true) is { } relation)
+                        yield return relation;
             }
         }
 
@@ -385,8 +403,8 @@ internal static class ClauseFusionAnalyzer
                 "no_verified_single_token_repair");
         }
 
-        static TextGrammarMatch? TryProjectSubjectPredicateMismatch(
-            TextAnalysis analysis, TextContextCandidate candidate, HashSet<int> covered)
+        static TextGrammarMatch? TryProjectSubjectPredicateRelation(
+            TextAnalysis analysis, TextContextCandidate candidate, HashSet<int> covered, bool compatible = false)
         {
             TextContextRoleSelection? pred = candidate.Roles.FirstOrDefault(r => r.Role == TextContextRole.Predicate);
             TextContextRoleSelection[] subjs = candidate.Roles.Where(r => r.Role == TextContextRole.Subject).ToArray();
@@ -415,10 +433,10 @@ internal static class ClauseFusionAnalyzer
                 end - start,
                 Array.AsReadOnly(controllers),
                 Array.AsReadOnly(new[] { pred.TokenIndex }),
-                TextGrammarAssessment.Mismatch,
-                Array.AsReadOnly(new[] { new TextGrammarConflict(pred.TokenIndex, pred.Readings, Array.AsReadOnly(expectedRefs)) }),
+                compatible ? TextGrammarAssessment.Compatible : TextGrammarAssessment.Mismatch,
+                compatible ? [] : Array.AsReadOnly(new[] { new TextGrammarConflict(pred.TokenIndex, pred.Readings, Array.AsReadOnly(expectedRefs)) }),
                 [],
-                reason);
+                compatible ? null : reason);
         }
 
         static TextGrammarMatch? TryProjectDisjointAmbiguousSubjectPredicate(
@@ -473,6 +491,7 @@ internal static class ClauseFusionAnalyzer
         ref MatrixSelection? matrixSelection,
         List<ContextOverlayCandidate> agreement,
         List<ArticleTarget> articles,
+        List<NominalArticleRole>? nominalRepairArticles,
         CancellationToken ct)
     {
         TextAnalysis analysis = map.Analysis;
@@ -485,6 +504,7 @@ internal static class ClauseFusionAnalyzer
         VerbalComplex? verb = BindClauseMainComplex(map, clause, ct);
         if (verb is null)
         {
+            if (clause.Boundary.Kind == ClauseBoundaryKind.ReportingSpeech) return;
             if (idx.All(i => !slots[i].Quoted) &&
                 !HasUnexpectedSymbol(analysis, slots[idx[0]].Word.OriginalIndex, slots[idx[^1]].Word.OriginalIndex, map.ProtectedSpans))
             {
@@ -512,7 +532,8 @@ internal static class ClauseFusionAnalyzer
         bool[] governed = MarkGovernedPhrases(map, idx, bodyStart, postEndPos, verbFirstPos, verbLastPos, ct);
 
         List<NominalChunk> preNps = CollectNominalChunks(map, idx, bodyStart, verbFirstPos - 1, governed, ct);
-        List<NominalChunk> postNps = CollectNominalChunks(map, idx, verbLastPos + 1, postEndPos, governed, ct);
+        List<NominalChunk> postNps = CollectNominalChunks(map, idx, verbLastPos + 1, postEndPos, governed, ct,
+            allowLeadingPostverbalAdverbs: !verb.CopularCarrier && !verb.HasDaComplement && preNps.All(np => np.TemporalAdjunct));
 
         bool quotedClause = slots[verb.FiniteCarrierWordIndex].Quoted || slots[verb.LexicalHeadWordIndex].Quoted;
         bool hasSymbolGap = HasUnexpectedSymbol(analysis, slots[idx[0]].Word.OriginalIndex, slots[idx[^1]].Word.OriginalIndex, map.ProtectedSpans) ||
@@ -532,12 +553,18 @@ internal static class ClauseFusionAnalyzer
             if (!quotedClause && !idx.Any(i => slots[i].Quoted) && !hasSymbolGap)
             {
                 if (!coordinatedPreSubject)
-                    CollectClauseArticleTargets(map, clause, preSubjectCand, preCommaBlocked, verb, postNps, governed, articles, ct);
+                    CollectClauseArticleTargets(map, clause, preSubjectCand, preCommaBlocked, verb, postNps, governed, articles, ct, nominalRepairArticles);
                 else
                     CollectCoordinatedSubjectArticleTargets(map, clause, verbFirstPos, nonTemporalPreNps, verb, articles, ct);
             }
             return;
         }
+
+        if (!quotedClause && !hasSymbolGap &&
+            TryAddReportingSpeakerRelation(map, clause, verb, verbFirstPos, verbLastPos, governed,
+                preNps, postNps, directObjectFrame, canonicalKey, agreement, ct))
+            return;
+        if (clause.Boundary.Kind == ClauseBoundaryKind.ReportingSpeech) return;
 
         WordSlot predicate = slots[verb.FiniteCarrierWordIndex];
         NominalChunk? postSubject = null;
@@ -565,44 +592,49 @@ internal static class ClauseFusionAnalyzer
                      .Any(p => !governed[p] && slots[idx[p]].Quoted && !map.HasDirectCommaBetween(idx, p, verbFirstPos)))
         {
             NominalChunk[] ungoverned = postNps.Where(np => !np.TemporalAdjunct).ToArray();
+            int[] completePostFinite = AllFinitePersonalReadings(predicate.Word, ct);
+            if (!allowsPerfPres)
+                completePostFinite = FilterIndicativeFinite(predicate.Word, completePostFinite);
+            bool strictlyIntransitive = completePostFinite.Length > 0 && completePostFinite.All(r =>
+                SupportsIntransitiveSubjectRole(predicate.Word.Readings[r]) &&
+                !IsLinkingOrSemiCopularLemma(predicate.Word.Readings[r].Lemma));
             if (!quotedClause && !hasSymbolGap && !verb.CopularCarrier &&
                 (verb.LastWordIndex == verb.FiniteCarrierWordIndex || verb.PostposedSe) &&
                 verb.CarrierAccusativeCliticWordIndex < 0 &&
                 slots[idx[bodyStart]].Word.CanonicalText != "се" &&
                 ungoverned is [var nominal] && !nominal.ShortMasculineSingular &&
                 !Enumerable.Range(verbLastPos + 1, Math.Max(0, postEndPos - verbLastPos))
-                    .Any(p => !governed[p] && slots[idx[p]].Word.CanonicalText is "и" or "или") &&
+                    .Any(p => !governed[p] && slots[idx[p]].Word.CanonicalText is "и" or "или" &&
+                        !IsRepeatedGovernedPrepositionCoordinator(map, idx, p, governed, ct)) &&
                 !(nominal.PronounSubject && nominal.LastWord == idx[postEndPos] &&
                   postEndPos + 1 < idx.Length && slots[idx[postEndPos + 1]].Word.CanonicalText == "да") &&
                 !IsAdverbialTimeOrMeasureHead(slots[nominal.HeadWord]) && !HasVocativeReading(slots[nominal.HeadWord]) &&
                 !IsAmbiguousPersonPlaceSubject(analysis, slots, nominal) &&
-                map.AreSpaceBridged(verb.LastWordIndex, nominal.FirstWord, ct) &&
+                HasPostverbalSubjectBridge(map, idx, verbLastPos, nominal, ct, strictlyIntransitive ? governed : null) &&
                 HasCleanSelectionTokens(map, verb, nominal, ct))
             {
-                postFinite = AllFinitePersonalReadings(predicate.Word, ct);
-                if (!allowsPerfPres)
-                    postFinite = FilterIndicativeFinite(predicate.Word, postFinite);
+                postFinite = completePostFinite;
                 bool hasThird = postFinite.Any(r => predicate.Word.Readings[r].Features.Person == MorphologicalPerson.Third);
-                bool initialGovernedFront = bodyStart < verbFirstPos &&
-                    Enumerable.Range(bodyStart, verbFirstPos - bodyStart).All(p => governed[p]);
+                bool initialAdjunctFront = bodyStart < verbFirstPos &&
+                    Enumerable.Range(bodyStart, verbFirstPos - bodyStart).All(p =>
+                        (governed[p] || IsExactPureAdverb(slots[idx[p]].Word)) &&
+                        !slots[idx[p]].Quoted && map.AreSpaceBridged(idx[p], idx[p + 1], ct));
                 bool mismatchPatient = nominal.Coherent && nominal.Number is not null &&
                     MatchingVerbReadings(predicate, postFinite, nominal).Length == 0 &&
                     !HasSecondPersonImperative(predicate.Word, nominal.Number.Value);
                 bool intransitive = postFinite.Length > 0 &&
-                    (postFinite.All(r =>
-                        predicate.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive &&
-                        !IsLinkingOrSemiCopularLemma(predicate.Word.Readings[r].Lemma)) ||
-                     mismatchPatient && initialGovernedFront && IsIntransitiveMotionOrSpeechLemma(predicate, postFinite));
+                    (strictlyIntransitive ||
+                     mismatchPatient && initialAdjunctFront && IsIntransitiveMotionOrSpeechLemma(predicate, postFinite));
                 bool hasIntransitive = postFinite.Any(r =>
                     predicate.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive) ||
-                    mismatchPatient && initialGovernedFront && IsIntransitiveMotionOrSpeechLemma(predicate, postFinite);
+                    mismatchPatient && initialAdjunctFront && IsIntransitiveMotionOrSpeechLemma(predicate, postFinite);
                 int nominalEnd = Array.IndexOf(idx, nominal.LastWord);
                 WordSlot head = slots[nominal.HeadWord];
                 // The sole bare NP can be a passive patient. A categorical conflict
                 // also needs a source declaration of the finite verb's argument frame.
                 bool pluralMismatchPatient = mismatchPatient && nominal.Number == MorphologicalNumber.Plural;
                 bool preposedPassiveSe = verb.HasReflexiveSe &&
-                    (verb.PreCarrierClitics.HasReflexiveSe && verb.PreCarrierClitics.DativeCliticWordIndex < 0 && initialGovernedFront ||
+                    (verb.PreCarrierClitics.HasReflexiveSe && verb.PreCarrierClitics.DativeCliticWordIndex < 0 && initialAdjunctFront ||
                      verb.Kind == VerbalComplexKind.DaConstruction && verb.PostDaOrAuxClitics.HasReflexiveSe &&
                      verb.PostDaOrAuxClitics.DativeCliticWordIndex < 0 && pluralMismatchPatient) &&
                     mismatchPatient &&
@@ -618,11 +650,12 @@ internal static class ClauseFusionAnalyzer
                     nominal.HeadReadings.All(r => head.Word.Readings[r].Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun) &&
                     postEndPos == idx.Length - 1 &&
                     Enumerable.Range(nominalEnd + 1, postEndPos - nominalEnd).All(p =>
-                        governed[p] && map.AreSpaceBridged(idx[p - 1], idx[p], ct));
+                        (governed[p] || IsExactPureAdverb(slots[idx[p]].Word)) &&
+                        map.AreSpaceBridged(idx[p - 1], idx[p], ct));
                 bool singularPassiveVerb = hasThird && postFinite.All(r =>
                     predicate.Word.Readings[r].Features.Number == MorphologicalNumber.Singular);
                 postRoleProven = postFinite.Length > 0 && (nominal.PronounSubject ||
-                    (hasThird || initialGovernedFront) && intransitive ||
+                    (hasThird || initialAdjunctFront) && intransitive ||
                     passivePatient && !HasAnimateNominalHead(head, nominal.HeadReadings) &&
                     (directObjectFrame?.Invoke(predicate.Word, postFinite) == true ||
                      pluralMismatchPatient && singularPassiveVerb ||
@@ -734,9 +767,9 @@ internal static class ClauseFusionAnalyzer
         }
         else if (postSubject is { } post)
         {
+            int[] matching = postRoleProven ? MatchingVerbReadings(predicate, postFinite, post) : [];
             bool conflicting = postRoleProven && post.Coherent && post.Number is not null &&
-                MatchingVerbReadings(predicate, postFinite, post).Length == 0 &&
-                !HasSecondPersonImperative(predicate.Word, post.Number.Value);
+                matching.Length == 0 && !HasSecondPersonImperative(predicate.Word, post.Number.Value);
             bool pluralVerbWithSingularPost = conflicting && !post.PronounSubject && post.Number == MorphologicalNumber.Singular &&
                 postFinite.Any(r => predicate.Word.Readings[r].Features is
                     { Person: MorphologicalPerson.Third, Number: MorphologicalNumber.Plural });
@@ -744,9 +777,17 @@ internal static class ClauseFusionAnalyzer
                 (idx.Skip(Array.IndexOf(idx, post.LastWord) + 1).Any(w => slots[w].Word.CanonicalText is "с" or "със") ||
                  post.LastWord + 1 < slots.Length && map.HasCommaBetween(post.LastWord, post.LastWord + 1) &&
                  (IsNominalModifierOrDeterminer(slots[post.LastWord + 1]) || HasNominalHeadReading(slots[post.LastWord + 1])));
-            svMismatch = conflicting && !associativeAlternative;
-            bool subjectProven = postRoleProven && !associativeAlternative;
-            if (emitDiagnostic || !svMismatch)
+            bool inclusivePluralAlternative = conflicting && !post.PronounSubject && post.Number == MorphologicalNumber.Plural &&
+                HasAnimateNominalHead(slots[post.HeadWord], post.HeadReadings) &&
+                postFinite.Any(r => predicate.Word.Readings[r].Features is
+                    { Person: MorphologicalPerson.First or MorphologicalPerson.Second, Number: MorphologicalNumber.Plural });
+            svMismatch = conflicting && !associativeAlternative && !inclusivePluralAlternative;
+            bool subjectProven = postRoleProven && !associativeAlternative && !inclusivePluralAlternative;
+            if (subjectProven && post.PronounSubject && matching.Length > 0 &&
+                clause.Boundary.Kind == ClauseBoundaryKind.IndependentPunctuation)
+                AddSubjectRelation(slots, post, verb, matching, canonicalKey, agreement,
+                    CompatibleSubjectPredicate, mismatch: false, subjectProven: true);
+            else if (emitDiagnostic || !svMismatch)
                 AddSubjectRelation(slots, post, verb, postFinite, canonicalKey, agreement,
                     subjectProven ? "postverbal_nominal_reading" : passivePatient
                         ? "postverbal_passive_patient_candidate" : "postverbal_nominal_role_unassessed", svMismatch, subjectProven);
@@ -814,11 +855,88 @@ internal static class ClauseFusionAnalyzer
         if (!quotedClause && !idx.Any(i => slots[i].Quoted) && !hasSymbolGap)
         {
             if (!coordinatedPreSubject)
-                CollectClauseArticleTargets(map, clause, preSubjectCand, preCommaBlocked, verb, postNps, governed, articles, ct);
+                CollectClauseArticleTargets(map, clause, preSubjectCand, preCommaBlocked, verb, postNps, governed, articles, ct, nominalRepairArticles);
             else
                 CollectCoordinatedSubjectArticleTargets(map, clause, verbFirstPos, nonTemporalPreNps, verb, articles, ct);
         }
     }
+
+    private static bool TryAddReportingSpeakerRelation(
+        SentenceClauseMap map, ClauseSpan clause, VerbalComplex verb, int verbFirstPos, int verbLastPos,
+        bool[] governed, List<NominalChunk> preNps, List<NominalChunk> postNps, DirectObjectFrame? directObjectFrame,
+        Func<IReadOnlyList<ContextOverlayRoleSelection>, string> canonicalKey,
+        List<ContextOverlayCandidate> agreement, CancellationToken ct)
+    {
+        int[] idx = clause.WordIndices;
+        WordSlot[] slots = map.Slots;
+        WordSlot predicate = slots[verb.FiniteCarrierWordIndex];
+        bool speechBoundary = clause.Boundary.Kind == ClauseBoundaryKind.ReportingSpeech;
+        bool contentPrefix = clause.Boundary.Kind == ClauseBoundaryKind.SentenceInitial &&
+            clause.BodyStartPos == 0 && verbFirstPos == 1 && slots[idx[0]].Word.CanonicalText == "това";
+        if (!speechBoundary && !contentPrefix) return false;
+        if (!map.HasTerminalPunctuation || verb.Kind != VerbalComplexKind.SyntheticFinite ||
+            verbFirstPos != verbLastPos || verb.HasReflexiveSe || verb.CarrierAccusativeCliticWordIndex >= 0 ||
+            verb.CopularCarrier || verb.ImpersonalModal || verb.HasDaComplement || !IsReportingPredicate(predicate, ct) ||
+            idx.Any(w => slots[w].Quoted) ||
+            postNps.Where(np => !np.TemporalAdjunct).ToArray() is not
+                [{ Coherent: true, ShortMasculineSingular: false, Number: not null, HeadReadings.Length: > 0 } speaker] ||
+            HasVocativeReading(slots[speaker.HeadWord]) ||
+            IsAdverbialTimeOrMeasureHead(slots[speaker.HeadWord], speaker) ||
+            !HasCleanSelectionTokens(map, verb, speaker, ct) ||
+            !HasPostverbalSubjectBridge(map, idx, verbLastPos, speaker, ct, governed))
+            return false;
+
+        int[] finite = AllFinitePersonalReadings(predicate.Word, ct);
+        if (!verb.AllowsPerfectivePresent(map, clause)) finite = FilterIndicativeFinite(predicate.Word, finite);
+        bool speech = speechBoundary && verbFirstPos == clause.BodyStartPos && preNps.Count == 0;
+        bool frontedContent = contentPrefix &&
+            IsExactWord(slots[idx[0]]) && map.AreSpaceBridged(idx[0], idx[1], ct) &&
+            slots[idx[0]].Active.All(r => Guard.TryGetDeterminerAxes(slots[idx[0]].Word, slots[idx[0]].Word.Readings[r], out var axes) &&
+                axes.Number == MorphologicalNumber.Singular && axes.Gender == MorphologicalGender.Neuter) &&
+            (AllFiniteReadingsTransitive(predicate.Word, finite) || directObjectFrame?.Invoke(predicate.Word, finite) == true);
+        if (finite.Length == 0 || !speech && !frontedContent) return false;
+        // Bulgarian FrameNet's кажа/казвам + Quote frame has an external Speaker and no NP-object Addressee.
+        // Recipient-taking уведомя/уверя and unmarked/unknown nominal classes cannot inherit this license.
+        bool personSpeaker = speech && !governed.Any(value => value) &&
+            finite.All(r => Norm(predicate.Word.Readings[r].Lemma) is "кажа" or "казвам") &&
+            !IsAmbiguousPersonPlaceSubject(map.Analysis, slots, speaker) &&
+            NonPlaceholderReadings(slots[speaker.HeadWord].Word, sentenceInitial: false).All(r =>
+                IsReportingPersonReading(slots[speaker.HeadWord].Word.Readings[r]));
+        if (!speaker.FullMasculineSingular && !personSpeaker) return false;
+
+        for (int p = verbLastPos + 1; p < idx.Length; p++)
+        {
+            WordSlot slot = slots[idx[p]];
+            if (idx[p] != idx[p - 1] + 1 || !map.AreSpaceBridged(idx[p - 1], idx[p], ct) ||
+                !IsExactWord(slot) ||
+                !(speaker.FirstWord <= idx[p] && idx[p] <= speaker.LastWord) && !governed[p] && !IsReportingSpeakerAdverb(slot, speaker))
+                return false;
+        }
+        int[] matching = MatchingVerbReadings(predicate, finite, speaker);
+        if (matching.Length == 0 && HasSecondPersonImperative(predicate.Word, speaker.Number.Value)) return false;
+        AddSubjectRelation(slots, speaker, verb, matching.Length > 0 ? matching : finite, canonicalKey, agreement,
+            matching.Length > 0 ? CompatibleSubjectPredicate : "postverbal_reporting_speaker",
+            mismatch: matching.Length == 0, subjectProven: true);
+        // Compatible fronted content retains the pre-existing matrix subject/predicate selection below.
+        return speech || matching.Length == 0;
+    }
+
+    private static bool IsReportingPersonReading(ReadingView row) =>
+        row.Features is { HasConflictingFeatures: false, HasUnrecognizedFeatures: false, Case: null } f &&
+        (f is { PartOfSpeech: MorphologicalPartOfSpeech.ProperNoun, NameKind: MorphologicalNameKind.GivenName } ||
+         f.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
+            (TextCountConstructionAnalyzer.IsReviewedPersonLemma(row.Lemma) || Guard.IsEpiceneHumanNounLemma(row.Lemma)));
+
+    private static bool IsReportingSpeakerAdverb(WordSlot slot, NominalChunk speaker) =>
+        IsExactPureAdverb(slot.Word) ||
+        speaker.Gender == MorphologicalGender.Masculine && speaker.Number == MorphologicalNumber.Singular &&
+        slot.Word.Readings.Any(r => r.SourceAdverb && r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adverb) &&
+        slot.Word.Readings.All(r => Guard.IsSourcePlaceholder(slot.Word, r) || Guard.IsUnwrittenCapitalizedReading(slot.Word, r) ||
+            r.SourceAdverb && r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Adverb, HasUnrecognizedFeatures: false, HasConflictingFeatures: false } ||
+            r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Adjective, Gender: MorphologicalGender.Neuter,
+                Number: MorphologicalNumber.Singular, Article: MorphologicalArticle.Indefinite,
+                HasUnrecognizedFeatures: false, HasConflictingFeatures: false });
 
     private static bool TryAddSubjectVerbMismatch(
         SentenceClauseMap map,
@@ -856,15 +974,34 @@ internal static class ClauseFusionAnalyzer
 
         // Check ALL original finite/imperative readings of the verb so imperatives on 2nd-person subjects never false-trigger.
         int[] allFinite = AllFinitePersonalReadings(verbSlot.Word, ct);
+        if (verb.HasFutureMarker)
+            allFinite = allFinite.Where(r => verbSlot.Word.Readings[r].Features.Tense == MorphologicalTense.Present).ToArray();
         if (!verb.AllowsPerfectivePresent(map, clause))
             allFinite = FilterIndicativeFinite(verbSlot.Word, allFinite);
         if (allFinite.Length == 0 || subj.Number is null) return false;
 
+        int partPos = Array.IndexOf(clauseIdx, verb.FiniteCarrierWordIndex);
+        int siPos = partPos - (partPos > 0 && slots[clauseIdx[partPos - 1]].Word.CanonicalText == "се" ? 2 : 1);
+        if (!verb.HasFutureMarker && verb.DaParticleWordIndex < 0 && siPos >= 0 &&
+            HasCompatibleSiCliticAlternative(map, clause, subj, siPos, partPos, ct))
+            return false;
+
         if (subj.PronounSubject)
         {
-            // Defer non-future subordinate че/защото pronoun prefixes to SubordinatePronounPrefixLane;
-            // future-marked complexes ("че аз ще закъснеем", "защото ние ще работиш") are outside SubordinatePronounPrefixLane.
-            if (!clause.Matrix && slots[clauseIdx[0]].Word.CanonicalText is "че" or "защото" && !verb.HasFutureMarker)
+            // The prefix lane owns plain че/защото prefixes; reflexive clusters need
+            // the clause-bound complex because that lane accepts only adverbs/не between pronoun and verb.
+            if (!clause.Matrix && slots[clauseIdx[0]].Word.CanonicalText is "че" or "защото" &&
+                !verb.HasFutureMarker && !verb.HasReflexiveSe)
+                return false;
+            // The reflexive subordinate addition proves only the adjacent pronoun + complex.
+            // Interrupted groups can license a comitative or another local controller.
+            if (!clause.Matrix && verb.HasReflexiveSe && !verb.HasFutureMarker &&
+                (subj.LastWord + 1 != verb.FirstWordIndex || !map.AreSpaceBridged(subj.LastWord, verb.FirstWordIndex, ct)))
+                return false;
+            // In this new subordinate domain, a short dative can belong to the reflexive complex with an
+            // implicit or impersonal subject ("че ти се усмихват", "че ти се спеше").
+            if (!clause.Matrix && !verb.HasFutureMarker && verb.HasReflexiveSe && subjSlot.Word.Readings.Any(r => r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, Case: MorphologicalCase.Dative, IsShortForm: true }))
                 return false;
             // Guard clitic edge cases from NominalDiagnosticsPackageTests ("Тя я видяхте.", "Тя ги пристигнахте.").
             if (verb.CarrierAccusativeCliticWordIndex >= 0)
@@ -873,12 +1010,19 @@ internal static class ClauseFusionAnalyzer
                 if (cliticText == "я" || !AllFiniteReadingsTransitive(verbSlot.Word, allFinite))
                     return false;
             }
-            if (subj.Person == MorphologicalPerson.Second && HasSecondPersonImperative(verbSlot.Word, subj.Number.Value))
+            if (subj.Person == MorphologicalPerson.Second && !verb.HasFutureMarker &&
+                HasSecondPersonImperative(verbSlot.Word, subj.Number.Value))
                 return false;
-            if (allFinite.Any(r => Guard.PersonNumberTupleMatches(
+            int[] matchingFinite = allFinite.Where(r => Guard.PersonNumberTupleMatches(
                     (subj.Person, subj.Number),
-                    (verbSlot.Word.Readings[r].Features.Person, verbSlot.Word.Readings[r].Features.Number))))
+                    (verbSlot.Word.Readings[r].Features.Person, verbSlot.Word.Readings[r].Features.Number))).ToArray();
+            if (matchingFinite.Length > 0)
+            {
+                if (!clause.Matrix && verb.HasReflexiveSe)
+                    AddSubjectRelation(slots, subj, verb, matchingFinite, canonicalKey, agreement,
+                        CompatibleSubjectPredicate, mismatch: false, subjectProven: true);
                 return false;
+            }
             if (IsNonInitialPreverbalAccusativeTeClitic(map, clauseIdx, subj, verb, verbSlot, allFinite, ct))
                 return false;
 
@@ -1039,8 +1183,7 @@ internal static class ClauseFusionAnalyzer
                 verb.HasReflexiveSe &&
                     !CanLicenseFrontedReflexivePredicative(slots, subj, verbSlot, verb.CarrierFiniteReadings) ||
                 verb.CarrierAccusativeCliticWordIndex >= 0 ||
-                verb.CarrierFiniteReadings.All(r => verbSlot.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive &&
-                    Norm(verbSlot.Word.Readings[r].Lemma) != "играя") ||
+                verb.CarrierFiniteReadings.All(r => SupportsIntransitiveSubjectRole(verbSlot.Word.Readings[r])) ||
                 IsIntransitiveMotionOrSpeechLemma(verbSlot, verb.CarrierFiniteReadings) ||
                 saturatedObliqueComplementVerb && IsDefiniteOrProperSubjectCandidate(slots, subj) ||
                 IsAnimateSubjectWithInanimateOnlyVerb(subjSlot, subj.HeadReadings, verbSlot, verb.CarrierFiniteReadings) ||
@@ -1376,8 +1519,7 @@ internal static class ClauseFusionAnalyzer
         bool provenSubject = np1.PronounSubject || np2.PronounSubject ||
             np1.FullMasculineSingular || np2.FullMasculineSingular ||
             verb.CopularCarrier || verb.HasReflexiveSe ||
-            verb.CarrierFiniteReadings.All(r => verbSlot.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive &&
-                Norm(verbSlot.Word.Readings[r].Lemma) != "играя") ||
+            verb.CarrierFiniteReadings.All(r => SupportsIntransitiveSubjectRole(verbSlot.Word.Readings[r])) ||
             IsIntransitiveMotionOrSpeechLemma(verbSlot, verb.CarrierFiniteReadings) ||
             IsAnimateSubjectWithInanimateOnlyVerb(h1, np1.HeadReadings, verbSlot, verb.CarrierFiniteReadings) ||
             IsAnimateSubjectWithInanimateOnlyVerb(h2, np2.HeadReadings, verbSlot, verb.CarrierFiniteReadings) ||
@@ -1412,6 +1554,37 @@ internal static class ClauseFusionAnalyzer
         return true;
     }
 
+    private static bool IsMasculineSingularRepairHead(WordSlot[] slots, NominalChunk nominal) =>
+        nominal.HeadReadings.Length > 0 && nominal.HeadReadings.All(r =>
+            slots[nominal.HeadWord].Word.Readings[r].Features is
+            { PartOfSpeech: MorphologicalPartOfSpeech.Noun, Number: MorphologicalNumber.Singular, Gender: MorphologicalGender.Masculine });
+
+    private static bool SupportsSubjectArticleRole(SentenceClauseMap map, ClauseSpan clause,
+        NominalChunk preSubject, bool preCommaBlocked, VerbalComplex verb, List<NominalChunk> postNps,
+        bool[] governed, CancellationToken ct, out int[] matching3Sg)
+    {
+        WordSlot[] slots = map.Slots;
+        int[] clauseIdx = clause.WordIndices;
+        WordSlot verbSlot = slots[verb.FiniteCarrierWordIndex];
+        matching3Sg = verb.CarrierFiniteReadings.Where(r => verbSlot.Word.Readings[r].Features is
+            { Person: MorphologicalPerson.Third, Number: MorphologicalNumber.Singular }).ToArray();
+        if (preCommaBlocked || preSubject.TemporalAdjunct || preSubject.FirstWord != clauseIdx[clause.BodyStartPos] ||
+            slots[preSubject.FirstWord].Word.UsesGraph ||
+            IsAdverbialTimeOrMeasureHead(slots[preSubject.HeadWord], preSubject) ||
+            IsCliticResumedObject(slots, preSubject, verb) || IsSobriquetSubject(slots, preSubject) ||
+            HasOtherPossibleSubject(map, clauseIdx, clause.BodyStartPos, preSubject, postNps, verb, governed, ct) ||
+            matching3Sg.Length == 0)
+            return false;
+        return verb.CopularCarrier || verb.HasReflexiveSe || verb.CarrierAccusativeCliticWordIndex >= 0 ||
+            verb.CarrierFiniteReadings.All(r => SupportsIntransitiveSubjectRole(verbSlot.Word.Readings[r])) ||
+            verb.CarrierFiniteReadings.All(r => IsLinkingOrSemiCopularLemma(verbSlot.Word.Readings[r].Lemma)) ||
+            IsPhaseVerbWithoutDirectObject(verbSlot, verb.CarrierFiniteReadings, postNps) ||
+            postNps.Any(p => !p.TemporalAdjunct) || verb.HasDaComplement ||
+            HasPostverbalDaComplement(slots, clauseIdx, verb.LastWordIndex) ||
+            IsIntransitiveMotionOrSpeechLemma(verbSlot, verb.CarrierFiniteReadings) ||
+            IsAnimateSubjectWithInanimateOnlyVerb(slots[preSubject.HeadWord], preSubject.HeadReadings, verbSlot, verb.CarrierFiniteReadings);
+    }
+
     private static void CollectClauseArticleTargets(
         SentenceClauseMap map,
         ClauseSpan clause,
@@ -1421,7 +1594,8 @@ internal static class ClauseFusionAnalyzer
         List<NominalChunk> postNps,
         bool[] governed,
         List<ArticleTarget> articles,
-        CancellationToken ct)
+        CancellationToken ct,
+        List<NominalArticleRole>? nominalRepairArticles = null)
     {
         WordSlot[] slots = map.Slots;
         int[] clauseIdx = clause.WordIndices;
@@ -1433,44 +1607,26 @@ internal static class ClauseFusionAnalyzer
         if (TryCollectCliticResumedFrontedObjectArticle(slots, clauseIdx, bodyStart, preSubject, preCommaBlocked, verb, postNps, articles))
             return;
 
+        // Rank only after local repair succeeds; original mismatching NPs gain no selected role.
+        if (nominalRepairArticles is not null && !verb.ImpersonalModal && !verb.InvariantCarrier &&
+            preSubject is { Coherent: false, Number: MorphologicalNumber.Singular, Gender: MorphologicalGender.Masculine } &&
+            IsMasculineSingularRepairHead(slots, preSubject) &&
+            SupportsSubjectArticleRole(map, clause, preSubject, preCommaBlocked, verb, postNps, governed, ct, out _))
+            nominalRepairArticles.Add(new(slots[preSubject.FirstWord].Word.OriginalIndex,
+                slots[preSubject.HeadWord].Word.OriginalIndex, ArticleExpectationKind.SubjectFull));
+
         // 1. SubjectFull: clause-initial coherent masculine singular Short-article NP before agreeing 3sg finite verb,
         // where subjecthood is structurally established (not a fronted object).
-        if (!preCommaBlocked && preSubject is { Coherent: true, ShortMasculineSingular: true, TemporalAdjunct: false } &&
-            preSubject.FirstWord == clauseIdx[bodyStart] &&
-            !slots[preSubject.FirstWord].Word.UsesGraph &&
-            !IsAdverbialTimeOrMeasureHead(slots[preSubject.HeadWord], preSubject) &&
-            !IsCliticResumedObject(slots, preSubject, verb) &&
-            !IsSobriquetSubject(slots, preSubject) &&
-            !HasOtherPossibleSubject(map, clauseIdx, bodyStart, preSubject, postNps, verb, governed, ct))
+        if (preSubject is { Coherent: true, ShortMasculineSingular: true } &&
+            SupportsSubjectArticleRole(map, clause, preSubject, preCommaBlocked, verb, postNps, governed, ct, out int[] matching3Sg))
         {
-            int[] matching3Sg = verb.CarrierFiniteReadings.Where(r =>
-            {
-                MorphologicalFeatures f = verbSlot.Word.Readings[r].Features;
-                return f.Person == MorphologicalPerson.Third && f.Number == MorphologicalNumber.Singular;
-            }).ToArray();
-
-            bool provenSubjectRole = verb.CopularCarrier || verb.HasReflexiveSe ||
-                verb.CarrierAccusativeCliticWordIndex >= 0 ||
-                verb.CarrierFiniteReadings.All(r => verbSlot.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive &&
-                    Norm(verbSlot.Word.Readings[r].Lemma) != "играя") ||
-                verb.CarrierFiniteReadings.All(r => IsLinkingOrSemiCopularLemma(verbSlot.Word.Readings[r].Lemma)) ||
-                IsPhaseVerbWithoutDirectObject(verbSlot, verb.CarrierFiniteReadings, postNps) ||
-                postNps.Any(p => !p.TemporalAdjunct) ||
-                verb.HasDaComplement ||
-                HasPostverbalDaComplement(slots, clauseIdx, verb.LastWordIndex) ||
-                IsIntransitiveMotionOrSpeechLemma(verbSlot, verb.CarrierFiniteReadings) ||
-                IsAnimateSubjectWithInanimateOnlyVerb(slots[preSubject.HeadWord], preSubject.HeadReadings, verbSlot, verb.CarrierFiniteReadings);
-
-            if (matching3Sg.Length > 0 && provenSubjectRole)
-            {
-                int[] phraseWords = Enumerable.Range(preSubject.FirstWord, preSubject.HeadWord - preSubject.FirstWord + 1).ToArray();
-                if (phraseWords.All(w => !slots[w].Word.UsesGraph && slots[w].Word.Readings.Count > 0))
-                    articles.Add(new(ArticleExpectationKind.SubjectFull,
-                        slots[preSubject.FirstWord].Word.OriginalIndex,
-                        phraseWords,
-                        verbSlot.Word.OriginalIndex,
-                        matching3Sg));
-            }
+            int[] phraseWords = Enumerable.Range(preSubject.FirstWord, preSubject.HeadWord - preSubject.FirstWord + 1).ToArray();
+            if (phraseWords.All(w => !slots[w].Word.UsesGraph && slots[w].Word.Readings.Count > 0))
+                articles.Add(new(ArticleExpectationKind.SubjectFull,
+                    slots[preSubject.FirstWord].Word.OriginalIndex,
+                    phraseWords,
+                    verbSlot.Word.OriginalIndex,
+                    matching3Sg));
         }
 
         // 2. DirectObjectShort: immediately postverbal coherent masculine singular Full-article NP after a transitive-capable,
@@ -1551,17 +1707,24 @@ internal static class ClauseFusionAnalyzer
                  verb.ImpersonalModal && MatchingVerbReadings(lexSlot, lexReadings, preSubject).Length > 0);
 
             if (adjacentToVerb && transitiveCapable && subjectAlreadyOccupied &&
-                obj is { Coherent: true, FullMasculineSingular: true, TemporalAdjunct: false } &&
+                !obj.TemporalAdjunct &&
                 !IsAdverbialTimeOrMeasureHead(slots[obj.HeadWord], obj) &&
                 !targetGoverned[objFirstPos])
             {
-                int[] phraseWords = Enumerable.Range(obj.FirstWord, obj.HeadWord - obj.FirstWord + 1).ToArray();
-                if (phraseWords.All(w => !slots[w].Word.UsesGraph && slots[w].Word.Readings.Count > 0))
-                    articles.Add(new(ArticleExpectationKind.DirectObjectShort,
-                        slots[obj.FirstWord].Word.OriginalIndex,
-                        phraseWords,
-                        lexSlot.Word.OriginalIndex,
-                        lexReadings));
+                if (nominalRepairArticles is not null && strictSubjectOccupied &&
+                    !obj.Coherent && IsMasculineSingularRepairHead(slots, obj))
+                    nominalRepairArticles.Add(new(slots[obj.FirstWord].Word.OriginalIndex,
+                        slots[obj.HeadWord].Word.OriginalIndex, ArticleExpectationKind.DirectObjectShort));
+                if (obj is { Coherent: true, FullMasculineSingular: true })
+                {
+                    int[] phraseWords = Enumerable.Range(obj.FirstWord, obj.HeadWord - obj.FirstWord + 1).ToArray();
+                    if (phraseWords.All(w => !slots[w].Word.UsesGraph && slots[w].Word.Readings.Count > 0))
+                        articles.Add(new(ArticleExpectationKind.DirectObjectShort,
+                            slots[obj.FirstWord].Word.OriginalIndex,
+                            phraseWords,
+                            lexSlot.Word.OriginalIndex,
+                            lexReadings));
+                }
             }
         }
     }
@@ -1788,8 +1951,7 @@ internal static class ClauseFusionAnalyzer
             partPos + 1 < idx.Length && slots[idx[partPos + 1]].Word.CanonicalText == "се" &&
                 map.AreSpaceBridged(idx[partPos], idx[partPos + 1], ct);
         bool provenSubject = hasReflexiveSe ||
-            partReadings.All(r => partSlot.Word.Readings[r].Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive &&
-                Norm(partSlot.Word.Readings[r].Lemma) != "играя") ||
+            partReadings.All(r => SupportsIntransitiveSubjectRole(partSlot.Word.Readings[r])) ||
             partReadings.All(r => IsLinkingOrSemiCopularLemma(partSlot.Word.Readings[r].Lemma)) ||
             IsPhaseVerbWithoutDirectObject(partSlot, partReadings, postNps) ||
             postNps.Any(np => !np.TemporalAdjunct) ||
@@ -1830,7 +1992,10 @@ internal static class ClauseFusionAnalyzer
                     continue;
                 }
                 if (!map.AreSpaceBridged(idx[q - 1], idx[q], ct) && !slots[idx[q - 1]].Quoted &&
-                    !(sawNominal && HasDigitOnlyBridge(map.Analysis, slots[idx[q - 1]].Word, cur.Word) && IsIndefiniteCountedNoun(cur)))
+                    !(IsIndefiniteCountedNoun(cur) &&
+                      (sawNominal && HasDigitOnlyBridge(map.Analysis, slots[idx[q - 1]].Word, cur.Word) ||
+                       q == p + 1 && Guard.IsExactAdposition(s.Word) && IsExactWord(cur) &&
+                       !map.IsPrepositionalSubordinatorPrep(idx[p]) && HasStandaloneDigitBridge(map.Analysis, s.Word, cur.Word))))
                 {
                     // Allow "от девет до пет часа": nested preposition starts its own loop iteration.
                     break;
@@ -1841,7 +2006,7 @@ internal static class ClauseFusionAnalyzer
                     governed[q] = true;
                     break;
                 }
-                if (!sawNominal && cur.Word.CanonicalText is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно")
+                if (!sawNominal && BulgarianFunctionWords.IsNominalFocusParticle(cur.Word.CanonicalText))
                 {
                     governed[q] = true;
                     continue;
@@ -1916,6 +2081,24 @@ internal static class ClauseFusionAnalyzer
         return governed;
     }
 
+    // A cardinal quantity directly after the preposition ("до 2 месеца").
+    // Keep punctuation, attached digits and word-coordinated quantities outside this local bridge.
+    private static bool HasStandaloneDigitBridge(TextAnalysis analysis, TokenView left, TokenView right)
+    {
+        int tokenIndex = left.OriginalIndex + 1;
+        while (tokenIndex < right.OriginalIndex && analysis.Tokens[tokenIndex].Kind == TokenKind.Whitespace)
+            tokenIndex++;
+        if (tokenIndex >= right.OriginalIndex || analysis.Tokens[tokenIndex].Kind != TokenKind.Number)
+            return false;
+        TokenAnalysis numeral = analysis.Tokens[tokenIndex++];
+        while (tokenIndex < right.OriginalIndex && analysis.Tokens[tokenIndex].Kind == TokenKind.Whitespace)
+            tokenIndex++;
+        return tokenIndex == right.OriginalIndex &&
+               numeral.Start > left.Token.Start + left.Token.Length &&
+               numeral.Start + numeral.Length < right.Token.Start &&
+               HasDigitOnlyBridge(analysis, left, right);
+    }
+
     private static bool HasDigitOnlyBridge(TextAnalysis analysis, TokenView left, TokenView right)
     {
         int from = left.Token.Start + left.Token.Length;
@@ -1940,13 +2123,18 @@ internal static class ClauseFusionAnalyzer
                    f.Number is MorphologicalNumber.Plural or MorphologicalNumber.Count;
         });
 
+    private static bool IsNominalQuantifier(WordSlot slot) =>
+        slot.Word.CanonicalText is "много" or "многото" or "малко" or "немалко" or "повече" or "повечето" or
+            "няколко" or "толкова" or "колко" or "хиляди" || IsNumeralWord(slot);
+
     private static List<NominalChunk> CollectNominalChunks(
         SentenceClauseMap map,
         int[] idx,
         int fromPos,
         int toPos,
         bool[] governed,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool allowLeadingPostverbalAdverbs = false)
     {
         SentenceSpan sentence = map.Sentence;
         WordSlot[] slots = map.Slots;
@@ -2003,9 +2191,7 @@ internal static class ClauseFusionAnalyzer
             // Find maximal contiguous modifier* + head Noun/ProperNoun run starting at or after cursor.
             int modStart = cursor;
             WordSlot startSlot = slots[idx[modStart]];
-            bool isQuantifier = startSlot.Word.CanonicalText is
-                    "много" or "многото" or "малко" or "немалко" or "повече" or "повечето" or "няколко" or "толкова" or "колко" or "хиляди" ||
-                IsNumeralWord(startSlot);
+            bool isQuantifier = IsNominalQuantifier(startSlot);
             bool isModifier = startSlot.ComparativeGraphModifier || isQuantifier || IsNominalModifierOrDeterminer(startSlot);
 
             int headPos = -1;
@@ -2144,6 +2330,17 @@ internal static class ClauseFusionAnalyzer
                 continue;
             }
 
+            // A source adverb with only bare neuter-singular adjective alternatives cannot
+            // modify this plural head; keep that token outside the nominal chunk.
+            bool leadingPostverbalChunk = allowLeadingPostverbalAdverbs && chunks.Count == 0 && !isQuantifier && fromPos > 0 &&
+                Enumerable.Range(fromPos, modStart - fromPos + 1).All(p =>
+                    idx[p] == idx[p - 1] + 1 && !slots[idx[p]].Quoted && map.AreSpaceBridged(idx[p - 1], idx[p], ct) &&
+                    (p == modStart || IsExactPureAdverb(slots[idx[p]].Word)));
+            while (leadingPostverbalChunk && modStart < headPos &&
+                   !IsNominalQuantifier(slots[idx[modStart]]) &&
+                   IsAdverbBeforePluralHead(slots[idx[modStart]].Word, headSlot, headRows))
+                modStart++;
+
             bool coherent = AssessChunkCoherence(slots, idx, modStart, headPos, headRows, sentence, ct,
                 out MorphologicalNumber? number, out MorphologicalGender? gender, out int[] agreedHeadRows);
             WordSlot carrierSlot = slots[idx[modStart]];
@@ -2193,11 +2390,13 @@ internal static class ClauseFusionAnalyzer
         bool hasCountHead = headRows.Any(r => headSlot.Word.Readings[r].Features.Number == MorphologicalNumber.Count);
         int modEnd = SkipPersonNamePrefixEnd(slots, idx, modStart, headPos);
         bool hasPersonPrefix = modEnd < headPos;
+        bool leader = headSlot.Word.CanonicalText == "глава" && ContextualNominalAgreement.HasLeaderCue(headSlot.Word,
+            Enumerable.Range(modStart, headPos - modStart).Select(m => slots[idx[m]].Word), ct);
         List<int> compatibleHeads = [];
         foreach (int hr in headRows)
         {
             ct.ThrowIfCancellationRequested();
-            ReadingView headRow = headSlot.Word.Readings[hr];
+            ReadingView headRow = ContextualNominalAgreement.ForAgreement(headSlot.Word.Readings[hr], leader);
             MorphologicalFeatures hf = headRow.Features;
             if (!hasCountTrigger && hf.Number == MorphologicalNumber.Count && hasSingularHead) continue;
             if (hasCountTrigger && hf.Number == MorphologicalNumber.Singular && hasCountHead) continue;
@@ -2364,7 +2563,7 @@ internal static class ClauseFusionAnalyzer
         }
         else
         {
-            gender = headSlot.Word.Readings[compatibleHeads[0]].Features.Gender;
+            gender = ContextualNominalAgreement.Features(headSlot.Word.Readings[compatibleHeads[0]], leader).Gender;
         }
         return distinctNumbers.Length == 1;
     }
@@ -2786,7 +2985,7 @@ internal static class ClauseFusionAnalyzer
             }
 
             WordSlot cur = slots[clauseIdx[q]];
-            if (cur.Word.CanonicalText is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно")
+            if (BulgarianFunctionWords.IsNominalFocusParticle(cur.Word.CanonicalText))
                 continue;
 
             if (cur.Word.UsesGraph || !cur.Word.Complete || cur.Word.Readings.Count == 0)
@@ -2867,7 +3066,7 @@ internal static class ClauseFusionAnalyzer
             }
 
             WordSlot cur = slots[clauseIdx[q]];
-            if (cur.Word.CanonicalText is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно")
+            if (BulgarianFunctionWords.IsNominalFocusParticle(cur.Word.CanonicalText))
                 continue;
 
             if (Guard.ObliquePronounReadings(cur.Word, ct).Length == 0)
@@ -3055,6 +3254,49 @@ internal static class ClauseFusionAnalyzer
     private static bool IsPossessiveClitic(string c) =>
         BulgarianFunctionWords.HasAny(c, FunctionWordClasses.PossessiveOrDativeClitic);
 
+    private static bool IsAdverbBeforePluralHead(TokenView word, WordSlot head, int[] headRows) =>
+        !word.UsesGraph && word.Complete && word.Readings.Count > 0 && headRows.Length > 0 &&
+        headRows.All(r => head.Word.Readings[r].Features.Number == MorphologicalNumber.Plural) &&
+        word.Readings.Any(r => r.SourceAdverb && r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adverb) &&
+        word.Readings.All(r => Guard.IsUnwrittenCapitalizedReading(word, r) || r.SourceAdverb && r.Features is
+            { PartOfSpeech: MorphologicalPartOfSpeech.Adverb, HasConflictingFeatures: false, HasUnrecognizedFeatures: false } ||
+            r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Adjective, Gender: MorphologicalGender.Neuter,
+                Number: MorphologicalNumber.Singular, Article: MorphologicalArticle.Indefinite,
+                HasConflictingFeatures: false, HasUnrecognizedFeatures: false });
+
+    private static bool HasPostverbalSubjectBridge(
+        SentenceClauseMap map, int[] idx, int verbLastPos, NominalChunk nominal, CancellationToken ct,
+        bool[]? intransitiveGoverned = null)
+    {
+        int nominalPos = Array.IndexOf(idx, nominal.FirstWord);
+        if (nominalPos <= verbLastPos) return false;
+        for (int p = verbLastPos + 1; p <= nominalPos; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot slot = map.Slots[idx[p]];
+            if (idx[p] != idx[p - 1] + 1 || slot.Quoted ||
+                !map.AreSpaceBridged(idx[p - 1], idx[p], ct)) return false;
+            if (p < nominalPos && !IsExactPureAdverb(slot.Word) &&
+                !(intransitiveGoverned is not null && (intransitiveGoverned[p] || IsExactNominalFocusParticle(slot))) &&
+                !IsAdverbBeforePluralHead(slot.Word, map.Slots[nominal.HeadWord], nominal.HeadReadings))
+                return false;
+        }
+        return true;
+    }
+
+    private static bool IsExactNominalFocusParticle(WordSlot slot) =>
+        BulgarianFunctionWords.IsNominalFocusParticle(slot.Word.CanonicalText) &&
+        IsExactWord(slot) && slot.Active.Length > 0 && slot.Active.All(r =>
+            slot.Word.Readings[r].Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Particle or MorphologicalPartOfSpeech.Adverb,
+                  HasUnrecognizedFeatures: false, HasConflictingFeatures: false });
+
+    private static bool IsRepeatedGovernedPrepositionCoordinator(
+        SentenceClauseMap map, int[] idx, int pos, bool[] governed, CancellationToken ct) =>
+        pos > 0 && pos + 1 < idx.Length && governed[pos - 1] && governed[pos + 1] &&
+        IsActivePreposition(map.Slots[idx[pos + 1]].Word, map.Slots[idx[pos + 1]].Active) &&
+        map.AreSpaceBridged(idx[pos - 1], idx[pos], ct) && map.AreSpaceBridged(idx[pos], idx[pos + 1], ct);
+
     private static bool HasCleanSelectionTokens(
         SentenceClauseMap map, VerbalComplex verb, NominalChunk? subj, CancellationToken ct)
     {
@@ -3176,18 +3418,18 @@ internal static class ClauseFusionAnalyzer
         if (!IsExactWord(auxSlot)) return false;
 
         string auxCanon = auxSlot.Word.CanonicalText;
-        bool isConditionalAux = auxCanon is "бих" or "би" or "бихме" or "бихте" or "биха";
+        int[] clauseIdx = clause.WordIndices;
+        int verbPos = Array.IndexOf(clauseIdx, verb.FiniteCarrierWordIndex);
+        if (verbPos < 0) return false;
+        bool isConditionalAux = IsConditionalAuxiliary(auxCanon,
+            verbPos > 0 ? slots[clauseIdx[verbPos - 1]].Word.CanonicalText : null);
+        if (!isConditionalAux && IsConditionalAuxiliary(auxCanon, null)) return false;
         bool isAnalyticPerfect = verb.Kind == VerbalComplexKind.AnalyticPerfect && !isConditionalAux && !verb.HasFutureMarker;
         if (!isConditionalAux && !verb.HasFutureMarker && !isAnalyticPerfect)
             return false;
         if (isAnalyticPerfect && preSubject is null)
             return false;
 
-        int[] clauseIdx = clause.WordIndices;
-        int verbPos = Array.IndexOf(clauseIdx, verb.FiniteCarrierWordIndex);
-        if (verbPos < 0) return false;
-        if (auxCanon == "би" && verbPos > 0 && slots[clauseIdx[verbPos - 1]].Word.CanonicalText is "може" or "не")
-            return false;
         if (isAnalyticPerfect)
         {
             int appStart = preSubject is null ? 1 : Math.Max(1, Array.IndexOf(clauseIdx, preSubject.LastWord) + 1);
@@ -3209,6 +3451,11 @@ internal static class ClauseFusionAnalyzer
                 Guard.IsPersonalPredicate(auxSlot.Word.Readings[r].Features))
             .ToArray();
         if (auxCarrierReadings.Length == 0) return false;
+
+        // A compatible third-person bare -л predicate licenses clitic "си" too. Its retained
+        // second-person copular homograph cannot then prove a strict agreement conflict.
+        if (isAnalyticPerfect && HasCompatibleSiCliticAlternative(map, clause, preSubject, verbPos, partPosInClause, ct))
+            return false;
 
         // 1. Auxiliary <-> -л Participle number compatibility (per БЕРОН § 24.1.1, -л active participle uses plural even for polite Вие).
         if (!auxCarrierReadings.Any(ar =>
@@ -3328,6 +3575,43 @@ internal static class ClauseFusionAnalyzer
         return false;
     }
 
+    private static bool HasCompatibleSiCliticAlternative(
+        SentenceClauseMap map, ClauseSpan clause, NominalChunk? subject,
+        int auxPos, int partPos, CancellationToken ct)
+    {
+        if (subject is not { Coherent: true, Person: MorphologicalPerson.Third, Number: not null,
+                ShortMasculineSingular: false, TemporalAdjunct: false })
+            return false;
+        WordSlot[] slots = map.Slots;
+        int[] idx = clause.WordIndices;
+        WordSlot aux = slots[idx[auxPos]], part = slots[idx[partPos]];
+        if (aux.Quoted || aux.Word.CanonicalText != "си" || partPos < auxPos + 1 || partPos > auxPos + 2 ||
+            !IsDefiniteOrProperSubjectCandidate(slots, subject) ||
+            PredicativeGrammarEvidence.ReflexiveMarkerReadings(aux.Word).Length == 0 ||
+            partPos == auxPos + 2 && (slots[idx[auxPos + 1]].Word.CanonicalText != "се" ||
+                PredicativeGrammarEvidence.ReflexiveMarkerReadings(slots[idx[auxPos + 1]].Word).Length == 0))
+            return false;
+        for (int p = auxPos + 1; p <= partPos; p++)
+            if (!IsExactWord(slots[idx[p]]) || slots[idx[p]].Quoted ||
+                idx[p] != idx[p - 1] + 1 || !map.AreSpaceBridged(idx[p - 1], idx[p], ct))
+                return false;
+        foreach (int w in idx)
+            if (PredicativeGrammarEvidence.BlocksBareParticiple(slots[w].Word.CanonicalText) ||
+                w != idx[auxPos] && w != idx[partPos] && HasFiniteReading(slots[w]))
+                return false;
+        for (int w = subject.FirstWord; w <= subject.HeadWord; w++)
+            if (!IsExactWord(slots[w]) || !IsCleanSubjectToken(slots[w].Word,
+                    IsSentenceInitialWord(map.Analysis, map.Sentence, w, slots[w].Word), subject.PronounSubject && w == subject.HeadWord, ct))
+                return false;
+        // One compatible original tuple defeats a strict conflict; choosing a bare frame still
+        // requires TryGetBareParticipleRows to account for every competing lexical reading.
+        return part.Word.Readings.Any(r => PredicativeGrammarEvidence.ActiveParticiple(r) &&
+            r.Features.Article is null or MorphologicalArticle.Indefinite &&
+            !TextPredicateLinkAnalyzer.CopularLemma(r.Lemma) && r.Features.Number == subject.Number &&
+            (subject.Number == MorphologicalNumber.Plural || subject.Gender is null ||
+             r.Features.Gender == subject.Gender));
+    }
+
     private static readonly HashSet<string> PartitiveOrCollectiveHeads = new(StringComparer.Ordinal)
     {
         "част", "половина", "третина", "четвъртина", "група", "редица",
@@ -3350,7 +3634,13 @@ internal static class ClauseFusionAnalyzer
         WordSlot headVerbSlot = slots[verb.FiniteCarrierWordIndex];
         string copCanon = headVerbSlot.Word.CanonicalText;
 
-        bool isCopula = verb.Kind is VerbalComplexKind.SyntheticFinite or VerbalComplexKind.CopularPredicative &&
+        VerbalDependent? copularParticiple = verb.Kind == VerbalComplexKind.Conditional && verb.CopularCarrier &&
+            verb.CarrierAccusativeCliticWordIndex < 0 &&
+            verb.PreCarrierClitics.ReflexiveWordIndex < 0 && verb.PostDaOrAuxClitics.ReflexiveWordIndex < 0 &&
+            verb.Dependents is [{ Kind: VerbalDependentKind.AuxiliaryByl } byl, ..] && !verb.HasActiveParticipleTail
+                ? byl : null;
+        bool isConditionalCopula = copularParticiple is not null;
+        bool isCopula = isConditionalCopula || verb.Kind is VerbalComplexKind.SyntheticFinite or VerbalComplexKind.CopularPredicative &&
             !verb.HasFutureMarker && verb.DaParticleWordIndex < 0 &&
             copCanon is "съм" or "си" or "е" or "сме" or "сте" or "са" or "бях" or "беше" or "бе" or "бяхме" or "бяхте" or "бяха" &&
             !(copCanon == "си" && (!subj.PronounSubject || slots[subj.HeadWord].Word.CanonicalText != "ти"));
@@ -3364,6 +3654,24 @@ internal static class ClauseFusionAnalyzer
         int verbClausePos = Array.IndexOf(cWords, verb.FiniteCarrierWordIndex);
         if (verbClausePos < 1 || verbClausePos + 1 >= cWords.Length)
             return false;
+        int copulaEndClausePos = verbClausePos;
+        if (copularParticiple is { } tail)
+        {
+            WordSlot tailSlot = slots[tail.WordIndex];
+            int[] rawTail = NonPlaceholderReadings(tailSlot.Word, sentenceInitial: false);
+            // Keep the nominal била/било and object-oriented lexical бия alternatives uncovered.
+            if (!IsExactWord(tailSlot) || tailSlot.Quoted || rawTail.Length == 0 ||
+                rawTail.Any(r => tailSlot.Word.Readings[r].Features.VerbForm != MorphologicalVerbForm.Participle ||
+                    !IsCleanOrBenignLegacyVerb(tailSlot.Word.Readings[r])))
+                return false;
+            copulaEndClausePos = Array.IndexOf(cWords, tail.WordIndex);
+            if (copulaEndClausePos <= verbClausePos)
+                return false;
+            for (int w = subj.FirstWord; w <= subj.HeadWord; w++)
+                if (!IsCleanSubjectToken(slots[w].Word, IsSentenceInitialWord(map.Analysis, map.Sentence, w, slots[w].Word),
+                        subj.PronounSubject && w == subj.HeadWord, ct))
+                    return false;
+        }
 
         // Abstain if capitalized proper-name appositives appear between clause start and copula ("поетеса Елизабет Барет Браунинг е...").
         int appStart = Math.Max(1, Array.IndexOf(cWords, subj.LastWord) + 1);
@@ -3383,7 +3691,7 @@ internal static class ClauseFusionAnalyzer
             return false;
 
         // Skip optional degree intensifiers right after the copula/linking verb.
-        int predClausePos = verbClausePos + 1;
+        int predClausePos = copulaEndClausePos + 1;
         bool hasIntensifier = false;
         while (predClausePos < cWords.Length && !map.Peripheral[cWords[predClausePos]] &&
                map.AreSpaceBridged(cWords[predClausePos - 1], cWords[predClausePos], ct) &&
@@ -3404,7 +3712,7 @@ internal static class ClauseFusionAnalyzer
         bool hasTrailingMaterialAfterPred = Enumerable.Range(predClausePos + 1, cWords.Length - predClausePos - 1)
             .Any(k => !map.Peripheral[cWords[k]]);
         bool isPoliteVie = subj.PronounSubject && subjSlot.Word.CanonicalText == "вие";
-        if (!isLinking && !hasIntensifier && !hasInterveningMaterialBeforeCopula && !hasTrailingMaterialAfterPred && !isPoliteVie)
+        if (!isConditionalCopula && !isLinking && !hasIntensifier && !hasInterveningMaterialBeforeCopula && !hasTrailingMaterialAfterPred && !isPoliteVie)
             return false;
 
         // Guard predicate-nominal NPs ("Тази книга е истинско съкровище.", "Тя е добър за възрастта си специалист."):
@@ -3470,9 +3778,32 @@ internal static class ClauseFusionAnalyzer
             .ToArray();
         if (predSupport.Length == 0) return false;
 
-        MorphologicalNumber copNum = copCanon is "сме" or "сте" or "са" or "бяхме" or "бяхте" or "бяха" or "остават" or "останаха" or "стават" or "станаха"
-            ? MorphologicalNumber.Plural
-            : MorphologicalNumber.Singular;
+        int[] copulaReadings = isCopula
+            ? Enumerable.Range(0, headVerbSlot.Word.Readings.Count)
+                .Where(r => TextPredicateLinkAnalyzer.CopularCarrier(headVerbSlot.Word.Readings[r]) &&
+                    Guard.IsPersonalPredicate(headVerbSlot.Word.Readings[r].Features))
+                .ToArray()
+            : verb.CarrierFiniteReadings;
+        if (copulaReadings.Length == 0) return false;
+
+        MorphologicalNumber copNum;
+        if (copularParticiple is { } conditionalTail)
+        {
+            if (subj.Number is not { } conditionalNumber ||
+                !copulaReadings.Any(cr => Guard.PersonNumberTupleMatches(
+                    (subj.Person, subj.Number),
+                    (headVerbSlot.Word.Readings[cr].Features.Person, headVerbSlot.Word.Readings[cr].Features.Number))) ||
+                !conditionalTail.Readings.Any(r => Guard.NominalTupleMatches(
+                    (conditionalNumber, conditionalNumber == MorphologicalNumber.Singular ? subj.Gender : null),
+                    (slots[conditionalTail.WordIndex].Word.Readings[r].Features.Number,
+                     slots[conditionalTail.WordIndex].Word.Readings[r].Features.Gender))))
+                return false;
+            copNum = conditionalNumber;
+        }
+        else
+            copNum = copCanon is "сме" or "сте" or "са" or "бяхме" or "бяхте" or "бяха" or "остават" or "останаха" or "стават" or "станаха"
+                ? MorphologicalNumber.Plural
+                : MorphologicalNumber.Singular;
 
         // Guard CompetingPrepositionalSplit ("Тя е поканен от младата лекар." and present-tense "от"-agentive split).
         int firstAfterPred = -1;
@@ -3502,14 +3833,6 @@ internal static class ClauseFusionAnalyzer
                 return false;
         }
 
-        int[] copulaReadings = isCopula
-            ? Enumerable.Range(0, headVerbSlot.Word.Readings.Count)
-                .Where(r => TextPredicateLinkAnalyzer.CopularCarrier(headVerbSlot.Word.Readings[r]) &&
-                    Guard.IsPersonalPredicate(headVerbSlot.Word.Readings[r].Features))
-                .ToArray()
-            : verb.CarrierFiniteReadings;
-        if (copulaReadings.Length == 0) return false;
-
         // Case 1: Polite "Вие" + singular predicative participle/adjective + explicit honorific+name vocative ("Вие сте поканена на срещата, господин Петров.").
         if (isPoliteVie)
         {
@@ -3518,7 +3841,7 @@ internal static class ClauseFusionAnalyzer
             MorphologicalGender? vocGender = FindVocativeAddresseeGender(map, ct);
             if (vocGender is null || predSupport.Any(r => predSlot.Word.Readings[r].Features.Gender == vocGender))
                 return false;
-            return EmitPredicativeSubjMismatch(slots, subj, predSlot, predSupport, headVerbSlot.Word, copulaReadings, canonicalKey, agreement);
+            return EmitPredicativeSubjMismatch(slots, subj, predSlot, predSupport, headVerbSlot.Word, copulaReadings, canonicalKey, agreement, copularParticiple);
         }
 
         if (subj.Number != copNum ||
@@ -3559,7 +3882,7 @@ internal static class ClauseFusionAnalyzer
         if (subj.HeadReadings.Length == 0)
             return false;
 
-        return EmitPredicativeSubjMismatch(slots, subj, predSlot, predSupport, headVerbSlot.Word, copulaReadings, canonicalKey, agreement);
+        return EmitPredicativeSubjMismatch(slots, subj, predSlot, predSupport, headVerbSlot.Word, copulaReadings, canonicalKey, agreement, copularParticiple);
     }
 
     private static MorphologicalGender? FindVocativeAddresseeGender(SentenceClauseMap map, CancellationToken ct)
@@ -3593,7 +3916,8 @@ internal static class ClauseFusionAnalyzer
         TokenView copulaWord,
         int[] copulaReadings,
         Func<IReadOnlyList<ContextOverlayRoleSelection>, string> canonicalKey,
-        List<ContextOverlayCandidate> agreement)
+        List<ContextOverlayCandidate> agreement,
+        VerbalDependent? copularParticiple = null)
     {
         TokenView predWord = predSlot.Word;
         TokenView subjWord = slots[subj.HeadWord].Word;
@@ -3611,6 +3935,12 @@ internal static class ClauseFusionAnalyzer
             new(ContextOverlayRole.Subject, subjWord.OriginalIndex, subjWord.Token.Start, subjWord.Token.Length,
                 subj.HeadReadings.Order().ToArray(), [subj.PronounSubject ? "pronoun_subject_clause_mismatch" : "nominal_subject_clause_mismatch"])
         ];
+        if (copularParticiple is { } tail)
+        {
+            TokenView tailWord = slots[tail.WordIndex].Word;
+            roles.Add(new(ContextOverlayRole.NominalContext, tailWord.OriginalIndex, tailWord.Token.Start, tailWord.Token.Length,
+                tail.Readings.Order().ToArray(), ["clause_fusion_copular_participle"]));
+        }
         int subjModEnd = NominalModifierEndWord(slots, subj);
         for (int w = subj.FirstWord; w < subjModEnd; w++)
             if (!slots[w].Word.UsesGraph && slots[w].Active.Length > 0)
@@ -3642,7 +3972,7 @@ internal static class ClauseFusionAnalyzer
             !sentTrim.EndsWith(".", StringComparison.Ordinal) ||
             slots.Any(s => s.Word.CanonicalText is "ли" or "бе" or "бре" or "абе" or "ма" or "де"))
             return false;
-        if (verb.Kind != VerbalComplexKind.SyntheticFinite || verb.CopularCarrier || verb.InvariantCarrier)
+        if (verb.Kind is not (VerbalComplexKind.SyntheticFinite or VerbalComplexKind.Future) || verb.CopularCarrier || verb.InvariantCarrier)
             return false;
 
         WordSlot verbSlot = slots[verb.FiniteCarrierWordIndex];
@@ -3655,7 +3985,12 @@ internal static class ClauseFusionAnalyzer
         int[] allFinite = AllFinitePersonalReadings(verbSlot.Word, ct);
         if (!verb.AllowsPerfectivePresent(map, clause))
             allFinite = FilterIndicativeFinite(verbSlot.Word, allFinite);
-        if (allFinite.Length == 0 || !IsExclusivelyFirstOrSecond(verbSlot.Word, allFinite) ||
+        bool markedGroup = verb.HasFutureMarker || verb.HasReflexiveSe;
+        if (allFinite.Length == 0 ||
+            (markedGroup ? allFinite.Any(r => Guard.PersonNumberTupleMatches(
+                (MorphologicalPerson.Third, MorphologicalNumber.Singular),
+                (verbSlot.Word.Readings[r].Features.Person, verbSlot.Word.Readings[r].Features.Number))) :
+                !IsExclusivelyFirstOrSecond(verbSlot.Word, allFinite)) ||
             verbSlot.Word.Readings.Any(r => r.Features.VerbForm == MorphologicalVerbForm.Imperative && !r.Features.HasConflictingFeatures))
             return false;
 
@@ -6945,6 +7280,10 @@ internal static class ClauseFusionAnalyzer
                 return true;
         return false;
     }
+
+    // The 161ii entry for играя also occurs with an object (играя роля).
+    private static bool SupportsIntransitiveSubjectRole(ReadingView row) =>
+        row.Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive && Norm(row.Lemma) != "играя";
 
     private static string Norm(string value) => BulgarianTextNormalizer.NormalizeKey(value);
 }

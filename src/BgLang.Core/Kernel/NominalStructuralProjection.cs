@@ -112,13 +112,17 @@ internal static class NominalStructuralProjection
                         (ContextEvidenceGuards.IsMeasuredPassiveAttribute(m.Word.Readings[ri].Features) ||
                          ContextEvidenceGuards.IsMeasuredPresentActiveAttribute(m.Word.Readings[ri].Features)) ||
                     ContextEvidenceGuards.TryGetOrdinalAxes(m.Word.Readings[ri], out var ord) && ord.Article == MorphologicalArticle.Indefinite)) &&
-                !head.Word.Readings.Any(r => r.Category == ContextLanes.Category.Verb) &&
                 !head.RoleReadings.Any(ri => IsVocativeMemberReading(head.Word, head.Word.Readings[ri])) &&
                 !(words[current - 1].CanonicalText == "ти" && head.RoleReadings.Any(ri =>
                     ContextEvidenceGuards.IsTemporalOrMeasureLemma(BulgarianTextNormalizer.NormalizeKey(head.Word.Readings[ri].Lemma)))))
             {
                 Member? cliticMod = MemberAt(current - 2, ContextLanes.Category.Adjective, MorphologicalPartOfSpeech.Adjective);
                 if (cliticMod is not null && Whitespace(cliticMod.Word, words[current - 1]) &&
+                    (!head.Word.Readings.Any(r => r.Category == ContextLanes.Category.Verb) ||
+                     cliticMod.RoleReadings.All(ri => cliticMod.Word.Readings[ri].Features.Number is { } number &&
+                         ContextEvidenceGuards.FiniteReadingsConflictWithNumber(head.Word, number)) &&
+                     cliticMod.RoleReadings.Any(ri => head.RoleReadings.Any(hi => ContextEvidenceGuards.ModifierAgreement(
+                         cliticMod.Word, cliticMod.Word.Readings[ri], head.Word.Readings[hi], includeAdnominalReadings: true)))) &&
                     cliticMod.RoleReadings.Count > 0 && cliticMod.RoleReadings.All(ri =>
                         cliticMod.Word.Readings[ri].Features.Article is MorphologicalArticle.Definite or MorphologicalArticle.Full or MorphologicalArticle.Short ||
                         ContextEvidenceGuards.TryGetOrdinalAxes(cliticMod.Word.Readings[ri], out var ord) &&

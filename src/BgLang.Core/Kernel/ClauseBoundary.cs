@@ -20,7 +20,9 @@ internal enum ClauseBoundaryKind
     PrepositionalSubordinator,
     PreposedSubordinatorComma,
     Coordinator,
-    BareParticipleSegment
+    BareParticipleSegment,
+    IndependentPunctuation,
+    ReportingSpeech
 }
 
 internal readonly record struct ClauseBoundary(
@@ -229,7 +231,7 @@ internal sealed class SentenceClauseMap
         bool hasTerminalPunctuation = ComputeTerminalPunctuation(analysis, sentence);
 
         IReadOnlyList<ClauseSpan> clauses = allExactOrDegree
-            ? SegmentClauses(analysis, slots, peripheral, spaceNext, commaTokenBefore, prepByPrep, ct)
+            ? SegmentClauses(analysis, sentence, words, slots, peripheral, spaceNext, commaTokenBefore, prepByPrep, ct)
             : [];
 
         IReadOnlyList<BareParticipleClauseSegment> bareSegments =
@@ -430,12 +432,11 @@ internal sealed class SentenceClauseMap
     internal static bool IsClauseIntroducer(TokenView word, IReadOnlyList<int> active) =>
         BulgarianFunctionWords.HasAny(word.CanonicalText, FunctionWordClasses.ClauseIntroducer);
 
-    internal static bool IsCoordinatingConjunction(WordSlot slot)
-    {
-        string c = slot.Word.CanonicalText;
-        if (!BulgarianFunctionWords.HasAny(c, FunctionWordClasses.ClauseCoordinatingConjunction)) return false;
-        return !slot.Word.Readings.Any(r => r.Category == Category.Noun && !Guard.IsSourcePlaceholder(slot.Word, r));
-    }
+    internal static bool IsCoordinatingConjunction(WordSlot slot) => IsCoordinatingConjunction(slot.Word);
+
+    private static bool IsCoordinatingConjunction(TokenView word) =>
+        BulgarianFunctionWords.HasAny(word.CanonicalText, FunctionWordClasses.ClauseCoordinatingConjunction) &&
+        !word.Readings.Any(r => r.Category == Category.Noun && !Guard.IsSourcePlaceholder(word, r));
 
     internal static int[] NominalHeadReadings(WordSlot slot)
     {
@@ -640,6 +641,7 @@ internal sealed class SentenceClauseMap
             if (nextAdjacent && IsActivePreposition(words[i + 1], rawActive[i + 1]) &&
                 rawActive[i].Any(r => w.Readings[r].Category == Category.Noun &&
                     w.Readings[r].Features.Article == MorphologicalArticle.Definite) &&
+                !HasCoordinatedAccusativeFinitePrefix(words, rawActive, quoted, spaceNext, i, ct) &&
                 (i == 0 || !prevAdjacent || words[i - 1].CanonicalText != "вие") &&
                 (!HasVerbReading(w, rawActive[i]) ||
                  i == 0 || !prevAdjacent ||
@@ -683,7 +685,7 @@ internal sealed class SentenceClauseMap
             {
                 TokenView w = words[j];
                 if (w.UsesGraph) continue;
-                if (j == i + 1 && w.CanonicalText is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно")
+                if (j == i + 1 && BulgarianFunctionWords.IsNominalFocusParticle(w.CanonicalText))
                     continue;
                 if (IsActivePreposition(w, rawActive[j]) || IsClauseIntroducer(w, rawActive[j])) break;
                 bool hasNominal = rawActive[j].Any(r => w.Readings[r].Category is Category.Noun or Category.Adjective or Category.Number ||
@@ -980,6 +982,8 @@ internal sealed class SentenceClauseMap
 
     private static List<ClauseSpan> SegmentClauses(
         TextAnalysis analysis,
+        SentenceSpan sentence,
+        IReadOnlyList<TokenView> words,
         WordSlot[] slots,
         bool[] peripheral,
         bool[] spaceNext,
@@ -1103,10 +1107,18 @@ internal sealed class SentenceClauseMap
             return onlySub;
         }
 
-        // 2. Split remaining sequence into sequential clauses at subordinating, prepositional-subordinating, or coordinating boundaries.
+        // 2. Split remaining sequence at explicit connectors and independent punctuation boundaries.
         List<(int StartPos, int EndPos, bool SubordinatorStart, ClauseBoundary Boundary)> rawSegments = [];
         int segStart = 0;
-        ClauseBoundary currentBoundary = InitialSegmentBoundary(slots, remaining, prepByPrep);
+        // A sentence coordinator can precede a preposed subordinate clause ("Но щом ..., той ...").
+        // Keep it inside that clause while recognizing the comma that returns to the matrix clause.
+        int initialPos = remaining.Length > 2 && IsCoordinatingConjunction(slots[remaining[0]]) &&
+            !slots[remaining[1]].Quoted && remaining[1] == remaining[0] + 1 && spaceNext[remaining[0]] ? 1 : 0;
+        bool initiallySubordinate = IsPreposedSubordinator(slots, remaining[initialPos],
+            remaining.Length > initialPos + 1 ? remaining[initialPos + 1] : -1) ||
+            prepByPrep[remaining[initialPos]].Kind == ClauseBoundaryKind.PrepositionalSubordinator;
+        ClauseBoundary currentBoundary = InitialSegmentBoundary(slots, remaining, prepByPrep,
+            initiallySubordinate ? initialPos : 0);
 
         for (int p = 1; p < remaining.Length; p++)
         {
@@ -1126,16 +1138,17 @@ internal sealed class SentenceClauseMap
                 p + 1 < remaining.Length && slots[remaining[p + 1]].Word.CanonicalText is "като" or "че";
             bool subBreak = IsClauseIntroducer(cur.Word, cur.Active) || multiWordSub;
             bool coordBreak = IsCoordinatingConjunction(cur) &&
-                (commaBefore || SegmentedVerbAllowsCoordSplit(slots, remaining, p));
-            bool preposedSubComma = segStart == 0 && commaBefore &&
-                (IsPreposedSubordinator(slots, remaining[0], remaining.Length > 1 ? remaining[1] : -1) ||
-                 prepByPrep[remaining[0]].Kind == ClauseBoundaryKind.PrepositionalSubordinator);
+                (commaBefore || SegmentedVerbAllowsCoordSplit(analysis, slots, remaining, p, prepByPrep) &&
+                    !ContinuesCoordinatedNominal(analysis, sentence, words, slots, remaining, p, spaceNext, ct));
+            bool preposedSubComma = segStart == 0 && commaBefore && initiallySubordinate;
+            bool independentPunctuation = curIdx == prevIdx + 1 &&
+                (HasOnlyBoundaryPunctuation(analysis, slots[prevIdx].Word, cur.Word, ';') ||
+                 commaBefore && HasOnlyBoundaryPunctuation(analysis, slots[prevIdx].Word, cur.Word, ',') &&
+                 HasNominativeOnlyPostposedPronoun(analysis, sentence, slots, remaining, p, spaceNext));
 
-            if (prepSubBreak || subBreak || coordBreak || preposedSubComma)
+            if (prepSubBreak || subBreak || coordBreak || preposedSubComma || independentPunctuation)
             {
-                bool startedSub = segStart == 0 &&
-                    (IsPreposedSubordinator(slots, remaining[0], remaining.Length > 1 ? remaining[1] : -1) ||
-                     prepByPrep[remaining[0]].Kind == ClauseBoundaryKind.PrepositionalSubordinator);
+                bool startedSub = segStart == 0 && initiallySubordinate;
                 rawSegments.Add((segStart, p - 1, startedSub, currentBoundary));
                 segStart = p;
 
@@ -1165,6 +1178,11 @@ internal sealed class SentenceClauseMap
                         CommaTokenIndex: commaTok,
                         HasConcessiveIntroducer: false);
                 }
+                else if (independentPunctuation)
+                {
+                    currentBoundary = new ClauseBoundary(
+                        ClauseBoundaryKind.IndependentPunctuation, -1, -1, -1, commaTok, false);
+                }
                 else
                 {
                     currentBoundary = new ClauseBoundary(
@@ -1178,9 +1196,7 @@ internal sealed class SentenceClauseMap
             }
         }
 
-        bool lastStartedSub = segStart == 0 &&
-            (IsPreposedSubordinator(slots, remaining[0], remaining.Length > 1 ? remaining[1] : -1) ||
-             prepByPrep[remaining[0]].Kind == ClauseBoundaryKind.PrepositionalSubordinator);
+        bool lastStartedSub = segStart == 0 && initiallySubordinate;
         rawSegments.Add((segStart, remaining.Length - 1, lastStartedSub, currentBoundary));
 
         int matrixSeg = rawSegments.FindIndex(s => !s.SubordinatorStart);
@@ -1201,14 +1217,152 @@ internal sealed class SentenceClauseMap
         return ordered;
     }
 
-    private static ClauseBoundary InitialSegmentBoundary(
-        WordSlot[] slots, int[] remaining, ClauseBoundary[] prepByPrep)
+    // Keep the sentence map and its existing fallback roles intact when a speaker cannot be proved.
+    internal ClauseSpan? FindDelimitedReportingTail(ClauseSpan clause, CancellationToken ct)
     {
-        int first = remaining[0];
+        int[] idx = clause.WordIndices;
+        if (!clause.Matrix || clause.BodyStartPos != 0 || idx.Length < 3) return null;
+        ReadOnlySpan<char> leading = Analysis.Text.AsSpan(Sentence.Start,
+            Slots[idx[0]].Word.Token.Start - Sentence.Start).Trim();
+        bool dialogue = leading.Length == 1 && leading[0] is '-' or '\u2013' or '\u2014';
+        if (!Slots[idx[0]].Quoted && !dialogue) return null;
+        for (int p = 1; p + 1 < idx.Length; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot previous = Slots[idx[p - 1]], current = Slots[idx[p]];
+            if (current.Quoted || idx[p] != idx[p - 1] + 1 ||
+                !(previous.Quoted || dialogue &&
+                    (HasOnlyBoundaryPunctuation(Analysis, previous.Word, current.Word, '-') ||
+                     HasOnlyBoundaryPunctuation(Analysis, previous.Word, current.Word, '\u2013') ||
+                     HasOnlyBoundaryPunctuation(Analysis, previous.Word, current.Word, '\u2014'))))
+                continue;
+            if (HasDelimitedFiniteSpeech(Analysis, Sentence, Slots, idx, 0, p, ProtectedSpans, ct) &&
+                IsReportingPredicate(current, ct))
+                return new ClauseSpan(clause.ClauseId,
+                    new(ClauseBoundaryKind.ReportingSpeech, -1, -1, -1, -1, false), idx[p..], 0, false, false);
+        }
+        return null;
+    }
+
+    // A positive speech construction license; general transitivity does not identify a speaker.
+    internal static bool IsReportingPredicate(WordSlot slot, CancellationToken ct)
+    {
+        if (slot.Quoted || !IsExactWord(slot)) return false;
+        int[] finite = AllFinitePersonalReadings(slot.Word, ct);
+        return finite.Length > 0 && finite.All(r =>
+            BulgarianTextNormalizer.NormalizeKey(slot.Word.Readings[r].Lemma) is
+                "кажа" or "казвам" or "съобщя" or "съобщавам" or
+                "заявя" or "заявявам" or "обявя" or "обявявам");
+    }
+
+    private static bool HasDelimitedFiniteSpeech(
+        TextAnalysis analysis, SentenceSpan sentence, WordSlot[] slots, int[] indices,
+        int fromPos, int predicatePos, IReadOnlyList<(int Start, int End)> protectedSpans, CancellationToken ct)
+    {
+        if (fromPos != 0 || predicatePos <= fromPos) return false;
+        TokenView first = slots[indices[fromPos]].Word;
+        TokenView last = slots[indices[predicatePos - 1]].Word;
+        TokenView predicate = slots[indices[predicatePos]].Word;
+        bool quoted = false;
+        foreach (var span in protectedSpans)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (span.Start < sentence.Start || span.Start > first.Token.Start ||
+                span.End < last.Token.Start + last.Token.Length || span.End > predicate.Token.Start ||
+                !analysis.Text.AsSpan(sentence.Start, span.Start - sentence.Start).Trim().IsEmpty)
+                continue;
+            char open = analysis.Text[span.Start], close = analysis.Text[span.End - 1];
+            bool paired = (open, close) is ('"', '"') or ('„', '“') or ('“', '”') or ('«', '»') or ('‘', '’');
+            ReadOnlySpan<char> delimiter = analysis.Text.AsSpan(span.End, predicate.Token.Start - span.End).Trim();
+            if (paired && delimiter.Length == 1 && delimiter[0] is ',' or '-' or '\u2013' or '\u2014' &&
+                Enumerable.Range(fromPos, predicatePos - fromPos).All(p => slots[indices[p]].Quoted))
+                quoted = true;
+        }
+        if (!quoted)
+        {
+            ReadOnlySpan<char> leading = analysis.Text.AsSpan(sentence.Start, first.Token.Start - sentence.Start).Trim();
+            int end = last.Token.Start + last.Token.Length;
+            ReadOnlySpan<char> delimiter = analysis.Text.AsSpan(end, predicate.Token.Start - end);
+            ReadOnlySpan<char> trimmed = delimiter.Trim();
+            if (leading.Length != 1 || leading[0] is not ('-' or '\u2013' or '\u2014') ||
+                first.Token.Start == 0 || !char.IsWhiteSpace(analysis.Text[first.Token.Start - 1]) ||
+                trimmed.Length != 1 || trimmed[0] is not ('-' or '\u2013' or '\u2014') ||
+                delimiter.IsEmpty || !char.IsWhiteSpace(delimiter[0]) || !char.IsWhiteSpace(delimiter[^1]) ||
+                Enumerable.Range(fromPos, predicatePos - fromPos).Any(p => slots[indices[p]].Quoted))
+                return false;
+        }
+        // A finite homograph inside a quoted title ("Неговите работи") is not a finite-content witness.
+        return Enumerable.Range(fromPos, predicatePos - fromPos).Any(p =>
+        {
+            ct.ThrowIfCancellationRequested();
+            TokenView word = slots[indices[p]].Word;
+            int[] real = NonPlaceholderReadings(word, p == fromPos);
+            return !word.UsesGraph && word.Complete && real.Length > 0 && real.All(r =>
+                word.Readings[r].Features.VerbForm == MorphologicalVerbForm.Finite &&
+                Guard.IsPersonalPredicate(word.Readings[r].Features) && IsCleanOrBenignLegacyVerb(word.Readings[r]));
+        });
+    }
+
+    private static bool HasOnlyBoundaryPunctuation(TextAnalysis analysis, TokenView left, TokenView right, char punctuation)
+    {
+        bool found = false;
+        int from = left.Token.Start + left.Token.Length;
+        foreach (char ch in analysis.Text.AsSpan(from, right.Token.Start - from))
+        {
+            if (ch == punctuation && !found) found = true;
+            else if (!char.IsWhiteSpace(ch)) return false;
+        }
+        return found;
+    }
+
+    private static bool HasNominativeOnlyPostposedPronoun(
+        TextAnalysis analysis, SentenceSpan sentence, WordSlot[] slots, int[] indices, int predicatePos, bool[] spaceNext)
+    {
+        WordSlot predicate = slots[indices[predicatePos]];
+        if (!IsExactWord(predicate) || FiniteReadings(predicate).Length == 0)
+            return false;
+        bool hasNonverbalAlternative = predicate.Active.Any(r => predicate.Word.Readings[r].Features.VerbForm is not
+            (MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative));
+        if (hasNonverbalAlternative &&
+            (predicatePos + 2 != indices.Length ||
+             predicate.Word.Readings.Any(r => r.Features.RawTag?.Contains("Звател", StringComparison.Ordinal) == true) ||
+             predicate.Active.Any(r =>
+             {
+                 ReadingView row = predicate.Word.Readings[r];
+                 MorphologicalFeatures f = row.Features;
+                 return f.VerbForm is not (MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative) &&
+                     !(f is { PartOfSpeech: MorphologicalPartOfSpeech.Noun, HasConflictingFeatures: false,
+                              HasUnrecognizedFeatures: false } &&
+                       (f.Number == MorphologicalNumber.Count || Guard.IsShortMasculineDefiniteReading(predicate.Word.CanonicalText, row)));
+             })))
+            return false;
+        for (int p = predicatePos + 1; p < indices.Length; p++)
+        {
+            int previous = indices[p - 1], current = indices[p];
+            WordSlot slot = slots[current];
+            if (current != previous + 1 || !spaceNext[previous] || slot.Quoted || !IsExactWord(slot)) return false;
+            if (VerbalComplexBinder.IsExactPureAdverb(slot.Word)) continue;
+            // Complete inventories veto ти/те/то when dative, accusative or discourse readings remain.
+            if (p != indices.Length - 1 || !slot.Word.Readings.All(r => Guard.LicensedSubject(slot.Word.CanonicalText, r)))
+                return false;
+            int from = slot.Word.Token.Start + slot.Word.Token.Length;
+            ReadOnlySpan<char> tail = analysis.Text.AsSpan(from, sentence.Start + sentence.Length - from).Trim();
+            if (tail.IsEmpty) return false;
+            foreach (char ch in tail)
+                if (ch is not ('.' or '!' or '?' or '\u2026')) return false;
+            return true;
+        }
+        return false;
+    }
+
+    private static ClauseBoundary InitialSegmentBoundary(
+        WordSlot[] slots, int[] remaining, ClauseBoundary[] prepByPrep, int firstPos)
+    {
+        int first = remaining[firstPos];
         if (prepByPrep[first].Kind == ClauseBoundaryKind.PrepositionalSubordinator)
             return prepByPrep[first];
 
-        int second = remaining.Length > 1 ? remaining[1] : -1;
+        int second = remaining.Length > firstPos + 1 ? remaining[firstPos + 1] : -1;
         if (IsPreposedSubordinator(slots, first, second))
         {
             bool twoWord = slots[first].Word.CanonicalText is "след" or "преди" or "тъй" or "макар" or "въпреки" &&
@@ -1258,6 +1412,11 @@ internal sealed class SentenceClauseMap
             {
                 // Keep ", в която ..." intact from pos 0 so MarkGovernedPhrases marks "в която" as PP, matching legacy behavior.
                 bodyStart = 0;
+            }
+            else if (boundary.Kind == ClauseBoundaryKind.Subordinator &&
+                     Array.IndexOf(idx, boundary.IntroducerLastWordIndex) is int introducerPos && introducerPos >= 0)
+            {
+                bodyStart = introducerPos + 1;
             }
             else if (IsCoordinatingConjunction(slots[idx[0]]) || IsClauseIntroducer(slots[idx[0]].Word, slots[idx[0]].Active))
             {
@@ -1391,7 +1550,36 @@ internal sealed class SentenceClauseMap
                slots[secondIdx].Word.CanonicalText is "като" or "да";
     }
 
-    private static bool SegmentedVerbAllowsCoordSplit(WordSlot[] slots, int[] remaining, int conjPos)
+    private static bool ContinuesCoordinatedNominal(
+        TextAnalysis analysis, SentenceSpan sentence, IReadOnlyList<TokenView> words, WordSlot[] slots,
+        int[] remaining, int conjPos, bool[] spaceNext, CancellationToken ct)
+    {
+        if (conjPos < 2 || !IsActivePreposition(slots[remaining[conjPos - 2]].Word, slots[remaining[conjPos - 2]].Active))
+            return false;
+        WordSlot left = slots[remaining[conjPos - 1]];
+        if (!HasNominalHeadReading(left) && Guard.ObliquePronounReadings(left.Word, ct).Length == 0)
+            return false;
+        int headPos = conjPos + 1;
+        while (headPos < remaining.Length && !HasFiniteReading(slots[remaining[headPos]])) headPos++;
+        if (headPos >= remaining.Length || RangeHasFinite(slots, remaining, headPos + 1, remaining.Length - 1))
+            return false;
+        for (int p = conjPos - 2; p <= headPos; p++)
+        {
+            if (slots[remaining[p]].Quoted || p > conjPos - 2 &&
+                (remaining[p] != remaining[p - 1] + 1 || !spaceNext[remaining[p - 1]]))
+                return false;
+        }
+        NominalStructuralProjection.Binding? binding = NominalStructuralProjection.BindHead(
+            analysis.Text, sentence, analysis.Tokens, words, remaining[headPos], ct, allowPossessiveCliticBridge: true);
+        if (binding is null || binding.Participants.Count < 2 || binding.Participants[0].WordIndex != remaining[conjPos + 1] ||
+            NominalStructuralProjection.Measure(binding, ct) is not { } phrase)
+            return false;
+        var coherent = phrase.Heads.Where(h => h.Attributes.All(rows => rows.Length > 0)).ToArray();
+        return coherent.Length > 0 && coherent.All(h => Guard.FiniteReadingsConflictWithNumber(binding.Head.Word, h.Number));
+    }
+
+    private static bool SegmentedVerbAllowsCoordSplit(
+        TextAnalysis analysis, WordSlot[] slots, int[] remaining, int conjPos, ClauseBoundary[] prepByPrep)
     {
         if (conjPos + 1 >= remaining.Length) return false;
         WordSlot prev = slots[remaining[conjPos - 1]], next = slots[remaining[conjPos + 1]];
@@ -1413,10 +1601,13 @@ internal sealed class SentenceClauseMap
                     vPos = q;
                     break;
                 }
-                if (laterBreakPos < 0 && (IsCoordinatingConjunction(s) || IsClauseIntroducer(s.Word, s.Active)))
+                if (laterBreakPos < 0 && (IsCoordinatingConjunction(s) || IsClauseIntroducer(s.Word, s.Active) ||
+                    prepByPrep[remaining[q]].Kind == ClauseBoundaryKind.PrepositionalSubordinator))
                     laterBreakPos = q;
             }
-            if (laterBreakPos >= 0 && vPos > laterBreakPos)
+            if (laterBreakPos >= 0 && vPos > laterBreakPos &&
+                (prepByPrep[remaining[laterBreakPos]].Kind != ClauseBoundaryKind.PrepositionalSubordinator ||
+                 !HasFiniteAfterComma(analysis, slots, remaining, vPos)))
             {
                 bool prevGoverned = conjPos >= 2 &&
                     IsActivePreposition(slots[remaining[conjPos - 2]].Word, slots[remaining[conjPos - 2]].Active);
@@ -1428,6 +1619,14 @@ internal sealed class SentenceClauseMap
             }
         }
         return true;
+    }
+
+    private static bool HasFiniteAfterComma(TextAnalysis analysis, WordSlot[] slots, int[] remaining, int firstPos)
+    {
+        for (int p = remaining.Length - 1; p > firstPos; p--)
+            if (!slots[remaining[p]].Quoted && HasFiniteReading(slots[remaining[p]]))
+                return HasCommaBetweenRaw(analysis, slots[remaining[firstPos]].Word, slots[remaining[p]].Word);
+        return false;
     }
 
     private static bool HasCommaBetweenRaw(TextAnalysis analysis, TokenView left, TokenView right)
@@ -1490,6 +1689,13 @@ internal sealed class SentenceClauseMap
     {
         int next = prepIndex + 1;
         if (next >= words.Count) return false;
+        // Preserve a noun reading licensed by the preceding governor or modifier ("за под", "избрах под", "нов под").
+        if (words[prepIndex].CanonicalText == "под" && prepIndex > 0 && spaceNext[prepIndex - 1] &&
+            (IsActivePreposition(words[prepIndex - 1], rawActive[prepIndex - 1]) ||
+             HasVerbReading(words[prepIndex - 1], rawActive[prepIndex - 1]) ||
+             HasAgreeingIndefiniteNounAfterModifier(words[prepIndex - 1], rawActive[prepIndex - 1],
+                words[prepIndex], rawActive[prepIndex], allowArticledModifier: true)))
+            return false;
         if (StartsNominalMaterial(words, rawActive, next)) return true;
 
         string nc = words[next].CanonicalText;
@@ -1733,6 +1939,24 @@ internal sealed class SentenceClauseMap
                    Number: MorphologicalNumber.Singular,
                    Article: MorphologicalArticle.Full
                });
+    }
+
+    private static bool HasCoordinatedAccusativeFinitePrefix(
+        IReadOnlyList<TokenView> words, List<int>[] active, bool[] quoted, bool[] spaceNext,
+        int index, CancellationToken ct)
+    {
+        if (index < 2 || !spaceNext[index - 2] || !spaceNext[index - 1] ||
+            quoted[index - 2] || quoted[index - 1] || quoted[index])
+            return false;
+        TokenView coordinator = words[index - 2];
+        TokenView host = words[index];
+        // Preserve both host readings; a complete short accusative rules out a nominal prefix.
+        return !coordinator.UsesGraph && coordinator.Complete && IsCoordinatingConjunction(coordinator) &&
+            active[index - 2].Any(r => coordinator.Readings[r].Features.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction) &&
+            Guard.AccusativeCliticReadings(words[index - 1], ct).Length > 0 &&
+            !host.UsesGraph && host.Complete && active[index].Any(r =>
+                host.Readings[r].Features.VerbForm == MorphologicalVerbForm.Finite &&
+                Guard.IsPersonalPredicate(host.Readings[r].Features) && IsCleanOrBenignLegacyVerb(host.Readings[r]));
     }
 
     private static bool IsParticipialAppositiveOpener(WordSlot nounSlot, WordSlot openerSlot)

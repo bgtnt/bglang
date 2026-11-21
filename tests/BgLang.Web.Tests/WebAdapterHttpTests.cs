@@ -166,15 +166,19 @@ public sealed class WebAdapterHttpTests
             using (var noRedirect = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
                 { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(20) })
             {
-                foreach (string labAlias in new[] { "/demo-lab", "/demo-lab/" })
+                foreach (string labAlias in new[] { "/", "/demo", "/demo/", "/demo.html", "/demo/index.html", "/demo-lab", "/demo-lab/", "/demo-lab/index.html" })
                 {
                     using HttpResponseMessage redirect = await noRedirect.GetAsync(labAlias);
                     Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode, labAlias);
-                    Assert.AreEqual("/demo-lab/index.html", redirect.Headers.Location?.OriginalString, labAlias);
+                    Assert.AreEqual("/demo-tree/index.html", redirect.Headers.Location?.OriginalString, labAlias);
                 }
             }
             using HttpResponseMessage labPage = await client.GetAsync("/demo-lab");
             Assert.AreEqual(HttpStatusCode.OK, labPage.StatusCode);
+            string mainDemo = await labPage.Content.ReadAsStringAsync();
+            StringAssert.Contains(mainDemo, "Роли и опори");
+            StringAssert.Contains(mainDemo, "Прочит с ударения");
+            Assert.IsFalse(mainDemo.Contains("Време при писане", StringComparison.Ordinal));
 
             for (int request = 0; request < 2; request++)
             {

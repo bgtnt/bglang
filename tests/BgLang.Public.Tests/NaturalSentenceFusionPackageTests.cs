@@ -16,6 +16,148 @@ public sealed partial class PublicPackageTests
     };
 
     [TestMethod]
+    [DataRow("Свали шлема си с гребена и го размаха.", "BasicPrepositionalObject", "Свали", "с гребена")]
+    [DataRow("После един от накичените свали шлема си с гребена и го размаха над главата си.", "BasicPrepositionalObject", "свали", "с гребена")]
+    [DataRow("Свали шлема си с гребена и го размаха над главата си.", "BasicPrepositionalObject", "Свали", "с гребена")]
+    [DataRow("Свали шлема си с гребена и го размаха над него.", "BasicPrepositionalObject", "Свали", "с гребена")]
+    [DataRow("Той стоеше с портрета и го показа на детето.", "BasicPrepositionalObject", "стоеше", "с портрета")]
+    [DataRow("Той не е висял на стената и класът не е правил стойка.", "BasicPrepositionalObject", "е", "на стената")]
+    [DataRow("Учителят влезе и говори с децата.", "BasicPrepositionalObject", "влезе", null)]
+    [DataRow("Учителят влезе и говори с децата.", "BasicObject", "влезе", null)]
+    [DataRow("Каза, че пътува с влака.", "BasicPrepositionalObject", "Каза", null)]
+    [DataRow("Тя подари книгата, която намери в парка, на детето.", "BasicPrepositionalObject", "подари", "на детето")]
+    [DataRow("Работя с молив и гума.", "BasicPrepositionalObject", "Работя", "с молив и гума")]
+    [DataRow("Тя работи с молив и гума на масата.", "BasicPrepositionalObject", "работи", "с молив и гума")]
+    [DataRow("Той се възхищава на ръста и размаха на птицата.", "BasicPrepositionalObject", "възхищава", "на ръста и размаха")]
+    [DataRow("Тя се интересува от него и неговите работи на масата.", "BasicPrepositionalObject", "интересува", "от него и неговите работи")]
+    [DataRow("Тя се интересува от него и неговите работи.", "BasicPrepositionalObject", "интересува", "от него и неговите работи")]
+    [DataRow("Тя се интересува от него и добрите му работи.", "BasicPrepositionalObject", "интересува", "от него и добрите му работи")]
+    [DataRow("Тя се интересува от него и добрите му работи на масата.", "BasicPrepositionalObject", "интересува", "от него и добрите му работи")]
+    [DataRow("Тя се интересува от него и неговите книги на масата.", "BasicPrepositionalObject", "интересува", "от него и неговите книги")]
+    [DataRow("Тя се интересува от него и неговите деца.", "BasicPrepositionalObject", "интересува", "от него и неговите деца")]
+    [DataRow("Всяка мина през залата.", "BasicPrepositionalObject", "мина", "през залата")]
+    [DataRow("Една мина през залата.", "BasicPrepositionalObject", "мина", "през залата")]
+    [DataRow("Нейната мина през залата.", "BasicPrepositionalObject", "мина", "през залата")]
+    [DataRow("Добрата му мина през залата.", "BasicPrepositionalObject", "мина", "през залата")]
+    [DataRow("Учителката каза, че всяка мина през залата.", "BasicPrepositionalObject", "каза", null)]
+    [DataRow("Децата видяха всяка мина на пътя.", "BasicObject", "видяха", "всяка мина")]
+    [DataRow("Учителката говори с момичетата и всяка мина през залата.", "BasicPrepositionalObject", "говори", "с момичетата")]
+    [DataRow("Тя се интересува от него и неговите работи останаха неплатени.", "BasicPrepositionalObject", "интересува", "от него")]
+    [DataRow("Тя се интересува от него и добрите му работи останаха неплатени.", "BasicPrepositionalObject", "интересува", "от него")]
+    [DataRow("Тя се интересува от него и той работи на масата.", "BasicPrepositionalObject", "интересува", "от него")]
+    [DataRow("Тя се интересува от него и работи на масата.", "BasicPrepositionalObject", "интересува", "от него")]
+    [DataRow("Тя говори с него и нея за работата.", "BasicPrepositionalObject", "говори", "с него и нея")]
+    [DataRow("Говоря с брат ми.", "BasicPrepositionalObject", "Говоря", "с брат ми")]
+    [DataRow("Тя нарисува къща и дърво.", "BasicObject", "нарисува", "къща и дърво")]
+    [DataRow("Учителят е спокоен и големите момчета, за да помогнат, пристигнаха.", "BasicComplement", "е", "спокоен")]
+    [DataRow("Учителите са спокойни и големите момчета, за да помогнат, пристигнаха.", "BasicComplement", "са", "спокойни")]
+    [DataRow("Учителят е спокоен и големите момчета пристигнаха, за да помогнат.", "BasicComplement", "е", "спокоен")]
+    [DataRow("Тя работи с молив и го размаха над главата си, за да го видят.", "BasicPrepositionalObject", "работи", "с молив")]
+    [DataRow("Учителят разглежда книги и списания, за да избере текст.", "BasicObject", "разглежда", "книги и списания")]
+    public void Basic_object_extents_follow_their_predicate_clause(
+        string text, string rule, string predicate, string? expected)
+    {
+        TextAnalysis analysis = session.AnalyzeText(text, false, NaturalSentenceOptions, default);
+        TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+        int predicateIndex = sentence.PredicateTokenIndex!.Value;
+        Assert.AreEqual(predicate, analysis.Tokens[predicateIndex].Text);
+        var matches = sentence.Candidates.Where(c => c.RuleId == rule).ToArray();
+        if (expected is null)
+        {
+            Assert.IsEmpty(matches);
+            return;
+        }
+        Assert.HasCount(1, matches);
+        TextSyntaxCandidate role = matches[0];
+        Assert.AreEqual(text.IndexOf(expected, StringComparison.Ordinal), role.Start);
+        Assert.AreEqual(expected, text.Substring(role.Start, role.Length));
+        Assert.AreEqual(predicateIndex, role.Context.Single().TokenIndex);
+        CollectionAssert.AreEqual(expected.Split(' '), role.Targets.Select(t => analysis.Tokens[t.TokenIndex].Text).ToArray());
+        foreach (TextReadingOccurrence occurrence in analysis.ReadingInventory!.Occurrences)
+            CollectionAssert.AreEqual(session.Lookup(occurrence.Text, LookupMode.Exact, 256).ToArray(),
+                analysis.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(r => r.Raw).ToArray(), occurrence.Text);
+    }
+
+    [TestMethod]
+    [DataRow("Той работеше с гребена и, след кратка пауза, го размаха над главата си.")]
+    [DataRow("Той работеше с гребена и 😀 го размаха над главата си.")]
+    [DataRow("Той работеше с гребена и „го размаха над главата си“.")]
+    public void Interrupted_coordinator_clitic_prefix_does_not_supply_a_prepositional_object_extent(string text)
+    {
+        TextAnalysis analysis = session.AnalyzeText(text, false, NaturalSentenceOptions, default);
+        foreach (TextSyntaxCandidate role in analysis.Syntax!.Sentences.Single().Candidates.Where(c => c.RuleId == "BasicPrepositionalObject"))
+            Assert.IsFalse(role.Targets.Any(t => analysis.Tokens[t.TokenIndex].Text == "размаха"), text);
+    }
+
+    [TestMethod]
+    public void Coordinated_accusative_host_preserves_the_complete_noun_and_finite_inventory()
+    {
+        const string text = "После един от накичените свали шлема си с гребена и го размаха над главата си.";
+        TextAnalysis analysis = session.AnalyzeText(text, false, NaturalSentenceOptions, default);
+        TextReadingInventory inventory = analysis.ReadingInventory!;
+        TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.Text == "размаха");
+        TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
+        CollectionAssert.AreEqual(new[]
+        {
+            "размах|Съществително:40a,Мъжки,Членуван",
+            "размахам|Глагол:186tt,2л.,Минало_свършено",
+            "размахам|Глагол:186tt,3л.,Минало_свършено",
+            "размахам|Глагол:186tt,3л.,Сегашно"
+        }, set.ResolvedReadings.Select(r => r.Raw.Lemma + "|" + r.Raw.PartOfSpeech).ToArray());
+        Assert.AreEqual(4, set.DisplayedReadingCount);
+        CollectionAssert.AreEqual(set.ResolvedReadings.Select(r => r.Raw).ToArray(), analysis.Tokens[occurrence.TokenIndex].Analysis!.Readings.ToArray());
+        TextReadingOccurrence clitic = inventory.Occurrences.Single(o => o.Text == "го");
+        Assert.IsTrue(inventory.Sets[clitic.ReadingSetIndex].ResolvedReadings.Any(r => r.Features is
+            { Case: MorphologicalCase.Accusative, IsShortForm: true }));
+        Assert.AreEqual(text, analysis.Text);
+    }
+
+    [TestMethod]
+    [DataRow("Държавите-членки приемат необходимите законови подзаконови и административни разпоредби, за да се съобразят с настоящата директива преди 31 декември 1982 г. Те незабавно уведомяват Комисията за това.")]
+    [DataRow("Държавите-членки приемат необходимите законови подзаконови и административни разпоредби, без да нарушават настоящата директива.")]
+    public void Coordinated_object_modifiers_do_not_borrow_the_finite_of_a_licensed_subordinator(string text)
+    {
+        const string expected = "необходимите законови подзаконови и административни разпоредби";
+        foreach (TextContextOptions options in new TextContextOptions[] { new() { IncludeAdditionalRoleHeuristics = true }, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences[0];
+            TextSyntaxCandidate predicate = sentence.Candidates.Single(c => c.RuleId == "BasicPredicate");
+            Assert.AreEqual("приемат", text.Substring(predicate.Start, predicate.Length));
+            TextSyntaxCandidate obj = sentence.Candidates.Single(c => c.RuleId == "BasicObject");
+            Assert.AreEqual(expected, text.Substring(obj.Start, obj.Length));
+            Assert.AreEqual(text.IndexOf(expected, StringComparison.Ordinal), obj.Start);
+            Assert.IsTrue(obj.Targets.Any(t => analysis.Tokens[t.TokenIndex].Text == "разпоредби"));
+            Assert.IsFalse(sentence.Candidates.Any(c => c.RuleId == "BasicPrepositionalObject"),
+                "The matrix object must not regain the subordinate clause's prepositional object.");
+            if (options.IncludeNominalConstructions)
+                Assert.IsTrue(analysis.NominalConstructions!.Phrases.Any(p => p.Assessment == NominalAgreementAssessment.Compatible &&
+                    text.Substring(p.Start, p.Length) == expected));
+            Assert.AreEqual(text, analysis.Text);
+        }
+    }
+
+    [TestMethod]
+    public void Legal_comma_nominal_core_keeps_its_complete_advice_and_separate_subordinate_scope()
+    {
+        const string text = "Държавите-членки приемат необходимите законови, подзаконови и административни разпоредби, за да се съобразят с настоящата директива преди 31 декември 1982 г. Те незабавно уведомяват Комисията за това.";
+        foreach (TextContextOptions options in new TextContextOptions[] { new() { IncludeAdditionalRoleHeuristics = true }, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences[0];
+            Assert.AreEqual("приемат", analysis.Tokens[sentence.PredicateTokenIndex!.Value].Text);
+            Assert.IsFalse(sentence.Candidates.Any(c => c.RuleId == "BasicPrepositionalObject"));
+            if (options.IncludeNominalConstructions)
+            {
+                TextNominalPhrase phrase = analysis.NominalConstructions!.Phrases.Single(p =>
+                    text.Substring(p.Start, p.Length) == "необходимите законови, подзаконови и административни разпоредби");
+                Assert.AreEqual(NominalAgreementAssessment.Compatible, phrase.Assessment);
+                CollectionAssert.AreEqual(new[] { ",", "и" }, phrase.ConnectorTokenIndices.Select(i => analysis.Tokens[i].Text).ToArray());
+            }
+        }
+    }
+
+    [TestMethod]
     [DataRow("Вчера сутринта в центъра на града се проведе протест.", "проведе", "протест", "протест")]
     [DataRow("Кметът излезе пред сградата на общината и говори с протестиращите.", "излезе", "Кметът", "Кметът")]
     [DataRow("Според организаторите протестът ще продължи и утре.", "продължи", "протестът", "протестът")]

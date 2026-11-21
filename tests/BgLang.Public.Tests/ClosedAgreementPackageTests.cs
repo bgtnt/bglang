@@ -107,6 +107,348 @@ public sealed partial class PublicPackageTests
         }
     }
 
+    [TestMethod]
+    [DataRow("Под познатата външност се криеха напълно нова конструкция.", "криеха", "конструкция", true)]
+    [DataRow("Под познатата външност се криех напълно нова конструкция.", "криех", "конструкция", true)]
+    [DataRow("По водата се предават всеки шум отвън, а водата стига до входа на дупката.", "предават", "шум", true)]
+    [DataRow("Там имаше толкова много студенти, че той се зачудеха.", "зачудеха", "той", true)]
+    [DataRow("Не е както ти мислехте.", "мислехте", "ти", true)]
+    [DataRow("Но щом времето почнеше да се влошава, той се събуждат от дрямката си.", "събуждат", "той", true)]
+    [DataRow("В стаята се чуваше ясно силни гласове.", "чуваше", "гласове", true)]
+    [DataRow("По улицата вървеше бързо децата.", "вървеше", "децата", true)]
+    [DataRow("Как се искат подкуп?", "искат", "подкуп", true)]
+    [DataRow("Ти се казвам Чорбанова.", "казвам", "Ти", true)]
+    [DataRow("Ти се казваш Чорбанова.", "казваш", "Ти", false)]
+    [DataRow("Под познатата външност се крие напълно нова конструкция.", "крие", "конструкция", false)]
+    [DataRow("Под познатата външност се криеха напълно нови конструкции.", "криеха", "конструкции", false)]
+    [DataRow("По водата се предава всеки шум отвън, а водата стига до входа на дупката.", "предава", "шум", false)]
+    [DataRow("Там имаше толкова много студенти, че той се зачуди.", "зачуди", "той", false)]
+    [DataRow("Не е както ти мислиш.", "мислиш", "ти", false)]
+    [DataRow("Но щом времето почнеше да се влошава, той се събуждаше от дрямката си.", "събуждаше", "той", false)]
+    [DataRow("В стаята се чуваха ясно силни гласове.", "чуваха", "гласове", false)]
+    [DataRow("По улицата вървяха бързо децата.", "вървяха", "децата", false)]
+    [DataRow("Как се иска подкуп?", "иска", "подкуп", false)]
+    [DataRow("Под познатата външност криеха напълно нова конструкция.", "криеха", "конструкция", false)]
+    [DataRow("По водата предават всеки шум отвън.", "предават", "шум", false)]
+    [DataRow("Видях червената стол.", "Видях", "стол", false)]
+    [DataRow("Видях червения стол.", "Видях", "стол", false)]
+    [DataRow("Книгата четат децата.", "четат", "децата", false)]
+    [DataRow("В града вървяхме бавно лекарите.", "вървяхме", "лекарите", false)]
+    [DataRow("Дойдоха учителят с децата.", "Дойдоха", "учителят", false)]
+    [DataRow("Казвам се Иван.", "Казвам", "Иван", false)]
+    [DataRow("Наричаме се отбор.", "Наричаме", "отбор", false)]
+    [DataRow("Нов под се полага.", "полага", "под", false)]
+    [DataRow("Този под скърца.", "скърца", "под", false)]
+    [DataRow("Дървен под скърца.", "скърца", "под", false)]
+    [DataRow("Без под къщата е недовършена.", "е", "под", false)]
+    [DataRow("За под този материал е подходящ.", "е", "под", false)]
+    [DataRow("Избрахме под миналата седмица.", "Избрахме", "под", false)]
+    [DataRow("Остава малко време.", "Остава", "време", false)]
+    [DataRow("Остана малко храна.", "Остана", "храна", false)]
+    [DataRow("Останаха достатъчно места.", "Останаха", "места", false)]
+    [DataRow("В стаята се чуваше отдалеч силни гласове.", "чуваше", "гласове", true)]
+    [DataRow("По улицата вървеше напред децата.", "вървеше", "децата", true)]
+    [DataRow("В стаята се чуваха отдалеч силни гласове.", "чуваха", "гласове", false)]
+    [DataRow("По улицата вървяха напред децата.", "вървяха", "децата", false)]
+    [DataRow("Той чете както и аз.", "чете", "Той", false)]
+    [DataRow("Той работи както вчера.", "работи", "Той", false)]
+    [DataRow("Той каза, че ти работи.", "работи", "ти", false)]
+    [DataRow("Той каза, че ти се усмихват.", "усмихват", "ти", false)]
+    [DataRow("Той каза, че ти се спеше.", "спеше", "ти", false)]
+    [DataRow("Той каза, че той с нея се виждат.", "виждат", "той", false)]
+    [DataRow("Той каза, че тя с него се виждат.", "виждат", "тя", false)]
+    [DataRow("Той каза, че аз с нея се виждаме.", "виждаме", "аз", false)]
+    [DataRow("Той казва, че се събуждат.", "събуждат", "Той", false)]
+    [DataRow("По водата се предават, а всеки шум остава отвън.", "предават", "шум", false)]
+    [DataRow("По водата се предават всеки шум и всеки вик.", "предават", "шум", false)]
+    [DataRow("Той казва, че „ние“ се събуждат.", "събуждат", "ние", false)]
+    [DataRow("Той каза: „Под познатата външност се криеха напълно нова конструкция.“", "криеха", "конструкция", false)]
+    [DataRow("Под познатата външност се криеха — напълно нова конструкция.", "криеха", "конструкция", false)]
+    [DataRow("Влакът тръгва, казаха той.", "казаха", "той", true)]
+    [DataRow("Влакът тръгва, каза той.", "каза", "той", false)]
+    [DataRow("Влакът тръгва, уточниха тя.", "уточниха", "тя", true)]
+    [DataRow("Влакът тръгва, уточни тя.", "уточни", "тя", false)]
+    [DataRow("Те дойдоха, дадоха ти хляб.", "дадоха", "ти", false)]
+    [DataRow("Той влезе, видях те вчера.", "видях", "те", false)]
+    [DataRow("Те дойдоха, видяха учителят.", "видяха", "учителят", false)]
+    [DataRow("Учителят записа „казаха той“ на дъската.", "казаха", "той", false)]
+    [DataRow("Понякога ми липсват даже усещането за време.", "липсват", "усещането", true)]
+    [DataRow("Понякога ми липсва даже усещането за време.", "липсва", "усещането", false)]
+    [DataRow("Занесоха даже книгата на учителя.", "Занесоха", "книгата", false)]
+    [DataRow("Поради това за поетите не съществува синоними; всяка дума е незаменима.", "съществува", "синоними", true)]
+    [DataRow("Поради това за поетите не съществуват синоними; всяка дума е незаменима.", "съществуват", "синоними", false)]
+    [DataRow("До 2 месеца предстои нови избори в града.", "предстои", "избори", true)]
+    [DataRow("До 2 месеца предстоят нови избори в града.", "предстоят", "избори", false)]
+    [DataRow("След 3 дни докараха нови машини.", "докараха", "машини", false)]
+    [DataRow("През юли предстои визити у нас на министрите на отбраната на Турция и на Грузия.", "предстои", "визити", true)]
+    [DataRow("През юли предстоят визити у нас на министрите на отбраната на Турция и на Грузия.", "предстоят", "визити", false)]
+    [DataRow("В града пристигнаха лекарят и учителят.", "пристигнаха", "учителят", false)]
+    [DataRow("Учителят написа „тихо; казаха той“.", "казаха", "той", false)]
+    [DataRow("Българина аз познавам, казаха той познава.", "казаха", "той", false)]
+    [DataRow("Играят важна роля.", "Играят", "роля", false)]
+    [DataRow("Играят даже важна роля.", "Играят", "роля", false)]
+    [DataRow("Играят в театъра важна роля.", "Играят", "роля", false)]
+    [DataRow("Те пеят; играят важна роля.", "играят", "роля", false)]
+    [DataRow("Шепнат даже молитва.", "Шепнат", "молитва", false)]
+    public void Clause_order_agreement_uses_local_proven_subjects_and_preserves_alternatives(
+        string text, string predicate, string subject, bool mismatch)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        int predicateIndex = actual.Tokens.Select((token, index) => (token, index))
+            .Single(p => p.token.Kind == TokenKind.Word && p.token.Text == predicate).index;
+        int subjectIndex = actual.Tokens.Select((token, index) => (token, index))
+            .Single(p => p.token.Kind == TokenKind.Word && p.token.Text == subject).index;
+        TokenAnalysis target = actual.Tokens[predicateIndex];
+        TextDiagnostic[] warnings = actual.Diagnostics.Where(d => d.Code is
+                "productive_morphology_agreement_mismatch" or "pronoun_verb_agreement_mismatch" &&
+            d.Start == target.Start && d.Length == target.Length).ToArray();
+        Assert.HasCount(mismatch ? 1 : 0, warnings, text);
+        TextGrammarMatch[] matches = actual.Grammar!.Matches.Where(m => m.RuleId == "clause_fusion_agreement.v1" &&
+            m.Assessment == TextGrammarAssessment.Mismatch && m.DependentTokenIndices.Contains(predicateIndex)).ToArray();
+        Assert.HasCount(mismatch ? 1 : 0, matches, text);
+
+        if (mismatch)
+        {
+            Assert.AreEqual("clause_fusion_agreement.v1", warnings[0].RuleId);
+            Assert.IsNull(warnings[0].ProjectedText); Assert.IsNull(warnings[0].GraphReadings);
+            Assert.IsNotNull(warnings[0].Readings); Assert.IsEmpty(matches[0].Repairs);
+            Assert.IsTrue(matches[0].ControllerTokenIndices.Contains(subjectIndex));
+            TextContextCandidate proof = actual.Context!.Sentences.SelectMany(s => s.Candidates).Single(c =>
+                c.AuthorityLane == "clause_fusion_agreement.v1" && c.PredicateTokenIndex == predicateIndex &&
+                c.EvidenceCodes.Contains("productive_morphology_agreement_mismatch"));
+            Assert.IsFalse(proof.Selectable);
+            TextContextRoleSelection subjectRole = proof.Roles.Single(r => r.Role == TextContextRole.Subject && r.TokenIndex == subjectIndex);
+            TextContextRoleSelection predicateRole = proof.Roles.Single(r => r.Role == TextContextRole.Predicate);
+            foreach (TextReadingReference predicateRef in predicateRole.Readings)
+            {
+                MorphologicalFeatures finite = OrderRows(actual, predicateRef.TokenIndex)[predicateRef.CompleteReadingIndex].Features;
+                Assert.AreEqual(MorphologicalVerbForm.Finite, finite.VerbForm);
+                foreach (TextReadingReference subjectRef in subjectRole.Readings)
+                {
+                    MorphologicalFeatures nominal = OrderRows(actual, subjectRef.TokenIndex)[subjectRef.CompleteReadingIndex].Features;
+                    Assert.IsFalse((nominal.Person ?? MorphologicalPerson.Third) == finite.Person && nominal.Number == finite.Number,
+                        "Every original supported pair must conflict; compatible or imperative readings cannot be discarded.");
+                }
+            }
+        }
+
+        foreach (TextReadingOccurrence occurrence in actual.ReadingInventory!.Occurrences)
+        {
+            TextReadingSet set = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex];
+            CollectionAssert.AreEqual(session.Lookup(set.CanonicalKey, LookupMode.Exact, 256)
+                    .Select(r => new TextReadingSnapshot(r, r.Features)).ToArray(), set.ResolvedReadings.ToArray(),
+                "Clause order must preserve every original lexical reading and index: " + occurrence.Text);
+            Assert.AreEqual(occurrence.Text, text.Substring(occurrence.Start, occurrence.Length));
+        }
+
+        static IReadOnlyList<TextReadingSnapshot> OrderRows(TextAnalysis analysis, int tokenIndex) =>
+            analysis.ReadingInventory!.Sets[analysis.ReadingInventory.Occurrences.Single(o => o.TokenIndex == tokenIndex).ReadingSetIndex].ResolvedReadings;
+    }
+
+    [TestMethod]
+    [DataRow("Той каза, че ние се подготвяме.", "ние", "подготвяме", true)]
+    [DataRow("Той чете, защото тя се усмихва.", "тя", "усмихва", true)]
+    [DataRow("Той каза, че ти се усмихваш.", "ти", "усмихваш", false)]
+    [DataRow("Той каза, че ти се спеше.", "ти", "спеше", false)]
+    public void Clause_order_compatible_reflexive_subordinate_pair_retains_local_original_support(
+        string text, string subject, string predicate, bool compatible) =>
+        AssertLocalPronounAgreement(text, subject, predicate, compatible);
+
+    [TestMethod]
+    [DataRow("Влакът тръгва, каза той.", "той", "каза")]
+    [DataRow("Влакът тръгва, уточни тя.", "тя", "уточни")]
+    public void Clause_order_reporting_pronoun_retains_local_original_support(string text, string subject, string predicate) =>
+        AssertLocalPronounAgreement(text, subject, predicate, true);
+
+    [TestMethod]
+    [DataRow("„Влакът тръгва“, казаха учителят.", "учителят", "казаха", 1)]
+    [DataRow("„Влакът тръгва“, каза учителят.", "учителят", "каза", 0)]
+    [DataRow("\"Тръгваме\", заявиха новият учител.", "учител", "заявиха", 1)]
+    [DataRow("\"Тръгваме\", заяви новият учител.", "учител", "заяви", 0)]
+    // The licensed leadership phrase now supplies a singular controller, retaining the feminine lexical head witness.
+    [DataRow("\"Налагането на вето означава провеждане на изборите при действието и при условията на стария закон\", казаха държавният глава.", "глава", "казаха", 1)]
+    [DataRow("„Тръгваме“, казаха държавният глава.", "глава", "казаха", 1)]
+    [DataRow("„Тръгваме“, каза държавният глава.", "глава", "каза", 0)]
+    [DataRow("„Тръгваме“, казаха църковният глава.", "глава", "казаха", 1)]
+    [DataRow("„Тръгваме“, каза църковният глава.", "глава", "каза", 0)]
+    [DataRow("– Тръгваме – казаха учителят.", "учителят", "казаха", 1)]
+    [DataRow("– Тръгваме – каза учителят.", "учителят", "каза", 0)]
+    [DataRow("Това обявиха дипломатът лично пред журналисти вчера.", "дипломатът", "обявиха", 1)]
+    [DataRow("Това обяви дипломатът лично пред журналисти вчера.", "дипломатът", "обяви", 0)]
+    [DataRow("„Тръгваме“, попитаха учителя.", "учителя", "попитаха", -1)]
+    [DataRow("„Тръгваме“, казаха учителя.", "учителя", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха Иван.", "Иван", "казаха", -1)]
+    [DataRow("„Тръгваме“, каза Иван.", "Иван", "каза", -1)]
+    [DataRow("– Тръгваме – казаха Иван.", "Иван", "казаха", -1)]
+    [DataRow("– Тръгваме – каза Иван.", "Иван", "каза", -1)]
+    [DataRow("„Тръгваме“, казаха Теодора.", "Теодора", "казаха", 1)]
+    [DataRow("„Тръгваме“, каза Теодора.", "Теодора", "каза", 0)]
+    [DataRow("– Тръгваме – казаха Петър.", "Петър", "казаха", 1)]
+    [DataRow("– Тръгваме – каза Петър.", "Петър", "каза", 0)]
+    [DataRow("„Тръгваме“, казаха жената.", "жената", "казаха", -1)]
+    [DataRow("„Тръгваме“, каза жената.", "жената", "каза", -1)]
+    [DataRow("„Тръгваме“, каза учениците.", "учениците", "каза", 1)]
+    [DataRow("„Тръгваме“, казаха учениците.", "учениците", "казаха", 0)]
+    [DataRow("„Тръгвам“, каза учениците.", "учениците", "каза", 1)]
+    [DataRow("„Тръгвам“, казаха учениците.", "учениците", "казаха", 0)]
+    [DataRow("„Тръгваме“, каза журналистите.", "журналистите", "каза", 1)]
+    [DataRow("„Тръгваме“, казаха журналистите.", "журналистите", "казаха", 0)]
+    [DataRow("„Тръгваме“ – каза думите тихо.", "думите", "каза", -1)]
+    [DataRow("– Съгласен съм – каза думите бавно.", "думите", "каза", -1)]
+    [DataRow("„Тръгваме“, уведомиха Иван.", "Иван", "уведомиха", -1)]
+    [DataRow("„Тръгваме“, увериха Иван.", "Иван", "увериха", -1)]
+    [DataRow("„Тръгваме“, заявиха Иван.", "Иван", "заявиха", -1)]
+    [DataRow("„Тръгваме“, казаха книгата.", "книгата", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха Зфрог.", "Зфрог", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха на Иван жената.", "жената", "казаха", -1)]
+    [DataRow("Влакът тръгва, казаха Иван.", "Иван", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха учителката.", "учителката", "казаха", -1)]
+    [DataRow("„Неговите работи“, казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("„Война и мир“, обявиха учителят.", "учителят", "обявиха", -1)]
+    [DataRow("„Неговите работи“, обявиха учителят.", "учителят", "обявиха", -1)]
+    [DataRow("„Тръгваме“, те казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("„😀 Тръгваме“, казаха учителят.", "учителят", "казаха", 1)]
+    [DataRow("(Тръгваме), казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("`Тръгваме`, казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("„Тръгваме, казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха на учителя.", "учителя", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха новите учителят.", "учителят", "казаха", -1)]
+    [DataRow("„Тръгваме“, казаха учителят и лекарят.", "учителят", "казаха", -1)]
+    [DataRow("Те дойдоха, видяха учителят.", "учителят", "видяха", -1)]
+    [DataRow("Влакът тръгва, казаха учителят.", "учителят", "казаха", -1)]
+    [DataRow("Това обявиха учителя лично пред журналисти вчера.", "учителя", "обявиха", -1)]
+    public void Reporting_attribution_requires_delimited_finite_speech_or_licensed_fronted_content(
+        string text, string subject, string predicate, int assessment)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        int subjectIndex = actual.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == subject).index;
+        int predicateIndex = actual.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == predicate).index;
+        TextGrammarMatch[] relations = actual.Grammar!.Matches.Where(m => m.RuleId == "clause_fusion_agreement.v1" &&
+            m.DependentTokenIndices.Contains(predicateIndex) &&
+            m.Assessment is TextGrammarAssessment.Compatible or TextGrammarAssessment.Mismatch).ToArray();
+        Assert.HasCount(assessment < 0 ? 0 : 1, relations, text);
+        TextDiagnostic[] diagnostics = actual.Diagnostics.Where(d =>
+            d.Code == "productive_morphology_agreement_mismatch" && d.Start == actual.Tokens[predicateIndex].Start).ToArray();
+        Assert.HasCount(assessment == 1 ? 1 : 0, diagnostics, text);
+        if (assessment < 0) return;
+        Assert.AreEqual(assessment == 1 ? TextGrammarAssessment.Mismatch : TextGrammarAssessment.Compatible, relations[0].Assessment);
+        Assert.Contains(subjectIndex, relations[0].ControllerTokenIndices);
+        CollectionAssert.AreEqual(subject is "учител" or "глава"
+            ? new[] { subjectIndex - 1, subjectIndex } : new[] { subjectIndex }, relations[0].ControllerTokenIndices.ToArray());
+        Assert.IsEmpty(relations[0].Repairs);
+        TextContextCandidate proof = actual.Context!.Sentences.SelectMany(s => s.Candidates).Single(c =>
+            c.AuthorityLane == "clause_fusion_agreement.v1" && c.PredicateTokenIndex == predicateIndex &&
+            c.Roles.Any(r => r.Role == TextContextRole.Subject && r.TokenIndex == subjectIndex));
+        Assert.IsFalse(proof.Selectable);
+        if (assessment == 0 && text.StartsWith("Това", StringComparison.Ordinal))
+            Assert.IsTrue(actual.Context.Sentences.SelectMany(s => s.SelectedRoles).Any(r =>
+                r.Role == TextContextRole.Subject && r.TokenIndex == subjectIndex));
+        TextContextRoleSelection nominal = proof.Roles.Single(r => r.Role == TextContextRole.Subject);
+        TextContextRoleSelection finite = proof.Roles.Single(r => r.Role == TextContextRole.Predicate);
+        Assert.IsNotEmpty(nominal.Readings); Assert.IsNotEmpty(finite.Readings);
+        if (subject == "глава")
+        {
+            Assert.IsTrue(nominal.Readings.All(r => r.TokenIndex == subjectIndex &&
+                Rows(r).Features is { PartOfSpeech: MorphologicalPartOfSpeech.Noun,
+                    Gender: MorphologicalGender.Feminine, Number: MorphologicalNumber.Singular }));
+            Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == ClosedAttributeCode));
+            if (assessment == 1)
+                CollectionAssert.AreEqual(proof.Roles.SelectMany(r => r.Readings).Distinct()
+                    .OrderBy(r => r.TokenIndex).ThenBy(r => r.CompleteReadingIndex).ToArray(), diagnostics[0].Readings!.ToArray(),
+                    "The warning cites the same original modifier, head and finite witnesses as its local proof.");
+        }
+        foreach (TextReadingReference nr in nominal.Readings)
+            foreach (TextReadingReference vr in finite.Readings)
+            {
+                MorphologicalFeatures nf = Rows(nr).Features, vf = Rows(vr).Features;
+                Assert.AreEqual(MorphologicalVerbForm.Finite, vf.VerbForm);
+                // Exact given-name rows retain raw Number:null; the existing coherent nominal chunk supplies singular.
+                MorphologicalNumber? number = nf.Number ??
+                    (nf is { PartOfSpeech: MorphologicalPartOfSpeech.ProperNoun, NameKind: MorphologicalNameKind.GivenName }
+                        ? MorphologicalNumber.Singular : null);
+                Assert.AreEqual(assessment == 0, (nf.Person ?? MorphologicalPerson.Third) == vf.Person && number == vf.Number);
+            }
+        foreach (TextReadingOccurrence occurrence in actual.ReadingInventory!.Occurrences)
+        {
+            TextReadingSet set = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex];
+            CollectionAssert.AreEqual(session.Lookup(set.CanonicalKey, LookupMode.Exact, 256)
+                .Select(r => new TextReadingSnapshot(r, r.Features)).ToArray(), set.ResolvedReadings.ToArray());
+            Assert.AreEqual(occurrence.Text, text.Substring(occurrence.Start, occurrence.Length));
+        }
+        if (assessment == 1) { Assert.IsNull(diagnostics[0].ProjectedText); Assert.IsNull(diagnostics[0].GraphReadings); }
+
+        TextReadingSnapshot Rows(TextReadingReference reference) => actual.ReadingInventory!.Sets[
+            actual.ReadingInventory.Occurrences.Single(o => o.TokenIndex == reference.TokenIndex).ReadingSetIndex]
+            .ResolvedReadings[reference.CompleteReadingIndex];
+    }
+
+    private void AssertLocalPronounAgreement(string text, string subject, string predicate, bool compatible)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        int subjectIndex = actual.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == subject).index;
+        int predicateIndex = actual.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == predicate).index;
+        TextContextCandidate[] candidates = actual.Context!.Sentences.SelectMany(s => s.Candidates).Where(c =>
+            c.AuthorityLane == "clause_fusion_agreement.v1" && c.PredicateTokenIndex == predicateIndex &&
+            c.EvidenceCodes.Contains("clause_subject_predicate_compatible")).ToArray();
+        TextGrammarMatch[] matches = actual.Grammar!.Matches.Where(m => m.RuleId == "clause_fusion_agreement.v1" &&
+            m.Assessment == TextGrammarAssessment.Compatible && m.DependentTokenIndices.Contains(predicateIndex)).ToArray();
+        Assert.HasCount(compatible ? 1 : 0, candidates); Assert.HasCount(compatible ? 1 : 0, matches);
+        if (!compatible) return;
+        TextContextCandidate candidate = candidates[0];
+        Assert.IsFalse(candidate.Selectable);
+        TextContextRoleSelection nominal = candidate.Roles.Single(r => r.Role == TextContextRole.Subject);
+        Assert.AreEqual(subjectIndex, nominal.TokenIndex);
+        Assert.IsFalse(actual.Context.Sentences.SelectMany(s => s.SelectedRoles).Any(r => r.Role == TextContextRole.Subject &&
+            r.TokenIndex == subjectIndex), "The local subject must remain associated with its own predicate.");
+        TextGrammarMatch match = matches[0];
+        CollectionAssert.AreEqual(new[] { subjectIndex }, match.ControllerTokenIndices.ToArray());
+        Assert.IsEmpty(match.Conflicts); Assert.IsEmpty(match.Repairs);
+        TextContextRoleSelection finite = candidate.Roles.Single(r => r.Role == TextContextRole.Predicate);
+        foreach (TextReadingReference nr in nominal.Readings)
+            foreach (TextReadingReference vr in finite.Readings)
+            {
+                MorphologicalFeatures nf = Rows(nr).Features, vf = Rows(vr).Features;
+                Assert.AreEqual(MorphologicalVerbForm.Finite, vf.VerbForm);
+                Assert.AreEqual(nf.Person, vf.Person); Assert.AreEqual(nf.Number, vf.Number);
+            }
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == "productive_morphology_agreement_mismatch"));
+
+        TextReadingSnapshot Rows(TextReadingReference reference) => actual.ReadingInventory!.Sets[
+            actual.ReadingInventory.Occurrences.Single(o => o.TokenIndex == reference.TokenIndex).ReadingSetIndex]
+            .ResolvedReadings[reference.CompleteReadingIndex];
+    }
+
+    [TestMethod]
+    [DataRow("Под познатата външност се крие напълно нова конструкция.", "конструкция", "крие")]
+    [DataRow("По водата се предава всеки шум отвън.", "шум", "предава")]
+    [DataRow("Нов под се полага.", "под", "полага")]
+    [DataRow("Този под скърца.", "под", "скърца")]
+    [DataRow("Дървен под скърца.", "под", "скърца")]
+    [DataRow("Понякога ми липсва даже усещането за време.", "усещането", "липсва")]
+    [DataRow("До 2 месеца предстоят нови избори в града.", "избори", "предстоят")]
+    public void Clause_order_selected_subject_retains_inverted_noun_and_independent_pod(
+        string text, string subject, string predicate)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        TextContextSentence sentence = actual.Context!.Sentences.Single();
+        TextContextRoleSelection nominal = sentence.SelectedRoles.Single(r => r.Role == TextContextRole.Subject);
+        TextContextRoleSelection finite = sentence.SelectedRoles.Single(r => r.Role == TextContextRole.Predicate);
+        Assert.AreEqual(subject, actual.Tokens[nominal.TokenIndex].Text);
+        Assert.AreEqual(predicate, actual.Tokens[finite.TokenIndex].Text);
+        Assert.IsNotEmpty(nominal.Readings); Assert.IsNotEmpty(finite.Readings);
+        foreach (TextReadingReference reference in nominal.Readings)
+        {
+            TextReadingOccurrence occurrence = actual.ReadingInventory!.Occurrences.Single(o => o.TokenIndex == reference.TokenIndex);
+            TextReadingSnapshot row = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings[reference.CompleteReadingIndex];
+            Assert.AreEqual(MorphologicalPartOfSpeech.Noun, row.Features.PartOfSpeech);
+        }
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == "productive_morphology_agreement_mismatch"));
+    }
+
     private static void ClosedAssertPinned(string word, IReadOnlyList<TextReadingSnapshot> rows)
     {
         string canonicalWord = word.ToLowerInvariant();

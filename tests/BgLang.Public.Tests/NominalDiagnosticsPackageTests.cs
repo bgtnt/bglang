@@ -278,6 +278,80 @@ public sealed class NominalDiagnosticsPackageTests
     }
 
     [TestMethod]
+    public void Repaired_subject_article_ranks_full_first_without_selecting_the_original_mismatching_phrase()
+    {
+        using var session = GraphStressAcceptance.Open();
+        TextContextOptions options = new() { IncludeGrammarEvidence = true, IncludeAdditionalRoleHeuristics = true };
+        foreach ((string feminine, string plural, string full, string shortForm) in new[]
+        {
+            ("Артилерийската огън се премества някъде настрана.",
+             "Артилерийските огън се премества някъде настрана.", "Артилерийският", "Артилерийския"),
+            ("Министерската съвет се състои от министър-председател, заместник министър-председатели и министри.",
+             "Министерските съвет се състои от министър-председател, заместник министър-председатели и министри.",
+             "Министерският", "Министерския"),
+            ("Главната проблем на американското здравеопазване е в това, че милиони работещи, които нямат право на осигуровката \"Медикейд\", в същото време не могат да се осигуряват частно, тъй като нямат достатъчно пари.",
+             "Главните проблем на американското здравеопазване е в това, че милиони работещи, които нямат право на осигуровката \"Медикейд\", в същото време не могат да се осигуряват частно, тъй като нямат достатъчно пари.",
+             "Главният", "Главния")
+        })
+        foreach (string text in new[] { feminine, plural })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            TextGrammarMatch match = analysis.Grammar!.Matches.Single(m =>
+                m.RuleId == "local_exact_attribute_agreement.v1" && m.Start == 0);
+            Assert.AreEqual(TextGrammarAssessment.Mismatch, match.Assessment, text);
+            TextGrammarRepair[] alternatives = match.Repairs.Where(r => r.Edits.Single().Start == 0).ToArray();
+            CollectionAssert.AreEqual(new[] { full, shortForm },
+                alternatives.Select(r => r.Edits.Single().Replacement).ToArray(), text);
+            Assert.IsTrue(alternatives.All(r => r.Qualifications.Contains("masculine_article_form_requires_role")), text);
+            Assert.IsFalse(analysis.Context!.Sentences.SelectMany(s => s.SelectedRoles)
+                .Any(r => r.Role == TextContextRole.Subject && r.TokenIndex == match.ControllerTokenIndices.Single()), text);
+            TextGrammarEdit edit = alternatives[0].Edits.Single();
+            TextAnalysis repaired = session.AnalyzeText(text[..edit.Start] + edit.Replacement + text[(edit.Start + edit.Length)..],
+                false, options, default);
+            Assert.IsFalse(repaired.Diagnostics.Any(d => d.Start == 0 &&
+                d.Code is Attribute or "full_article_expected_for_subject_candidate"), text);
+        }
+    }
+
+    [TestMethod]
+    public void Subject_article_ranking_keeps_open_object_and_prepositional_alternatives()
+    {
+        using var session = GraphStressAcceptance.Open();
+        TextContextOptions options = new() { IncludeGrammarEvidence = true, IncludeAdditionalRoleHeuristics = true };
+        foreach ((string text, string[] expected, bool qualified) in new[]
+        {
+            ("Малката автобус.", new[] { "Малкия", "Малкият" }, true),
+            ("Малката автобус вижда учителят.", new[] { "Малкия", "Малкият" }, true),
+            ("Жената вижда младата учител.", new[] { "младия", "младият" }, true),
+            ("Видях малката автобус.", new[] { "малкия" }, true),
+            ("Видях червената стол.", Array.Empty<string>(), true),
+            ("До малката автобус.", new[] { "малкия" }, false),
+            ("Артилерийската силен огън се премества.", new[] { "Артилерийският", "Артилерийския" }, true)
+        })
+        {
+            TextGrammarMatch match = session.AnalyzeText(text, false, options, default).Grammar!.Matches.Single(m =>
+                m.RuleId == "local_exact_attribute_agreement.v1");
+            Assert.AreEqual(TextGrammarAssessment.Mismatch, match.Assessment, text);
+            TextGrammarRepair[] alternatives = match.Repairs.Where(r =>
+                r.Edits.Single().TokenIndex == match.DependentTokenIndices[0]).ToArray();
+            CollectionAssert.AreEqual(expected, alternatives.Select(r => r.Edits.Single().Replacement).ToArray(), text);
+            Assert.IsTrue(alternatives.All(r =>
+                r.Qualifications.Contains("masculine_article_form_requires_role") == qualified), text);
+            if (expected.Length == 0)
+                Assert.AreEqual("no_verified_single_token_repair", match.Reason, text);
+        }
+        foreach (string text in new[] { "Малката автобус вижда.", "Малката автобус го вижда учителят." })
+        {
+            TextGrammarMatch match = session.AnalyzeText(text, false, options, default).Grammar!.Matches.Single(m =>
+                m.RuleId == "local_exact_attribute_agreement.v1");
+            Assert.AreEqual(TextGrammarAssessment.Ambiguous, match.Assessment, text);
+            Assert.IsEmpty(match.Repairs, text);
+            Assert.AreEqual("competing_nominal_construction", match.Reason, text);
+        }
+        Assert.IsFalse(session.AnalyzeText("Видях червения стол.").Diagnostics.Any(d => d.Code == Attribute));
+    }
+
+    [TestMethod]
     public void Grammar_catalog_reports_exact_article_rules_and_available_repairs()
     {
         using var session = GraphStressAcceptance.Open();

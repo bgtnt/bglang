@@ -1,7 +1,6 @@
-import {createPostLane, explorerCSharpSnippet, livePayload} from "/live-client.js";
-import {initLiveDemo, diagnosticPresentation} from "/live-demo.js";
+import {diagnosticPresentation, explorerCSharpSnippet, livePayload} from "./live-client.js";
 
-const postLane = createPostLane();
+let postLane, workspace, comparisonRevision;
 async function requestApi(operation, payload) {
   const result = await postLane.post(operation, payload);
   if (result.error) throw result.error;
@@ -395,6 +394,8 @@ function showTokenDetails(token, originalText, response) {
 function showHit(hit, response) {
   if (busy) return;
   const data = response.data;
+  if (workspace.revision() !== comparisonRevision || workspace.text.value !== data.textAnalysis.text) return;
+  workspace.select(hit.start, hit.length);
   const token = data.textAnalysis.tokens[hit.tokenIndex];
   results.replaceChildren();
   clearDonors();
@@ -409,7 +410,7 @@ function showHit(hit, response) {
   // Show the actual text-budget analysis, not a fresh AnalyzeWord call with a different budget.
   showAnalysis(tokenAnalysis(token, response), response);
   showTokenDetails(token, data.textAnalysis.text, response);
-  results.scrollIntoView({ behavior: "smooth", block: "start" });
+
 }
 
 function markText(target, response, exact) {
@@ -449,9 +450,12 @@ async function compareText() {
   document.querySelector("#json-context").hidden = true;
   textStatus.textContent = "Анализ на заявката и текста…";
   try {
-    const {http, response} = await requestApi("find-forms-in-text", { text: document.querySelector("#source-text").value, query: document.querySelector("#query").value });
+    const revision = workspace.revision();
+    const {http, response} = await requestApi("find-forms-in-text", { text: workspace.text.value, query: document.querySelector("#query").value });
+    if (revision !== workspace.revision()) return;
     if (!http.ok) { textStatus.textContent = `HTTP ${http.status}: ${response.message}`; return; }
     const data = response.data;
+    comparisonRevision = revision;
     comparison.hidden = false;
     lazyJson("#text-json", response);
     const queryEvidence = document.querySelector("#query-evidence");
@@ -473,19 +477,18 @@ async function compareText() {
   finally { setBusy(false); }
 }
 
-form.addEventListener("submit", event => { event.preventDefault(); search(mode.value, input.value); });
-textForm.addEventListener("submit", event => { event.preventDefault(); compareText(); });
-mode.addEventListener("change", updateExplorerControls);
-updateExplorerControls();
-for (const button of document.querySelectorAll("[data-example]"))
-  button.addEventListener("click", () => search(button.dataset.mode, button.dataset.example));
-
-const liveDemo = initLiveDemo({lane:postLane,tokenAnalysis,donorSet,showTokenDetails,search});
-
-fetch("/api/v2/").then(async response => {
-  if (!response.ok) throw new Error("metadata unavailable");
-  const metadata = await response.json();
-  liveDemo.metadata(metadata);
-  document.querySelector("#identity").textContent = `API ${metadata.apiVersion}; host ${metadata.versions.host}; public API ${metadata.versions.publicApi}; пакет ${metadata.package.packageId}; manifest SHA-256 ${metadata.package.manifestSha256}.`;
-  status.textContent = "Готово за заявка.";
-}).catch(() => { status.textContent = "Неуспешно зареждане на идентичността на host-а."; });
+export function initExplorer(transport, context) {
+  postLane = transport;
+  workspace = context;
+  form.addEventListener("submit", event => { event.preventDefault(); search(mode.value, input.value); });
+  textForm.addEventListener("submit", event => { event.preventDefault(); compareText(); });
+  mode.addEventListener("change", updateExplorerControls);
+  updateExplorerControls();
+  for (const button of document.querySelectorAll("#explorer [data-mode]"))
+    button.addEventListener("click", () => search(button.dataset.mode, button.dataset.example));
+  return () => {
+    comparisonRevision = undefined;
+    document.querySelector("#text-comparison").hidden = true;
+    document.querySelector("#text-status").textContent = "";
+  };
+}

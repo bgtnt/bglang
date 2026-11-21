@@ -1,6 +1,6 @@
 # BgLang
 
-**BgLang** е детерминистичен инструментариум за български език под .NET 10 / C#, придружен от локален HTTP API хост и две локални интерактивни уеб приложения. Библиотеката предоставя речниково търсене (точни, префиксни и суфиксни форми, словоформи по лема, приблизително търсене), морфологичен анализ и графово словообразуване за непознати думи, квалифицирани данни за лексикално ударение и ограничени контекстни и граматични проверки.
+**BgLang** е детерминистичен инструментариум за български език за .NET 10 и C# с локален HTTP API и интерактивно уеб демо. Библиотеката предоставя речниково търсене (точни, префиксни и суфиксни форми, словоформи по лема, приблизително търсене), морфологичен анализ и графово словообразуване за непознати думи, квалифицирани данни за лексикално ударение и ограничени контекстни и граматични проверки.
 
 **За кого е предназначен:**
 - **.NET / C# разработчици**, които вграждат офлайн, предвидим анализ на български текст и словоформи чрез `BulgarianLanguageSession`.
@@ -10,33 +10,33 @@
 **Какво включва решението (`BgLang.Public.slnx`):**
 - `src/BgLang.Api` и `src/BgLang.Contracts` — публичният вход (`BulgarianLanguageSession.Open`) и договорите за резултати (`TextAnalysis`, `WordAnalysis`, `StressEvidence`).
 - `src/BgLang.Core` — ядрото за речниково търсене (DAWG), словообразувателен граф и анализатори на текста.
-- `apps/BgLang.Web` — локалният ASP.NET Core HTTP хост и статичните уеб приложения.
+- `apps/BgLang.Web` — локалният ASP.NET Core хост, уеб демото и справката за API.
 - `examples/BgLang.PublicExample` — готов конзолен пример с JSON изход.
 
 ## Локално изпълнение (няма публично хоствано демо)
 
-BgLang се изпълнява **изцяло локално на вашата машина**. Проектът **няма** публичен облачен сървър или хоствана уеб версия. Адресите `/demo` (`http://127.0.0.1:5070/demo`), `/demo-lab/index.html` (`http://127.0.0.1:5070/demo-lab/index.html`) и `/docs` (`http://127.0.0.1:5070/docs`) стават достъпни на `localhost` едва след като стартирате `BgLang.Web` локално.
+BgLang се изпълнява **изцяло локално на вашата машина**. Проектът **няма** публичен облачен сървър или хоствана уеб версия. След стартиране на `BgLang.Web` демото е достъпно на `/demo-tree` (също през `/demo` и `/demo-lab`), а справката за API — на `/docs` на `http://127.0.0.1:5070`.
 
-## Изтегляне и подготовка (`v0.2.0-alpha.2`)
+## Изтегляне и подготовка (`v0.2.0-alpha.3`)
 
 Изисква се **.NET SDK 10.0.403** (зададен в [`global.json`](global.json)) и PowerShell 7 за скриптованите стъпки.
 
-1. Изтеглете от страницата на изданието [`v0.2.0-alpha.2`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.2) (prerelease):
-   - [`bglang-v0.2.0-alpha.2-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-source.zip) — публичният изходен код;
-   - [`bglang-v0.2.0-alpha.2-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-runtime.zip) — готовият пакет с езикови данни (`CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`);
-   - [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/SHA256SUMS) — контролни суми на архивите.
-   - *(По избор)* [`bglang-v0.2.0-alpha.2-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.2/bglang-v0.2.0-alpha.2-inputs.zip) е нужен **само** за независимо пълно преизграждане на пакета с данни (вж. [ръководството за възпроизвеждане](packaging/RELEASE-CANDIDATE.md)); за стандартна употреба готовият `runtime.zip` е достатъчен.
+1. Изтеглете от страницата на изданието [`v0.2.0-alpha.3`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.3) (prerelease):
+   - [`bglang-v0.2.0-alpha.3-source.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.3/bglang-v0.2.0-alpha.3-source.zip) — публичният изходен код;
+   - [`bglang-v0.2.0-alpha.3-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.3/bglang-v0.2.0-alpha.3-runtime.zip) — готовият пакет с езикови данни (`CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`);
+   - [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.3/SHA256SUMS) — контролни суми на архивите.
+   - *(По избор)* [`bglang-v0.2.0-alpha.3-inputs.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.3/bglang-v0.2.0-alpha.3-inputs.zip) е нужен **само** за независимо пълно преизграждане на пакета с данни (вж. [ръководството за възпроизвеждане](packaging/RELEASE-CANDIDATE.md)); за стандартна употреба готовият `runtime.zip` е достатъчен.
 2. Проверете SHA-256 контролните суми спрямо `SHA256SUMS`:
    ```powershell
-   Get-FileHash bglang-v0.2.0-alpha.2-source.zip, bglang-v0.2.0-alpha.2-runtime.zip -Algorithm SHA256
+   Get-FileHash bglang-v0.2.0-alpha.3-source.zip, bglang-v0.2.0-alpha.3-runtime.zip -Algorithm SHA256
    ```
-3. Разархивирайте `bglang-v0.2.0-alpha.2-source.zip` в нова папка (напр. `bglang`), а четирите файла от `bglang-v0.2.0-alpha.2-runtime.zip` — в нейната подпапка `./runtime`, така че вътре да се намират:
+3. Разархивирайте `bglang-v0.2.0-alpha.3-source.zip` в нова папка (напр. `bglang`), а четирите файла от `bglang-v0.2.0-alpha.3-runtime.zip` — в нейната подпапка `./runtime`, така че вътре да се намират:
    - `runtime/manifest.json` (SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`);
    - `runtime/lexicon.v3.jsonl`;
    - `runtime/word-formation.v0.json`;
    - `runtime/lexeme-annotations.v1.json`.
 
-## Бърз старт: локален уеб хост и демота
+## Стартиране на локалното уеб демо
 
 От корена на разархивираната папка стартирайте локалния HTTP хост `BgLang.Web`:
 
@@ -46,10 +46,7 @@ $env:BgLang__ManifestSha256 = '9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178
 dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
 ```
 
-След стартиране отворете в браузъра:
-- `http://127.0.0.1:5070/demo` — класическият жив редактор за анализ на текст, инспектор на думата, търсене по лема и API explorer;
-- `http://127.0.0.1:5070/demo-lab/index.html` — експерименталната лаборатория (наслагващо оцветяване, меню за контекстни продължения, синтактични роли и прочит с ударения);
-- `http://127.0.0.1:5070/docs` — локалната HTTP API справка.
+След стартиране отворете [локалното демо](http://127.0.0.1:5070/demo-tree). Изданието `v0.2.0-alpha.3` включва общия редактор `/demo-tree`; `/demo` и `/demo-lab` отварят същия редактор. Докато пишете, редакторът оцветява думите и показва връзките и проверките за текущото изречение. Изберете дума в текста или схемата за прочити, форми и предложения за поправка. Можете също да видите текста с ударения, да поискате продължение с Ctrl+Space или да потърсите срещания по лема. За операциите и форматите вижте [локалната API справка](http://127.0.0.1:5070/docs).
 
 ## Бърз старт: конзолен пример и компилация на решението
 
@@ -118,7 +115,7 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 
 В `TextAnalysis` (и JSON полетата на `POST /api/v2/analyze-text`) резултатът е разделен на четири ясни слоя:
 - **`Diagnostics` (`diagnostics` / `validation`):** доказани предупреждения с точен UTF-16 обхват и без автоматична промяна на входния `Text`.
-- **`Grammar` (`grammar`, при `IncludeGrammarEvidence = true`):** структурни оценки `Compatible`, `Mismatch`, `Ambiguous` и `Unassessed`. Локалните интерфейси `/demo` и `/demo-lab` показват обвързания `Ambiguous` конфликт с `reason: "disjoint_subject_predicate_locus"` (напр. `"Момичетата рисува пейзажи."`) като видимо предупреждение върху сказуемото **без** автоматична замяна, защото двете страни на конфликта не определят еднозначно коя дума е сгрешена.
+- **`Grammar` (`grammar`, при `IncludeGrammarEvidence = true`):** структурни оценки `Compatible`, `Mismatch`, `Ambiguous` и `Unassessed`. Общото демо показва обвързания `Ambiguous` конфликт с `reason: "disjoint_subject_predicate_locus"` (напр. `"Момичетата рисува пейзажи."`) като видимо предупреждение върху сказуемото **без** автоматична замяна, защото двете страни на конфликта не определят еднозначно коя дума е сгрешена.
 - **`Syntax` (`syntax`):** кандидатни синтактични роли (`Predicate`, `Subject`, `Object` и др.) с изричен маршрут `Selected`, `SourceScan` или `Abstained`.
 - **`Repairs` (`repairs`):** само еднозначно проверени локални предложения за замяна, прилагани единствено при изрично потребителско действие.
 
@@ -126,7 +123,9 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 
 ## Ограничения
 
-- **Предварително издание (`v0.2.0-alpha.2`):** това е алфа prerelease и договорите/покритието продължават да се развиват.
+Следваща задача за пунктуацията е корпусна проверка на границите на подчинени изречения и на крайния знак при пряк и косвен въпрос. За „Учителят каза че е умен.“ сегашната проверка дава кандидат пред „че“. При „Учителят каза, че е умен.“ кандидатът отпада. Задачата включва тестове чрез премахване, добавяне и подмяна на един знак, правилни контроли като „Готов ли е?“ и „Той попита дали е готов.“, както и проверка на позицията и предложението в API и демото.
+
+- **Предварително издание (`v0.2.0-alpha.3`):** това е алфа prerelease и договорите/покритието продължават да се развиват.
 - **Не е пълен синтактичен парсер:** BgLang не извършва пълен синтактичен или дискурсен разбор на произволен български текст.
 - **Ограничен обхват и съзнателно въздържание:** граматичните проверки покриват поддържани локални именни групи (`NP`) и прости конструкции на изречението. При неподдържани или двусмислени конструкции анализаторът умишлено се въздържа — **`0` предупреждения не е доказателство за граматическа правилност**.
 - **Без автоматично пренаписване:** предупрежденията и предложенията само сочат позиции и алтернативи; редакторът не променя текста без изрично действие от потребителя.
@@ -136,7 +135,6 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:5070/api/v2/analyze-text' 
 ## Документация и предишни издания
 
 - [Ръководство за локалния HTTP хост (`apps/BgLang.Web/README.md`)](apps/BgLang.Web/README.md)
-- [Бележки за BgLang Live Lab (`apps/BgLang.Web/wwwroot/demo-lab/README.md`)](apps/BgLang.Web/wwwroot/demo-lab/README.md)
 - [Възпроизвеждане на пакета и CI проверки (`packaging/RELEASE-CANDIDATE.md`)](packaging/RELEASE-CANDIDATE.md)
 - [Възпроизводима лингвистична оценка и сравнение с UDPipe 2 (`packaging/LINGUISTIC-EVALUATION.md`)](packaging/LINGUISTIC-EVALUATION.md)
 - [Профил за графово ударение `CurrentGraphStress` (`packaging/GRAPH-STRESS.md`)](packaging/GRAPH-STRESS.md)

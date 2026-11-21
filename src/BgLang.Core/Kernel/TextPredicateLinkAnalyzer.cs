@@ -9,6 +9,7 @@ internal static class TextPredicateLinkAnalyzer
     internal const string Code = "unseparated_finite_predications";
     private const string Rule = "grammar.closed_pronoun_two_present_predications.v1";
     private sealed record Word(int Index, TokenAnalysis Token, MorphologyEvidenceProjection.Rows Rows);
+    private readonly record struct SupportReadingKey(int Token, TextReadingReference? Exact, TextGraphReadingReference? Graph);
 
     internal static (TextPredicateLinkEvidence Evidence, IReadOnlyList<TextDiagnostic> Diagnostics) Calculate(
         TextAnalysis analysis, MorphologyEvidenceProjection.View morphology, CancellationToken ct)
@@ -40,7 +41,7 @@ internal static class TextPredicateLinkAnalyzer
                     reasons.Add("unresolved_morphology:token=" + word.Index);
             }
             var relevant = words.Where(w => w.Rows.Lanes.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Verb) ||
-                w.Rows.Canonical == "ще" && w.Rows.Lanes.Any(FutureMarker)).ToArray();
+                w.Rows.Canonical is "ще" or "се" && w.Rows.Lanes.Any(FutureMarker)).ToArray();
             List<TextPredicateLink> links = [];
             HashSet<(int Token, int Row)> linked = [];
             if (!quote)
@@ -50,6 +51,9 @@ internal static class TextPredicateLinkAnalyzer
                     for (int j = i + 1; j < words.Length && j <= i + 3; j++)
                     {
                         Word left = words[i], right = words[j];
+                        bool epistemicBi = left.Rows.Canonical == "би" && i > 0 && words[i - 1].Rows.Canonical == "може" &&
+                            BridgesHorizontal(analysis.Text, words, i - 1, i);
+                        if (epistemicBi) continue;
                         string? kind = null;
                         var markers = new List<(Word Word, int Row)>();
                         if (j == i + 1)
@@ -57,11 +61,18 @@ internal static class TextPredicateLinkAnalyzer
                             string bridge = analysis.Text[(left.Token.Start + left.Token.Length)..right.Token.Start];
                             if (bridge.Trim(' ', '\t') == ",") kind = "comma_separation";
                             else if (Horizontal(bridge) && left.Rows.Canonical == "ще") kind = "future_marker";
+                            else if (Horizontal(bridge) && (left.Rows.Canonical == "се" || right.Rows.Canonical == "се")) kind = "reflexive_clitic";
+                            else if (Horizontal(bridge) && ConditionalHead(analysis.Text, words, i)) kind = "conditional_auxiliary_participle";
                             else if (Horizontal(bridge)) kind = "auxiliary_participle";
                         }
                         else if (BridgesHorizontal(analysis.Text, words, i, j))
                         {
-                            if (j == i + 2 && words[i + 1].Rows.Canonical is "и" or "да")
+                            if (left.Rows.Canonical == "ще" && AllFutureBridgeTokens(words, i + 1, j - 1))
+                            {
+                                kind = "future_marker";
+                                for (int m = i + 1; m < j; m++) AddAuxBridgeMarker(words[m]);
+                            }
+                            else if (j == i + 2 && words[i + 1].Rows.Canonical is "и" or "да")
                             {
                                 Word marker = words[i + 1];
                                 kind = marker.Rows.Canonical == "и" ? "coordinating_conjunction" : "da_boundary";
@@ -72,10 +83,11 @@ internal static class TextPredicateLinkAnalyzer
                                 kind = "coordinated_da_boundary";
                                 AddMarker(words[i + 1]); AddMarker(words[i + 2]);
                             }
-                            else if (relevant.Length >= 2 && left.Rows.Lanes.Any(CopularCarrier) && right.Rows.Lanes.Any(Participle) &&
+                            else if (relevant.Length >= 2 && left.Rows.Lanes.Any(CopularCarrier) &&
+                                right.Rows.Lanes.Any(row => ConditionalHead(analysis.Text, words, i) ? ConditionalParticiple(row) : LinkedParticiple(row)) &&
                                 AllAuxBridgeTokens(words, i + 1, j - 1))
                             {
-                                kind = "auxiliary_participle";
+                                kind = ConditionalHead(analysis.Text, words, i) ? "conditional_auxiliary_participle" : "auxiliary_participle";
                                 for (int m = i + 1; m < j; m++) AddAuxBridgeMarker(words[m]);
                             }
                         }
@@ -89,7 +101,12 @@ internal static class TextPredicateLinkAnalyzer
                                 bool accepted = kind switch
                                 {
                                     "future_marker" => FutureMarker(l) && Finite(r) && r.Features.Tense == MorphologicalTense.Present,
-                                    "auxiliary_participle" => CopularCarrier(l) && Participle(r) && l.Features.Number == r.Features.Number,
+                                    "reflexive_clitic" => left.Rows.Canonical == "се" ? FutureMarker(l) && Finite(r) :
+                                        left.Rows.Canonical != "ще" && Finite(l) && FutureMarker(r) &&
+                                        !(j + 1 < words.Length && words[j + 1].Rows.Lanes.Any(Finite) &&
+                                            BridgesHorizontal(analysis.Text, words, j, j + 1)),
+                                    "conditional_auxiliary_participle" => ConditionalCarrier(left.Rows.Canonical, l) && ConditionalParticiple(r),
+                                    "auxiliary_participle" => CopularCarrier(l) && LinkedParticiple(r) && l.Features.Number == r.Features.Number,
                                     _ => Finite(l) && Finite(r)
                                 };
                                 if (!accepted) continue;
@@ -128,9 +145,14 @@ internal static class TextPredicateLinkAnalyzer
                             for (int row = 0; row < marker.Rows.Count; row++)
                             {
                                 var reading = marker.Rows.Lanes[row];
+                                if (Guard.IsShortPersonalCliticReading(reading))
+                                {
+                                    markers.Add((marker, row));
+                                    continue;
+                                }
                                 if (reading.SourceGenericUnknown || !Clean(reading)) continue;
                                 var pos = reading.Features.PartOfSpeech;
-                                if (marker.Rows.Canonical == "ли"
+                                if (marker.Rows.Canonical is "ли" or "не"
                                     ? pos == MorphologicalPartOfSpeech.Particle
                                     : pos is MorphologicalPartOfSpeech.PersonalPronoun or MorphologicalPartOfSpeech.Pronoun ||
                                         marker.Rows.Canonical == "се" && pos == MorphologicalPartOfSpeech.Particle)
@@ -139,6 +161,18 @@ internal static class TextPredicateLinkAnalyzer
                         }
                     }
                 }
+            BindReflexiveParticipleLinks(analysis, links, ct);
+            // Coverage is recomputed after analytic groups bind reflexives to their lexical head.
+            linked.Clear();
+            var graphRows = words.Where(w => w.Rows.UsesGraph).SelectMany(w => Enumerable.Range(0, w.Rows.Count)
+                .Select(row => (Reference: GraphReference(w, row), Row: row))).ToDictionary(r => r.Reference, r => r.Row);
+            foreach (TextSyntaxSupport support in links.SelectMany(l => new[] { l.Left, l.Right }))
+            {
+                foreach (TextReadingReference reference in support.Readings)
+                    linked.Add((reference.TokenIndex, reference.CompleteReadingIndex));
+                foreach (TextGraphReadingReference reference in support.GraphReadings ?? [])
+                    linked.Add((reference.TokenIndex, graphRows[reference]));
+            }
             bool conflict = !quote && ClosedConflict(analysis.Text, sentence, words, ct);
             if (conflict)
             {
@@ -185,6 +219,33 @@ internal static class TextPredicateLinkAnalyzer
         }
     }
 
+    private static void BindReflexiveParticipleLinks(TextAnalysis analysis, List<TextPredicateLink> links, CancellationToken ct)
+    {
+        var preposed = links.Where(l => l.Kind == "reflexive_clitic" &&
+            analysis.Tokens[l.Left.TokenIndex].Text.Equals("се", StringComparison.OrdinalIgnoreCase)).ToLookup(l => Key(l.Right), l => l.Left);
+        List<TextPredicateLink> additions = [];
+        HashSet<(int Carrier, int Reflexive)> removed = [];
+        foreach (TextPredicateLink group in links.Where(l => l.Kind is "auxiliary_participle" or "conditional_auxiliary_participle"))
+        {
+            ct.ThrowIfCancellationRequested();
+            var reflexives = group.Markers.Where(m => analysis.Tokens[m.TokenIndex].Text.Equals("се", StringComparison.OrdinalIgnoreCase))
+                .Concat(preposed[Key(group.Left)]);
+            foreach (TextSyntaxSupport reflexive in reflexives)
+            {
+                additions.Add(new("reflexive_clitic", reflexive, group.Right,
+                    Freeze(new[] { group.Left }.Concat(group.Markers.Where(m => m.TokenIndex != reflexive.TokenIndex)))));
+                removed.Add((group.Left.TokenIndex, reflexive.TokenIndex));
+                removed.Add((reflexive.TokenIndex, group.Left.TokenIndex));
+            }
+        }
+        links.RemoveAll(l => l.Kind == "reflexive_clitic" && removed.Contains((l.Left.TokenIndex, l.Right.TokenIndex)));
+        links.AddRange(additions);
+
+        static SupportReadingKey Key(TextSyntaxSupport support) =>
+            new(support.TokenIndex, support.Readings.Count == 0 ? null : support.Readings[0],
+                support.GraphReadings is { Count: > 0 } graph ? graph[0] : null);
+    }
+
     private static bool ClosedConflict(string text, SentenceSpan sentence, Word[] words, CancellationToken ct)
     {
         if (words.Length != 3 || words.Any(w => w.Rows.Count == 0 || w.Rows.GraphUnavailableReason is not null) ||
@@ -209,7 +270,7 @@ internal static class TextPredicateLinkAnalyzer
     }
 
     internal static bool Finite(ContextLanes.ReadingView row) =>
-        row.Category == ContextLanes.Category.Verb && !row.SourceGenericUnknown && !row.Features.HasUnrecognizedFeatures &&
+        row.Category == ContextLanes.Category.Verb && !row.SourceGenericUnknown && SentenceClauseMap.IsCleanOrBenignLegacyVerb(row) &&
         Guard.IsPersonalPredicate(row.Features) && row.Features.VerbForm == MorphologicalVerbForm.Finite;
     private static string Kind(ContextLanes.ReadingView row) => row.Features.PartOfSpeech != MorphologicalPartOfSpeech.Verb ? "other" :
         Finite(row) ? "finite" : row.Features.HasConflictingFeatures || row.Features.HasUnrecognizedFeatures ? "unmeasured_verb" : row.Features.VerbForm switch
@@ -221,9 +282,22 @@ internal static class TextPredicateLinkAnalyzer
     private static bool Auxiliary(string lemma) => BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда" or "ща" or "имам" or "нямам";
     internal static bool CopularLemma(string lemma) => BulgarianTextNormalizer.NormalizeKey(lemma) is "съм" or "бъда";
     internal static bool CopularCarrier(ContextLanes.ReadingView row) => Finite(row) && CopularLemma(row.Lemma);
+    internal static bool ConditionalCarrier(string canonical, ContextLanes.ReadingView row) =>
+        VerbalComplexBinder.IsConditionalAuxiliary(canonical, null) && CopularCarrier(row);
+    internal static bool ConditionalParticiple(ContextLanes.ReadingView row) => row.Features is
+        { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
+            ParticipleKind: MorphologicalParticipleKind.PastAoristActive or MorphologicalParticipleKind.PastImperfectActive,
+            Article: null or MorphologicalArticle.Indefinite, HasConflictingFeatures: false } &&
+        SentenceClauseMap.IsCleanOrBenignLegacyVerb(row);
+    private static bool ConditionalHead(string text, Word[] words, int index) =>
+        words[index].Rows.Lanes.Any(row => ConditionalCarrier(words[index].Rows.Canonical, row)) &&
+        VerbalComplexBinder.IsConditionalAuxiliary(words[index].Rows.Canonical,
+            index > 0 && BridgesHorizontal(text, words, index - 1, index) ? words[index - 1].Rows.Canonical : null);
     internal static bool Participle(ContextLanes.ReadingView row) => row.Features is
         { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
             HasConflictingFeatures: false, HasUnrecognizedFeatures: false };
+    private static bool LinkedParticiple(ContextLanes.ReadingView row) => Participle(row) ||
+        SentenceClauseMap.IsCleanOrBenignLegacyVerb(row) && PredicativeGrammarEvidence.ActiveParticiple(row);
     internal static bool DaMarker(ContextLanes.ReadingView row) => Clean(row) &&
         (row.SourceConjunction || row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle);
     private static bool Clean(ContextLanes.ReadingView row) => !row.Features.HasConflictingFeatures && !row.Features.HasUnrecognizedFeatures;
@@ -234,6 +308,12 @@ internal static class TextPredicateLinkAnalyzer
     {
         for (int i = first; i <= last; i++)
             if (!IsAuxBridgeToken(words[i])) return false;
+        return true;
+    }
+    private static bool AllFutureBridgeTokens(Word[] words, int first, int last)
+    {
+        for (int i = first; i <= last; i++)
+            if (!BulgarianFunctionWords.HasAny(words[i].Rows.Canonical, FunctionWordClasses.PreVerbalCliticBridge)) return false;
         return true;
     }
     private static bool FutureMarker(ContextLanes.ReadingView row) =>

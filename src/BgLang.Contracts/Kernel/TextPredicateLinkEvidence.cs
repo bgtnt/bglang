@@ -8,7 +8,7 @@ public sealed record TextPredicateLinkEvidence(string Version, bool Available, s
 public sealed record TextPredicateSentence(int Start, int Length, IReadOnlyList<TextPredicateOccurrence> Occurrences,
     IReadOnlyList<TextPredicateLink> Links, IReadOnlyList<string> UncoveredReasons, bool ConflictScopeComplete);
 
-/// <summary>Every original reading is retained at a verb or future-marker occurrence, including nonverb alternatives.</summary>
+/// <summary>Every original reading is retained at a verb, future-marker or reflexive-се occurrence, including nonverb alternatives.</summary>
 public sealed record TextPredicateOccurrence(int TokenIndex, int Start, int Length,
     IReadOnlyList<TextPredicateReading> Readings);
 

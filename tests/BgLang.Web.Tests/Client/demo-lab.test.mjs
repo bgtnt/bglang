@@ -2059,16 +2059,20 @@ test('construction advice: malformed nested collections reject the response; an 
 });
 
 // ---------- static page ----------
-test('the static page has no inline code, no external resources and every element the module reads', async () => {
-  const html = await readFile(fileURLToPath(new URL('index.html', labUrl)), 'utf8');
-  const js = await readFile(fileURLToPath(new URL('demo.js', labUrl)), 'utf8');
-  assert.match(html, /<script type="module" src="demo\.js"><\/script>/);
-  assert.equal([...html.matchAll(/<script\b/g)].length, 1, 'one external module script');
+test('the Lab bookmark opens the unified local page and its editor module has every named control', async () => {
+  const bookmark = await readFile(fileURLToPath(new URL('index.html', labUrl)), 'utf8');
+  assert.match(bookmark, /url=\.\.\/demo-tree\/index\.html/i);
+  const tree = new URL('../demo-tree/', labUrl);
+  const html = await readFile(fileURLToPath(new URL('index.html', tree)), 'utf8');
+  const js = await readFile(fileURLToPath(new URL('tree.js', tree)), 'utf8');
+  assert.match(html, /<script type="module" src="tree\.js"><\/script>/);
+  assert.match(html, /<script defer src="\.\.\/lib\/signalr\/signalr\.min\.js"><\/script>/);
+  assert.equal([...html.matchAll(/<script\b/g)].length, 2);
   assert.doesNotMatch(html, /<style\b|\sstyle=|\son[a-z]+=/i);
   assert.doesNotMatch(html, /(src|href)="(https?:)?\/\//i);
-  assert.match(js, /from '\.\.\/live-client\.js'/);
-  for (const id of new Set([...js.matchAll(/\$\('([a-z-]+)'\)/g)].map(m => m[1]))) assert.match(html, new RegExp('id="' + id + '"'), id);
-  for (const id of LAB_IDS) assert.match(html, new RegExp('id="' + id + '"'), id);
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const ref of js.matchAll(/\bui(?:\.([a-z]+)|\["([\w-]+)"\])/g)) assert.ok(ids.includes(ref[1] ?? ref[2]), ref[0]);
 });
 
 

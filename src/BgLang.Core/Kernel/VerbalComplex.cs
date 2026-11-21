@@ -135,6 +135,11 @@ internal sealed record VerbalComplex(
 /// </summary>
 internal static class VerbalComplexBinder
 {
+    // Surface licensing only; each caller still proves the copular reading and local dependent.
+    internal static bool IsConditionalAuxiliary(string canonical, string? previousCanonical) =>
+        canonical is "бих" or "би" or "бихме" or "бихте" or "биха" &&
+        !(canonical == "би" && previousCanonical == "може");
+
     /// <summary>
     /// Binds the primary predicative verbal complex of a segmented ClauseSpan, preserving exact matrix predicate
     /// anchoring (Carrier token for copular/modal/analytic constructions; DaConstruction for PrepositionalSubordinator).
@@ -182,6 +187,11 @@ internal static class VerbalComplexBinder
             // Scan pre-carrier clitic/negation/future cluster within [bodyStart .. p - 1].
             CliticCluster preClitics = BindPreVerbalCliticsInClause(
                 map, idx, bodyStart, p, out int firstWord, out int futureWord, ct);
+            if (futureWord >= 0)
+            {
+                finite = finite.Where(r => s.Word.Readings[r].Features.Tense == MorphologicalTense.Present).ToArray();
+                if (finite.Length == 0) return null;
+            }
 
             int carrierWord = idx[p];
             int lastWord = carrierWord;
@@ -194,8 +204,8 @@ internal static class VerbalComplexBinder
 
             bool copular = s.Active.Any(r => TextPredicateLinkAnalyzer.CopularLemma(s.Word.Readings[r].Lemma));
             string canon = s.Word.CanonicalText;
-            bool isConditionalAux = copular && canon is "бих" or "би" or "бихме" or "бихте" or "биха" &&
-                !(canon == "би" && p > 0 && slots[idx[p - 1]].Word.CanonicalText is "може" or "не");
+            bool isConditionalAux = copular && IsConditionalAuxiliary(canon,
+                p > 0 ? slots[idx[p - 1]].Word.CanonicalText : null);
             bool isFutPastAux = canon is "щях" or "щеше" or "щяхме" or "щяхте" or "щяха";
             bool isPersonalNyama = canon is "нямам" or "нямаш" or "нямаме" or "нямате" or "нямат";
             bool isPersonalMoga = canon is "мога" or "можеш" or "можем" or "можете" or "могат" or
@@ -1206,7 +1216,7 @@ internal static class VerbalComplexBinder
         !slot.Word.UsesGraph && slot.Active.Length > 0 &&
         slot.Active.All(r => slot.Word.Readings[r].Features.VerbForm == MorphologicalVerbForm.Participle);
 
-    private static bool IsExactPureAdverb(TokenView word) =>
+    internal static bool IsExactPureAdverb(TokenView word) =>
         !word.UsesGraph && word.Complete && word.Readings.Count > 0 &&
         word.Readings.All(r => r.SourceAdverb &&
             r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Adverb, HasUnrecognizedFeatures: false });

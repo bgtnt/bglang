@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BgLang.Api;
 using BgLang.Contracts;
 
@@ -60,6 +61,24 @@ internal sealed class SessionHost : IHostedService, IAsyncDisposable
             cancellation.ThrowIfCancellationRequested();
             await respond(result, cancellation);
             return result;
+        }, cancellation);
+    }
+
+    internal Task<object> AnalyzeSyntaxAsync(long revision, WebInput input, CancellationToken cancellation)
+    {
+        if (!_ready || _queue is null)
+            throw new ApiRequestException(503, "not-ready", "Езиковият пакет още не е готов или услугата спира.");
+        return _queue.RunResponseAsync(() =>
+        {
+            cancellation.ThrowIfCancellationRequested();
+            long started = Stopwatch.GetTimestamp();
+            TextAnalysis analysis = _session!.AnalyzeText(input.Text!, input.IncludeUnknownContextProperNames ?? false,
+                input.Context ?? default, cancellation);
+            double analysisMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            cancellation.ThrowIfCancellationRequested();
+            object tree = SyntaxTreeProjection.Build(analysis);
+            cancellation.ThrowIfCancellationRequested();
+            return Task.FromResult<object>(new { revision, analysisMs, tree });
         }, cancellation);
     }
 

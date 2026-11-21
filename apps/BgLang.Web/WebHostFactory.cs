@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BgLang.Api;
+using Microsoft.AspNetCore.Http.Connections;
 
 namespace BgLang.Web;
 
@@ -21,7 +22,9 @@ internal static class WebHostFactory
             options.AddServerHeader = false;
             options.Limits.MaxRequestBodySize = HttpContract.BodyBytes;
             options.Limits.MaxConcurrentConnections = 64;
-            options.Limits.MaxConcurrentUpgradedConnections = 0;
+            // Interactive WebSockets have a separate connection bound, while linguistic work
+            // still shares the single session worker and bounded queue with the HTTP API.
+            options.Limits.MaxConcurrentUpgradedConnections = 16;
             options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10);
             options.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(30);
         });
@@ -34,6 +37,13 @@ internal static class WebHostFactory
             builder.Configuration.GetValue<int>("BgLang:RequestsPerMinute", HttpContract.RequestsPerMinute)));
         builder.Services.AddSingleton(new ResponseWriter(
             builder.Configuration.GetValue<long?>("BgLang:ResponseByteLimit") ?? HttpContract.DefaultResponseBytes));
+        builder.Services.AddSignalR(options =>
+        {
+            options.MaximumReceiveMessageSize = HttpContract.BodyBytes;
+            options.MaximumParallelInvocationsPerClient = 1;
+            options.HandshakeTimeout = HttpContract.QueueWait + HttpContract.ResponseTimeout;
+            options.EnableDetailedErrors = false;
+        }).AddJsonProtocol(options => options.PayloadSerializerOptions = HttpContract.Json);
 
         WebApplication app = builder.Build();
         app.Use(async (context, next) =>
@@ -46,11 +56,25 @@ internal static class WebHostFactory
             await next(context);
         });
         // Forwarded IP/host/scheme headers are deliberately ignored. See README for deployment trust.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/hubs/syntax") && !SyntaxHub.HasSameOrigin(context.Request))
+            {
+                await ErrorAsync(context, 403, "origin-not-allowed", "Връзката трябва да идва от същия сайт.");
+                return;
+            }
+            await next(context);
+        });
         app.UseStaticFiles();
-        app.MapGet("/", () => Results.Redirect("/demo"));
-        app.MapGet("/demo", (IWebHostEnvironment environment) =>
-            Results.File(Path.Combine(environment.WebRootPath, "demo.html"), "text/html; charset=utf-8"));
-        app.MapGet("/demo-lab", () => Results.Redirect("/demo-lab/index.html"));
+        foreach (string entrance in new[] { "/", "/demo", "/demo.html", "/demo/index.html", "/demo-lab", "/demo-lab/index.html", "/demo-tree" })
+            app.MapGet(entrance, (HttpContext context) =>
+                Results.Redirect($"{context.Request.PathBase}/demo-tree/index.html{context.Request.QueryString}"));
+        app.MapHub<SyntaxHub>("/hubs/syntax", options =>
+        {
+            options.Transports = HttpTransportType.WebSockets;
+            options.ApplicationMaxBufferSize = HttpContract.BodyBytes;
+            options.TransportMaxBufferSize = HttpContract.BodyBytes;
+        });
         app.MapGet("/docs", (IWebHostEnvironment environment) =>
             Results.File(Path.Combine(environment.WebRootPath, "docs.html"), "text/html; charset=utf-8"));
         app.MapGet("/health/live", () => Results.Json(new { status = "live" }));

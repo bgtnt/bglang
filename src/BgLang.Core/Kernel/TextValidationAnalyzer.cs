@@ -204,8 +204,20 @@ internal static class TextValidationAnalyzer
                 if (Quoted(start, end)) continue;
                 Word[] phrase = binding.Participants.Select(member => bound[member.Word.OriginalIndex]).ToArray();
                 AddArticlePlacement(analysis, words, binding, phrase, prepReadings, ArticlePlacementRule, added, ct, grammar);
+                var headMember = binding.Head;
+                bool leaderHead = ContextualNominalAgreement.HasLeaderCue(binding, ct) &&
+                    headMember.RoleReadings.Count > 0 &&
+                    headMember.Word.Readings.Where((_, index) => !headMember.RoleReadings.Contains(index)).All(row =>
+                        row.Features.NameKind == MorphologicalNameKind.PlaceName &&
+                        ContextEvidenceGuards.IsUnwrittenCapitalizedReading(headMember.Word, row));
+                bool IsExcludedPlaceReading(ProperNameCandidate candidate) =>
+                    leaderHead && candidate.TokenIndex == headMember.Word.OriginalIndex &&
+                    candidate is { Lane: ProperNameLane.Exact, Kinds: ProperNameKinds.Place, ContextSupports.Count: 0, ExactSupports.Count: > 0 } &&
+                    candidate.ExactSupports.All(r => r.TokenIndex == candidate.TokenIndex &&
+                        (uint)r.CompleteReadingIndex < (uint)headMember.Word.Readings.Count &&
+                        !headMember.RoleReadings.Contains(r.CompleteReadingIndex));
                 if (analysis.ProperNames is { } names &&
-                    (names.Candidates.Any(n => Overlap(start, end - start, n.Start, n.Length)) ||
+                    (names.Candidates.Any(n => Overlap(start, end - start, n.Start, n.Length) && !IsExcludedPlaceReading(n)) ||
                      names.Groups.Any(n => Overlap(start, end - start, n.Start, n.Length)) ||
                      binding.Participants.Any(member => names.DeferredTokenIndices.Contains(member.Word.OriginalIndex) ||
                          names.UnresolvedContextTokens?.Any(token => token.TokenIndex == member.Word.OriginalIndex) == true)))
@@ -214,10 +226,19 @@ internal static class TextValidationAnalyzer
                 Word carrier = phrase[0];
                 bool upperFrame = phrase.All(word => word.Token.Text.All(c => !char.IsLetter(c) || char.IsUpper(c)));
                 if (!upperFrame && phrase.Any(word => char.IsUpper(word.Token.Text[0]))) continue;
+                // The filtered copy validates article rows; supports still use original reading indices.
+                Word[] articlePhrase = phrase;
+                if (leaderHead)
+                {
+                    articlePhrase = phrase.ToArray();
+                    articlePhrase[^1] = phrase[^1] with
+                    { Rows = headMember.RoleReadings.Select(index => phrase[^1].Rows[index]).ToArray() };
+                }
                 if (binding.Bridges.Any(bridge => bridge.Kind == NominalStructuralProjection.BridgeKind.ConjunctionAnd) ||
                     binding.Participants.Any(member => !member.Word.Complete || member.Word.UsesGraph ||
-                        member.RoleReadings.Count != member.Word.Readings.Count) ||
-                    phrase.Any(word => !ExactArticleRows(word))) continue;
+                        member.RoleReadings.Count != (leaderHead && member == headMember
+                            ? articlePhrase[^1].Rows.Count : member.Word.Readings.Count)) ||
+                    articlePhrase.Any(word => !ExactArticleRows(word))) continue;
                 if (phrase.Length == 1)
                 {
                     if (!All(carrier, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Noun)) continue;
@@ -226,7 +247,7 @@ internal static class TextValidationAnalyzer
                 // member can signal a different local structure even when the axes agree.
                 else if (!All(carrier, f => f.PartOfSpeech == MorphologicalPartOfSpeech.Adjective ||
                              ContextEvidenceGuards.IsMeasuredPassiveAttribute(f)) ||
-                         phrase.Skip(1).Any(word => !All(word, f => f.Article == MorphologicalArticle.Indefinite ||
+                         articlePhrase.Skip(1).Any(word => !All(word, f => f.Article == MorphologicalArticle.Indefinite ||
                              f.Article is null && ContextEvidenceGuards.IsMeasuredPassiveAttribute(f))) ||
                          NominalStructuralProjection.Measure(binding, ct) is not { } measured ||
                          measured.Heads.Any(group => group.Attributes.Where((rows, index) =>
@@ -235,7 +256,8 @@ internal static class TextValidationAnalyzer
 
                 KnownArticlePair? pair = ArticlePair(carrier, lookup, ct);
                 if (pair is null || !evaluated.Add((carrier.Token.Start, carrier.Token.Length))) continue;
-                var supports = Freeze(prepReadings.Concat(Supports(phrase)));
+                var supports = Freeze(prepReadings.Concat(leaderHead
+                    ? Supports(phrase.SkipLast(1)).Concat(NominalGrammarRules.References(headMember)) : Supports(phrase)));
                 if (grammar is not null)
                 {
                     var source = binding.Participants[0].Word;

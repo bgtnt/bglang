@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Синтаксис на живо · BgLang</title>
+  <link rel="icon" href="mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="tree.css">
+  <script defer src="../lib/signalr/signalr.min.js"></script>
+  <script type="module" src="tree.js"></script>
+</head>
+<body>
+  <header><nav aria-label="Основна навигация"><a class="brand" href="index.html"><b>бг</b> BgLang</a><div><a href="#workshop">Работилница</a><a href="../docs">API справка ↗</a></div></nav></header>
+  <main>
+    <div class="title"><h1>Синтаксис на живо</h1><span id="connection" role="status">Свързване…</span></div>
+    <div class="workbench">
+    <section class="editor" aria-labelledby="editor-label">
+      <label id="editor-label" for="text">Текст за анализ</label>
+      <div class="editor-shell"><div id="backdrop" aria-hidden="true"></div><textarea id="text" rows="3" maxlength="16384" spellcheck="false">Малката книга пътува с мен. Утре ще пристигнем.</textarea></div>
+      <div class="examples"><span>Пробвай</span><button type="button" data-example="Знам, че аз ще закъснеем.">Съгласуване</button><button type="button" data-example="Ще пристигнем. Тя се смее. И то ще се превърне.">Ще и се</button><button type="button" data-example="Аз бих бил там. Ние бихме били там.">Условно наклонение</button><button type="button" data-example="Рисувам сипя река. Това е друфа дума.">Поправки</button></div>
+      <details class="colors"><summary>Цветове на думите</summary><div class="color-key"><span class="c-noun">Съществително</span><span class="c-adj">Прилагателно</span><span class="c-verb">Глагол</span><span class="c-pron">Местоимение</span><span class="c-adv">Наречие</span><span class="c-num">Числително</span><span class="c-name">Име</span><span class="c-func">Служебна дума</span><span class="c-multi">Няколко прочита</span><span class="c-unknown">Без точен прочит</span></div></details>
+      <details class="tools"><summary>Продължения при курсора</summary><div class="tool-row">
+        <label for="completion-target">Речникови форми</label><select id="completion-target"><option value="Auto" selected>Авто</option><option value="Finite">Глаголи</option><option value="Noun">Съществителни</option></select>
+        <button type="button" id="completion-button" aria-keyshortcuts="Control+Space">Предложи форми</button></div>
+        <p class="note" id="completion-help">Ctrl+Space отваря предложенията. В автоматичен режим глаголите имат приоритет пред съществителните.</p>
+        <section id="completion-menu" aria-label="Предложения за продължение" hidden></section>
+      </details>
+      <details class="tools" id="stress-reading"><summary>Прочит с ударения</summary><button id="stress-read" type="button">Покажи ударенията</button><div id="stress-reading-body" aria-live="polite"></div></details>
+      <button type="button" id="punctuation" hidden></button>
+      <button type="button" id="undo" hidden>Отмени последната замяна</button>
+    </section>
+    <section class="inspector" aria-labelledby="word-title"><p class="caption">Избрана дума</p><h2 id="word-title">Дума и опори</h2><p id="morph"></p><div id="variants"></div><details id="role-details"><summary>Роли и опори</summary><div id="detail"></div></details><details id="word-tools"><summary>Речник, форми и звуков строеж</summary><div id="word-tools-body"></div></details></section>
+    </div>
+    <section class="board" aria-labelledby="board-label">
+      <div class="board-head"><h2 id="board-label">Връзки в изречението</h2><label id="navigation" hidden>Изречение <input type="number" min="1" step="1" id="sentence" aria-label="Номер на изречението"> <span id="count"></span></label></div>
+      <p id="state" class="state" role="status">Подготовка…</p>
+      <div id="graph"></div>
+      <div class="legend"><span class="compatible">Избрана връзка или съвместимост</span><span class="candidate">Възможна връзка</span><span class="evidence">Опора за роля</span><span class="conflict">Конфликт</span></div>
+    </section>
+    <section class="checks"><h2>Проверки</h2><div id="diagnostics">Изчакване на анализ.</div></section>
+    <details class="workshop" id="workshop"><summary>Работилница · търсене по лема и API</summary>
+    <div id="workshop-tools" inert>
+  <form id="text-search">
+    <label for="query">Дума или лема в редактора</label>
+    <input id="query" maxlength="256" value="книга" required aria-describedby="match-rules">
+    <p id="match-rules" class="tag">Точното изписване сравнява цял токен, включително регистъра. По лема сравнява всички върнати прочити и хипотези, без контекстно разрешаване на многозначността.</p>
+    <button id="text-submit" type="submit">Сравни попаденията</button>
+  </form>
+  <p id="text-status" role="status" aria-live="polite"></p>
+  <section id="text-comparison" hidden aria-label="Точни попадения и попадения по лема">
+    <div id="query-evidence"></div>
+    <p id="text-coverage" class="notice"></p>
+    <div class="comparison">
+      <section><h2 id="exact-count">Точно изписване</h2><div id="exact-text" class="marked-text"></div></section>
+      <section><h2 id="lemma-count">По лема</h2><p class="tag">Плътно маркиране: речникови прочити. Пунктир: графови/морфологични хипотези. Условното evidence е означено отделно при click.</p><div id="lemma-text" class="marked-text"></div></section>
+    </div>
+    <p class="tag">Двата панела показват същия оригинален текст. Щракни върху попадение за неговия AnalyzeText анализ и UTF-16 offsets.</p>
+    <details><summary>Целият HTTP отговор за сравнението и общите donorSets</summary><pre id="text-json"></pre></details>
+  </section>
+  <details id="explorer">
+  <summary>Заявка към API</summary>
+  <p><code>GenerateForms(lemma)</code> връща краен набор словоформи по лема от пакета, до избрания лимит. За собствено новообразувание използвай <code>AnalyzeWord</code> и <code>DecomposeWord</code>: графът може да върне път за незаписана дума, ако правилата и evidence го допускат. <code>DeriveWords</code> показва ограничено търсене от основа. Нито една операция не обещава всички възможни новообразувания; условната основа и непълното търсене остават означени.</p>
+  <form id="search">
+    <label for="mode">Операция</label>
+    <select id="mode">
+      <option value="analyze-word">Анализ на дума: прочити и графови хипотези</option>
+      <option value="generate-forms">Словоформи по лема</option>
+      <option value="derive-words">Словообразуване от основа чрез граф</option>
+      <option value="decompose-word">Разлагане и графово evidence</option>
+      <option value="analyze-text">Анализ на текст</option>
+    </select>
+    <label for="input">Дума, лема или собствен текст</label>
+    <textarea id="input" rows="3" maxlength="16384" required>книга</textarea>
+    <div id="limit-controls">
+      <label for="limit">Лимит на резултатите (1–256)</label>
+      <input id="limit" type="number" min="1" max="256" step="1" value="32" required aria-describedby="limit-help">
+      <p id="limit-help" class="tag">Началният избор за словоформи е 256; за анализ и словообразуване — 32. Можеш да избереш по-малък лимит. По-голям лимит може да разшири самото търсене; не доказва пълнота.</p>
+    </div>
+    <button id="submit" type="submit">Разгледай</button>
+  </form>
+  <div class="examples" aria-label="Примерни входове">
+    <span>Примери:</span>
+    <button type="button" data-example="книга" data-mode="generate-forms">Форми: книга</button>
+    <button type="button" data-example="пила" data-mode="analyze-word">Прочити: пила</button>
+    <button type="button" data-example="супермравка" data-mode="analyze-word">Граф: супермравка</button>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
+  </details>
+  <section id="results" aria-label="Резултати"></section>
+  <section id="donor-viewer" hidden aria-label="Пълен списък с подкрепящи леми">
+    <h2 id="donor-title"></h2>
+    <p id="donor-context" class="tag"></p>
+    <p class="tag">Общият списък запазва всички върнати леми в оригиналния ред. Програмата, tags и неизпълнените изисквания принадлежат на избрания кандидат.</p>
+    <pre id="donor-list"></pre>
+  </section>
+  <section id="details" hidden>
+    <h2 id="detail-title">Действителният отговор</h2>
+    <p id="coverage"></p>
+    <p id="json-context" class="tag" hidden>Това е оригиналният токен от HTTP отговора. References са индекси от нула в donorSets на целия отговор; те не са donor IDs. Отвори целия HTTP отговор по-долу за таблицата и останалия текстов анализ.</p>
+    <details><summary>JSON от HTTP операцията или избрания токен</summary><pre id="json"></pre></details>
+    <details id="response-json-view" hidden><summary>Целият оригинален HTTP отговор и общите donorSets</summary><pre id="response-json"></pre></details>
+    <details><summary>Същото извикване в C#</summary><pre id="code"></pre></details>
+  </section>
+    </div></details>
+  </main>
+</body>
+</html>

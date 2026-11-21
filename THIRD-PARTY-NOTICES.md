@@ -4,6 +4,10 @@ The project owner's code and linguistic data are covered by the root MIT license
 The .NET SDK/runtime and test tooling retain their own licenses. The public source
 distribution does not vendor NuGet packages, SDK binaries or GitHub action code.
 
+The local syntax demo includes the official browser distribution of `@microsoft/signalr` 10.0.11
+so it can connect to the Web host offline. [MIT license](apps/BgLang.Web/wwwroot/lib/signalr/LICENSE.txt) and
+[upstream third-party notices](apps/BgLang.Web/wwwroot/lib/signalr/third-party-notices.txt).
+
 The public test target reuses the project's existing Microsoft.NET.Test.Sdk18.7.0
 and MSTest.TestAdapter/TestFramework4.2.3. Its exact direct/transitive versions and
 content hashes are recorded in `tests/BgLang.Public.Tests/packages.lock.json`.

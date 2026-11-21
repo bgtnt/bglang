@@ -103,7 +103,7 @@ public sealed class ConstructionIndex
             query[i] = symbol;
         }
 
-        if (mode != ConstructionQueryMode.EditDistance)
+        if (mode != ConstructionQueryMode.EditDistance || maxDistance == 0)
         {
             int start = Bound(query, afterPrefix: false, cancellationToken);
             int end = mode == ConstructionQueryMode.Prefix
@@ -124,12 +124,13 @@ public sealed class ConstructionIndex
         // Entry ordinals are the lexicographic tie-break, including proper-prefix signatures.
         PriorityQueue<ConstructionIndexHit, (int Distance, int Ordinal)> best = new();
         int total = 0;
+        int[] row = [];
         for (int i = 0; i < Data.Entries.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ConstructionIndexEntry entry = Data.Entries[i];
             if (Math.Abs((long)entry.Symbols.Count - query.Length) > maxDistance) continue;
-            int distance = Distance(query, entry.Symbols, cancellationToken);
+            int distance = Distance(query, entry.Symbols, ref row, cancellationToken);
             if (distance > maxDistance) continue;
             total++;
             if (limit == 0) continue;
@@ -277,28 +278,34 @@ public sealed class ConstructionIndex
     }
 
     private static int Distance(IReadOnlyList<string> left, IReadOnlyList<string> right,
-        CancellationToken cancellationToken)
+        ref int[] row, CancellationToken cancellationToken)
     {
         if (left.Count > right.Count) (left, right) = (right, left);
-        int[] previous = new int[checked(left.Count + 1)], current = new int[checked(left.Count + 1)];
-        for (int j = 0; j < previous.Length; j++)
+        if (left.Count == 0) return right.Count;
+
+        int width = checked(left.Count + 1);
+        if (row.Length < width) row = new int[width];
+        for (int j = 0; j < width; j++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            previous[j] = j;
+            row[j] = j;
         }
         for (int i = 0; i < right.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            current[0] = i + 1;
-            for (int j = 1; j < current.Length; j++)
+            int diagonal = row[0];
+            row[0] = i + 1;
+            for (int j = 1; j < width; j++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int substitution = previous[j - 1] + (string.Equals(left[j - 1], right[i], StringComparison.Ordinal) ? 0 : 1);
-                current[j] = Math.Min(substitution, Math.Min(previous[j] + 1, current[j - 1] + 1));
+                int above = row[j];
+                row[j] = string.Equals(left[j - 1], right[i], StringComparison.Ordinal)
+                    ? diagonal
+                    : Math.Min(diagonal, Math.Min(above, row[j - 1])) + 1;
+                diagonal = above;
             }
-            (previous, current) = (current, previous);
         }
-        return previous[^1];
+        return row[width - 1];
     }
 
     private static void RequireText(string value)

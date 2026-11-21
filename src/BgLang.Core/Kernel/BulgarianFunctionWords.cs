@@ -31,7 +31,7 @@ internal enum FunctionWordClasses : ulong
     ReviewedComplementPreposition = 1UL << 13,  // без в във до за зад към между на над около от под пред през при с след сред със
     ReportComplementPreposition = 1UL << 14,    // върху покрай срещу
     SyntaxRolePreposition = 1UL << 15,          // без в във до за из към на над от по под пред през при с със след
-    AdpositionHomographPrunable = 1UL << 16,    // преди край между срещу около
+    AdpositionHomographPrunable = 1UL << 16,    // преди край между срещу около под
 
     // Conjunctions, subordinators & relative introducers
     CoreCoordinatingConjunction = 1UL << 17,    // и или а но
@@ -39,7 +39,7 @@ internal enum FunctionWordClasses : ulong
     CoreSubordinatingConjunction = 1UL << 19,   // че ако когато защото понеже докато
     CommaSubordinateTrigger = 1UL << 20,        // че защото когато който която което които ако понеже докато
     RelativeWord = 1UL << 21,                   // който която което които чийто чиято чието чиито където откъдето
-    ClauseIntroducer = 1UL << 22,               // че защото понеже когато ако докато дали щом който която което които където макар въпреки
+    ClauseIntroducer = 1UL << 22,               // че защото понеже когато ако докато дали щом както който която което които където макар въпреки
     SingleWordPreposedSubordinator = 1UL << 23, // когато ако докато защото понеже щом макар въпреки
     PerfectivePresentSubordinator = 1UL << 24,  // когато ако докато щом като
     PureAccusativeClitic = 1UL << 25,           // ме те го я ги (strict non-reflexive non-dative short accusatives)
@@ -131,7 +131,8 @@ internal static class BulgarianFunctionWords
             ["освен"] = FunctionWordClasses.ClauseCaseGovernedPrepositionExtra,
             ["от"] = FunctionWordClasses.LegacyChainPreposition | FunctionWordClasses.ReviewedComplementPreposition | FunctionWordClasses.SyntaxRolePreposition,
             ["по"] = FunctionWordClasses.SyntaxRolePreposition,
-            ["под"] = FunctionWordClasses.ReviewedComplementPreposition | FunctionWordClasses.SyntaxRolePreposition,
+            ["под"] = FunctionWordClasses.ReviewedComplementPreposition | FunctionWordClasses.SyntaxRolePreposition |
+                      FunctionWordClasses.AdpositionHomographPrunable,
             ["покрай"] = FunctionWordClasses.ReportComplementPreposition,
             ["поради"] = FunctionWordClasses.ClauseCaseGovernedPrepositionExtra,
             ["пред"] = FunctionWordClasses.LegacyChainPreposition | FunctionWordClasses.ReviewedComplementPreposition | FunctionWordClasses.SyntaxRolePreposition,
@@ -161,6 +162,7 @@ internal static class BulgarianFunctionWords
                          FunctionWordClasses.ClauseIntroducer | FunctionWordClasses.SingleWordPreposedSubordinator |
                          FunctionWordClasses.PerfectivePresentSubordinator,
             ["дали"] = FunctionWordClasses.ClauseIntroducer,
+            ["както"] = FunctionWordClasses.ClauseIntroducer,
             ["щом"] = FunctionWordClasses.ClauseIntroducer | FunctionWordClasses.SingleWordPreposedSubordinator |
                       FunctionWordClasses.PerfectivePresentSubordinator,
             ["макар"] = FunctionWordClasses.ClauseIntroducer | FunctionWordClasses.SingleWordPreposedSubordinator,
@@ -221,6 +223,9 @@ internal static class BulgarianFunctionWords
 
     internal static bool HasAny(string normalizedForm, FunctionWordClasses mask) =>
         ClassesByForm.TryGetValue(normalizedForm, out FunctionWordClasses classes) && (classes & mask) != 0;
+
+    internal static bool IsNominalFocusParticle(string normalizedForm) =>
+        normalizedForm is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно";
 
     internal static bool TryGetPersonalSubjectPronoun(string normalizedForm, out PersonalSubjectPronounSpec spec) =>
         PersonalSubjects.TryGetValue(normalizedForm, out spec);

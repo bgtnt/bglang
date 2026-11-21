@@ -162,6 +162,8 @@ internal static class TextCountConstructionAnalyzer
 
     // Reviewed lexical scope: BERON стол/компютър and IBE consultation ученици, mapped by the oracle.
     // The full inflection is supplied by complete package rows. Meaning strings and suffixes are not classifiers.
+    internal static bool IsReviewedPersonLemma(string lemma) => ReviewedNoun(lemma)?.Denotation == Denotation.Person;
+
     private static Noun? ReviewedNoun(string lemma) => Key(lemma) switch
     {
         "стол" => new("стол", "стола", "столове", Denotation.Nonperson),

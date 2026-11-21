@@ -21,9 +21,14 @@ public sealed record TextNominalPhrase(string ConstructionKey, int Start, int Le
     public IReadOnlyList<TextReadingReference>? ConjunctionReadings { get; init; }
 }
 
-/// <summary>Every member is tested against this same actual head reading, never a union of feature axes.</summary>
+/// <summary>Every member is tested against the same head reading and its agreement features in this phrase.</summary>
 public sealed record NominalHeadSupport(TextReadingReference? Reading, TextGraphReadingReference? GraphReading,
-    IReadOnlyList<NominalMemberSupport> Members);
+    IReadOnlyList<NominalMemberSupport> Members)
+{
+    /// <summary>Phrase-level gender when it differs from the lexical reading, as in държавен глава.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MorphologicalGender? ContextualGender { get; init; }
+}
 
 public sealed record NominalMemberSupport(int TokenIndex, NominalAgreementAssessment Assessment,
     IReadOnlyList<TextReadingReference> Readings, IReadOnlyList<TextGraphReadingReference> GraphReadings)

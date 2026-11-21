@@ -484,7 +484,7 @@ public sealed class BulgarianLanguageSession : IDisposable
             counterpartMemo.Add(surface, captured);
             return captured;
         }
-        var (context, syntax, clauseMaps, articleTargets) =
+        var (context, syntax, clauseMaps, articleTargets, nominalRepairArticles) =
             TextContextAnalyzer.CalculateWithArtifacts(analysis, contextOptions, cancellationToken, morphology,
                 _verbFrames, _postverbalDirectObjectMaxRatio, DirectObjectFrame, ExactCounterpart, VerbAuthority);
         TextContinuationEvidence? continuation = contextOptions.Continuation is { } requested
@@ -531,6 +531,9 @@ public sealed class BulgarianLanguageSession : IDisposable
         {
             var selectedSubjects = context.Sentences.SelectMany(sentence => sentence.SelectedRoles)
                 .Where(role => role.Role == TextContextRole.Subject).Select(role => role.TokenIndex).ToHashSet();
+            var repairArticles = nominalRepairArticles.GroupBy(role => (role.FirstTokenIndex, role.HeadTokenIndex))
+                .Where(group => group.Select(role => role.Kind).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => (ClauseFusionAnalyzer.ArticleExpectationKind?)group.First().Kind);
             var framesByController = predicative.Where(frame => frame.Controller?.Phrase is not null)
                 .GroupBy(frame => frame.Controller!.Head.OriginalIndex)
                 .ToDictionary(group => group.Key, group => group.First());
@@ -538,7 +541,8 @@ public sealed class BulgarianLanguageSession : IDisposable
             {
                 int head = match.Binding.Head.Word.OriginalIndex;
                 return NominalGrammarEvidence.Explain(match, package.Lexicon, Acquire, selectedSubjects.Contains(head),
-                    framesByController.GetValueOrDefault(head), cancellationToken);
+                    framesByController.GetValueOrDefault(head), cancellationToken,
+                    repairArticles.GetValueOrDefault((match.Binding.Participants[0].Word.OriginalIndex, head)));
             }).ToList();
             grammarMatches.AddRange(numeralGrammar!);
             grammarMatches.AddRange(predicative.SelectMany(frame =>

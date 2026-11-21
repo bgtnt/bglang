@@ -159,7 +159,10 @@ internal static class TextNominalConstructionAnalyzer
                     ct.ThrowIfCancellationRequested();
                     heads.Add(new(morphology.ByToken[head].UsesGraph ? null : new TextReadingReference(head, h),
                         morphology.ByToken[head].UsesGraph ? new TextGraphReadingReference(head,
-                            morphology.ByToken[head].Graph[h].CandidateIndex, morphology.ByToken[head].Graph[h].FullTagIndex) : null, Array.AsReadOnly(members.ToArray())));
+                            morphology.ByToken[head].Graph[h].CandidateIndex, morphology.ByToken[head].Graph[h].FullTagIndex) : null, Array.AsReadOnly(members.ToArray()))
+                    {
+                        ContextualGender = group.Gender != binding.Head.Word.Readings[h].Features.Gender ? group.Gender : null
+                    });
                 }
             }
             NominalAgreementAssessment assessment = relation is null ? NominalAgreementAssessment.Unassessed :

@@ -6,6 +6,40 @@ namespace BgLang.Public.Tests;
 
 public sealed partial class PublicPackageTests
 {
+    [TestMethod]
+    [DataRow("Държавният глва пристигна.", SpellingContextAssessment.NoCompatiblePair)]
+    [DataRow("Голямата глва се вижда.", SpellingContextAssessment.Supported)]
+    public void Leadership_sense_does_not_relabel_raw_spelling_candidates_or_scalar_witnesses(
+        string text, SpellingContextAssessment assessment)
+    {
+        IReadOnlyList<FuzzyMatch> before = session.FindSimilar("глва", 2, 10);
+        int candidateIndex = Enumerable.Range(0, before.Count).Single(i => before[i].Form == "глава");
+        TextAnalysis actual = session.AnalyzeText(text);
+        SpellingWordEvidence word = actual.Spelling!.Words.Single(w => w.NormalizedQuery == "глва");
+        Assert.AreEqual(SpellingSearchDisposition.Completed, word.Search);
+        Assert.AreEqual(JsonSerializer.Serialize(before), JsonSerializer.Serialize(word.Alternatives));
+        Assert.AreEqual("глва", text.Substring(word.Start, word.Length));
+        Assert.IsTrue(before[candidateIndex].Readings.Any(r => r.Features is
+            { PartOfSpeech: MorphologicalPartOfSpeech.Noun, Gender: MorphologicalGender.Feminine }));
+        SpellingContextCandidate candidate = word.ContextualCandidates!.Single(c => c.AlternativeIndex == candidateIndex);
+        Assert.AreEqual(assessment, candidate.Assessment);
+        Assert.IsEmpty(candidate.Matches);
+        Assert.AreEqual(assessment == SpellingContextAssessment.Supported, candidate.PreviousModifierMatches is { Count: > 0 });
+        foreach (SpellingPreviousModifierMatch match in candidate.PreviousModifierMatches ?? [])
+        {
+            Assert.AreEqual(word.TokenIndex - 1, match.PreviousModifierReading.TokenIndex);
+            TextReadingInventory inventory = actual.ReadingInventory!;
+            TextReadingSet set = inventory.Sets[inventory.Occurrences.Single(o =>
+                o.TokenIndex == match.PreviousModifierReading.TokenIndex).ReadingSetIndex];
+            Assert.AreEqual(MorphologicalGender.Feminine, set.ResolvedReadings[match.PreviousModifierReading.CompleteReadingIndex].Features.Gender);
+            Assert.AreEqual(MorphologicalGender.Feminine, before[candidateIndex].Readings[match.CandidateReadingIndex].Features.Gender);
+        }
+        Assert.AreEqual(JsonSerializer.Serialize(before), JsonSerializer.Serialize(session.FindSimilar("глва", 2, 10)));
+        TextAnalysis known = session.AnalyzeText("Държавният глава пристигна.");
+        Assert.IsTrue(known.Spelling!.Words.All(w => w.Search == SpellingSearchDisposition.NotRequestedKnown &&
+            w.Alternatives.Count == 0 && w.ContextualCandidates is null));
+    }
+
     // Report 7.4 supplies the noun example; raw candidate preservation is checked independently.
     [TestMethod]
     [DataRow("Нова кнгиа.", DisplayName = "reverse-package-01")][DataRow("Нова кнгиа", DisplayName = "reverse-package-02")][DataRow("„Нова кнгиа.“", DisplayName = "reverse-package-03")][DataRow("😀 Нова кнгиа.", DisplayName = "reverse-package-04")]

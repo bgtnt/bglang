@@ -36,11 +36,11 @@ internal static class LocalClauseRoleLinker
         var binding = pronoun ? null : Phrase(head);
         int first = binding?.Participants[0].WordIndex ?? head;
         int prep = first > 0 && Guard.IsExactAdposition(words[first - 1]) && Gap(first - 1, first) ? first - 1 : -1;
-        int[][]? governedRows = prep == 0 ? Governed(1, head) : null;
-        int[][]? prefixRows = first > 1 && prep < 0 && Guard.IsExactAdposition(words[0])
+        var governedMembers = prep == 0 ? Governed(1, head) : null;
+        var prefixMembers = first > 1 && prep < 0 && Guard.IsExactAdposition(words[0])
             ? Governed(1, first - 1) : null;
-        bool governed = governedRows is not null;
-        bool prefix = prefixRows is not null;
+        bool governed = governedMembers is not null;
+        bool prefix = prefixMembers is not null;
         if (first != 0 && !governed && !prefix) return null;
         if (!governed && !pronoun && binding is null) return null;
         bool coherent = binding is null || Coherent(binding);
@@ -81,7 +81,7 @@ internal static class LocalClauseRoleLinker
         List<ContextOverlayRoleSelection> roles =
         [
             Evidence(Role.Predicate, predicate, Indices(verb), "complete_exact_finite_readings"),
-            Evidence(licensed ? Role.Subject : Role.NominalContext, head, governedRows?[^1] ?? Indices(nominal), basis)
+            Evidence(licensed ? Role.Subject : Role.NominalContext, head, governedMembers?[^1].RoleReadings ?? Indices(nominal), basis)
         ];
         if (binding is not null)
             foreach (var member in binding.Participants.Take(binding.Participants.Count - 1))
@@ -90,9 +90,9 @@ internal static class LocalClauseRoleLinker
         {
             int[] prepositions = Indices(words[0]).Where(i => words[0].Readings[i].Features.PartOfSpeech == MorphologicalPartOfSpeech.Preposition).ToArray();
             roles.Add(Evidence(Role.Adposition, 0, prepositions, "exact_preposition_governor"));
-            if (prefixRows is not null)
-                for (int i = 0; i < prefixRows.Length; i++)
-                    roles.Add(Evidence(Role.NominalContext, i + 1, prefixRows[i], "governed_prefix"));
+            if (prefixMembers is not null)
+                foreach (var member in prefixMembers)
+                    roles.Add(Evidence(Role.NominalContext, member.WordIndex, member.RoleReadings, "governed_prefix"));
         }
         if (clitic.Length > 0)
             roles.Add(Evidence(Role.NominalContext, predicate - 1, clitic, "accusative_clitic_witness"));
@@ -113,7 +113,7 @@ internal static class LocalClauseRoleLinker
             measured.Heads.All(head => head.Attributes.Select((readings, i) =>
                 readings.Length == phrase.Participants[i].RoleReadings.Count).All(equal => equal));
 
-        int[][]? Governed(int start, int last)
+        IReadOnlyList<NominalStructuralProjection.Member>? Governed(int start, int last)
         {
             for (int i = start - 1; i < last; i++)
                 if (!Gap(i, i + 1)) return null;
@@ -121,16 +121,16 @@ internal static class LocalClauseRoleLinker
             if (last == start && Exact(word))
             {
                 int[] oblique = Guard.ObliquePronounReadings(word, ct);
-                if (oblique.Length > 0) return [oblique];
+                if (oblique.Length > 0) return [new(last, word, oblique)];
                 if (word.Readings.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
                     !r.Features.HasConflictingFeatures && !r.Features.HasUnrecognizedFeatures))
                 {
                     int[] nouns = Indices(word).Where(i => Guard.HasNominalAxes(word.Readings[i].Features)).ToArray();
-                    if (nouns.Length > 0) return [nouns];
+                    if (nouns.Length > 0) return [new(last, word, nouns)];
                 }
             }
             return Phrase(last) is { } phrase && phrase.Participants[0].WordIndex == start && Coherent(phrase)
-                ? phrase.Participants.Select(member => member.RoleReadings.ToArray()).ToArray() : null;
+                ? phrase.Participants : null;
         }
 
         bool AdverbialTail(int start, int last)

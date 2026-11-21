@@ -42,6 +42,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check apps/BgLang.Web/wwwroot/demo-lab/demo.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($script in (Get-ChildItem apps/BgLang.Web/wwwroot/demo-tree/*.js)) {
+            node --check $script.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Public Markdown links
         shell: pwsh
         run: |
@@ -56,7 +60,7 @@ jobs:
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
           $env:BGLANG_CLIENT_SOURCE_ROOT = $env:GITHUB_WORKSPACE
-          node --test tests/BgLang.Web.Tests/Client/live-demo.test.mjs tests/BgLang.Web.Tests/Client/demo-lab.test.mjs
+          node --test tests/BgLang.Web.Tests/Client/*.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Locked authoring input, Graph5 package, Public/example and optional HTTP checks
         shell: pwsh

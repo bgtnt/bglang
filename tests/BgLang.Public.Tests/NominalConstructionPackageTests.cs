@@ -8,6 +8,120 @@ public sealed partial class PublicPackageTests
 {
     private static readonly TextContextOptions NominalOptions = new() { IncludeNominalConstructions = true };
 
+    [TestMethod]
+    [DataRow("Държавният глава пристигна.", 1, NominalAgreementAssessment.Compatible, false, MorphologicalGender.Masculine)]
+    [DataRow("ДЪРЖАВНИЯТ ГЛАВА ПРИСТИГНА.", 1, NominalAgreementAssessment.Compatible, false, MorphologicalGender.Masculine)]
+    [DataRow("Църковният глава пристигна.", 1, NominalAgreementAssessment.Compatible, false, MorphologicalGender.Masculine)]
+    [DataRow("Новият държавен глава пристигна.", 2, NominalAgreementAssessment.Compatible, false, MorphologicalGender.Masculine)]
+    [DataRow("Те видяха държавния глава.", 1, NominalAgreementAssessment.Compatible, true, MorphologicalGender.Masculine)]
+    [DataRow("Те видяха новия държавен глава.", 2, NominalAgreementAssessment.Compatible, true, MorphologicalGender.Masculine)]
+    [DataRow("Те говориха на държавния глава.", 1, NominalAgreementAssessment.Compatible, true, MorphologicalGender.Masculine)]
+    [DataRow("Голямата глава се вижда.", 1, NominalAgreementAssessment.Compatible, false, null)]
+    [DataRow("Големият глава се вижда.", 1, NominalAgreementAssessment.Mismatch, false, null)]
+    [DataRow("Новата държавен глава пристигна.", 2, NominalAgreementAssessment.Mismatch, false, MorphologicalGender.Masculine)]
+    [DataRow("Новият държавна глава пристигна.", 2, NominalAgreementAssessment.Mismatch, false, null)]
+    public void Leadership_nominal_sense_is_local_and_keeps_the_literal_feminine_reading(
+        string text, int modifiers, NominalAgreementAssessment assessment, bool objectOrGoverned, MorphologicalGender? contextualGender)
+    {
+        string lexicalBefore = JsonSerializer.Serialize(session.Lookup("глава", LookupMode.Exact, 256));
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true, IncludeNominalConstructions = true }, default);
+        int head = actual.Tokens.Select((token, index) => (token, index))
+            .Single(t => t.token.Text.Equals("глава", StringComparison.OrdinalIgnoreCase)).index;
+        TextNominalPhrase phrase = actual.NominalConstructions!.Phrases.Single(p => p.HeadTokenIndex == head);
+        Assert.AreEqual(assessment, phrase.Assessment, text);
+        CollectionAssert.AreEqual(Enumerable.Range(head - modifiers, modifiers).ToArray(), phrase.ModifierTokenIndices.ToArray());
+        Assert.AreEqual(actual.Tokens[head - modifiers].Start, phrase.Start);
+        Assert.AreEqual(actual.Tokens[head].Start + actual.Tokens[head].Length - phrase.Start, phrase.Length);
+        Assert.IsNotEmpty(phrase.HeadSupports);
+        Assert.AreEqual(assessment == NominalAgreementAssessment.Compatible,
+            phrase.HeadSupports.Any(s => s.Members.All(m => m.Assessment == NominalAgreementAssessment.Compatible)), text);
+        foreach (NominalHeadSupport support in phrase.HeadSupports)
+        {
+            Assert.AreEqual(contextualGender, support.ContextualGender);
+            Assert.IsNull(support.GraphReading); Assert.IsNotNull(support.Reading);
+            TextReadingReference reference = support.Reading.Value;
+            Assert.AreEqual(head, reference.TokenIndex);
+            Assert.AreEqual(MorphologicalGender.Feminine, Rows(reference).Features.Gender,
+                "Phrase sense must not relabel the dictionary reading or invent a masculine reading ordinal.");
+            Assert.AreEqual(MorphologicalNumber.Singular, Rows(reference).Features.Number);
+            foreach (NominalMemberSupport member in support.Members)
+            {
+                Assert.IsNull(member.ReplacementReadings); Assert.IsEmpty(member.GraphReadings);
+                Assert.AreEqual(member.Assessment == NominalAgreementAssessment.Compatible, member.Readings.Count > 0);
+                foreach (TextReadingReference witness in member.Readings) Assert.AreEqual(member.TokenIndex, witness.TokenIndex);
+            }
+        }
+        if (assessment == NominalAgreementAssessment.Compatible)
+            Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == ClosedAttributeCode), text);
+        if (objectOrGoverned)
+            Assert.IsFalse(actual.Context!.Sentences.SelectMany(s => s.SelectedRoles).Any(r =>
+                r.Role == TextContextRole.Subject && r.TokenIndex == head), "A masculine phrase sense does not license a subject role.");
+        foreach (TextReadingOccurrence occurrence in actual.ReadingInventory!.Occurrences)
+        {
+            TextReadingSet set = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex];
+            CollectionAssert.AreEqual(session.Lookup(set.CanonicalKey, LookupMode.Exact, 256)
+                .Select(r => new TextReadingSnapshot(r, r.Features)).ToArray(), set.ResolvedReadings.ToArray());
+            Assert.AreEqual(occurrence.Text, text.Substring(occurrence.Start, occurrence.Length));
+        }
+        Assert.AreEqual(lexicalBefore, JsonSerializer.Serialize(session.Lookup("глава", LookupMode.Exact, 256)));
+
+        TextReadingSnapshot Rows(TextReadingReference reference) => actual.ReadingInventory!.Sets[
+            actual.ReadingInventory.Occurrences.Single(o => o.TokenIndex == reference.TokenIndex).ReadingSetIndex]
+            .ResolvedReadings[reference.CompleteReadingIndex];
+    }
+
+    [TestMethod]
+    [DataRow("Държавният глава пристигна.", false)]
+    [DataRow("Държавният глава пристигнаха.", true)]
+    [DataRow("Новият държавен глава пристигна.", false)]
+    [DataRow("Новият държавен глава пристигнаха.", true)]
+    public void Leadership_preposed_subject_keeps_singular_number_for_finite_agreement(string text, bool mismatch)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        int head = actual.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == "глава").index;
+        int predicate = head + 1;
+        TextDiagnostic[] warnings = actual.Diagnostics.Where(d => d.Code == ClosedFiniteCode).ToArray();
+        Assert.HasCount(mismatch ? 1 : 0, warnings, text);
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code == ClosedAttributeCode), text);
+        if (!mismatch) return;
+        Assert.AreEqual((actual.Tokens[predicate].Start, actual.Tokens[predicate].Length), (warnings[0].Start, warnings[0].Length));
+        Assert.IsNull(warnings[0].ProjectedText); Assert.IsNull(warnings[0].GraphReadings);
+        Assert.IsNotNull(warnings[0].Readings);
+        IReadOnlyList<TextReadingReference> references = warnings[0].Readings!;
+        Assert.IsTrue(references.Any(r => r.TokenIndex == head));
+        Assert.IsTrue(references.Any(r => r.TokenIndex == predicate));
+        foreach (TextReadingReference reference in references)
+        {
+            TextReadingSet set = actual.ReadingInventory!.Sets[actual.ReadingInventory.Occurrences
+                .Single(o => o.TokenIndex == reference.TokenIndex).ReadingSetIndex];
+            Assert.AreEqual(session.Lookup(set.CanonicalKey, LookupMode.Exact, 256)[reference.CompleteReadingIndex],
+                set.ResolvedReadings[reference.CompleteReadingIndex].Raw);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("Новият държавен глава е пристигнал.", "grammar.agreement.active_participle_controller.v1")]
+    [DataRow("Държавният глава е доволен.", "grammar.agreement.copular_adjective.v1")]
+    [DataRow("Голямата глава е видима.", "grammar.agreement.copular_adjective.v1")]
+    public void Leadership_predicative_agreement_preserves_literal_word_provenance(string text, string rule)
+    {
+        TextAnalysis actual = session.AnalyzeText(text, false,
+            new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true }, default);
+        Assert.IsFalse(actual.Diagnostics.Any(d => d.Code is ClosedAttributeCode or ClosedFiniteCode or
+            "productive_predicative_agreement_mismatch"), text);
+        TextGrammarMatch relation = actual.Grammar!.Matches.Single(m => m.RuleId == rule);
+        Assert.AreEqual(TextGrammarAssessment.Compatible, relation.Assessment);
+        Assert.IsEmpty(relation.Conflicts); Assert.IsEmpty(relation.Repairs);
+        foreach (TextReadingOccurrence occurrence in actual.ReadingInventory!.Occurrences)
+        {
+            TextReadingSet set = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex];
+            CollectionAssert.AreEqual(session.Lookup(set.CanonicalKey, LookupMode.Exact, 256)
+                .Select(r => new TextReadingSnapshot(r, r.Features)).ToArray(), set.ResolvedReadings.ToArray());
+        }
+    }
+
     // Independent human examples, frozen before measurement. Gold does not come from the new projection.
     [TestMethod]
     [DataRow("Стара къща пустее.", "къща", 1, 0, NominalAgreementAssessment.Compatible)]

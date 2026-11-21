@@ -32,6 +32,7 @@ public sealed class LocalPrepositionalArticleGraphPackageTests
     [DataRow("{0} помагам.", "На", "ученикът", "ученика", "")]
     [DataRow("Говоря {0}.", "с", "добрият", "добрия", " учител")]
     [DataRow("Говоря {0}.", "с", "добрият", "добрия", " млад учител")]
+    [DataRow("Говорих {0}.", "с", "държавният", "държавния", " глава")]
     [DataRow("В задънена улица попадна и делото за убийството {0} Георги Сивков.", "на", "наркодилърът", "наркодилъра", "")]
     public void Local_result_is_independent_of_predicates_and_unrelated_text(
         string frame, string preposition, string full, string shortForm, string tail) =>
@@ -117,6 +118,7 @@ public sealed class LocalPrepositionalArticleGraphPackageTests
     [DataRow("Говоря с „учителят“.")]
     [DataRow("`Говоря с учителят`")]
     [DataRow("Говоря с Учителят.")]
+    [DataRow("Говорих с държавният Глава.")]
     [DataRow("Говоря с добрият учителят.")]
     [DataRow("Говоря с добрият учители.")]
     [DataRow("Говоря с добрият и млад учител.")]
@@ -143,5 +145,96 @@ public sealed class LocalPrepositionalArticleGraphPackageTests
             Assert.AreEqual("учителя", warning.ProjectedText);
             Assert.AreEqual(warning.Start, analysis.Tokens[warning.Readings![^1].TokenIndex].Start);
         }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("По някакъв много странен начин тя приличаше на Хюго.", "някакъв|странен|начин", "тя", "приличаше")]
+    [DataRow("По един много дълъг път той вървеше.", "един|дълъг|път", "той", "вървеше")]
+    [DataRow("С един много добър човек тя разговаряше.", "един|добър|човек", "тя", "разговаряше")]
+    [DataRow("По някакъв странен начин тя приличаше на Хюго.", "някакъв|странен|начин", "тя", "приличаше")]
+    public void Governed_prefix_preserves_noncontiguous_original_members(
+        string text, string members, string subject, string predicate)
+    {
+        foreach ((bool unknownNames, TextContextOptions options) in new[]
+        {
+            (false, default(TextContextOptions)),
+            (true, new TextContextOptions
+            {
+                IncludeAdditionalRoleHeuristics = true,
+                IncludeSubordinateCommaDiagnostics = true,
+                IncludeFragmentDiagnostics = true,
+                IncludeSpacingDiagnostics = true,
+                IncludeNominalConstructions = true,
+                IncludeGrammarEvidence = true
+            })
+        })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, unknownNames, options, default);
+            TextContextSentence sentence = analysis.Context!.Sentences.Single();
+            TextContextCandidate candidate = sentence.Candidates.Single(c => c.AuthorityLane == "local_finite_clause_roles.v1");
+            Assert.IsFalse(candidate.Selectable, "A local role hypothesis does not gain selection authority.");
+            Assert.AreEqual(predicate, analysis.Tokens[candidate.PredicateTokenIndex].Text);
+            Assert.AreEqual(predicate, analysis.Tokens[candidate.Roles.Single(r => r.Role == TextContextRole.Predicate).TokenIndex].Text);
+            Assert.AreEqual(subject, analysis.Tokens[candidate.Roles.Single(r => r.Role == TextContextRole.Subject).TokenIndex].Text);
+            TextContextRoleSelection[] prefix = candidate.Roles.Where(r => r.EvidenceCodes.Contains("governed_prefix")).ToArray();
+            CollectionAssert.AreEqual(members.Split('|'), prefix.Select(r => analysis.Tokens[r.TokenIndex].Text).ToArray(), text);
+            foreach (TextContextRoleSelection member in prefix)
+            {
+                Assert.AreEqual(TextContextRole.NominalContext, member.Role, text);
+                TextReadingInventory inventory = analysis.ReadingInventory!;
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == member.TokenIndex);
+                TokenAnalysis token = analysis.Tokens[member.TokenIndex];
+                Assert.AreEqual((token.Start, token.Length), (member.Start, member.Length));
+                Assert.AreEqual((token.Start, token.Length), (occurrence.Start, occurrence.Length));
+                Assert.AreEqual(token.Text, text.Substring(member.Start, member.Length));
+                var complete = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings;
+                CollectionAssert.AreEqual(session.Lookup(token.Text, LookupMode.Exact, 256).ToArray(),
+                    complete.Select(r => r.Raw).ToArray(), token.Text);
+                CollectionAssert.AreEqual(Enumerable.Range(0, complete.Count)
+                    .Select(i => new TextReadingReference(member.TokenIndex, i)).ToArray(), member.Readings.ToArray(), text);
+                Assert.IsNull(member.GraphReadings, text);
+            }
+            int[] ppTokens = prefix.Select(r => r.TokenIndex).ToArray();
+            Assert.IsFalse(sentence.SelectedRoles.Any(r => r.Role == TextContextRole.Subject && ppTokens.Contains(r.TokenIndex)), text);
+            Assert.IsFalse(analysis.Syntax!.Sentences.SelectMany(s => s.Candidates)
+                .Where(c => c.Role == TextSyntaxRole.Subject).SelectMany(c => c.Targets)
+                .Any(t => ppTokens.Contains(t.TokenIndex)), text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("С един много добър човек тя разговаряше.", "тя", "тя", "разговаряше")]
+    [DataRow("За един много добър човек тя говореше.", "тя", "тя", "говореше")]
+    [DataRow("Един добър човек разговаряше.", "Един добър човек", "Един|добър|човек", "разговаряше")]
+    public void Source_subject_extent_excludes_proved_governed_prefix_and_preserves_unbound_nominals(
+        string text, string subjectSpan, string subjectTargets, string predicate)
+    {
+        TextAnalysis analysis = session.AnalyzeText(text, false, default, default);
+        TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+        TextSyntaxCandidate subject = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+        TextSyntaxCandidate verb = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate);
+        Assert.AreEqual((text.IndexOf(subjectSpan, StringComparison.Ordinal), subjectSpan.Length), (subject.Start, subject.Length));
+        Assert.AreEqual(subjectSpan, text.Substring(subject.Start, subject.Length));
+        CollectionAssert.AreEqual(subjectTargets.Split('|'), subject.Targets.Select(t => analysis.Tokens[t.TokenIndex].Text).ToArray());
+        Assert.AreEqual(predicate, text.Substring(verb.Start, verb.Length));
+        Assert.AreEqual(verb.Targets.Single().TokenIndex, sentence.PredicateTokenIndex);
+        Assert.AreEqual(predicate, analysis.Tokens[verb.Targets.Single().TokenIndex].Text);
+        foreach (TextSyntaxCandidate role in new[] { subject, verb })
+            foreach (TextSyntaxSupport target in role.Targets)
+            {
+                Assert.IsTrue(target.TokenIndex >= 0 && target.TokenIndex < analysis.Tokens.Count);
+                TokenAnalysis token = analysis.Tokens[target.TokenIndex];
+                Assert.IsTrue(token.Start >= role.Start && token.Start + token.Length <= role.Start + role.Length);
+                Assert.AreEqual(token.Text, text.Substring(token.Start, token.Length));
+                Assert.IsNotEmpty(target.Readings);
+                TextReadingInventory inventory = analysis.ReadingInventory!;
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == target.TokenIndex);
+                int completeCount = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Count;
+                foreach (TextReadingReference reading in target.Readings)
+                {
+                    Assert.AreEqual(target.TokenIndex, reading.TokenIndex);
+                    Assert.IsTrue(reading.CompleteReadingIndex >= 0 && reading.CompleteReadingIndex < completeCount);
+                }
+            }
     }
 }

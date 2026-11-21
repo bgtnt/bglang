@@ -1,8 +1,10 @@
-# Възпроизводима лингвистична оценка и сравнение с UDPipe 2 (`v0.2.0-alpha.2`)
+# Възпроизводима лингвистична оценка и сравнение с UDPipe 2 (замразено измерване от `v0.2.0-alpha.2`)
 
 Този документ представя публично възпроизводимата оценка на **BgLang** (`v0.2.0-alpha.2`) върху пакета **`CurrentGraphStress`** (`bglang-neutral:9e9a4f441f679542`, SHA-256 на `manifest.json`: `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`), сравнена с **UDPipe 2** (`bulgarian-btb-ud-2.17-251125`).
 
-Всички числа са измерени чрез публичния API вход [`BulgarianLanguageSession.Open`](../src/BgLang.Api/Kernel/BulgarianLanguageSession.cs) (без вътрешния `VerbFrameCatalog`) със същите седем булеви опции в `TextContextOptions`, които използват `/demo` и `/demo-lab`, докато настройката `includeUnknownContextProperNames` е `false` в benchmark скрипта и `true` по подразбиране в `/demo` и `/demo-lab`. При контролна проверка на всичките `59 + 30` изречения със стойност `includeUnknownContextProperNames: true` върху същия пакет `CurrentGraphStress` всички `89` индивидуални резултата са идентични байт по байт с публикувания профил `false` (в обобщението `summary.json` се различава единствено записаната стойност на настройката).
+В `v0.2.0-alpha.3` същите входни данни и `expected-alpha2-summary.v1.json` остават замразен независим регресионен контрол. При повторно изпълнение на `Evaluate-PublicBenchmark.ps1 -VerifyExpected` върху Alpha3 обобщението за същите `59 + 30` изречения съвпада с публикуваното обобщение от Alpha2. Числата по-долу са запазеното измерване върху този замразен набор, потвърдено отново за Alpha3. Това не е нов независим набор и не обхваща отделния широк корпусен одит или общата точност върху произволен текст.
+
+Всички числа са измерени чрез публичния API вход [`BulgarianLanguageSession.Open`](../src/BgLang.Api/Kernel/BulgarianLanguageSession.cs) (без вътрешния `VerbFrameCatalog`) със същите седем булеви опции в `TextContextOptions`, които използват тогавашните `/demo` и `/demo-lab`, докато настройката `includeUnknownContextProperNames` е `false` в benchmark скрипта и `true` по подразбиране в `/demo` и `/demo-lab`. При контролна проверка на всичките `59 + 30` изречения със стойност `includeUnknownContextProperNames: true` върху същия пакет `CurrentGraphStress` всички `89` индивидуални резултата са идентични байт по байт с публикувания профил `false` (в обобщението `summary.json` се различава единствено записаната стойност на настройката).
 
 ## Точна конфигурация и възпроизвеждане
 
@@ -18,7 +20,7 @@
 - **Показани предупреждения:** всички действащи граматични, съгласувателни, членни и ремонтни кодове от `Diagnostics` / `Validation` (без правописни догадки при непознати собствени имена) плюс клиентската проекция на обвързания `TextGrammarAssessment.Ambiguous` конфликт с причина `disjoint_subject_predicate_locus` върху зависимия предикат (без автоматична поправка).
 - **Очаквано обобщение и входни данни:** [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json), [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv), [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv).
 
-Пуснете възпроизводимата проверка от корена на публичното хранилище след разархивиране на [`bglang-v0.2.0-alpha.2-runtime.zip`](RELEASE-CANDIDATE.md) в `./runtime`:
+Пуснете възпроизводимата проверка от корена на публичното хранилище след разархивиране на [`bglang-v0.2.0-alpha.3-runtime.zip`](RELEASE-CANDIDATE.md) в `./runtime`:
 
 ```powershell
 ./packaging/Evaluate-PublicBenchmark.ps1 `

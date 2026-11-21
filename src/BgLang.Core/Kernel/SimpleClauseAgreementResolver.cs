@@ -1387,17 +1387,21 @@ internal static class SimpleClauseAgreementResolver
                 }
 
                 int firstWordIdx = clauseWordIndices[bodyStart + startPos];
+                bool leader = headWord.CanonicalText == "глава" && ContextualNominalAgreement.HasLeaderCue(headWord,
+                    Enumerable.Range(startPos, headPos - startPos)
+                        .Select(p => map.Words[clauseWordIndices[bodyStart + p]]), ct);
 
-                foreach (var headGrp in headNouns.GroupBy(h => (
-                    Number: h.Number!.Value,
-                    Gender: h.Number == MorphologicalNumber.Singular ? h.Gender : null,
-                    h.Article,
-                    h.MasculineArticle,
-                    h.IsAnimate)))
+                foreach (var headGrp in headNouns.GroupBy(h =>
+                {
+                    var features = ContextualNominalAgreement.Features(headWord.Readings[h.CompleteReadingIndex], leader);
+                    return (Number: h.Number!.Value,
+                        Gender: h.Number == MorphologicalNumber.Singular ? leader ? features.Gender : h.Gender : null,
+                        h.Article, h.MasculineArticle, h.IsAnimate);
+                }))
                 {
                     if (++steps > MaxSearchSteps) { truncated = true; return result; }
                     int[] headIndices = headGrp.Select(h => h.CompleteReadingIndex).Order().ToArray();
-                    ReadingView repHeadRow = headWord.Readings[headIndices[0]];
+                    ReadingView repHeadRow = ContextualNominalAgreement.ForAgreement(headWord.Readings[headIndices[0]], leader);
 
                     if (startPos == headPos)
                     {

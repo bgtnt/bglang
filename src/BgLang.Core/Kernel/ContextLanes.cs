@@ -167,17 +167,23 @@ internal static class ContextLanes
         }
         List<NominalHead> heads = [];
         bool[] anyAttributeMatch = new bool[head];
-        foreach (var group in noun.Select(i => { ct.ThrowIfCancellationRequested(); return i; }).GroupBy(i => (Number: words[head].Readings[i].Features.Number!.Value,
-            Gender: words[head].Readings[i].Features.Number == MorphologicalNumber.Singular
-                ? words[head].Readings[i].Features.Gender : null)))
+        bool leader = words[head].CanonicalText == "глава" &&
+            ContextualNominalAgreement.HasLeaderCue(words[head], words.Take(head), ct);
+        foreach (var group in noun.Select(i => { ct.ThrowIfCancellationRequested(); return i; }).GroupBy(i =>
+        {
+            var features = ContextualNominalAgreement.Features(words[head].Readings[i], leader);
+            return (Number: features.Number!.Value, Gender: features.Number == MorphologicalNumber.Singular ? features.Gender : null);
+        }))
         {
             ct.ThrowIfCancellationRequested();
             int[] members = group.ToArray();
+            var representative = ContextualNominalAgreement.ForAgreement(words[head].Readings[members[0]], leader);
             var matching = new int[head][];
             for (int a = 0; a < head; a++)
             {
                 matching[a] = attributes[a].Where(i => { ct.ThrowIfCancellationRequested(); return Guard.ModifierAgreement(
-                    words[a], words[a].Readings[i], words[head].Readings[members[0]], allowAdnominalReadings, phraseInitial: a == 0); }).ToArray();
+                    words[a], words[a].Readings[i], representative,
+                    allowAdnominalReadings, phraseInitial: a == 0); }).ToArray();
                 anyAttributeMatch[a] |= matching[a].Length > 0;
             }
             heads.Add(new(group.Key.Number, group.Key.Gender, members, matching));

@@ -27,6 +27,21 @@ internal static class ContextEvidenceGuards
         (MorphologicalPerson? Person, MorphologicalNumber? Number) right) =>
         left.Person == right.Person && left.Number == right.Number;
 
+    // Used only alongside a compatible nominal relation, never as a grammar verdict by itself.
+    internal static bool FiniteReadingsConflictWithNumber(ContextLanes.TokenView word, MorphologicalNumber number)
+    {
+        if (!word.Complete || word.UsesGraph || word.Readings.Any(r => r.Features.HasConflictingFeatures ||
+            !IsSourcePlaceholder(word, r) && r.Category is not (ContextLanes.Category.Noun or ContextLanes.Category.Verb))) return false;
+        bool found = false;
+        foreach (var row in word.Readings.Where(r => r.Category == ContextLanes.Category.Verb))
+        {
+            if (!IsPersonalPredicate(row.Features) || row.Features.HasUnrecognizedFeatures || row.Features.Number == number)
+                return false;
+            found = true;
+        }
+        return found;
+    }
+
     internal static bool IsPersonalPredicate(MorphologicalFeatures f) =>
         !f.HasConflictingFeatures && f.PartOfSpeech == MorphologicalPartOfSpeech.Verb &&
         f.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative &&
@@ -88,7 +103,11 @@ internal static class ContextEvidenceGuards
     }
 
     internal static bool IsAccusativeCliticReading(ContextLanes.ReadingView row) =>
-        row.Features is { Case: MorphologicalCase.Accusative, IsShortForm: true } && IsMeasuredPersonalForm(row);
+        row.Features.Case == MorphologicalCase.Accusative && IsShortPersonalCliticReading(row);
+
+    internal static bool IsShortPersonalCliticReading(ContextLanes.ReadingView row) =>
+        row.Features is { Case: MorphologicalCase.Accusative or MorphologicalCase.Dative, IsShortForm: true } &&
+        IsMeasuredPersonalForm(row);
 
     private static bool IsMeasuredPersonalForm(ContextLanes.ReadingView row)
     {

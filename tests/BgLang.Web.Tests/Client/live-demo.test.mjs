@@ -965,16 +965,16 @@ test('nominal production DOM keeps unavailable and complete empty scopes distinc
 });
 
 test('the actual static page exposes Auto verb and noun modes outside the hidden result panel',async()=>{
-  const {readFile}=await import('node:fs/promises'),html=await readFile(new URL('demo.html',source),'utf8');
-  const select=html.match(/<select\b[^>]*\bid="live-continuation-target"[^>]*>([\s\S]*?)<\/select>/);
+  const {readFile}=await import('node:fs/promises'),html=await readFile(new URL('demo-tree/index.html',source),'utf8');
+  const select=html.match(/<select\b[^>]*\bid="completion-target"[^>]*>([\s\S]*?)<\/select>/);
   assert.ok(select,'Expose the target selector before any continuation result exists.');
   const options=[...select[1].matchAll(/<option\b([^>]*)>([^<]*)<\/option>/g)].map(m=>({
     value:m[1].match(/\bvalue="([^"]+)"/)?.[1],label:m[2].trim(),selected:/\bselected\b/.test(m[1])}));
   assert.deepEqual(options.map(x=>[x.value,x.label]),[['Auto','Авто'],['Finite','Глаголи'],['Noun','Съществителни']]);
   assert.equal(options.slice(1).some(x=>x.selected),false,'The page default is Auto.');
-  const result=html.match(/<section\b[^>]*\bid="live-completion"[^>]*>[\s\S]*?<\/section>/);
-  assert.ok(result);assert.equal(result[0].includes('live-continuation-target'),false);
-  const help=html.match(/<[^>]+\bid="live-continuation-help"[^>]*>([\s\S]*?)<\/[^>]+>/);
+  const result=html.match(/<section\b[^>]*\bid="completion-menu"[^>]*>[\s\S]*?<\/section>/);
+  assert.ok(result);assert.equal(result[0].includes('completion-target'),false);
+  const help=html.match(/<[^>]+\bid="completion-help"[^>]*>([\s\S]*?)<\/[^>]+>/);
   assert.ok(help);assert.match(help[1],/глагол|finite|финитн/iu);
   assert.match(help[1],/съществителн/iu);assert.match(help[1],/приоритет|предпочит/iu);
 });

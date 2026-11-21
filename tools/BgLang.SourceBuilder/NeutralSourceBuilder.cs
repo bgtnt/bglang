@@ -146,8 +146,8 @@ internal static class NeutralSourceBuilder
 
     private static NeutralDictionaryPackageLoader.ComponentDocument Component(string directory, string name, string source)
     {
-        byte[] bytes = File.ReadAllBytes(Path.Combine(directory, name));
-        return new(name, bytes.Length, Convert.ToHexStringLower(SHA256.HashData(bytes)), source);
+        using FileStream stream = new(Path.Combine(directory, name), FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 64 * 1024);
+        return new(name, stream.Length, Convert.ToHexStringLower(SHA256.HashData(stream)), source);
     }
 
     internal static void WriteNew(OwnedStageDirectory stage, string name, byte[] bytes)

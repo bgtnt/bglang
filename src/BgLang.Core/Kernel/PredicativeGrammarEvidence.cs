@@ -30,7 +30,8 @@ internal static class PredicativeGrammarEvidence
     }
 
     private sealed record Relation(string Rule, string Code, Word Anchor, int[] AnchorRows, Word Target, int[] TargetRows,
-        TextGrammarConstraint Constraint, Dependent Part, bool Competing, bool AllowsPolite = false, bool UsesController = false);
+        TextGrammarConstraint Constraint, Dependent Part, bool Competing, bool AllowsPolite = false, bool UsesController = false,
+        bool LeaderController = false);
 
     internal static bool IsDiagnostic(TextDiagnostic diagnostic) =>
         diagnostic.RuleId != ClauseFusionAnalyzer.AgreementLane &&
@@ -119,9 +120,8 @@ internal static class PredicativeGrammarEvidence
 
                         bool isImpersonalConditionalModal = left.CanonicalText == "би" &&
                             depWord.CanonicalText is "трябвало" or "следвало" or "могло";
-                        bool isConditionalAux = !isImpersonalConditionalModal &&
-                            left.CanonicalText is "бих" or "би" or "бихме" or "бихте" or "биха" &&
-                            !(left.CanonicalText == "би" && i > coreStart && words[i - 1].CanonicalText is "може" or "не");
+                        bool isConditionalAux = !isImpersonalConditionalModal && VerbalComplexBinder.IsConditionalAuxiliary(
+                            left.CanonicalText, i > coreStart ? words[i - 1].CanonicalText : null);
 
                         if (!isImpersonalConditionalModal &&
                             BindPair(left, depWord, active: true, analyticDisambiguated: isConditionalAux || hasFutureMarker) is { } active)
@@ -324,6 +324,9 @@ internal static class PredicativeGrammarEvidence
                 if (prev2 < coreStart || prev2 == groupStart - 2 && !Connected(prev2, groupStart - 1)) return null;
                 Word marker = words[groupStart - 1];
                 if (ExactDa(marker)) return Subject(prev2, References(marker, Rows(marker, TextPredicateLinkAnalyzer.DaMarker)), da: true);
+                if (marker.CanonicalText == "не" && Exact(marker) && marker.Readings.All(row => row.Features is
+                    { PartOfSpeech: MorphologicalPartOfSpeech.Particle, HasUnrecognizedFeatures: false, HasConflictingFeatures: false }))
+                    return Subject(prev2, References(marker, Rows(marker, _ => true)));
                 if (!allowClitic) return null;
                 int[] markers = ReflexiveMarkerReadings(marker);
                 if (markers.Length == 0) markers = Guard.AccusativeCliticReadings(marker, ct);
@@ -723,7 +726,7 @@ internal static class PredicativeGrammarEvidence
     private static bool OrdinaryAttribute(ContextLanes.ReadingView row) => row.Category == ContextLanes.Category.Adjective &&
         row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adjective && Guard.HasNominalAxes(row.Features);
 
-    private static bool ActiveParticiple(ContextLanes.ReadingView row)
+    internal static bool ActiveParticiple(ContextLanes.ReadingView row)
     {
         var features = row.Features;
         if (features is not { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
@@ -749,7 +752,7 @@ internal static class PredicativeGrammarEvidence
         row.Features.Article == MorphologicalArticle.Indefinite || Guard.IsMeasuredPassiveAttribute(row.Features) &&
         row.Features.Article is null or MorphologicalArticle.Indefinite;
 
-    private static int[] ReflexiveMarkerReadings(Word word)
+    internal static int[] ReflexiveMarkerReadings(Word word)
     {
         if (!Exact(word) || word.CanonicalText is not ("се" or "си")) return [];
         bool Particle(ContextLanes.ReadingView row) => row.Features is
@@ -767,12 +770,14 @@ internal static class PredicativeGrammarEvidence
     {
         var first = frame.Dependents[0];
         var subject = frame.Controller;
+        bool leader = ContextualNominalAgreement.HasLeaderCue(subject?.Phrase);
         bool finiteSubjectCompeting = subject is not null && subject.Competing &&
             !(subject.AdverbBridgeOnlyCompeting && frame.Finite.CanonicalText != "си");
         if (subject is not null && frame.FiniteRows.Length > 0)
             yield return new(first.Kind == DependentKind.ActiveParticiple ? NominalGrammarRules.AnalyticFiniteId : NominalGrammarRules.CopularFiniteId,
                 ContextLanes.ProductiveGraphMismatch, subject.Head, subject.Rows, frame.Finite, frame.FiniteRows,
-                TextGrammarConstraint.PersonNumber, first, first.Competing || finiteSubjectCompeting, UsesController: true);
+                TextGrammarConstraint.PersonNumber, first, first.Competing || finiteSubjectCompeting, UsesController: true,
+                LeaderController: leader);
         foreach (var part in frame.Dependents)
         {
             bool active = part.Kind == DependentKind.ActiveParticiple;
@@ -791,7 +796,8 @@ internal static class PredicativeGrammarEvidence
             Word? address = active ? null : subject.Address;
             yield return new(rule, NominalGrammarRules.PredicativeCode, address ?? subject.Head,
                 address is null ? subject.Rows : Rows(address, _ => true), part.Word, part.Rows, TextGrammarConstraint.NumberGender,
-                part, address is not null || part.Competing || subject.Competing, !active && address is null, true);
+                part, address is not null || part.Competing || subject.Competing, !active && address is null, true,
+                LeaderController: address is null && leader);
         }
     }
 
@@ -899,9 +905,16 @@ internal static class PredicativeGrammarEvidence
     private static bool FrameAgrees(NominalStructuralProjection.Binding? phrase, IEnumerable<Relation> relations, Word word,
         MorphologicalFeatures[] changed, CancellationToken ct) =>
         relations.All(relation =>
-            (relation.Competing || Assessment(relation) == TextGrammarAssessment.Ambiguous) &&
+        {
+            if (relation.UsesController && phrase is not null && relation.Anchor.OriginalIndex == phrase.Head.Word.OriginalIndex)
+            {
+                bool leader = ContextualNominalAgreement.HasLeaderCue(phrase, ct);
+                if (leader != relation.LeaderController) relation = relation with { LeaderController = leader };
+            }
+            return (relation.Competing || Assessment(relation) == TextGrammarAssessment.Ambiguous) &&
                 relation.Anchor != word && relation.Target != word ||
-            Assessment(relation, word, changed) == TextGrammarAssessment.Compatible) &&
+                Assessment(relation, word, changed) == TextGrammarAssessment.Compatible;
+        }) &&
         (phrase is null || NominalGrammarEvidence.ArticlePlaced(phrase) && NominalStructuralProjection.Measure(phrase, ct) is { } measured &&
             NominalGrammarEvidence.FullyAgrees(phrase, measured));
 
@@ -913,8 +926,11 @@ internal static class PredicativeGrammarEvidence
 
     private static TextGrammarAssessment Assessment(Relation relation, Word? edited = null, MorphologicalFeatures[]? replacement = null)
     {
-        var controller = relation.Anchor == edited ? replacement! : Features(relation.Anchor, relation.AnchorRows);
+        var controller = relation.Anchor == edited ? replacement! : Features(relation.Anchor, relation.AnchorRows, relation.LeaderController);
         var dependent = relation.Target == edited ? replacement! : Features(relation.Target, relation.TargetRows);
+        if (relation.LeaderController && relation.Anchor == edited)
+            controller = controller.Select(features => ContextualNominalAgreement.Features(
+                relation.Anchor.Readings[relation.AnchorRows[0]] with { Features = features }, leader: true)).ToArray();
         bool any = false, all = true, unmeasured = false;
         foreach (var subject in controller)
         foreach (var target in dependent)
@@ -940,7 +956,8 @@ internal static class PredicativeGrammarEvidence
     private static int[] Rows(Word word, Func<ContextLanes.ReadingView, bool> predicate) =>
         Enumerable.Range(0, word.Readings.Count).Where(index => predicate(word.Readings[index])).ToArray();
 
-    private static MorphologicalFeatures[] Features(Word word, int[] rows) => rows.Select(index => word.Readings[index].Features).ToArray();
+    private static MorphologicalFeatures[] Features(Word word, int[] rows, bool leader = false) =>
+        rows.Select(index => ContextualNominalAgreement.Features(word.Readings[index], leader)).ToArray();
 
     private static IReadOnlyList<TextReadingReference> References(Word word, int[] rows) =>
         Array.AsReadOnly(rows.Select(index => new TextReadingReference(word.OriginalIndex, index)).ToArray());
@@ -971,10 +988,7 @@ internal static class PredicativeGrammarEvidence
             if (protectedSpans.Any(s => s.Start < spanEnd && s.End > spanStart) ||
                 frames.Any(f => f.Start < spanEnd && f.End > spanStart))
                 continue;
-            if (seg.Any(wi => words[wi].CanonicalText is "ще" or "да" or "би" or "бих" or "бихме" or "бихте" or "биха" or
-                    "нека" or "дано" or "де" or "ли" ||
-                    words[wi].CanonicalText.StartsWith("колк", StringComparison.Ordinal) ||
-                    words[wi].CanonicalText.StartsWith("какв", StringComparison.Ordinal)))
+            if (seg.Any(wi => BlocksBareParticiple(words[wi].CanonicalText)))
                 continue;
 
             int partPos = -1;
@@ -1058,6 +1072,11 @@ internal static class PredicativeGrammarEvidence
                 Controller: controller));
         }
     }
+
+    internal static bool BlocksBareParticiple(string canonical) =>
+        canonical is "ще" or "да" or "би" or "бих" or "бихме" or "бихте" or "биха" or
+            "нека" or "дано" or "де" or "ли" ||
+        canonical.StartsWith("колк", StringComparison.Ordinal) || canonical.StartsWith("какв", StringComparison.Ordinal);
 
     private static bool TryGetBareParticipleRows(Word word, bool sentenceInitial, Word? prevWord, out int[] partRows)
     {
