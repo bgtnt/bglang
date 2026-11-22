@@ -2771,6 +2771,12 @@ public sealed partial class PublicPackageTests
             "Чорбанова съм се казвала.",
             "Чорбанова щях да се казвам.",
             "Чорбанова може да се казвам.",
+            "Мария мога да се казвам.",
+            "Мария не мога да се казвам.",
+            "Мария можем да се казваме.",
+            "Мария мога да се наричам.",
+            "Петрова мога да се казвам.",
+            "Мога да се казвам Мария.",
             "Казвам се Чорбанова.",
             "Аз се казвам Чорбанова.",
             "Чорбанова съм аз.",
@@ -2789,6 +2795,9 @@ public sealed partial class PublicPackageTests
             ("Чорбанова се явявам на изпит.", "явявам"),
             ("Чорбанова се явяват утре.", "явяват"),
             ("Аз се казваме Чорбанова.", "казваме"),
+            ("Аз можем да се казваме Мария.", "можем"),
+            ("Мария могат да четат.", "могат"),
+            ("Мария мога да чета.", "мога"),
             ("Ти се казвам Чорбанова.", "казвам"),
             ("Настоящото решение се прилагам за всички продукти.", "прилагам"),
             ("Когато Чорбанова четат, ние слушаме.", "четат"),
@@ -2811,10 +2820,13 @@ public sealed partial class PublicPackageTests
                     TextDiagnostic[] okWarnings = ok.Diagnostics.Where(d => IsPresentationTestWarning(clean, d)).ToArray();
                     Assert.IsEmpty(okWarnings, $"{clean} (unknown={includeUnknown}): [{string.Join(',', okWarnings.Select(w => $"{w.Code}@{clean.Substring(w.Start, w.Length)}"))}]");
 
-                    if (opts.IncludeGrammarEvidence && ok.Syntax is { Available: true } syntax &&
-                        clean is "Чорбанова се казвам." or "Мария се казвам." or "Казвам се Чорбанова.")
+                    bool modalNaming = clean is "Мария мога да се казвам." or "Мария не мога да се казвам." or "Мария можем да се казваме." or
+                        "Мария мога да се наричам." or "Петрова мога да се казвам." or "Мога да се казвам Мария.";
+                    if (ok.Syntax is { Available: true } syntax && (modalNaming || opts.IncludeGrammarEvidence &&
+                        clean is "Чорбанова се казвам." or "Мария се казвам." or "Казвам се Чорбанова."))
                     {
-                        string nameToken = clean.Contains("Мария", StringComparison.Ordinal) ? "Мария" : "Чорбанова";
+                        string nameToken = clean.Contains("Мария", StringComparison.Ordinal) ? "Мария" :
+                            clean.Contains("Петрова", StringComparison.Ordinal) ? "Петрова" : "Чорбанова";
                         TextSyntaxCandidate[] badSubjects = syntax.Sentences
                             .SelectMany(s => s.Candidates)
                             .Where(c => c.Role == TextSyntaxRole.Subject &&
@@ -2822,6 +2834,28 @@ public sealed partial class PublicPackageTests
                             .ToArray();
                         Assert.IsEmpty(badSubjects, $"{clean} (unknown={includeUnknown}): unexpected Subject role on {nameToken}");
                     }
+                }
+
+                foreach ((string text, string subject) in new[]
+                {
+                    ("Мария може да се казва Петрова.", "Мария"),
+                    ("Иван може да се нарича Петър.", "Иван"),
+                    ("Мария Петрова може да се казва така.", "Мария Петрова")
+                })
+                {
+                    TextAnalysis named = session.AnalyzeText(text, includeUnknown, opts, default);
+                    TextSyntaxSentence sentence = named.Syntax!.Sentences.Single();
+                    if (opts.IncludeAdditionalRoleHeuristics)
+                    {
+                        TextSyntaxCandidate role = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+                        Assert.AreEqual(subject, text.Substring(role.Start, role.Length), text);
+                    }
+                    else
+                    {
+                        Assert.AreEqual("Abstained", sentence.Route, text);
+                        Assert.IsEmpty(sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject), text);
+                    }
+                    Assert.IsFalse(named.Diagnostics.Any(d => IsPresentationTestWarning(text, d)), text);
                 }
 
                 foreach ((string err, string targetVerb) in mismatches)

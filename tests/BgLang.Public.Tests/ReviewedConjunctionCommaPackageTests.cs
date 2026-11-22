@@ -108,6 +108,60 @@ public sealed partial class PublicPackageTests
         Assert.AreEqual(text, result.Text);
     }
 
+    [TestMethod]
+    [DataRow("В случай, че утре вали, ще остана.", "В случай, че", "вали")]
+    [DataRow("Влизам, при условие, че той дойде.", "при условие, че", "дойде")]
+    [DataRow("😀 Тръгвам — въпреки, че не вали — с теб.", "въпреки, че", "вали")]
+    [DataRow("Макар, че чета, чувам всичко.", "Макар, че", "чета")]
+    [DataRow("Независимо, че те чакат, влез.", "Независимо, че", "чакат")]
+    [DataRow("И в случай, че спре, остани.", "в случай, че", "спре")]
+    [DataRow("Тръгвам, но в случай, че спре, оставам.", "в случай, че", "спре")]
+    [DataRow("Тръгвам, а при условие, че вали, оставам.", "при условие, че", "вали")]
+    public void Compound_conjunction_reports_only_the_internal_comma_with_its_reading_witnesses(
+        string text, string conjunction, string verb)
+    {
+        RequireConjunctionReportBaseline();
+        const string code = "spurious_comma_inside_compound_conjunction";
+        int start = text.IndexOf(conjunction, StringComparison.Ordinal);
+        int comma = start + conjunction.IndexOf(',');
+        TextContextOptions options = new() { IncludeSubordinateCommaDiagnostics = true };
+        TextAnalysis result = session.AnalyzeText(text, false, options, default);
+        var advice = result.Validation!.SubordinateCommaDiagnostics!.Single(d => d.Code == code);
+        Assert.AreEqual((comma, 1, ","), (advice.Start, advice.Length, text.Substring(advice.Start, advice.Length)));
+        StringAssert.Contains(advice.Basis, "no_automatic_rewrite");
+        int verbStart = text.IndexOf(verb, start + conjunction.Length, StringComparison.Ordinal);
+        var inventory = result.ReadingInventory!;
+        var expected = inventory.Occurrences.Where(w => w.Start >= start && w.Start < start + conjunction.Length || w.Start == verbStart)
+            .SelectMany(w => Enumerable.Range(0, inventory.Sets[w.ReadingSetIndex].ResolvedReadings.Count)
+                .Select(i => new TextReadingReference(w.TokenIndex, i))).ToArray();
+        CollectionAssert.AreEqual(expected, advice.Supports.ToArray());
+        Assert.IsNull(session.AnalyzeText(text).Validation!.SubordinateCommaDiagnostics);
+        var corrected = session.AnalyzeText(text.Remove(comma, 1), false, options, default);
+        Assert.IsFalse(corrected.Validation!.SubordinateCommaDiagnostics!.Any(d => d.Code == code ||
+            d.Code == "missing_comma_before_subordinate_conjunction" && d.Start >= start && d.Start < start + conjunction.Length - 1));
+    }
+
+    [TestMethod]
+    [DataRow("Той каза, че вали.")]
+    [DataRow("Подреди ги така, че да се виждат.")]
+    [DataRow("Ще дойда, само, че по-късно.")]
+    [DataRow("Приех при едно изрично условие, че ще ми пишат.")]
+    [DataRow("Тя действа толкова независимо, че всички се учудиха.")]
+    [DataRow("Записах „макар, че навън вали“ на листа.")]
+    [DataRow("Той написа `в случай, че вали` и излезе.")]
+    [DataRow("Той написа „въпреки, че вали.")]
+    [DataRow("В случай, че … после разказах всичко.")]
+    [DataRow("Макар, че утре; другите чакат.")]
+    [DataRow("В случай, че „той чете“.")]
+    [DataRow("В случай,, че вали, ела.")]
+    [DataRow("В (случай), че вали, ела.")]
+    public void Compound_conjunction_abstains_for_ordinary_commas_quotes_and_missing_local_evidence(string text)
+    {
+        RequireConjunctionReportBaseline();
+        var result = session.AnalyzeText(text, false, new() { IncludeSubordinateCommaDiagnostics = true }, default);
+        Assert.IsFalse(result.Validation!.SubordinateCommaDiagnostics!.Any(d => d.Code == "spurious_comma_inside_compound_conjunction"));
+    }
+
     private static void RequireConjunctionReportBaseline()
     {
         Assert.AreEqual("bglang-neutral:36b0b69685d6d3e9", candidate.GetProperty("packageId").GetString());

@@ -29,6 +29,11 @@ export function reviewIndex(tree, text) {
       advised.add(first.index);
       punctuation.set(first.index, row);
     }
+    if (d.code === "spurious_comma_inside_compound_conjunction" && first?.kind === "Punctuation" &&
+        first.text === "," && first.start === d.start && first.length === d.length) {
+      warnings.add(first.index);
+      punctuation.set(first.index, row);
+    }
     if (first && row.warning && d.length > 0) {
       for (let i = first.index; i < tree.tokens.length && tree.tokens[i].start < d.start + d.length; i++)
         if (tree.tokens[i].kind === "Word") warnings.add(tree.tokens[i].index);

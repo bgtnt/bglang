@@ -128,6 +128,19 @@ public sealed class SyntaxHubHttpTests
                 warning.RootElement.GetProperty("result").GetProperty("tree").GetProperty("diagnostics").EnumerateArray()
                     .Select(diagnostic => $"{diagnostic.GetProperty("code").GetString()}|{diagnostic.GetProperty("ruleId").GetString()}|{diagnostic.GetProperty("start").GetInt32()}|{diagnostic.GetProperty("length").GetInt32()}").ToArray(),
                 "Hub warnings preserve the direct Lab analyzer's diagnostic codes, rules, order and original UTF-16 spans.");
+            const string governed = "С един много добър човек тя разговаряше.";
+            await Send(socket, JsonSerializer.Serialize(new { type = 1, invocationId = "subject", target = "Analyze", arguments = new object[] { 44, governed } }), deadline.Token);
+            using JsonDocument answer = await Completion(socket, "subject", deadline.Token);
+            JsonElement tree = answer.RootElement.GetProperty("result").GetProperty("tree");
+            JsonElement subject = tree.GetProperty("tokens").EnumerateArray().Single(token =>
+                token.GetProperty("roles").EnumerateArray().Any(role => role.GetProperty("ruleId").GetString() == "BasicSubject"));
+            Assert.AreEqual(("тя", 25, 2), (subject.GetProperty("text").GetString(),
+                subject.GetProperty("start").GetInt32(), subject.GetProperty("length").GetInt32()));
+            JsonElement role = subject.GetProperty("roles").EnumerateArray().Single(r => r.GetProperty("role").GetString() == "Subject");
+            Assert.AreEqual("candidate", role.GetProperty("status").GetString());
+            int predicate = role.GetProperty("contextTokenIndices").EnumerateArray().Single().GetInt32();
+            Assert.AreEqual("разговаряше", tree.GetProperty("tokens")[predicate].GetProperty("text").GetString());
+            Assert.IsFalse(tree.GetProperty("edges").EnumerateArray().Any(e => e.GetProperty("label").GetString() == "selected_subject"));
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", deadline.Token);
         });
     }

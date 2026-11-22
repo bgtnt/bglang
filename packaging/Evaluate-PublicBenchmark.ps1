@@ -17,7 +17,7 @@ $resolvedManifest = (Resolve-Path $ManifestPath).Path
 $ind59Path = (Resolve-Path (Join-Path $PSScriptRoot "evaluation/independent-59.v1.tsv")).Path
 $udpipePath = (Resolve-Path (Join-Path $PSScriptRoot "evaluation/udpipe-independent-59.v1.conllu")).Path
 $edge30Path = (Resolve-Path (Join-Path $PSScriptRoot "evaluation/edge-and-ambiguity-controls.v1.tsv")).Path
-$expectedSummaryPath = Join-Path $PSScriptRoot "evaluation/expected-alpha2-summary.v1.json"
+$expectedSummaryPath = Join-Path $PSScriptRoot "evaluation/expected-summary.v2.json"
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path ([System.IO.Path]::GetTempPath()) "bglang-public-eval"
@@ -674,17 +674,27 @@ internal static class Program
                     ah.Feats["Number"] != t.Feats["Number"])
                     flags.Add((ah.Id, "aux-participle"));
             }
-            if (t.Upos is "NOUN" or "ADJ" && (t.Xpos.StartsWith("Ncms", StringComparison.Ordinal) || t.Xpos.StartsWith("Ams", StringComparison.Ordinal)) &&
-                t.Xpos.Length == 5 && t.Xpos[4] is 'f' or 'h')
+            // BTB encodes the article after gender/number on nouns and adjectives,
+            // and after number/gender on participles used as adjectives.
+            char article = (t.Upos, t.Xpos) switch
+            {
+                ("NOUN", ['N', 'c', 'm', 's', var form]) => form,
+                ("ADJ", ['A', 'm', 's', var form]) => form,
+                ("ADJ", ['V', _, _, _, 'c', _, _, _, 's', 'm', var form])
+                    when t.Feats.GetValueOrDefault("VerbForm") == "Part" => form,
+                _ => default
+            };
+            if (article is 'f' or 'h' && t.Feats.GetValueOrDefault("Definite") == "Def" &&
+                t.Feats.GetValueOrDefault("Gender") == "Masc" && t.Feats.GetValueOrDefault("Number") == "Sing")
             {
                 UdToken? np = d == "amod" ? byId.GetValueOrDefault(t.Head) : t;
                 if (np is not null)
                 {
                     string nd = BaseDep(np.Dep);
                     bool prep = Kids(np.Id, "case").Count > 0;
-                    if (t.Xpos[4] == 'f' && (prep || nd is "obj" or "iobj" or "obl" or "nmod"))
+                    if (article == 'f' && (prep || nd is "obj" or "iobj" or "obl" or "nmod"))
                         flags.Add((t.Id, "full-article"));
-                    if (t.Xpos[4] == 'h' && nd == "nsubj" && !prep)
+                    if (article == 'h' && nd == "nsubj" && !prep)
                         flags.Add((t.Id, "short-article"));
                 }
             }
@@ -753,7 +763,7 @@ try {
         if ($actualNorm -cne $expectedNorm) {
             throw "Public benchmark summary mismatch against $expectedSummaryPath."
         }
-        Write-Host "Verified summary.json matches expected-alpha2-summary.v1.json."
+        Write-Host "Verified summary.json matches $expectedSummaryPath."
     }
 }
 finally {

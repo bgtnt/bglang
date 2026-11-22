@@ -224,9 +224,12 @@ internal static class TextContextAnalyzer
                     FusionPredicateWordIndex = extentPred,
                     FusionSubjectFirstWordIndex = extentSubjFirst,
                     FusionSubjectWordIndex = extentSubjHead,
+                    SourceScanSubjectExclusion = route == SyntaxRoleCalculator.Route.SourceScan
+                        ? fusion?.Selection?.SourceScanSubjectExclusion : null,
                     SubjectAfterGovernedPrefix = route == SyntaxRoleCalculator.Route.SourceScan &&
-                        clause?.Roles.FirstOrDefault(role => role.Role == ContextOverlayRole.Subject) is { } prefixSubject
-                        ? (clause.PredicateTokenIndex, prefixSubject.TokenIndex) : null,
+                        clause?.Roles.FirstOrDefault(role => role.Role == ContextOverlayRole.Subject &&
+                            role.EvidenceCodes.Contains("canonical_subject_after_governed_prefix", StringComparer.Ordinal)) is { } prefixSubject
+                        ? (clause.PredicateTokenIndex, prefixSubject) : null,
                     SuppressSourceScanSubject = !matrixOwnedByR3 && route == SyntaxRoleCalculator.Route.SourceScan &&
                         fusionExtent is { SuppressHeuristicSubject: true }
                 };

@@ -60,8 +60,9 @@ internal static class SpellingProjectionAnalyzer
                     token.Start + token.Length == suffix.Start &&
                     !followsWord &&
                     !continuesAsWordOrNumber &&
-                    suffix.Text.All(character => BulgarianOrthography.IsLowercaseLetterOrStressedVowel(
-                        char.ToLowerInvariant(character))))
+                    BulgarianTextNormalizer.NormalizeLetters(suffix.Text, removeStress: false)
+                        .All(character => BulgarianOrthography.IsLowercaseLetterOrStressedVowel(
+                            char.ToLowerInvariant(character))))
                 {
                     string normalized = BulgarianTextNormalizer.NormalizeKey(mappedDigit + suffix.Text);
                     cancellationToken.ThrowIfCancellationRequested();
@@ -208,19 +209,21 @@ internal static class SpellingProjectionAnalyzer
         out string suggestion)
     {
         suggestion = string.Empty;
-        bool lower = token.Text.All(BulgarianOrthography.IsLowercaseLetter);
-        bool upper = token.Text.All(c => char.IsUpper(c) && BulgarianOrthography.IsLowercaseLetter(char.ToLowerInvariant(c)));
-        bool title = token.Text.Length > 0 && char.IsUpper(token.Text[0]) &&
-            BulgarianOrthography.IsLowercaseLetter(char.ToLowerInvariant(token.Text[0])) &&
-            token.Text.Skip(1).All(BulgarianOrthography.IsLowercaseLetter);
-        if (token.Analysis!.BaseEvidence is not null ||
-            token.Text.Length is < 4 or > MaximumCandidateLength ||
+        if (token.Analysis!.BaseEvidence is not null)
+            return false;
+        string surface = BulgarianTextNormalizer.NormalizeLetters(token.Text, removeStress: false);
+        bool lower = surface.All(BulgarianOrthography.IsLowercaseLetter);
+        bool upper = surface.All(c => char.IsUpper(c) && BulgarianOrthography.IsLowercaseLetter(char.ToLowerInvariant(c)));
+        bool title = surface.Length > 0 && char.IsUpper(surface[0]) &&
+            BulgarianOrthography.IsLowercaseLetter(char.ToLowerInvariant(surface[0])) &&
+            surface.Skip(1).All(BulgarianOrthography.IsLowercaseLetter);
+        if (surface.Length is < 4 or > MaximumCandidateLength ||
             !(lower || allowCapitalized && (upper || title)))
         {
             return false;
         }
 
-        string query = BulgarianTextNormalizer.NormalizeKey(token.Text);
+        string query = token.Analysis.NormalizedWord;
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<FuzzyMatch> matches = cache.FindSimilarNormalized(query, distance: 1, limit: 2, cancellationToken);
         string? candidate = matches.Count == 1 && matches[0].Distance == 1 ? matches[0].Form : null;

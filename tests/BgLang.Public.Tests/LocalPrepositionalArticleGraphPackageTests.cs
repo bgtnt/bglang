@@ -155,19 +155,7 @@ public sealed class LocalPrepositionalArticleGraphPackageTests
     public void Governed_prefix_preserves_noncontiguous_original_members(
         string text, string members, string subject, string predicate)
     {
-        foreach ((bool unknownNames, TextContextOptions options) in new[]
-        {
-            (false, default(TextContextOptions)),
-            (true, new TextContextOptions
-            {
-                IncludeAdditionalRoleHeuristics = true,
-                IncludeSubordinateCommaDiagnostics = true,
-                IncludeFragmentDiagnostics = true,
-                IncludeSpacingDiagnostics = true,
-                IncludeNominalConstructions = true,
-                IncludeGrammarEvidence = true
-            })
-        })
+        foreach ((bool unknownNames, TextContextOptions options) in Profiles())
         {
             TextAnalysis analysis = session.AnalyzeText(text, unknownNames, options, default);
             TextContextSentence sentence = analysis.Context!.Sentences.Single();
@@ -199,7 +187,93 @@ public sealed class LocalPrepositionalArticleGraphPackageTests
             Assert.IsFalse(analysis.Syntax!.Sentences.SelectMany(s => s.Candidates)
                 .Where(c => c.Role == TextSyntaxRole.Subject).SelectMany(c => c.Targets)
                 .Any(t => ppTokens.Contains(t.TokenIndex)), text);
+            TextContextRoleSelection boundSubject = candidate.Roles.Single(r => r.Role == TextContextRole.Subject);
+            TextSyntaxSentence syntax = analysis.Syntax.Sentences.Single();
+            string expectedRoute = predicate switch
+            {
+                "разговаряше" => "SourceScan",
+                "вървеше" when options.IncludeAdditionalRoleHeuristics => "Selected",
+                _ => "Abstained"
+            };
+            Assert.AreEqual(expectedRoute, syntax.Route, text);
+            if (expectedRoute == "Abstained")
+            {
+                Assert.IsNull(syntax.PredicateTokenIndex, text);
+                Assert.IsEmpty(syntax.Candidates.Where(c => c.Role == TextSyntaxRole.Subject), text);
+                continue;
+            }
+            TextSyntaxCandidate syntaxSubject = syntax.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+            Assert.AreEqual((boundSubject.Start, boundSubject.Length), (syntaxSubject.Start, syntaxSubject.Length), text);
+            Assert.AreEqual(subject, text.Substring(syntaxSubject.Start, syntaxSubject.Length), text);
+            TextSyntaxSupport target = syntaxSubject.Targets.Single();
+            Assert.AreEqual(boundSubject.TokenIndex, target.TokenIndex, text);
+            Assert.AreEqual("TypedFeatures", target.Basis, text);
+            CollectionAssert.AreEqual(boundSubject.Readings.ToArray(), target.Readings.ToArray(), text);
+            Assert.IsNull(target.GraphReadings, text);
+            TextSyntaxCandidate syntaxPredicate = syntax.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate);
+            Assert.AreEqual(candidate.PredicateTokenIndex, syntaxPredicate.Targets.Single().TokenIndex, text);
+            TextSyntaxSupport governor = syntaxSubject.Context.Single(s => s.TokenIndex == candidate.PredicateTokenIndex);
+            CollectionAssert.AreEqual(syntaxPredicate.Targets.Single().Readings.ToArray(), governor.Readings.ToArray(), text);
+            if (text == "С един много добър човек тя разговаряше.")
+            {
+                Assert.AreEqual((25, 2), (syntaxSubject.Start, syntaxSubject.Length));
+                Assert.IsNull(sentence.SelectedPredicateTokenIndex, "Local role proof must remain candidate-only.");
+                Assert.IsFalse(sentence.SelectedRoles.Any(r => r.Role == TextContextRole.Subject));
+            }
         }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("С един много добър човек тя разговаряше.", "тя", "разговаряше")]
+    [DataRow("За един много добър човек тя говореше.", "тя", "говореше")]
+    [DataRow("С един добър човек тя разговаряше.", "тя", "разговаряше")]
+    [DataRow("Един добър човек разговаряше.", "Един добър човек", "разговаряше")]
+    public void Subject_span_survives_all_public_profiles_and_ordinary_nominal_alternatives(
+        string text, string subjectSpan, string predicate)
+    {
+        foreach ((bool unknownNames, TextContextOptions options) in Profiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, unknownNames, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            TextSyntaxCandidate subject = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+            Assert.AreEqual((text.IndexOf(subjectSpan, StringComparison.Ordinal), subjectSpan.Length), (subject.Start, subject.Length), text);
+            Assert.AreEqual(predicate, analysis.Tokens[sentence.PredicateTokenIndex!.Value].Text, text);
+            Assert.IsTrue(subject.Targets.All(t => analysis.Tokens[t.TokenIndex].Start >= subject.Start &&
+                analysis.Tokens[t.TokenIndex].Start + analysis.Tokens[t.TokenIndex].Length <= subject.Start + subject.Length), text);
+            Assert.IsTrue(subject.Targets.All(t => t.Readings.Count > 0 && t.GraphReadings is null), text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("С един много добър човек разговаряше.")]
+    [DataRow("С един много добър човек, тя разговаряше.")]
+    [DataRow("С един много добър човек тя, разговаряше.")]
+    [DataRow("„С един много добър човек тя разговаряше.“")]
+    public void Missing_or_disconnected_subject_has_no_governed_prefix_proof(string text)
+    {
+        foreach ((bool unknownNames, TextContextOptions options) in Profiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, unknownNames, options, default);
+            Assert.IsFalse(analysis.Context!.Sentences.SelectMany(s => s.Candidates)
+                .SelectMany(c => c.Roles).Any(r => r.Role == TextContextRole.Subject &&
+                    r.EvidenceCodes.Contains("canonical_subject_after_governed_prefix")), text);
+            Assert.IsFalse(analysis.Context.Sentences.SelectMany(s => s.Candidates)
+                .Where(c => c.AuthorityLane == "local_finite_clause_roles.v1").Any(c => c.Selectable), text);
+        }
+    }
+
+    private static IEnumerable<(bool UnknownNames, TextContextOptions Options)> Profiles()
+    {
+        var hub = new TextContextOptions
+        {
+            IncludeAdditionalRoleHeuristics = true, IncludeSubordinateCommaDiagnostics = true,
+            IncludeFragmentDiagnostics = true, IncludeSpacingDiagnostics = true,
+            IncludeNominalConstructions = true, IncludeGrammarEvidence = true
+        };
+        yield return (false, default);
+        yield return (false, new() { IncludeAdditionalRoleHeuristics = true });
+        yield return (true, hub);
+        yield return (true, hub with { IncludeAdditionalRoleHeuristics = false });
     }
 
     [TestMethod, TestCategory("FullPackage")]

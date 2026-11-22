@@ -7,6 +7,7 @@ const source = process.env.BGLANG_CLIENT_SOURCE_ROOT
   ? pathToFileURL(path.resolve(process.env.BGLANG_CLIENT_SOURCE_ROOT, 'apps/BgLang.Web/wwwroot/demo-tree/editor-view.js'))
   : new URL('../../../apps/BgLang.Web/wwwroot/demo-tree/editor-view.js', import.meta.url);
 const {renderEditorBackdrop, setBackdropSelection, syncEditorScroll, posClass} = await import(source.href);
+const {reviewIndex} = await import(new URL('reviews.js', source).href);
 
 function fixture() {
   class Element {
@@ -78,6 +79,26 @@ test('caret selection only changes two span classes while retaining warnings and
   setBackdropSelection(container, null);
   assert.equal(second.className, 'editor-token c-noun');
   assert.equal(container.textContent, text);
+});
+
+test('compound conjunction review underlines the actual comma and expires on a pending edit', () => {
+  const {container} = fixture(), text = '🙂 Дойдох, за да чета, за, да пиша.';
+  const tokens = Array.from(text.matchAll(/[\p{L}\p{M}]+|[^\s]/gu), (match,index) => ({index,
+    start:match.index, length:match[0].length, text:match[0],
+    kind:/^[.,]$/.test(match[0])?'Punctuation':'Word'}));
+  const start = text.lastIndexOf(',');
+  const review = reviewIndex({tokens,diagnostics:[{start,length:1,
+    code:'spurious_comma_inside_compound_conjunction'}]},text);
+  renderEditorBackdrop(container,text,tokens,{warningIndices:review.warnings});
+  const marked = spans(container).filter(node => node.className.includes('w-warning'));
+  assert.equal(container.textContent,text);
+  assert.equal(marked.length,1);
+  assert.equal(marked[0].textContent,',');
+  assert.equal(marked[0].attributes['data-token-index'],'8');
+  assert.equal(review.byToken.size,0);
+  renderEditorBackdrop(container,text,[],{pending:true});
+  assert.equal(container.textContent,text);
+  assert.equal(spans(container).some(node => node.className.includes('w-warning')),false);
 });
 
 test('pending edits reuse one plain node without scanning old tokens or keeping stale highlights', () => {

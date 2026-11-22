@@ -65,7 +65,7 @@ $ErrorActionPreference = 'Stop'
 - **Публичният списък от файлове:** [`Export-PublicSource.ps1`](Export-PublicSource.ps1) изнася точния списък от [`public-source-allowlist.v1.json`](public-source-allowlist.v1.json) след проверка на MSBuild проектите и референциите; с флаг `-SourceOnly` изходът пропуска `lexemes.source.json`.
 - **Проверка на редакционната възпроизводимост:** [`Test-EditorialReproduction.ps1`](Test-EditorialReproduction.ps1) проверява байт-по-байт възпроизводимостта на профилите `Current` и `Baseline` между пълен и `-SourceOnly` експорт.
 - **Проверка на JSON изхода на примера:** при `-Test` рецептата извиква автоматично `Verify-PublicConsumerJson.ps1` върху конзолните проби, включително `"😀 колажист!"` за `CurrentGraphStress`.
-- **Възпроизводима лингвистична оценка и сравнение с UDPipe 2:** [`Evaluate-PublicBenchmark.ps1`](Evaluate-PublicBenchmark.ps1) оценява [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv) (срещу [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu)) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv) чрез публичното `BulgarianLanguageSession.Open` и сверява [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json) (подробен анализ в [`LINGUISTIC-EVALUATION.md`](LINGUISTIC-EVALUATION.md)):
+- **Възпроизводима лингвистична оценка и сравнение с UDPipe 2:** [`Evaluate-PublicBenchmark.ps1`](Evaluate-PublicBenchmark.ps1) оценява [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv) (срещу [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu)) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv) чрез публичното `BulgarianLanguageSession.Open` и сверява [`expected-summary.v2.json`](evaluation/expected-summary.v2.json) (подробен анализ в [`LINGUISTIC-EVALUATION.md`](LINGUISTIC-EVALUATION.md)):
   ```powershell
   ./packaging/Evaluate-PublicBenchmark.ps1 -ManifestPath ./graph-a/manifest.json -OutputDir ./eval-out -VerifyExpected
   ```
@@ -93,7 +93,7 @@ $ErrorActionPreference = 'Stop'
 - Анализът на живо използва SignalR, обединява междинните редакции и показва резултати за текущия текст. Речникът, словоформите, ударенията, продълженията и HTTP работилницата са достъпни от същия редактор.
 - Връзките в `predicateLinks` покриват бъдещо време с междинни кратки форми, възвратни клитики и условни спомагателни групи. Възможна структурна връзка не означава съгласуваност; конфликтите и оригиналните позиции остават отделни данни в отговора.
 - Пакетът `CurrentGraphStress` и заключеният вход запазват точните си идентификатори и SHA-256 хешове от `v0.2.0-alpha.2`. Алгоритмите и клиентският код са от новото издание; номерът на пакетните данни е отделна идентичност.
-- Лингвистичната оценка запазва замразените входове и `expected-alpha2-summary.v1.json` като независим регресионен контрол. Повторната проверка с `-VerifyExpected` върху Alpha3 съвпада със запазеното обобщение за същите `59 + 30` изречения. Тези числа в [оценката](LINGUISTIC-EVALUATION.md) не обхващат отделния широк корпусен одит и не установяват обща точност върху произволен текст.
+- В публикуваната Alpha 3 проверката на 59 + 30 изречения съвпадна с историческото обобщение от Alpha 2. Текущият скрипт използва същите входове и сверява коригирания резултат за членуването при UDPipe с `expected-summary.v2.json`. [Методика и резултати](LINGUISTIC-EVALUATION.md)
 
 ## Исторически промени в `v0.2.0-alpha.2`
 

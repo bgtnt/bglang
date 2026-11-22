@@ -107,6 +107,7 @@ internal static class TextValidationAnalyzer
             if (word.Token.Text.IndexOfAny(['-', '/', '.']) >= 0)
                 diagnostics.AddRange(AnalyzeCompoundShape(analysis.Text, word.Token.Start, word.Token.Length, cancellationToken));
         }
+        List<(int Start, int End)>? commaQuotes = null;
         foreach (SentenceSpan sentence in analysis.Sentences)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -116,7 +117,7 @@ internal static class TextValidationAnalyzer
                 AddCoordinatedArticle(analysis.Text, sentence, sentenceWords, context, syntax, exactLookup, diagnostics, cancellationToken);
             AddIntensifier(analysis.Text, sentenceWords, suppressedSpans, diagnostics, unavailable, cancellationToken);
             if (commas is not null)
-                AddCommas(analysis.Text, sentence, sentenceWords, commas, unavailable, cancellationToken);
+                AddCommas(analysis.Text, sentence, sentenceWords, commas, unavailable, ref commaQuotes, cancellationToken);
             if (fragments is not null)
             {
                 if (!syntax.Available)
@@ -1719,7 +1720,7 @@ internal static class TextValidationAnalyzer
     }
 
     private static void AddCommas(string text, SentenceSpan sentence, Word[] words,
-        List<TextValidationDiagnostic> output, List<string> unavailable, CancellationToken ct)
+        List<TextValidationDiagnostic> output, List<string> unavailable, ref List<(int Start, int End)>? quotes, CancellationToken ct)
     {
         for (int index = 1; index < words.Length; index++)
         {
@@ -1737,14 +1738,37 @@ internal static class TextValidationAnalyzer
             bool marker = reviewedMarker || trigger.Rows.Any(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction);
             if (!relative && !marker) { AddUnavailable(unavailable, "subordinate_comma:trigger_authority_unavailable"); continue; }
             int boundary = index;
+            int compound = key == "че" ? CompoundCheStart(text, words, index) : index;
+            if (compound < index)
+            {
+                var previous = words[index - 1].Token;
+                var firstWord = words[compound].Token;
+                bool atBoundary = HasSeparatorBefore(text, sentence.Start, firstWord.Start) ||
+                    compound > 0 && Key(words[compound - 1].Token.Text) is "и" or "или" or "но" or "а" &&
+                    Bridge(text, words[compound - 1].Token.Start + words[compound - 1].Token.Length, firstWord.Start);
+                // Independently used as an adverb in e.g. „толкова независимо, че …“.
+                bool possibleAdverb = !atBoundary && Key(previous.Text) == "независимо";
+                int end = previous.Start + previous.Length;
+                ReadOnlySpan<char> gap = text.AsSpan(end, trigger.Token.Start - end);
+                if (gap.Trim().SequenceEqual(",") && gap.IndexOfAny('\r', '\n', '\u2029') < 0)
+                {
+                    if (atBoundary || compound == index - 1 && !possibleAdverb)
+                    {
+                        quotes ??= TextPredicateLinkAnalyzer.QuoteSpans(text, ct, protectBackticks: true);
+                        if (!quotes.Any(q => q.Start <= trigger.Token.Start && q.End > firstWord.Start))
+                            AddInternalComma(text, words, compound, index, end + gap.IndexOf(','), output, ct);
+                    }
+                    continue;
+                }
+                if (atBoundary && Bridge(text, end, trigger.Token.Start)) continue;
+                if (possibleAdverb) compound = index;
+            }
             if (Bridge(text, words[index - 1].Token.Start + words[index - 1].Token.Length, trigger.Token.Start))
             {
                 if (key == "ако" && Key(words[index - 1].Token.Text) == "освен") boundary--;
                 else if (relative && All(words[index - 1], f => f.PartOfSpeech == MorphologicalPartOfSpeech.Preposition) ||
-                    key == "че" && Key(words[index - 1].Token.Text) is "макар" or "въпреки" or "така") boundary--;
-                else if (key == "че" && index >= 2 && Key(words[index - 1].Token.Text) == "случай" &&
-                    Key(words[index - 2].Token.Text) == "в" && Bridge(text,
-                        words[index - 2].Token.Start + words[index - 2].Token.Length, words[index - 1].Token.Start)) boundary -= 2;
+                    key == "че" && Key(words[index - 1].Token.Text) == "така") boundary--;
+                else boundary = compound;
             }
             Word first = words[boundary];
             if ((key == "ако" || reviewedMarker) && boundary > 0 &&
@@ -1776,11 +1800,42 @@ internal static class TextValidationAnalyzer
         }
     }
 
-    // Only the two reviewed literal markers call this predicate; raw alternatives remain unchanged.
-    private static bool CompleteCommaRows(Word word, MorphologicalPartOfSpeech category) => word.CanonicalSource &&
+    private static int CompoundCheStart(string text, Word[] words, int index)
+    {
+        string prefix = Key(words[index - 1].Token.Text);
+        if (prefix is "въпреки" or "макар" or "независимо") return index - 1;
+        if (index < 2 || prefix is not ("случай" or "условие")) return index;
+        var first = words[index - 2].Token;
+        return Key(first.Text) == (prefix == "случай" ? "в" : "при") &&
+            Bridge(text, first.Start + first.Length, words[index - 1].Token.Start) ? index - 2 : index;
+    }
+
+    private static void AddInternalComma(string text, Word[] words, int first, int marker, int comma,
+        List<TextValidationDiagnostic> output, CancellationToken ct)
+    {
+        for (int i = first; i <= marker; i++)
+            if (!ExactCommaRows(words[i])) return;
+        for (int i = marker + 1; i < words.Length; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var previous = words[i - 1].Token;
+            if (!Bridge(text, previous.Start + previous.Length, words[i].Token.Start)) return;
+            if (!words[i].Rows.Any(r => r.Features.VerbForm == MorphologicalVerbForm.Finite &&
+                r.Features.Tense is not null && ContextEvidenceGuards.IsPersonalPredicate(r.Features)) ||
+                !ExactCommaRows(words[i])) continue;
+            output.Add(new("spurious_comma_inside_compound_conjunction", comma, 1,
+                "compound_conjunction;internal_comma;finite_verb_reading;candidate_only;not_grammar_verdict;no_automatic_rewrite",
+                Supports(words[first..(marker + 1)].Append(words[i]))));
+            return;
+        }
+    }
+
+    private static bool ExactCommaRows(Word word) => word.CanonicalSource &&
         word.Rows.Count > 0 && word.Rows.All(row => row.Features == row.Raw.Features && !row.Features.HasConflictingFeatures &&
-            !row.Features.HasUnrecognizedFeatures && Key(row.Raw.Form) == Key(word.Token.Text) &&
-            (row.Features.PartOfSpeech == category || category == MorphologicalPartOfSpeech.Conjunction &&
+            !row.Features.HasUnrecognizedFeatures && Key(row.Raw.Form) == Key(word.Token.Text));
+
+    private static bool CompleteCommaRows(Word word, MorphologicalPartOfSpeech category) => ExactCommaRows(word) &&
+        word.Rows.All(row => (row.Features.PartOfSpeech == category || category == MorphologicalPartOfSpeech.Conjunction &&
                 row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Adverb) &&
             (category != MorphologicalPartOfSpeech.Verb ||
                 row.Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative)) &&

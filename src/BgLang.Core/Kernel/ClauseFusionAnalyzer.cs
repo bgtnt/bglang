@@ -44,7 +44,10 @@ internal static class ClauseFusionAnalyzer
         int SubjectTokenIndex,
         int[] SubjectReadings,
         bool SuppressHeuristicSubject,
-        ContextSelectionOverlay Overlay);
+        ContextSelectionOverlay Overlay)
+    {
+        internal (int PredicateWordIndex, int SubjectWordIndex)? SourceScanSubjectExclusion { get; init; }
+    }
 
     internal sealed record Result(
         MatrixSelection? Selection,
@@ -532,6 +535,17 @@ internal static class ClauseFusionAnalyzer
         bool[] governed = MarkGovernedPhrases(map, idx, bodyStart, postEndPos, verbFirstPos, verbLastPos, ct);
 
         List<NominalChunk> preNps = CollectNominalChunks(map, idx, bodyStart, verbFirstPos - 1, governed, ct);
+        (int PredicateWordIndex, int SubjectWordIndex)? sourceScanSubjectExclusion = null;
+        if (verb.HasDaComplement && verb.PostDaOrAuxClitics.HasReflexiveSe)
+        {
+            for (int n = preNps.Count - 1; n >= 0; n--)
+            {
+                NominalChunk np = preNps[n];
+                if (!CanLicenseFrontedModalNamingComplement(slots, np, verb)) continue;
+                sourceScanSubjectExclusion ??= (verb.FiniteCarrierWordIndex, np.HeadWord);
+                preNps.RemoveAt(n);
+            }
+        }
         List<NominalChunk> postNps = CollectNominalChunks(map, idx, verbLastPos + 1, postEndPos, governed, ct,
             allowLeadingPostverbalAdverbs: !verb.CopularCarrier && !verb.HasDaComplement && preNps.All(np => np.TemporalAdjunct));
 
@@ -848,7 +862,8 @@ internal static class ClauseFusionAnalyzer
                 SubjectTokenIndex: subjTok,
                 SubjectReadings: subjReadings,
                 SuppressHeuristicSubject: selectedSubject is null,
-                Overlay: overlay);
+                Overlay: overlay)
+            { SourceScanSubjectExclusion = sourceScanSubjectExclusion };
         }
 
         // Collect clause-role article targets (SubjectFull and DirectObjectShort) outside quotes/symbols.
@@ -2877,6 +2892,23 @@ internal static class ClauseFusionAnalyzer
         verbReadings.All(r => IsReflexiveCallingOrNamingLemma(verbSlot.Word.Readings[r].Lemma)) &&
         IsPersonNameChunk(slots, nominal);
 
+    private static bool CanLicenseFrontedModalNamingComplement(
+        WordSlot[] slots, NominalChunk nominal, VerbalComplex verb)
+    {
+        if (!verb.HasDaComplement || !verb.PostDaOrAuxClitics.HasReflexiveSe ||
+            verb.PostDaOrAuxClitics.AccusativeCliticWordIndex >= 0 || verb.PostDaOrAuxClitics.DativeCliticWordIndex >= 0)
+            return false;
+        VerbalDependent dependent = verb.Dependents.First(d => d.Kind == VerbalDependentKind.DaFiniteComplement);
+        WordSlot lexical = slots[dependent.WordIndex];
+        return CanLicenseFrontedReflexivePredicative(slots, nominal, lexical, dependent.Readings) &&
+            MatchingVerbReadings(lexical, dependent.Readings, nominal).Length == 0 &&
+            (verb.InvariantCarrier || verb.CarrierFiniteReadings.Any(ar => dependent.Readings.Any(sr =>
+                Guard.PersonNumberTupleMatches(
+                    (slots[verb.FiniteCarrierWordIndex].Word.Readings[ar].Features.Person,
+                     slots[verb.FiniteCarrierWordIndex].Word.Readings[ar].Features.Number),
+                    (lexical.Word.Readings[sr].Features.Person, lexical.Word.Readings[sr].Features.Number)))));
+    }
+
     internal static bool IsAnimateForFusion(ContextLanes.ReadingView row) =>
         Guard.IsAnimateNominalReading(row) ||
         row.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun &&
@@ -3655,6 +3687,7 @@ internal static class ClauseFusionAnalyzer
         if (verbClausePos < 1 || verbClausePos + 1 >= cWords.Length)
             return false;
         int copulaEndClausePos = verbClausePos;
+        bool lexicalTransitiveTail = false;
         if (copularParticiple is { } tail)
         {
             WordSlot tailSlot = slots[tail.WordIndex];
@@ -3664,6 +3697,11 @@ internal static class ClauseFusionAnalyzer
                 rawTail.Any(r => tailSlot.Word.Readings[r].Features.VerbForm != MorphologicalVerbForm.Participle ||
                     !IsCleanOrBenignLegacyVerb(tailSlot.Word.Readings[r])))
                 return false;
+            lexicalTransitiveTail = rawTail.Any(r => tailSlot.Word.Readings[r].Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
+                  ParticipleKind: MorphologicalParticipleKind.PastAoristActive or MorphologicalParticipleKind.PastImperfectActive,
+                  DeclaredTransitivity: MorphologicalVerbTransitivity.Transitive, HasUnrecognizedFeatures: false } &&
+                !TextPredicateLinkAnalyzer.CopularLemma(tailSlot.Word.Readings[r].Lemma));
             copulaEndClausePos = Array.IndexOf(cWords, tail.WordIndex);
             if (copulaEndClausePos <= verbClausePos)
                 return false;
@@ -3777,6 +3815,10 @@ internal static class ClauseFusionAnalyzer
             .Order()
             .ToArray();
         if (predSupport.Length == 0) return false;
+        // An independently attested substantive can fill the lexical homograph's object slot.
+        // Preserve that alternative without inventing a noun reading or declaring the clause correct.
+        if (lexicalTransitiveTail && predSupport.Any(r => HasDocumentedSubstantiveUse(predSlot.Word.Readings[r])))
+            return false;
 
         int[] copulaReadings = isCopula
             ? Enumerable.Range(0, headVerbSlot.Word.Readings.Count)
@@ -3883,6 +3925,21 @@ internal static class ClauseFusionAnalyzer
             return false;
 
         return EmitPredicativeSubjMismatch(slots, subj, predSlot, predSupport, headVerbSlot.Word, copulaReadings, canonicalKey, agreement, copularParticiple);
+    }
+
+    private static bool HasDocumentedSubstantiveUse(ReadingView row)
+    {
+        if (row.Features is not { PartOfSpeech: MorphologicalPartOfSpeech.Adjective, Number: not null } f)
+            return false;
+        // Positive finite coverage: BAS RBE невинен §11, виновен §4, болен §5.
+        // https://ibl.bas.bg/rbe/lang/bg/невинен/ ; /виновен/ ; /болен/
+        return Norm(row.Lemma) switch
+        {
+            "невинен" => f.Number == MorphologicalNumber.Plural || f.Gender == MorphologicalGender.Masculine,
+            "виновен" => f.Number == MorphologicalNumber.Plural || f.Gender is MorphologicalGender.Masculine or MorphologicalGender.Feminine,
+            "болен" => true,
+            _ => false
+        };
     }
 
     private static MorphologicalGender? FindVocativeAddresseeGender(SentenceClauseMap map, CancellationToken ct)

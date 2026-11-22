@@ -763,6 +763,38 @@ public sealed partial class PublicPackageTests
     }
 
     [TestMethod]
+    [DataRow("3айче", "3аи\u0306че", "зайче", "digit_shape_ocr_known_candidate")]
+    [DataRow("чйтател", "чи\u0306тател", "читател", "spelling_unknown_word_unique_distance_one_candidate")]
+    [DataRow("ЧЙТАТЕЛ", "ЧИ\u0306ТАТЕЛ", "ЧИТАТЕЛ", "spelling_unknown_word_unique_distance_one_candidate")]
+    [DataRow("Чйтател", "Чи\u0306тател", "Читател", "spelling_unknown_word_unique_distance_one_candidate")]
+    public void Canonical_spelling_projections_return_the_same_repair_over_original_spans(
+        string composed, string decomposed, string replacement, string code)
+    {
+        string text = $"🙂 {decomposed}. {composed}.";
+        TextAnalysis analysis = session.AnalyzeText(text);
+        TextDiagnostic[] suggestions = analysis.Diagnostics.Where(d => d.Code == code).ToArray();
+        Assert.HasCount(2, suggestions);
+        foreach ((string source, TextDiagnostic suggestion) in new[] { decomposed, composed }.Zip(suggestions))
+        {
+            Assert.AreEqual(text.IndexOf(source, StringComparison.Ordinal), suggestion.Start);
+            Assert.AreEqual(source.Length, suggestion.Length);
+            Assert.AreEqual(replacement, suggestion.ProjectedText);
+        }
+        Assert.AreEqual(text, analysis.Text);
+    }
+
+    [TestMethod]
+    [DataRow("3а\u0301йче", "digit_shape_ocr_known_candidate")]
+    [DataRow("чИ\u0306тател", "spelling_unknown_word_unique_distance_one_candidate")]
+    [DataRow("чйта\u0301тел", "spelling_unknown_word_unique_distance_one_candidate")]
+    public void Canonical_composition_preserves_spelling_stress_and_mixed_case_guards(string raw, string code)
+    {
+        TextAnalysis analysis = session.AnalyzeText(raw);
+        Assert.IsFalse(analysis.Diagnostics.Any(diagnostic => diagnostic.Code == code), raw);
+        Assert.AreEqual(raw, analysis.Text);
+    }
+
+    [TestMethod]
     public void Canonical_grave_spellings_share_the_actual_lookup_owner_and_keep_raw_words()
     {
         WordAnalysis composed = session.AnalyzeWord("кафѐ");

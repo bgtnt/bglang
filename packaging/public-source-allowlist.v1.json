@@ -353,6 +353,7 @@
     "packaging/LINGUISTIC-EVALUATION.md",
     "packaging/evaluation/edge-and-ambiguity-controls.v1.tsv",
     "packaging/evaluation/expected-alpha2-summary.v1.json",
+    "packaging/evaluation/expected-summary.v2.json",
     "packaging/evaluation/independent-59.v1.tsv",
     "packaging/evaluation/udpipe-independent-59.v1.conllu"
   ],

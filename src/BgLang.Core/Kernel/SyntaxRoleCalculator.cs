@@ -42,7 +42,8 @@ internal static class SyntaxRoleCalculator
         internal int FusionSubjectFirstWordIndex { get; init; } = -1;
         internal int FusionSubjectWordIndex { get; init; } = -1;
         internal bool SuppressSourceScanSubject { get; init; }
-        internal (int PredicateTokenIndex, int SubjectTokenIndex)? SubjectAfterGovernedPrefix { get; init; }
+        internal (int PredicateWordIndex, int SubjectWordIndex)? SourceScanSubjectExclusion { get; init; }
+        internal (int PredicateTokenIndex, ContextOverlayRoleSelection Subject)? SubjectAfterGovernedPrefix { get; init; }
     }
     internal sealed record Candidate(Role Role, Rule Rule, int Start, int Length,
         ImmutableArray<Support> Targets, ImmutableArray<Support> Context);
@@ -233,6 +234,9 @@ internal static class SyntaxRoleCalculator
 
         bool subjectBefore = false;
         bool postNominalHandled = false;
+        var prefix = resolution.SubjectAfterGovernedPrefix;
+        int prefixHead = prefix is { } witness && witness.PredicateTokenIndex == words[p].TokenIndex
+            ? WordIndex(witness.Subject.TokenIndex) : -1;
         if (isSelected)
         {
             bool subjectEmitted = false;
@@ -269,6 +273,14 @@ internal static class SyntaxRoleCalculator
                 postNominalHandled = first > p;
             }
         }
+        else if (resolution.Route == Route.SourceScan && prefix is { } local &&
+            prefixHead >= 0 && prefixHead < p && InPredicateClause(prefixHead) && Chain(prefixHead, p))
+        {
+            // Local evidence supplies a candidate even when Fusion abstains from subject inference.
+            Emit(Role.Subject, Rule.BasicSubject, prefixHead, prefixHead, [SelectedSupport(local.Subject, prefixHead)],
+                BoundaryContext(prefixHead, p, predicateSupport));
+            subjectBefore = true;
+        }
         else if (resolution.Route == Route.SourceScan && Valid(resolution.FusionSubjectWordIndex) &&
             resolution.FusionSubjectWordIndex != p)
         {
@@ -290,7 +302,9 @@ internal static class SyntaxRoleCalculator
             else if (Reflexive(p) || Immediate(p) || (opt && C(p - 1) == "не" && Bridge(p - 1, p))) end = p - 2;
             else if ((C(p - 1) == "ще" && Has(p - 1, SourcePos.Particle)) || Has(p - 1, SourcePos.Adverb)) end = p - 2;
             while (end >= 0 && Preposition(C(end))) end--;
-            if (end >= 0 && Nominal(end) && Chain(end, p))
+            if (end >= 0 && Nominal(end) && Chain(end, p) &&
+                !(resolution.SourceScanSubjectExclusion is { } excluded &&
+                  excluded.PredicateWordIndex == p && excluded.SubjectWordIndex == end))
             {
                 int first = end;
                 while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
@@ -298,12 +312,6 @@ internal static class SyntaxRoleCalculator
                 {
                     var modifiers = ShortMasculineRefs(first, end);
                     bool divert = modifiers.Length > 0 && FirstOrSecondPredicate(p) && !FirstOrSecondPronoun(first, end);
-                    // This subject already qualifies. Its initial prepositional phrase ends before the pronoun.
-                    if (!divert && first < end && resolution.SubjectAfterGovernedPrefix == (words[p].TokenIndex, words[end].TokenIndex))
-                    {
-                        first = end;
-                        modifiers = ShortMasculineRefs(first, end);
-                    }
                     ImmutableArray<Support> nominal = NominalRefs(first, end);
                     Emit(divert ? Role.Object : Role.Subject, divert ? Rule.ShortMasculineObject : Rule.BasicSubject,
                         first, end, nominal, BoundaryContext(end, p, predicateSupport).AddRange(modifiers));

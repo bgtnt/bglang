@@ -227,6 +227,7 @@ internal static class SyntaxTreeProjection
     private static string DiagnosticMessage(string code) => code switch
     {
         "unseparated_finite_predications" => "Две лични глаголни форми без установена връзка или разделяне.",
+        "spurious_comma_inside_compound_conjunction" => "Излишна запетая между частите на сложния съюз.",
         _ => "Езиковият анализ отчита диагностиката „" + code + "“."
     };
 }

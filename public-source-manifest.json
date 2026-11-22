@@ -1476,8 +1476,8 @@
     },
     {
       "path": "apps/BgLang.Web/SyntaxTreeProjection.cs",
-      "bytes": 17048,
-      "sha256": "56292cba1376c04c6f1d1b89cc163d13b4b9ae100238b6bc5989c8cce5b5b7fc"
+      "bytes": 17456,
+      "sha256": "ae5de68296e5d25e02f91dfdbcd97372085eacf21a05700ccffb28de04288084"
     },
     {
       "path": "apps/BgLang.Web/TextMatchProjection.cs",
@@ -1556,13 +1556,13 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/reviews.js",
-      "bytes": 7757,
-      "sha256": "755180cdd945bff545f73ffb45eed5188706a159c4b2c58e242538e76ed981b1"
+      "bytes": 8170,
+      "sha256": "d571701a52f1e4ff3a4ad9199b1bed67876a62bd77f5201eb7170e50f19b0d79"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/tree.js",
-      "bytes": 16744,
-      "sha256": "5125bb82bf7a22b4c065f2849b35f28841d055ded2cb6ad59ab9f739c4076ccb"
+      "bytes": 17211,
+      "sha256": "9d50b55187834f2c1b35017c80a1fe522d8766f73faf85366a4e9740ceb7efcd"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/lib/signalr/LICENSE.txt",
@@ -1601,8 +1601,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 66705,
-      "sha256": "8d2499a477b191ee23d73b15806f6f92a1170c82f568fb8697c74061d1657a74"
+      "bytes": 68162,
+      "sha256": "c5545ef9b5c18abc9e4e5bec4ca5326945a29b4d50ce54d64630b8afdbe7822b"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
@@ -1651,8 +1651,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 16616,
-      "sha256": "2ccd3a084d7ed93cc53d21e73d8ff76b30e73fbf753c605d1c83c02763d3328e"
+      "bytes": 16417,
+      "sha256": "6306f5178d9e63ba2efd15a60a73ccb74238d31ea737a394a36c686e0619b97d"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -1661,8 +1661,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 20206,
-      "sha256": "508da4c6687068144ac4073219753b395b7600dfeacd990562527cad20aae879"
+      "bytes": 20259,
+      "sha256": "e7c15bbb08938534391461599ab9067f8a0ce7fc447e3b15fbe6e91ec8c2619f"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2026,8 +2026,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianTextNormalizer.cs",
-      "bytes": 1516,
-      "sha256": "d48a4c66fc686d879df3ea166eeeb98bff38c5b9e6013444200cb4b68a23aa04"
+      "bytes": 1554,
+      "sha256": "8e6ee21641acc34bd050e09526079d366eed424408448b12c0b3bc81d43559c3"
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianTokenizer.cs",
@@ -2331,8 +2331,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/SpellingProjectionAnalyzer.cs",
-      "bytes": 14391,
-      "sha256": "196a2268080ba2b353c71f61529ca0d7ee7ba874bbc04a6df1af8c60d93ec29f"
+      "bytes": 14570,
+      "sha256": "a4f7353afd7a21e3be270af42f00e5a802b89d1bd04cfb728b3a0b7a255fb3a9"
     },
     {
       "path": "src/BgLang.Core/Kernel/StressEvidenceAnalyzer.cs",
@@ -2356,13 +2356,13 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/SyntaxRoleCalculator.cs",
-      "bytes": 44268,
-      "sha256": "1564568019cf78737877a0767d2856c6feb7e19d6bbb502f37d5780e02ecfdaf"
+      "bytes": 44909,
+      "sha256": "3ed081c597217f3711c48e02bdbc30a80957a4ce9501bc9c4420e28b9ad74a73"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
-      "bytes": 68200,
-      "sha256": "37b13021640f90d5aef725b774ba5876cfa2cb45393fe6b9b3b60c154f3ed523"
+      "bytes": 68494,
+      "sha256": "5d757e744bd135fc379e42b33ef7fb55abdf03f2387c90194f1464f2c3c84de0"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextNominalConstructionAnalyzer.cs",
@@ -2381,8 +2381,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 138732,
-      "sha256": "bffa36b851c5bbfb12985899b5d7dc4e56678cd9fc5a9b7acb728367b34dc0ee"
+      "bytes": 141949,
+      "sha256": "ae61467e7d17d75f0f20de38298e35cb78db15928437298e934b91fcd65f192d"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2451,8 +2451,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/PublicPackageTests.cs",
-      "bytes": 132100,
-      "sha256": "86a1e01dd298dab1f000319912b4a48643bdc8d787094f347e365234816d933e"
+      "bytes": 134031,
+      "sha256": "ec1009c1ce2698fba0811fd2a0a48e8365821c6429945d37bd6701a8fecf7090"
     },
     {
       "path": "tests/BgLang.Public.Tests/packages.lock.json",
@@ -2466,23 +2466,23 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/SyntaxHubHttpTests.cs",
-      "bytes": 10676,
-      "sha256": "649016a3370b4b897ccb93dddb0150b22ddff69ecc64784d65612c5ec01a31ab"
+      "bytes": 12161,
+      "sha256": "6eae05fde340df4291ad548758b4639dddea8562646e5dc8b7e3a90d4fbca30f"
     },
     {
       "path": "tests/BgLang.Web.Tests/SyntaxTreeProjectionTests.cs",
-      "bytes": 20013,
-      "sha256": "8d95cf17ecb81bc5da6c6ac259864d0e78c99d797fa1df7d93f70c3b530a43db"
+      "bytes": 21917,
+      "sha256": "3e2a575760140b21f3b19025369e646db71f19c42466ba5c046ae50334a60a7c"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/syntax-editor.test.mjs",
-      "bytes": 11433,
-      "sha256": "faf0ae555a078ee61a4405db8c0fe5422cb8e3775edbfbf513f2677fc1c6608d"
+      "bytes": 12889,
+      "sha256": "45fe22ebae6b409f6778969d607f824c8aedcd1af9c68d21b6acf4e2594cbb39"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/syntax-reviews.test.mjs",
-      "bytes": 3602,
-      "sha256": "77fe183ecdf2e08c189f6c58d31413b1a25fd4685b14f7c019ac6cdef250df7e"
+      "bytes": 4719,
+      "sha256": "5a780983d69110ab838b577ea5293605e21f7be7e899c2222bb681763c84197f"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/syntax-live.test.mjs",
@@ -2836,8 +2836,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/LocalPrepositionalArticleGraphPackageTests.cs",
-      "bytes": 16029,
-      "sha256": "aa95ca521f6afd307fed255bc92391515aa5bec45fa905c71720c911cdda0edd"
+      "bytes": 21501,
+      "sha256": "572ac9192196266018a9406f3febbcaf02ebc2e392aed8175701519ca5ea5151"
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/demo-lab.test.mjs",
@@ -2946,8 +2946,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/ReviewedConjunctionCommaPackageTests.cs",
-      "bytes": 10347,
-      "sha256": "0ad0c6134f9ac686b2886484713c2d37ff0f5e8039b5308864b1b47eaecda7da"
+      "bytes": 14571,
+      "sha256": "395c91178eeaedbc6d7906f35d9cb607497c45b0d2191389829e07aee5b4f6eb"
     },
     {
       "path": "tests/BgLang.Web.Tests/InverseSpellingHttpTests.cs",
@@ -2986,8 +2986,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/ConditionalCopulaPackageTests.cs",
-      "bytes": 7838,
-      "sha256": "98f760676add5694ad4ceade241daf2a70715fb153e7861274d8461c9c54df6e"
+      "bytes": 11518,
+      "sha256": "48be5a4a8f270db2471a21d7582c689fc318c6a55645bc68b0c674df43330720"
     },
     {
       "path": "tests/BgLang.Public.Tests/ConditionalPredicatePackageTests.cs",
@@ -3026,8 +3026,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ClauseFusionAnalyzer.cs",
-      "bytes": 430776,
-      "sha256": "97247ccaac5f3e54969e04e33603d7abd427e0c3ba6c0ad07c7b99f738043b91"
+      "bytes": 434443,
+      "sha256": "158bab48ecb8f7319fea00b379121787d50bc6ed136db8ec64eebc17bfc1deeb"
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianFunctionWords.cs",
@@ -3041,8 +3041,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/NaturalSentenceFusionPackageTests.cs",
-      "bytes": 244331,
-      "sha256": "b654c4cc46cdeebf448922169152e06a12a387a6f8cc212f2740ff269426605a"
+      "bytes": 246766,
+      "sha256": "092dfcfe45439a0736945499b2e58b0d84de8eb4b949be7f3e6c5cb5af55327a"
     },
     {
       "path": "src/BgLang.Core/Kernel/ClauseBoundary.cs",
@@ -3056,13 +3056,13 @@
     },
     {
       "path": "packaging/Evaluate-PublicBenchmark.ps1",
-      "bytes": 36473,
-      "sha256": "dbbd6af375c15265cd8399782c3580fdff90cb1cd7bada796a213ba9c1c1b6de"
+      "bytes": 36984,
+      "sha256": "120494a1b28ef41586bda16a6b99d73eeae12773f24fc617ef87c443c8d69d80"
     },
     {
       "path": "packaging/LINGUISTIC-EVALUATION.md",
-      "bytes": 16457,
-      "sha256": "8b632e1032dce661dde55eaec36feab461f862717e886638e1e9c0628b9f9642"
+      "bytes": 16652,
+      "sha256": "6825a88b80a5859963e34fc04c6f567f34180341f1d21f57f3203e53a083369c"
     },
     {
       "path": "packaging/evaluation/edge-and-ambiguity-controls.v1.tsv",
@@ -3073,6 +3073,11 @@
       "path": "packaging/evaluation/expected-alpha2-summary.v1.json",
       "bytes": 9494,
       "sha256": "fbb00573784c98e63c66fa4a683d7df0a661e63b66f53c58da1100d7a02fc3d7"
+    },
+    {
+      "path": "packaging/evaluation/expected-summary.v2.json",
+      "bytes": 9494,
+      "sha256": "1350fc8c38b60342d8db3f4f24759483a795c7eb934dcb2f714e4be38666c7d8"
     },
     {
       "path": "packaging/evaluation/independent-59.v1.tsv",

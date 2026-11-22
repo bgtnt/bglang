@@ -10,8 +10,8 @@ const { replacementRange, tokenAt } = await import(new URL('live.js', view).href
 const { reviewIndex } = await import(new URL('reviews.js', view).href);
 
 function tokens(text) {
-  return Array.from(text.matchAll(/[^\s.]+|\./gu), (m,index) =>
-    ({index, start:m.index, length:m[0].length, text:m[0], kind:m[0]==='.'?'Punctuation':'Word'}));
+  return Array.from(text.matchAll(/[^\s.,]+|[.,]/gu), (m,index) =>
+    ({index, start:m.index, length:m[0].length, text:m[0], kind:/^[.,]$/.test(m[0])?'Punctuation':'Word'}));
 }
 test('selecting the repeated occurrence addresses its original UTF-16 span on either side of an emoji', () => {
   const s='Аз 📚 чета. Аз чета.', ts=tokens(s);
@@ -54,4 +54,20 @@ test('the subordinate comma candidate marks the observed conjunction for review'
   assert.ok(result.advised.has(index));
   assert.ok(!result.warnings.has(index));
   assert.equal(reviewIndex({tokens:ts,diagnostics:[]},text).punctuation.size,0);
+});
+
+test('a compound conjunction warning points to the offending comma among repeated UTF-16 occurrences without an edit', () => {
+  const text = '🙂 Дойдох, за да чета, за, да пиша.', start = text.lastIndexOf(','), ts = tokens(text);
+  const result = reviewIndex({tokens:ts,
+    diagnostics:[{start,length:1,code:'spurious_comma_inside_compound_conjunction'}]},text);
+  const index = ts.find(t => t.start === start).index;
+  assert.equal(index,8);
+  assert.deepEqual([...result.warnings],[index]);
+  assert.deepEqual([...result.punctuation.keys()],[index]);
+  assert.deepEqual(result.locations,[{start,length:1,
+    message:'Излишна запетая между частите на сложния съюз.',warning:true}]);
+  assert.equal(result.advised.size,0);
+  assert.equal(result.byToken.size,0);
+  assert.equal(text.slice(result.locations[0].start,result.locations[0].start + result.locations[0].length),',');
+  assert.equal(ts.map(token => token.text).filter(token => token === ',').length,3);
 });

@@ -62,6 +62,28 @@ public sealed class SyntaxTreeProjectionTests
     }
 
     [TestMethod]
+    public void Compound_conjunction_warning_keeps_the_original_comma_span_without_an_edit()
+    {
+        const string code = "spurious_comma_inside_compound_conjunction";
+        TextAnalysis input = Text("🙂 Дойдох, за да чета, за, да пиша.",
+            "🙂", "Дойдох", ",", "за", "да", "чета", ",", "за", ",", "да", "пиша", ".");
+        TokenAnalysis comma = input.Tokens[8];
+        TextValidationDiagnostic warning = new(code, comma.Start, comma.Length, "compound_conjunction", []);
+        input = input with { Validation = new("validation.v1", true, null, [warning], null, [warning], null, []) };
+
+        SyntaxTreeResult tree = SyntaxTreeProjection.Build(input);
+        SyntaxTreeDiagnostic diagnostic = tree.Diagnostics.Single();
+
+        Assert.AreEqual((code, input.Text.LastIndexOf(','), 1), (diagnostic.Code, diagnostic.Start, diagnostic.Length));
+        Assert.AreEqual("Излишна запетая между частите на сложния съюз.", diagnostic.Message);
+        Assert.IsNull(diagnostic.RuleId);
+        SyntaxTreeToken target = tree.Tokens.Single(token => token.Start == diagnostic.Start && token.Length == diagnostic.Length);
+        Assert.AreEqual((8, ",", "Punctuation"), (target.Index, target.Text, target.Kind));
+        Assert.AreEqual(0, tree.Suggestions.Count, "Punctuation evidence must not become an edit action.");
+        Assert.AreEqual("🙂 Дойдох, за да чета, за, да пиша.", input.Text);
+    }
+
+    [TestMethod]
     public void Spelling_options_keep_all_returned_variants_case_and_valid_previous_modifier_witnesses()
     {
         TextAnalysis input = Text("🙂 Нова Кнгиа. Нова Кнгиа.", "🙂", "Нова", "Кнгиа", ".", "Нова", "Кнгиа", ".");
@@ -320,7 +342,7 @@ public sealed class SyntaxTreeProjectionTests
         {
             int start = text.IndexOf(part, offset, StringComparison.Ordinal);
             Assert.IsTrue(start >= offset);
-            tokens.Add(new(part, part == "." ? TokenKind.Punctuation : part == "🙂" ? TokenKind.Symbol :
+            tokens.Add(new(part, part is "." or "," ? TokenKind.Punctuation : part == "🙂" ? TokenKind.Symbol :
                 TokenKind.Word, start, part.Length, null));
             offset = start + part.Length;
         }

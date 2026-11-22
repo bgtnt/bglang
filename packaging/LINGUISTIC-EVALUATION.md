@@ -1,8 +1,8 @@
-# Възпроизводима лингвистична оценка и сравнение с UDPipe 2 (замразено измерване от `v0.2.0-alpha.2`)
+# Лингвистична оценка на BgLang върху замразения набор и сравнение с UDPipe 2
 
 Този документ представя публично възпроизводимата оценка на **BgLang** (`v0.2.0-alpha.2`) върху пакета **`CurrentGraphStress`** (`bglang-neutral:9e9a4f441f679542`, SHA-256 на `manifest.json`: `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`), сравнена с **UDPipe 2** (`bulgarian-btb-ud-2.17-251125`).
 
-В `v0.2.0-alpha.3` същите входни данни и `expected-alpha2-summary.v1.json` остават замразен независим регресионен контрол. При повторно изпълнение на `Evaluate-PublicBenchmark.ps1 -VerifyExpected` върху Alpha3 обобщението за същите `59 + 30` изречения съвпада с публикуваното обобщение от Alpha2. Числата по-долу са запазеното измерване върху този замразен набор, потвърдено отново за Alpha3. Това не е нов независим набор и не обхваща отделния широк корпусен одит или общата точност върху произволен текст.
+В Alpha 2 и Alpha 3 шестте правила върху запазения разбор на UDPipe дадоха **28 / 34** целеви попадения. Коригираното правило за членуване разчита отделните позиции в таговете на BulTreeBank. Резултатът става **29 / 34** с прилагателното „старият“ (`Amsf`) и **30 / 34** с причастието в прилагателна употреба „счупеният“ (`Vpptcv--smf`). Чистите изречения с предупреждение остават **0 / 25**. Промяната идва от оценяването на същия замразен CoNLL-U разбор. Тези 59 + 30 изречения служат за регресионна проверка. [Позиционни тагове на BulTreeBank](https://bultreebank.org/wp-content/uploads/2017/04/BTB-TR03.pdf)
 
 Всички числа са измерени чрез публичния API вход [`BulgarianLanguageSession.Open`](../src/BgLang.Api/Kernel/BulgarianLanguageSession.cs) (без вътрешния `VerbFrameCatalog`) със същите седем булеви опции в `TextContextOptions`, които използват тогавашните `/demo` и `/demo-lab`, докато настройката `includeUnknownContextProperNames` е `false` в benchmark скрипта и `true` по подразбиране в `/demo` и `/demo-lab`. При контролна проверка на всичките `59 + 30` изречения със стойност `includeUnknownContextProperNames: true` върху същия пакет `CurrentGraphStress` всички `89` индивидуални резултата са идентични байт по байт с публикувания профил `false` (в обобщението `summary.json` се различава единствено записаната стойност на настройката).
 
@@ -18,7 +18,7 @@
   - `IncludeFragmentDiagnostics = true`
   - `IncludeSpacingDiagnostics = true`
 - **Показани предупреждения:** всички действащи граматични, съгласувателни, членни и ремонтни кодове от `Diagnostics` / `Validation` (без правописни догадки при непознати собствени имена) плюс клиентската проекция на обвързания `TextGrammarAssessment.Ambiguous` конфликт с причина `disjoint_subject_predicate_locus` върху зависимия предикат (без автоматична поправка).
-- **Очаквано обобщение и входни данни:** [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json), [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv), [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv).
+- **Очаквано обобщение и входни данни:** [expected-summary.v2.json](evaluation/expected-summary.v2.json), историческото [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json), [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv), [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv).
 
 Пуснете възпроизводимата проверка от корена на публичното хранилище след разархивиране на [`bglang-v0.2.0-alpha.3-runtime.zip`](RELEASE-CANDIDATE.md) в `./runtime`:
 
@@ -40,11 +40,11 @@
 | Категория | Общо | BgLang попадения на целта | BgLang точни / disjoint | BgLang условни (`Ambiguous`) | BgLang тихи | UDPipe 2 попадения (6 правила) | UDPipe 2 тихи |
 | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |
 | `AN` (определение – същ.) | 8 | **8 / 8** | 8 / 0 | 0 | 0 | 7 / 8 | 1 |
-| `ART` (пълен / кратък член) | 8 | **8 / 8** | 8 / 0 | 0 | 0 | 4 / 8 | 4 |
+| `ART` (пълен / кратък член) | 8 | **8 / 8** | 8 / 0 | 0 | 0 | 6 / 8 | 2 |
 | `AUX` (спом. глагол – причастие) | 3 | **3 / 3** | 3 / 0 | 0 | 0 | 3 / 3 | 0 |
 | `PRED` (предикативно съгласуване) | 5 | **4 / 5** (+1 условен) | 4 / 0 | 1 | 0 | 5 / 5 | 0 |
 | `SV` (подлог – сказуемо) | 10 | **10 / 10** | 9 / 1 | 0 | 0 | 9 / 10 | 1 |
-| **Общо `E` контроли** | **34** | **33 / 34** | **32 / 1** | **1** | **0** | **28 / 34** | **6** |
+| **Общо `E` контроли** | **34** | **33 / 34** | **32 / 1** | **1** | **0** | **30 / 34** | **4** |
 
 - Единственото условно `E` изречение (`"Ябълките от нашата градина са сладка."`) се улавя вътрешно в `Grammar` като `Ambiguous` с причина `competing_predicative_role`, без да се повдига като твърдо предупреждение.
 - Единственият `disjoint_subject_predicate_locus` случай (`"Фирмата търсят опитен счетоводител."`) се показва в `/demo` и `/demo-lab` като непоправяемо предупреждение върху `"търсят"`.

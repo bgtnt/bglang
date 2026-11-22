@@ -22,6 +22,8 @@ public sealed class ConditionalCopulaPackageTests
     [DataRow("Те не биха били готов.", "готов", "Те|биха|били|готов")]
     [DataRow("Знам, че те биха били готов.", "готов", "те|биха|били|готов")]
     [DataRow("Той би бил готова.", "готова", "Той|би|бил|готова")]
+    [DataRow("Той не би бил готова.", "готова", "Той|би|бил|готова")]
+    [DataRow("Той не би бил невинна.", "невинна", "Той|би|бил|невинна")]
     [DataRow("Ученикът би бил готова.", "готова", "Ученикът|би|бил|готова")]
     [DataRow("Новите деца биха били готов.", "готов", "Новите|деца|биха|били|готов")]
     [DataRow("Те биха били много готов.", "готов", "Те|биха|били|готов")]
@@ -64,6 +66,8 @@ public sealed class ConditionalCopulaPackageTests
 
     [TestMethod, TestCategory("FullPackage")]
     [DataRow("Те биха били готови.")]
+    [DataRow("Те никога не биха били невинен.")]
+    [DataRow("Те биха били невинен човек.")]
     [DataRow("Ние бихме били готови.")]
     [DataRow("Те не биха били готови.")]
     [DataRow("Знам, че те биха били готови.")]
@@ -91,6 +95,48 @@ public sealed class ConditionalCopulaPackageTests
             TextAnalysis analysis = language.AnalyzeText(text, false, options, default);
             Assert.IsEmpty(analysis.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), text);
             AssertConditionalCopulaInventory(language, analysis, text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("невинен", "невинен", MorphologicalGender.Masculine)]
+    [DataRow("виновен", "виновен", MorphologicalGender.Masculine)]
+    [DataRow("болен", "болен", MorphologicalGender.Masculine)]
+    [DataRow("болна", "болен", MorphologicalGender.Feminine)]
+    public void Conditional_substantive_objects_need_a_real_lexical_verb_alternative(
+        string form, string lemma, MorphologicalGender gender)
+    {
+        foreach (TextContextOptions options in new TextContextOptions[]
+                 { default, new() { IncludeGrammarEvidence = true, IncludeAdditionalRoleHeuristics = true } })
+        {
+            string conditionalText = $"Те биха били {form}.";
+            TextAnalysis conditional = session.AnalyzeText(conditionalText, false, options, default);
+            Assert.IsEmpty(conditional.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), conditionalText);
+            TextReadingOccurrence adjective = conditional.ReadingInventory!.Occurrences.Single(o => o.Text == form);
+            TextReadingSnapshot[] rows = conditional.ReadingInventory.Sets[adjective.ReadingSetIndex].ResolvedReadings.ToArray();
+            Assert.IsNotEmpty(rows);
+            Assert.IsTrue(rows.All(row => row.Raw.Lemma == lemma && row.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Adjective, Number: MorphologicalNumber.Singular } &&
+                row.Features.Gender == gender), "Substantive use is positive lexical evidence, not an injected noun reading.");
+            TextReadingOccurrence participle = conditional.ReadingInventory.Occurrences.Single(o => o.Text == "били");
+            var tails = conditional.ReadingInventory.Sets[participle.ReadingSetIndex].ResolvedReadings;
+            Assert.IsTrue(tails.Any(row => row.Raw.Lemma == "бия" && row.Features is
+                { VerbForm: MorphologicalVerbForm.Participle, ParticipleKind: MorphologicalParticipleKind.PastAoristActive,
+                  DeclaredTransitivity: MorphologicalVerbTransitivity.Transitive }));
+            Assert.IsTrue(tails.Any(row => row.Raw.Lemma == "съм" && row.Features.VerbForm == MorphologicalVerbForm.Participle));
+            if (options.IncludeGrammarEvidence)
+                Assert.IsFalse(conditional.Grammar!.Matches.Any(m => m.RuleId == "grammar.agreement.copular_adjective.v1" &&
+                    m.Assessment == TextGrammarAssessment.Mismatch), conditionalText);
+            AssertConditionalCopulaInventory(session, conditional, conditionalText);
+
+            string plainText = $"Те са {form}.";
+            TextAnalysis plain = session.AnalyzeText(plainText, false, options, default);
+            Assert.IsTrue(plain.Diagnostics.Any(d => d.Code == "productive_predicative_agreement_mismatch" &&
+                d.Start == plainText.IndexOf(form, StringComparison.Ordinal) && d.Length == form.Length), plainText);
+            if (options.IncludeGrammarEvidence)
+                Assert.IsTrue(plain.Grammar!.Matches.Any(m => m.RuleId == "grammar.agreement.copular_adjective.v1" &&
+                    m.Assessment == TextGrammarAssessment.Mismatch), plainText);
+            AssertConditionalCopulaInventory(session, plain, plainText);
         }
     }
 

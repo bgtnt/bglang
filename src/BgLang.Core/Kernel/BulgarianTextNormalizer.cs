@@ -12,7 +12,7 @@ internal static class BulgarianTextNormalizer
         if (trimmed.Length == 0)
             return string.Empty;
 
-        string withoutStress = NormalizeLettersAndStress(trimmed);
+        string withoutStress = NormalizeLetters(trimmed, removeStress: true);
         string normalized = BulgarianAbbreviationLexicon.TryNormalizeExact(withoutStress.AsSpan(), out string abbreviation)
             ? abbreviation
             : withoutStress;
@@ -22,7 +22,7 @@ internal static class BulgarianTextNormalizer
         return normalized;
     }
 
-    private static string NormalizeLettersAndStress(string value)
+    internal static string NormalizeLetters(string value, bool removeStress)
     {
         if (value.AsSpan().IndexOfAny("\u0300\u0301\u0306") < 0)
             return value;
@@ -33,7 +33,7 @@ internal static class BulgarianTextNormalizer
         {
             char character = BulgarianOrthography.ReadLetter(value, offset, out int length);
             offset += length;
-            if (character is '\u0300' or '\u0301' && previousVowel)
+            if (removeStress && previousVowel && character is '\u0300' or '\u0301')
                 continue;
 
             result.Append(character);

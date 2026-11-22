@@ -1,0 +1,339 @@
+{
+  "schema": "bglang.public-benchmark-summary.v1",
+  "packageId": "bglang-neutral:9e9a4f441f679542",
+  "options": {
+    "includeGrammarEvidence": true,
+    "includeAdditionalRoleHeuristics": true,
+    "includeWordConstructions": true,
+    "includeNominalConstructions": true,
+    "includeSubordinateCommaDiagnostics": true,
+    "includeFragmentDiagnostics": true,
+    "includeSpacingDiagnostics": true,
+    "includeUnknownContextProperNames": false
+  },
+  "surfaceAmbiguousReasonsInWarnings": [
+    "disjoint_subject_predicate_locus"
+  ],
+  "independent59": {
+    "dataset": "packaging/evaluation/independent-59.v1.tsv",
+    "udpipeConllu": "packaging/evaluation/udpipe-independent-59.v1.conllu",
+    "totals": {
+      "sentences": 59,
+      "words": 381,
+      "bgPredicateResolved": 44
+    },
+    "roleGold": {
+      "sentences": 25,
+      "predicateOk": 25,
+      "predicateWrong": 0,
+      "predicateNone": 0,
+      "subjectGoldSentences": 23,
+      "subjectOk": 23,
+      "subjectWrong": 0,
+      "subjectNone": 0,
+      "noSubjectGoldSentences": 2,
+      "noSubjectSpurious": 0
+    },
+    "errorControls": {
+      "total": 34,
+      "hitOnTarget": 33,
+      "hitOnTargetExactDiagnostic": 32,
+      "hitOnTargetAmbiguousDisjoint": 1,
+      "hitElsewhere": 0,
+      "conditionalOnly": 1,
+      "silent": 0,
+      "sentencesWithExtraWarning": 0,
+      "extraWarningsTotal": 0,
+      "extraWarningsByCode": {},
+      "byKind": {
+        "AN": {
+          "total": 8,
+          "hitOnTarget": 8,
+          "hitOnTargetExactDiagnostic": 8,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "ART": {
+          "total": 8,
+          "hitOnTarget": 8,
+          "hitOnTargetExactDiagnostic": 8,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "AUX": {
+          "total": 3,
+          "hitOnTarget": 3,
+          "hitOnTargetExactDiagnostic": 3,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "PRED": {
+          "total": 5,
+          "hitOnTarget": 4,
+          "hitOnTargetExactDiagnostic": 4,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 1,
+          "silent": 0
+        },
+        "SV": {
+          "total": 10,
+          "hitOnTarget": 10,
+          "hitOnTargetExactDiagnostic": 9,
+          "hitOnTargetAmbiguousDisjoint": 1,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        }
+      }
+    },
+    "cleanControls": {
+      "sentences": 25,
+      "words": 172,
+      "sentencesWithGrammarWarning": 0,
+      "grammarWarningsTotal": 0,
+      "grammarWarningsPer1000Words": 0,
+      "byCode": {}
+    },
+    "unassessedAndAmbiguity": {
+      "sentences": 59,
+      "grammarAmbiguousMatchesTotal": 21,
+      "byAmbiguousReason": {
+        "competing_nominal_construction": 8,
+        "competing_predicate_group": 4,
+        "competing_predicative_role": 2,
+        "disjoint_subject_predicate_locus": 1,
+        "unspecified": 6
+      },
+      "grammarUnassessedMatchesTotal": 0,
+      "byUnassessedReason": {},
+      "bySyntaxRoute": {
+        "Abstained": 15,
+        "Selected": 29,
+        "SourceScan": 15
+      },
+      "bySyntaxStatus": {
+        "Calculated": 59
+      },
+      "unavailableChecksTotal": 61,
+      "byUnavailableCheck": {
+        "article.intransitive_animate:typed_Animacy_and_Transitivity_unavailable": 59,
+        "subordinate_comma:reviewed_marker_authority_unavailable": 2
+      }
+    },
+    "udpipeComparison": {
+      "udpipeConllu": "packaging/evaluation/udpipe-independent-59.v1.conllu",
+      "udVerbalSentences": 59,
+      "bgPredicateWhenUdVerbal": 44,
+      "bgMissingWhenUdVerbal": 15,
+      "sameMainPredicate": 44,
+      "sameMainPredicateOverUdVerbalPct": 74.58,
+      "sameMainPredicateOverBothResolvedPct": 100,
+      "subjectAmongSameMainPredicate": {
+        "udHasNsubj": 41,
+        "bothHaveSubject": 36,
+        "sameSubject": 35,
+        "sameSubjectOverUdNsubjPct": 85.37,
+        "sameSubjectOverBothPct": 97.22,
+        "bgOnlySubject": 0,
+        "udOnlySubject": 5,
+        "neitherSubject": 3
+      },
+      "udpipeSixRuleBaseline": {
+        "rSentences": 25,
+        "rPredicateOk": 25,
+        "rSubjectOk": 22,
+        "cleanSentences": 25,
+        "cleanSentencesFlagged": 0,
+        "cleanFlagsTotal": 0,
+        "errorTotal": 34,
+        "errorHitOnTarget": 30,
+        "errorHitElsewhere": 0,
+        "errorSilent": 4,
+        "errorByKind": {
+          "AN": {
+            "total": 8,
+            "hitOnTarget": 7,
+            "hitElsewhere": 0,
+            "silent": 1
+          },
+          "ART": {
+            "total": 8,
+            "hitOnTarget": 6,
+            "hitElsewhere": 0,
+            "silent": 2
+          },
+          "AUX": {
+            "total": 3,
+            "hitOnTarget": 3,
+            "hitElsewhere": 0,
+            "silent": 0
+          },
+          "PRED": {
+            "total": 5,
+            "hitOnTarget": 5,
+            "hitElsewhere": 0,
+            "silent": 0
+          },
+          "SV": {
+            "total": 10,
+            "hitOnTarget": 9,
+            "hitElsewhere": 0,
+            "silent": 1
+          }
+        }
+      }
+    }
+  },
+  "edgeAndAmbiguityControls": {
+    "dataset": "packaging/evaluation/edge-and-ambiguity-controls.v1.tsv",
+    "udpipeConllu": null,
+    "totals": {
+      "sentences": 30,
+      "words": 126,
+      "bgPredicateResolved": 21
+    },
+    "roleGold": null,
+    "errorControls": {
+      "total": 18,
+      "hitOnTarget": 17,
+      "hitOnTargetExactDiagnostic": 15,
+      "hitOnTargetAmbiguousDisjoint": 2,
+      "hitElsewhere": 0,
+      "conditionalOnly": 0,
+      "silent": 1,
+      "sentencesWithExtraWarning": 0,
+      "extraWarningsTotal": 0,
+      "extraWarningsByCode": {},
+      "byKind": {
+        "AMBIG_DISJOINT_SV": {
+          "total": 2,
+          "hitOnTarget": 2,
+          "hitOnTargetExactDiagnostic": 0,
+          "hitOnTargetAmbiguousDisjoint": 2,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "COUNT_NOUN": {
+          "total": 1,
+          "hitOnTarget": 1,
+          "hitOnTargetExactDiagnostic": 1,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "JOINED_NEG": {
+          "total": 1,
+          "hitOnTarget": 1,
+          "hitOnTargetExactDiagnostic": 1,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "MULTI_AN_ART": {
+          "total": 2,
+          "hitOnTarget": 2,
+          "hitOnTargetExactDiagnostic": 2,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "MULTI_SV_ART": {
+          "total": 1,
+          "hitOnTarget": 1,
+          "hitOnTargetExactDiagnostic": 1,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "PRON_CASE": {
+          "total": 2,
+          "hitOnTarget": 2,
+          "hitOnTargetExactDiagnostic": 2,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "REL_CLAUSE": {
+          "total": 2,
+          "hitOnTarget": 1,
+          "hitOnTargetExactDiagnostic": 1,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 1
+        },
+        "REL_MATRIX_SV": {
+          "total": 1,
+          "hitOnTarget": 1,
+          "hitOnTargetExactDiagnostic": 1,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "SUBORD_FUTURE_SV": {
+          "total": 3,
+          "hitOnTarget": 3,
+          "hitOnTargetExactDiagnostic": 3,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        },
+        "SURNAME_SV": {
+          "total": 3,
+          "hitOnTarget": 3,
+          "hitOnTargetExactDiagnostic": 3,
+          "hitOnTargetAmbiguousDisjoint": 0,
+          "hitElsewhere": 0,
+          "conditionalOnly": 0,
+          "silent": 0
+        }
+      }
+    },
+    "cleanControls": {
+      "sentences": 12,
+      "words": 50,
+      "sentencesWithGrammarWarning": 0,
+      "grammarWarningsTotal": 0,
+      "grammarWarningsPer1000Words": 0,
+      "byCode": {}
+    },
+    "unassessedAndAmbiguity": {
+      "sentences": 30,
+      "grammarAmbiguousMatchesTotal": 2,
+      "byAmbiguousReason": {
+        "disjoint_subject_predicate_locus": 2
+      },
+      "grammarUnassessedMatchesTotal": 0,
+      "byUnassessedReason": {},
+      "bySyntaxRoute": {
+        "Abstained": 8,
+        "Selected": 13,
+        "SourceScan": 9
+      },
+      "bySyntaxStatus": {
+        "Calculated": 30
+      },
+      "unavailableChecksTotal": 31,
+      "byUnavailableCheck": {
+        "article.intransitive_animate:typed_Animacy_and_Transitivity_unavailable": 30,
+        "fragment:predicate_absence_unproven": 1
+      }
+    },
+    "udpipeComparison": null
+  }
+}

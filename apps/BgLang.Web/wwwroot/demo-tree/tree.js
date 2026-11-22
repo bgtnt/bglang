@@ -196,7 +196,8 @@ function draw() {
       ui.punctuation.hidden = commas.length === 0;
       if (commas.length) {
         const row = commas[0];
-        ui.punctuation.textContent = commas.length === 1 ? "Провери запетаята пред „" + job.text.slice(row.start, row.start + row.length) + "“" :
+        ui.punctuation.textContent = commas.length === 1 ? (job.text.slice(row.start, row.start + row.length) === "," ?
+          "Провери излишната запетая" : "Провери запетаята пред „" + job.text.slice(row.start, row.start + row.length) + "“") :
           "Провери запетаите (" + commas.length + ")";
         ui.punctuation.onclick = () => {
           if (currentResult() && snapshot.job === job) placeEditorRange(row.start, row.length);
