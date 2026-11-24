@@ -13,6 +13,7 @@ namespace BgLang.Core;
 internal enum VerbalComplexKind
 {
     SyntheticFinite,
+    Imperative,
     Future,
     DaConstruction,
     FutureInPast,
@@ -94,6 +95,22 @@ internal sealed record VerbalComplex(
     bool InvariantCarrier,
     int[] BridgeWordIndices)
 {
+    internal bool IsImperativeCarrier => Kind == VerbalComplexKind.Imperative;
+
+    internal CliticCluster CarrierClitics()
+    {
+        CliticCluster pre = PreCarrierClitics, post = HasDaComplement ? CliticCluster.Empty : PostDaOrAuxClitics;
+        return new(
+            pre.FirstWordIndex >= 0 ? pre.FirstWordIndex : post.FirstWordIndex,
+            post.LastWordIndex >= 0 ? post.LastWordIndex : pre.LastWordIndex,
+            pre.NegationWordIndex,
+            pre.InterrogativeLiWordIndex >= 0 ? pre.InterrogativeLiWordIndex : post.InterrogativeLiWordIndex,
+            pre.ReflexiveWordIndex >= 0 ? pre.ReflexiveWordIndex : post.ReflexiveWordIndex,
+            pre.HasReflexiveSe || post.HasReflexiveSe, pre.PostposedSe || post.PostposedSe,
+            pre.DativeCliticWordIndex >= 0 ? pre.DativeCliticWordIndex : post.DativeCliticWordIndex,
+            CarrierAccusativeCliticWordIndex, CarrierAccusativeCliticReadings);
+    }
+
     internal bool HasFutureMarker =>
         FutureParticleWordIndex >= 0 ||
         Kind is VerbalComplexKind.Future or VerbalComplexKind.FuturePerfect;
@@ -175,12 +192,23 @@ internal static class VerbalComplexBinder
             if (s.Quoted) continue;
             if (s.Word.CanonicalText == "да") break;
 
+            // A finite/imperative homograph keeps its existing indicative alternatives.
+            // Only an exact, exclusively imperative inventory proves this carrier's mood.
+            if (SentenceClauseMap.HasPureImperativeReading(s))
+                return BindImperativeComplex(map, clause, p, ct);
+
             int[] finite = SentenceClauseMap.FiniteReadings(s);
             if (finite.Length == 0) continue;
 
+            // The resumed carrier can disambiguate a pronoun such as Вие across an inserted clause.
+            if (InterruptedPersonalSubjectReadings(map, idx, p, ct).Length > 0)
+                continue;
+
             // Skip clitic/particle tokens that retained a secondary verb reading before an adjacent real verb or active -л participle.
             if (s.Word.CanonicalText is "ще" or "си" or "ми" && p + 1 < idx.Length &&
-                (SentenceClauseMap.HasFiniteReading(slots[idx[p + 1]]) ||
+                (SentenceClauseMap.HasFiniteReading(slots[idx[p + 1]]) &&
+                    !(s.Word.CanonicalText == "си" && slots[idx[p + 1]].Word.CanonicalText is "ми" or "си") ||
+                 SentenceClauseMap.HasPureImperativeReading(slots[idx[p + 1]]) ||
                  s.Word.CanonicalText == "ще" && HasUpcomingActiveParticipleInClause(map, idx, p + 1, ct)))
                 continue;
 
@@ -338,6 +366,132 @@ internal static class VerbalComplexBinder
         }
 
         return null;
+    }
+
+    internal static int[] InterruptedPersonalSubjectReadings(
+        SentenceClauseMap map, int[] indices, int subjectPos, CancellationToken ct)
+    {
+        if (subjectPos < 0 || subjectPos + 1 >= indices.Length ||
+            subjectPos > 0 && !(subjectPos == 1 && SentenceClauseMap.IsCoordinatingConjunction(map.Slots[indices[0]])))
+            return [];
+        WordSlot subject = map.Slots[indices[subjectPos]];
+        if (!map.HasDelimitedParentheticalBetween(subject.Index, indices[subjectPos + 1], ct)) return [];
+        int[] readings = subject.Active.Where(r => Guard.LicensedSubject(subject.Word.CanonicalText, subject.Word.Readings[r])).ToArray();
+        if (readings.Length == 0 || !subject.Active.All(r => Guard.LicensedSubject(subject.Word.CanonicalText, subject.Word.Readings[r]) ||
+                subject.Word.Readings[r].Features.VerbForm == MorphologicalVerbForm.Finite &&
+                Guard.IsPersonalPredicate(subject.Word.Readings[r].Features) && SentenceClauseMap.IsCleanOrBenignLegacyVerb(subject.Word.Readings[r])))
+            return [];
+        for (int p = subjectPos + 1; p < indices.Length; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot carrier = map.Slots[indices[p]];
+            if (carrier.Quoted || !SentenceClauseMap.IsExactWord(carrier) ||
+                p > subjectPos + 1 && (indices[p] != indices[p - 1] + 1 || !map.AreSpaceBridged(indices[p - 1], indices[p], ct)))
+                return [];
+            if (BulgarianFunctionWords.HasAny(carrier.Word.CanonicalText, FunctionWordClasses.PreVerbalClauseBridge))
+                continue;
+            return carrier.Active.Length > 0 && carrier.Active.All(r =>
+                    carrier.Word.Readings[r].Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative &&
+                    Guard.IsPersonalPredicate(carrier.Word.Readings[r].Features) && SentenceClauseMap.IsCleanOrBenignLegacyVerb(carrier.Word.Readings[r])) &&
+                readings.Any(r => carrier.Active.Any(v => Guard.PersonNumberTupleMatches(
+                    (subject.Word.Readings[r].Features.Person, subject.Word.Readings[r].Features.Number),
+                    (carrier.Word.Readings[v].Features.Person, carrier.Word.Readings[v].Features.Number))))
+                ? readings : [];
+        }
+        return [];
+    }
+
+    private static VerbalComplex? BindImperativeComplex(
+        SentenceClauseMap map, ClauseSpan clause, int carrierPos, CancellationToken ct)
+    {
+        int[] idx = clause.WordIndices;
+        int carrier = idx[carrierPos];
+        CliticCluster pre = BindPreVerbalCliticsInClause(map, idx, clause.BodyStartPos, carrierPos,
+            out int first, out int future, ct);
+        if (future >= 0) return null;
+
+        int last = carrier, firstClitic = -1, reflexive = -1, dative = -1, accusative = -1, li = -1;
+        int[] accReadings = [];
+        bool hasSe = false;
+        for (int p = carrierPos + 1; p < idx.Length; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot slot = map.Slots[idx[p]];
+            if (slot.Quoted || !map.AreSpaceBridged(idx[p - 1], idx[p], ct)) break;
+            string c = slot.Word.CanonicalText;
+            if (c == "се") { reflexive = idx[p]; hasSe = true; }
+            else if (c == "си") reflexive = idx[p];
+            else if (c == "ли") li = idx[p];
+            else if (IsVerbalClitic(slot, map.Slots[idx[p - 1]], out int[] acc))
+            {
+                if (acc.Length > 0) { accusative = idx[p]; accReadings = acc; }
+                else dative = idx[p];
+            }
+            else break;
+            if (firstClitic < 0) firstClitic = idx[p];
+            last = idx[p];
+        }
+        CliticCluster post = new(firstClitic, firstClitic >= 0 ? last : -1, -1, li,
+            reflexive, hasSe, false, dative, accusative, accReadings);
+        int firstPos = Array.IndexOf(idx, first);
+        int lastPos = Array.IndexOf(idx, last);
+        bool prePronoun = pre.ReflexiveWordIndex >= 0 || pre.DativeCliticWordIndex >= 0 || pre.AccusativeCliticWordIndex >= 0;
+        bool postPronoun = reflexive >= 0 || dative >= 0 || accusative >= 0;
+        if (prePronoun && postPronoun || pre.NegationWordIndex >= 0 && postPronoun ||
+            prePronoun && pre.NegationWordIndex < 0 &&
+                (firstPos <= 0 || !map.AreSpaceBridged(idx[firstPos - 1], first, ct)) ||
+            !IsLicensedImperativeCluster(map, idx, firstPos, carrierPos - 1, preverbal: true, ct) ||
+            !IsLicensedImperativeCluster(map, idx, carrierPos + 1, lastPos, preverbal: false, ct))
+            return null;
+        int[] readings = map.Slots[carrier].Active;
+        return new(VerbalComplexKind.Imperative, clause.ClauseId, first, carrier, carrier, last,
+            -1, -1, readings, readings, pre, post, [],
+            CopularCarrier: readings.Any(r => TextPredicateLinkAnalyzer.CopularLemma(map.Slots[carrier].Word.Readings[r].Lemma)),
+            ImpersonalModal: false, InvariantCarrier: false, BridgeWordIndices: []);
+    }
+
+    private static bool IsLicensedImperativeCluster(
+        SentenceClauseMap map, int[] idx, int from, int to, bool preverbal, CancellationToken ct)
+    {
+        bool dative = false, accusative = false, reflexive = false, li = false;
+        for (int p = from; p <= to; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot slot = map.Slots[idx[p]];
+            string c = slot.Word.CanonicalText;
+            if (c == "не")
+            {
+                if (!preverbal || p != from) return false;
+                continue;
+            }
+            if (c == "ли")
+            {
+                if (li || dative || accusative || reflexive ||
+                    preverbal && (p == from || map.Slots[idx[p - 1]].Word.CanonicalText != "не"))
+                    return false;
+                li = true;
+                continue;
+            }
+            if (c is "се" or "си")
+            {
+                if (reflexive || accusative) return false;
+                reflexive = true;
+                if (c == "се") accusative = true;
+                continue;
+            }
+            if (!IsVerbalClitic(slot, p > 0 ? map.Slots[idx[p - 1]] : null, out int[] acc)) return false;
+            if (acc.Length > 0)
+            {
+                if (accusative) return false;
+                accusative = true;
+            }
+            else
+            {
+                if (dative || accusative) return false;
+                dative = true;
+            }
+        }
+        return true;
     }
 
     /// <summary>

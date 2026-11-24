@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using BgLang.Contracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -141,6 +142,143 @@ public sealed class SyntaxHubHttpTests
             int predicate = role.GetProperty("contextTokenIndices").EnumerateArray().Single().GetInt32();
             Assert.AreEqual("разговаряше", tree.GetProperty("tokens")[predicate].GetProperty("text").GetString());
             Assert.IsFalse(tree.GetProperty("edges").EnumerateArray().Any(e => e.GetProperty("label").GetString() == "selected_subject"));
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", deadline.Token);
+        });
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public async Task SignalR_governed_nominal_roles_and_future_agreement_reach_the_wire()
+    {
+        await ContextCompositionHttpTests.WithPackage(async (_, _, client) =>
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+            using var socket = new ClientWebSocket();
+            socket.Options.SetRequestHeader("Origin", client.BaseAddress!.GetLeftPart(UriPartial.Authority));
+            var uri = new UriBuilder(new Uri(client.BaseAddress, "/hubs/syntax")) { Scheme = "ws" };
+            await socket.ConnectAsync(uri.Uri, deadline.Token);
+            await Send(socket, "{\"protocol\":\"json\",\"version\":1}", deadline.Token);
+            Assert.AreEqual("{}", await Read(socket, deadline.Token));
+
+            int revision = 100;
+            foreach (string text in new[]
+            {
+                "С един много добър човек разговаряше тя.",
+                "Разговаряше тя с един много добър човек."
+            })
+            {
+                string invocation = (++revision).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                await Send(socket, JsonSerializer.Serialize(new { type = 1, invocationId = invocation, target = "Analyze", arguments = new object[] { revision, text } }), deadline.Token);
+                using JsonDocument answer = await Completion(socket, invocation, deadline.Token);
+                JsonElement result = answer.RootElement.GetProperty("result");
+                Assert.AreEqual(revision, result.GetProperty("revision").GetInt32());
+                JsonElement tree = result.GetProperty("tree");
+                JsonElement[] subjects = tree.GetProperty("tokens").EnumerateArray().Where(token =>
+                    token.GetProperty("roles").EnumerateArray().Any(role => role.GetProperty("role").GetString() == "Subject")).ToArray();
+                Assert.HasCount(1, subjects, text);
+                JsonElement subject = subjects[0];
+                Assert.AreEqual(("тя", text.IndexOf("тя", StringComparison.Ordinal), 2),
+                    (subject.GetProperty("text").GetString(), subject.GetProperty("start").GetInt32(), subject.GetProperty("length").GetInt32()), text);
+                Assert.IsFalse(subject.GetProperty("roles").EnumerateArray().Any(role =>
+                    role.GetProperty("role").GetString() is "Object" or "PrepositionalObject"), text);
+                JsonElement subjectRole = subject.GetProperty("roles").EnumerateArray().Single(role =>
+                    role.GetProperty("ruleId").GetString() == "BasicSubject");
+                Assert.AreEqual("candidate", subjectRole.GetProperty("status").GetString(), text);
+                int predicate = subjectRole.GetProperty("contextTokenIndices").EnumerateArray().Single().GetInt32();
+                Assert.AreEqual("разговаряше", tree.GetProperty("tokens")[predicate].GetProperty("text").GetString()!.ToLowerInvariant(), text);
+                if (text.StartsWith("Разговаряше", StringComparison.Ordinal))
+                    CollectionAssert.AreEqual(new[] { "с", "един", "много", "добър", "човек" },
+                        tree.GetProperty("tokens").EnumerateArray().Where(token => token.GetProperty("roles").EnumerateArray()
+                            .Any(role => role.GetProperty("ruleId").GetString() == "BasicPrepositionalObject"))
+                            .Select(token => token.GetProperty("text").GetString()).ToArray(), text);
+            }
+
+            const string wrong = "С един много добър човек тя ще разговаряме.";
+            const string corrected = "С един много добър човек тя ще разговаря.";
+            foreach (string text in new[] { wrong, corrected })
+            {
+                string invocation = (++revision).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                await Send(socket, JsonSerializer.Serialize(new { type = 1, invocationId = invocation, target = "Analyze", arguments = new object[] { revision, text } }), deadline.Token);
+                using JsonDocument answer = await Completion(socket, invocation, deadline.Token);
+                JsonElement tree = answer.RootElement.GetProperty("result").GetProperty("tree");
+                JsonElement[] warnings = tree.GetProperty("diagnostics").EnumerateArray().Where(d =>
+                    d.GetProperty("code").GetString() == "productive_morphology_agreement_mismatch").ToArray();
+                if (text == wrong)
+                {
+                    Assert.HasCount(1, warnings, text);
+                    JsonElement warning = warnings[0];
+                    Assert.AreEqual((wrong.IndexOf("разговаряме", StringComparison.Ordinal), "разговаряме".Length),
+                        (warning.GetProperty("start").GetInt32(), warning.GetProperty("length").GetInt32()), text);
+                    Assert.AreEqual("clause_fusion_agreement.v1", warning.GetProperty("ruleId").GetString(), text);
+                }
+                else
+                {
+                    Assert.IsEmpty(warnings, text);
+                    Assert.IsFalse(tree.GetProperty("diagnostics").EnumerateArray().Any(d =>
+                        d.GetProperty("code").GetString()!.EndsWith("_mismatch", StringComparison.Ordinal)), text);
+                }
+            }
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", deadline.Token);
+        });
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public async Task SignalR_coordinated_predicates_and_bound_clitics_reach_the_existing_tree_route()
+    {
+        await ContextCompositionHttpTests.WithPackage(async (_, _, client) =>
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+            using var socket = new ClientWebSocket();
+            socket.Options.SetRequestHeader("Origin", client.BaseAddress!.GetLeftPart(UriPartial.Authority));
+            var uri = new UriBuilder(new Uri(client.BaseAddress, "/hubs/syntax")) { Scheme = "ws" };
+            await socket.ConnectAsync(uri.Uri, deadline.Token);
+            await Send(socket, "{\"protocol\":\"json\",\"version\":1}", deadline.Token);
+            Assert.AreEqual("{}", await Read(socket, deadline.Token));
+
+            foreach ((string text, string first, string second) in new[]
+            {
+                ("Много ви моля, успокойте се и ми се доверете.", "успокойте", "доверете"),
+                ("Аз чета и пиша.", "чета", "пиша")
+            })
+            {
+                await Send(socket, JsonSerializer.Serialize(new { type = 1, invocationId = "coordinated",
+                    target = "Analyze", arguments = new object[] { 200, text } }), deadline.Token);
+                using JsonDocument answer = await Completion(socket, "coordinated", deadline.Token);
+                JsonElement tree = answer.RootElement.GetProperty("result").GetProperty("tree");
+                JsonElement[] tokens = tree.GetProperty("tokens").EnumerateArray().ToArray();
+                JsonElement[] edges = tree.GetProperty("edges").EnumerateArray().ToArray();
+                JsonElement Word(string word, bool last = false)
+                {
+                    MatchCollection matches = Regex.Matches(text, $@"\b{Regex.Escape(word)}\b");
+                    int expectedStart = matches[last ? matches.Count - 1 : 0].Index;
+                    return tokens.Single(token => token.GetProperty("text").GetString() == word &&
+                        token.GetProperty("start").GetInt32() == expectedStart);
+                }
+                int Index(JsonElement token) => token.GetProperty("index").GetInt32();
+                bool HasRole(JsonElement token, string role) => token.GetProperty("roles").EnumerateArray().Any(row =>
+                    row.GetProperty("source").GetString() == "syntax" && row.GetProperty("role").GetString() == role);
+                void Relation(JsonElement target, JsonElement carrier, string label) => Assert.IsTrue(edges.Any(edge =>
+                    edge.GetProperty("source").GetString() == "syntax" && edge.GetProperty("label").GetString() == label &&
+                    edge.GetProperty("from").GetInt32() == Index(target) && edge.GetProperty("to").GetInt32() == Index(carrier)),
+                    $"{text}: expected {target.GetProperty("text")} → {carrier.GetProperty("text")} ({label}).");
+
+                Assert.IsTrue(HasRole(Word(first), "Predicate"), text);
+                Assert.IsTrue(HasRole(Word(second), "Predicate"), text);
+                Relation(Word(second), Word(first), "coordinated_predicate");
+                Relation(Word("и"), Word(second), "coordinating_conjunction");
+                Assert.AreEqual("partial", tree.GetProperty("status").GetString(), text);
+                if (first == "успокойте")
+                {
+                    Assert.IsTrue(HasRole(Word("ми"), "Object"), text);
+                    Relation(Word("ми"), Word(second), "object_clitic");
+                    Assert.IsTrue(HasRole(Word("се"), "ReflexiveClitic"), text);
+                    Assert.IsTrue(HasRole(Word("се", last: true), "ReflexiveClitic"), text);
+                    Relation(Word("се"), Word(first), "bound_reflexive_clitic");
+                    Relation(Word("се", last: true), Word(second), "bound_reflexive_clitic");
+                    Assert.IsFalse(edges.Any(edge => edge.GetProperty("source").GetString() == "syntax" &&
+                        edge.GetProperty("from").GetInt32() == Index(Word("ми")) &&
+                        edge.GetProperty("to").GetInt32() == Index(Word("се", last: true))), text);
+                }
+            }
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", deadline.Token);
         });
     }

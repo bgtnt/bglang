@@ -1419,6 +1419,22 @@ test('LAB-SYNTAX-WORDING-01: repeated roles get a neutral note; nothing is calle
 const role = (name, start, length, targets = [{tokenIndex: 0, basis: 'TypedFeatures', readings: []}]) =>
   ({role: name, ruleId: 'Rule' + name + start, start, length, targets, context: []});
 
+test('LAB-SYNTAX-REFLEXIVE-01: a bound reflexive role passes the wire validator and keeps its Bulgarian name', async () => {
+  const text = 'Успокойте се.';
+  const syntax = {version:'bounded-syntax-roles.v2',available:true,additionalGroups:null,sentences:[
+    {start:0,length:text.length,status:'Calculated',route:'SourceScan',predicateTokenIndex:0,candidates:[
+      role('Predicate',0,9),
+      {...role('ReflexiveClitic',10,2,[{tokenIndex:1,basis:'TypedFeatures',readings:[{tokenIndex:1,completeReadingIndex:0}]}]),
+        ruleId:'BoundReflexiveClitic',context:[{tokenIndex:0,basis:'TypedFeatures',readings:[{tokenIndex:0,completeReadingIndex:0}]}]}]}]};
+  const response = analysis(text,{syntax});
+  assert.equal(responseShapeValid(response),true);
+  const env = await boot(text);
+  await respond(env,env.host.calls[0],200,response);
+  const roles = env.$('lab-sentences').querySelectorAll('ul').find(node => node.className === 'roles');
+  assert.match(roles.textContent,/Възвратна глаголна частица: „се“/);
+  assert.doesNotMatch(roles.textContent,/ReflexiveClitic/);
+});
+
 test('stage 3: possible roles keep competing candidates apart and use careful names', async () => {
   const text = 'Децата са учители в парка. Тук.';
   const syntax = {version: 'bounded-syntax-roles.v2', available: true, additionalGroups: null, sentences: [

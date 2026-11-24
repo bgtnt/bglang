@@ -51,6 +51,34 @@ test('draws single-target role support separately from syntax, excluding self, m
   assert.equal(group.linkCount,0);
   assert.deepEqual(group.edges.map(e=>[e.from,e.to,e.status,e.label]),[[2,1,'evidence','role_support_Object']]);
 });
+test('canonical bound relations keep their supplied direction without a reversed support duplicate', () => {
+  const tokens = ['успокойте','се','и','ми','се','доверете'].map((text,index) =>
+    ({index,text,sentence:0,kind:'Word',roles:[]}));
+  const role = (role, alternative, carrier) =>
+    ({source:'syntax',role,alternative,contextTokenIndices:[carrier]});
+  tokens[0].roles.push({source:'syntax',role:'Predicate',alternative:'main'});
+  tokens[1].roles.push(role('ReflexiveClitic','first-se',0));
+  tokens[3].roles.push(role('Object','mi',5));
+  tokens[4].roles.push(role('ReflexiveClitic','second-se',5));
+  tokens[5].roles.push({...role('Predicate','coordinated',0),contextTokenIndices:[0,2]});
+  const edges = [
+    {from:5,to:0,label:'coordinated_predicate',alternative:'coordinated'},
+    {from:2,to:5,label:'coordinating_conjunction',alternative:'coordinated'},
+    {from:1,to:0,label:'bound_reflexive_clitic',alternative:'first-se'},
+    {from:3,to:5,label:'object_clitic',alternative:'mi'},
+    {from:4,to:5,label:'bound_reflexive_clitic',alternative:'second-se'}
+  ].map(edge => ({...edge,source:'syntax',status:'candidate'}));
+  const group = groupTree({tokens,edges,sentences:[{index:0}]}).get(0);
+  assert.deepEqual(group.edges,edges,'The server-projected relations need no client grammar or reversed support arc.');
+  assert.equal(group.linkCount,5);
+  assert.deepEqual(group.tokens.filter(token => token.roles.some(role => role.role === 'Predicate'))
+    .map(token => token.index),[0,5]);
+
+  tokens[3].roles.push(role('Object','other-evidence',0));
+  const extra = groupTree({tokens,edges,sentences:[{index:0}]}).get(0);
+  assert.deepEqual(extra.edges.at(-1),{from:0,to:3,label:'role_support_Object',status:'evidence',
+    source:'syntax',ruleId:undefined,alternative:'other-evidence'},'An unrelated candidate retains its evidence.');
+});
 test('UTF-16 aligned preview retains untouched endpoints and drops an edited repeated word', () => {
   const text = 'Тя 📚 чете чете.';
   const tokens = Array.from(text.matchAll(/[^\s.]+|\./gu), (m,i) =>

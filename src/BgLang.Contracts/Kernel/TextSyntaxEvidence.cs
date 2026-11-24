@@ -2,13 +2,15 @@ using System.Text.Json.Serialization;
 
 namespace BgLang.Contracts;
 
-public enum TextSyntaxRole { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive }
+public enum TextSyntaxRole { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive, ReflexiveClitic }
 
 /// <summary>Candidate roles and their explicit source basis; this is not a complete parse.</summary>
 public sealed record TextSyntaxEvidence(string Version, bool Available, string? UnavailableReason,
     IReadOnlyList<TextSyntaxSentence> Sentences, IReadOnlyList<TextSyntaxGroupStatus>? AdditionalGroups);
 
-/// <summary>The predicate index names the first emitted main predicate; it is null when no predicate is emitted.</summary>
+/// <summary>PredicateTokenIndex identifies the main predicate, or is null when none is available.
+/// Coordinated predicates appear as additional candidates. Their context identifies the main predicate
+/// followed by the coordinating conjunction when a lexical reading supports it.</summary>
 public sealed record TextSyntaxSentence(int Start, int Length, string Status, string Route,
     int? PredicateTokenIndex, IReadOnlyList<TextSyntaxCandidate> Candidates);
 

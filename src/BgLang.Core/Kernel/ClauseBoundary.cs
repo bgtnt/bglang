@@ -16,6 +16,7 @@ internal enum ClauseBoundaryKind
 {
     SentenceInitial,
     ParentheticalRelative,
+    ParentheticalCourtesy,
     Subordinator,
     PrepositionalSubordinator,
     PreposedSubordinatorComma,
@@ -45,7 +46,8 @@ internal sealed record WordSlot(
     bool ComparativeGraphModifier,
     (MorphologicalNumber Number, MorphologicalGender? Gender, MorphologicalArticle Article)? HyphenatedCompoundNominal = null,
     (MorphologicalNumber Number, MorphologicalGender? Gender)? DerivedPersonName = null,
-    bool PersonTitlePrefix = false);
+    bool PersonTitlePrefix = false,
+    int RequestVerbWordIndex = -1);
 
 internal sealed record ClauseSpan(
     int ClauseId,
@@ -307,6 +309,33 @@ internal sealed class SentenceClauseMap
         return false;
     }
 
+    // Bridge only an entire, already identified parenthetical at both original comma boundaries.
+    internal bool HasDelimitedParentheticalBetween(int leftWordIndex, int rightWordIndex, CancellationToken ct = default)
+    {
+        if (!AllExactOrDegree || leftWordIndex < 0 || rightWordIndex <= leftWordIndex + 1 ||
+            rightWordIndex >= Slots.Length || Slots[leftWordIndex].Quoted || Slots[rightWordIndex].Quoted ||
+            !IsExactWord(Slots[leftWordIndex]) || !IsExactWord(Slots[rightWordIndex]))
+            return false;
+        foreach (ClauseSpan clause in Clauses)
+        {
+            ct.ThrowIfCancellationRequested();
+            int[] indices = clause.WordIndices;
+            if (clause.Boundary.Kind is not (ClauseBoundaryKind.ParentheticalRelative or ClauseBoundaryKind.ParentheticalCourtesy) ||
+                indices.Length != rightWordIndex - leftWordIndex - 1 ||
+                indices[0] != leftWordIndex + 1 || indices[^1] != rightWordIndex - 1)
+                continue;
+            for (int p = 0; p < indices.Length; p++)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (indices[p] != leftWordIndex + p + 1 || Slots[indices[p]].Quoted || !IsExactWord(Slots[indices[p]]))
+                    return false;
+            }
+            return HasOnlyBoundaryPunctuation(Analysis, Words[leftWordIndex], Words[leftWordIndex + 1], ',') &&
+                HasOnlyBoundaryPunctuation(Analysis, Words[rightWordIndex - 1], Words[rightWordIndex], ',');
+        }
+        return false;
+    }
+
     internal bool IsPrepositionalSubordinatorPrep(int prepWordIndex) =>
         (uint)prepWordIndex < (uint)_prepSubordinatorsByPrep.Length &&
         _prepSubordinatorsByPrep[prepWordIndex].Kind == ClauseBoundaryKind.PrepositionalSubordinator;
@@ -410,11 +439,25 @@ internal sealed class SentenceClauseMap
 
     internal static bool HasFiniteReading(WordSlot slot) => FiniteReadings(slot).Length > 0;
 
-    internal static bool RangeHasFinite(WordSlot[] slots, int[] indices, int fromPos, int toPos)
+    internal static bool HasPureImperativeReading(WordSlot slot)
+    {
+        if (!IsExactWord(slot) || slot.Active.Length == 0) return false;
+        foreach (int index in slot.Active)
+        {
+            var reading = slot.Word.Readings[index];
+            if (reading.Features is not { VerbForm: MorphologicalVerbForm.Imperative, Person: MorphologicalPerson.Second } ||
+                !Guard.IsPersonalPredicate(reading.Features) || !IsCleanOrBenignLegacyVerb(reading)) return false;
+        }
+        return true;
+    }
+
+    private static bool RangeHasClausePredicate(WordSlot[] slots, int[] indices, int fromPos, int toPos, bool includeImperatives)
     {
         for (int i = fromPos; i <= toPos; i++)
-            if (!slots[indices[i]].Quoted && HasFiniteReading(slots[indices[i]]))
-                return true;
+        {
+            WordSlot word = slots[indices[i]];
+            if (!word.Quoted && (HasFiniteReading(word) || includeImperatives && HasPureImperativeReading(word))) return true;
+        }
         return false;
     }
 
@@ -577,15 +620,17 @@ internal sealed class SentenceClauseMap
                 PruneIfNonEmpty(rawActive[i], r => w.Readings[r].Category == Category.Particle);
 
             else if (c == "ми" &&
-                     (prevAdjacent && HasNominalOrDegree(words[i - 1], rawActive[i - 1]) ||
-                      nextAdjacent && (HasVerbReading(words[i + 1], rawActive[i + 1]) ||
+                     (prevAdjacent && HasNominalOrDegree(words[i - 1], rawActive[i - 1]) &&
+                          SentenceHasAnotherVerb(words, rawActive, quoted, i) ||
+                      prevAdjacent && IsPurePersonalVerb(words[i - 1], rawActive[i - 1]) ||
+                      nextAdjacent && (HasUpcomingVerb(words, rawActive, spaceNext, i + 1) ||
                                        words[i + 1].CanonicalText is "да" or "се")))
                 PruneIfNonEmpty(rawActive[i], r => w.Readings[r].Category != Category.Verb);
 
             else if (c == "си" &&
                      (prevAdjacent && HasPureNominal(words[i - 1], rawActive[i - 1]) ||
-                      nextAdjacent && HasVerbReading(words[i + 1], rawActive[i + 1]) &&
-                      prevAdjacent && BulgarianFunctionWords.HasAny(words[i - 1].CanonicalText, FunctionWordClasses.VerbalPrefixParticle)))
+                      prevAdjacent && IsPurePersonalVerb(words[i - 1], rawActive[i - 1]) ||
+                      nextAdjacent && HasUpcomingVerb(words, rawActive, spaceNext, i + 1)))
                 PruneIfNonEmpty(rawActive[i], r => w.Readings[r].Category != Category.Verb);
 
             else if (BulgarianFunctionWords.HasAny(c, FunctionWordClasses.AdpositionHomographPrunable) &&
@@ -703,9 +748,44 @@ internal sealed class SentenceClauseMap
 
         var result = new WordSlot[words.Count];
         for (int i = 0; i < words.Count; i++)
-            result[i] = new(i, words[i], rawActive[i].ToArray(), quoted[i], IsDegreeGraphModifier(words[i]),
-                hyphenCompounds?[i], derivedPersonNames?[i], personTitles?[i] == true);
+        {
+            ct.ThrowIfCancellationRequested();
+            int governor = -1;
+            var active = rawActive[i];
+            if (words[i].CanonicalText is "те" or "ти" or "ви" && RequestCliticBinding(i) is { } binding &&
+                active.Any(r => IsRequestClitic(words[i].Readings[r], binding.Case)))
+            {
+                active.RemoveAll(r => !IsRequestClitic(words[i].Readings[r], binding.Case));
+                governor = binding.Verb;
+            }
+            result[i] = new(i, words[i], active.ToArray(), quoted[i], IsDegreeGraphModifier(words[i]),
+                hyphenCompounds?[i], derivedPersonNames?[i], personTitles?[i] == true, governor);
+        }
         return result;
+
+        (int Verb, MorphologicalCase Case)? RequestCliticBinding(int at)
+        {
+            if (quoted[at] || at == 0 || !spaceNext[at - 1] || quoted[at - 1]) return null;
+            TokenView previous = words[at - 1];
+            bool adjacent = at + 1 < words.Count && spaceNext[at];
+            bool reflexive = adjacent && !quoted[at + 1] && IsRequestReflexive(words[at + 1], rawActive[at + 1]);
+            if (IsRequestVerb(previous, rawActive[at - 1]))
+            {
+                if (reflexive) return (at - 1, MorphologicalCase.Dative);
+                return !adjacent || words[at + 1].CanonicalText is "за" or "да"
+                    ? (at - 1, MorphologicalCase.Accusative) : null;
+            }
+
+            // An object clitic leans on the preceding word. A nominal host can also take a possessive.
+            int verb = at + (reflexive ? 2 : 1);
+            if (!adjacent || verb >= words.Count || !spaceNext[verb - 1] || quoted[verb] ||
+                !IsRequestVerb(words[verb], rawActive[verb]) ||
+                !(IsRequestAdverb(previous, rawActive[at - 1]) ||
+                  rawActive[at - 1].Any(r => Guard.LicensedSubject(previous.CanonicalText, previous.Readings[r]) ||
+                      previous.CanonicalText == "не" && previous.Readings[r].Category == Category.Particle)))
+                return null;
+            return (verb, reflexive ? MorphologicalCase.Dative : MorphologicalCase.Accusative);
+        }
     }
 
     private static void PruneIfNonEmpty(List<int> active, Func<int, bool> predicate)
@@ -980,6 +1060,66 @@ internal sealed class SentenceClauseMap
         return true;
     }
 
+    private static bool IsRequestVerb(TokenView word, IReadOnlyList<int> active) =>
+        !word.UsesGraph && word.Complete && word.CanonicalText == "моля" && active.Any(r => word.Readings[r].Features is
+            { VerbForm: MorphologicalVerbForm.Finite, Person: MorphologicalPerson.First, Number: MorphologicalNumber.Singular });
+
+    private static bool IsRequestReflexive(TokenView word, IReadOnlyList<int> active) =>
+        !word.UsesGraph && word.Complete && word.CanonicalText == "се" &&
+        active.Any(r => word.Readings[r].Category == Category.Particle);
+
+    private static bool IsRequestAdverb(TokenView word, IReadOnlyList<int> active) =>
+        !word.UsesGraph && word.Complete && word.CanonicalText != "не" &&
+        active.Any(r => IsCleanSourceAdverb(word.Readings[r])) &&
+        (BulgarianFunctionWords.IsNominalFocusParticle(word.CanonicalText) || !active.Any(r => word.Readings[r].Category == Category.Noun)) &&
+        !active.Any(r => word.Readings[r].Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative);
+
+    private static bool IsRequestClitic(ReadingView reading, MorphologicalCase grammaticalCase) =>
+        reading.Features.Case == grammaticalCase && Guard.IsShortPersonalCliticReading(reading);
+
+    private static bool IsAntecedentOnlyRelativeTail(
+        TextAnalysis analysis, WordSlot[] slots, int[] indices, int relativePos, bool hasPrefixPredicate,
+        bool[] spaceNext, CancellationToken ct)
+    {
+        int relativeWord = relativePos;
+        if (IsActivePreposition(slots[indices[relativePos]].Word, slots[indices[relativePos]].Active) &&
+            relativePos + 1 < indices.Length)
+            relativeWord++;
+        if (!IsRelativeWord(slots[indices[relativeWord]].Word.CanonicalText) ||
+            !HasOnlyBoundaryPunctuation(analysis, slots[indices[relativePos - 1]].Word, slots[indices[relativePos]].Word, ','))
+            return false;
+        for (int p = 0; p < indices.Length; p++)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (slots[indices[p]].Quoted || !IsExactWord(slots[indices[p]]) ||
+                p > 0 && (indices[p] != indices[p - 1] + 1 || p != relativePos && !spaceNext[indices[p - 1]]))
+                return false;
+        }
+
+        WordSlot first = slots[indices[0]];
+        int[] subject = relativePos == 1
+            ? first.Active.Where(r => Guard.LicensedSubject(first.Word.CanonicalText, first.Word.Readings[r])).ToArray() : [];
+        if (!hasPrefixPredicate)
+        {
+            if (subject.Length > 0 || relativePos == 1 && HasNominalHeadReading(first)) return true;
+            TokenView[] prefix = indices[..relativePos].Select(i => slots[i].Word).ToArray();
+            ContextLanes.NominalPhrase? nominal = ContextLanes.NominalMembers(prefix, prefix.Length - 1, ct,
+                allowAdnominalReadings: true, sentenceInitialFirst: true);
+            return nominal is not null && nominal.Heads.Any(h => h.Attributes.All(rows => rows.Length > 0));
+        }
+
+        // The sole finite homograph of a licensed antecedent (Вие/вия) is not an independent matrix witness.
+        if (subject.Length == 0 || !first.Active.All(r => Guard.LicensedSubject(first.Word.CanonicalText, first.Word.Readings[r]) ||
+                first.Word.Readings[r].Features.VerbForm == MorphologicalVerbForm.Finite &&
+                Guard.IsPersonalPredicate(first.Word.Readings[r].Features) && IsCleanOrBenignLegacyVerb(first.Word.Readings[r])) ||
+            !BulgarianFunctionWords.TryGetRelativeSubjectAxes(slots[indices[relativeWord]].Word.CanonicalText, out var number, out _))
+            return false;
+        return subject.Any(r => first.Word.Readings[r].Features.Number == number &&
+            indices[(relativeWord + 1)..].Any(i => FiniteReadings(slots[i]).Any(v => Guard.PersonNumberTupleMatches(
+                (first.Word.Readings[r].Features.Person, first.Word.Readings[r].Features.Number),
+                (slots[i].Word.Readings[v].Features.Person, slots[i].Word.Readings[v].Features.Number)))));
+    }
+
     private static List<ClauseSpan> SegmentClauses(
         TextAnalysis analysis,
         SentenceSpan sentence,
@@ -1048,11 +1188,12 @@ internal sealed class SentenceClauseMap
             }
             if (closeAfter < 0) continue;
 
-            bool outerFinite = false;
+            bool outerPredicate = false;
             for (int k = 0; k < slots.Length; k++)
-                if ((k < relStart || k > closeAfter) && !extracted[k] && !slots[k].Quoted && HasFiniteReading(slots[k]))
-                { outerFinite = true; break; }
-            if (!outerFinite) continue;
+                if ((k < relStart || k > closeAfter) && !extracted[k] && !slots[k].Quoted &&
+                    (HasFiniteReading(slots[k]) || HasPureImperativeReading(slots[k])))
+                { outerPredicate = true; break; }
+            if (!outerPredicate) continue;
 
             int[] relIndices = Enumerable.Range(relStart, closeAfter - relStart + 1).ToArray();
             for (int k = relStart; k <= closeAfter; k++) extracted[k] = true;
@@ -1095,6 +1236,57 @@ internal sealed class SentenceClauseMap
             i = closeAfter;
         }
 
+        // Set aside the request formula only when the adjacent clause licenses a command.
+        // Bind its original words to a separate clause without changing their lexical inventories.
+        for (int i = 0; i < slots.Length; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            WordSlot request = slots[i];
+            if (extracted[i] || request.Quoted || !IsRequestVerb(request.Word, request.Active))
+                continue;
+            int first = i, last = i;
+            int preClitic = i - 1;
+            if (preClitic > 0 && CanJoin(preClitic, i) && IsRequestReflexive(words[preClitic], slots[preClitic].Active))
+                preClitic--;
+            if (preClitic > 0 && slots[preClitic].RequestVerbWordIndex == i &&
+                CanJoin(preClitic - 1, preClitic) && CanJoin(preClitic, preClitic + 1) &&
+                IsRequestAdverb(words[preClitic - 1], slots[preClitic - 1].Active))
+                first = preClitic - 1;
+            else if (CanJoin(i, i + 1) && slots[i + 1].RequestVerbWordIndex == i)
+                last = CanJoin(i + 1, i + 2) && IsRequestReflexive(words[i + 2], slots[i + 2].Active) ? i + 2 : i + 1;
+            if (first > 0 && !HasOnlyBoundaryPunctuation(analysis, words[first - 1], words[first], ',') ||
+                last + 1 < slots.Length && !HasOnlyBoundaryPunctuation(analysis, words[last], words[last + 1], ','))
+                continue;
+            int previousStart = first - 1;
+            while (previousStart > 0 && spaceNext[previousStart - 1]) previousStart--;
+            if (!HasCommandOnset(last + 1, slots.Length) && !HasCommandOnset(previousStart, first)) continue;
+            int[] formula = Enumerable.Range(first, last - first + 1).ToArray();
+            foreach (int index in formula) extracted[index] = true;
+            parentheticals.Add((formula, new(ClauseBoundaryKind.ParentheticalCourtesy, -1, -1, -1,
+                commaTokenBefore[first > 0 ? first : last + 1], false)));
+        }
+
+        bool CanJoin(int left, int right) => right < slots.Length && spaceNext[left] &&
+            !extracted[left] && !extracted[right] && !slots[left].Quoted && !slots[right].Quoted;
+
+        bool HasCommandOnset(int first, int end)
+        {
+            for (int p = first; p >= 0 && p < end; p++)
+            {
+                ct.ThrowIfCancellationRequested();
+                WordSlot word = slots[p];
+                if (extracted[p] || word.Quoted || !IsExactWord(word) || p > first && !spaceNext[p - 1]) break;
+                if (word.Active.Any(r => word.Word.Readings[r].Features is
+                    { VerbForm: MorphologicalVerbForm.Imperative, Person: MorphologicalPerson.Second } &&
+                    IsCleanOrBenignLegacyVerb(word.Word.Readings[r])))
+                    return word.Active.All(r => word.Word.Readings[r].Category == Category.Verb) &&
+                        !(p + 1 < end && spaceNext[p] && slots[p + 1].Word.CanonicalText == "ли");
+                if (!(p == first && word.Word.CanonicalText is "ти" or "вие") &&
+                    !BulgarianFunctionWords.HasAny(word.Word.CanonicalText, FunctionWordClasses.PreVerbalCliticBridge)) break;
+            }
+            return false;
+        }
+
         int[] remaining = Enumerable.Range(0, slots.Length).Where(idx => !extracted[idx]).ToArray();
         if (remaining.Length == 0)
         {
@@ -1119,6 +1311,7 @@ internal sealed class SentenceClauseMap
             prepByPrep[remaining[initialPos]].Kind == ClauseBoundaryKind.PrepositionalSubordinator;
         ClauseBoundary currentBoundary = InitialSegmentBoundary(slots, remaining, prepByPrep,
             initiallySubordinate ? initialPos : 0);
+        bool antecedentOnlyRelative = false;
 
         for (int p = 1; p < remaining.Length; p++)
         {
@@ -1127,9 +1320,11 @@ internal sealed class SentenceClauseMap
             WordSlot cur = slots[curIdx];
             if (cur.Quoted) continue;
             bool commaBefore = HasCommaBetweenRaw(analysis, slots[prevIdx].Word, cur.Word);
-            bool leftHasVerb = RangeHasFinite(slots, remaining, segStart, p - 1);
-            bool rightHasVerb = RangeHasFinite(slots, remaining, p, remaining.Length - 1);
-            if (!leftHasVerb || !rightHasVerb) continue;
+            bool leftHasVerb = RangeHasClausePredicate(slots, remaining, segStart, p - 1, includeImperatives: true);
+            bool rightHasVerb = RangeHasClausePredicate(slots, remaining, p, remaining.Length - 1, includeImperatives: true);
+            bool relativeFragment = segStart == 0 && commaBefore && rightHasVerb &&
+                IsAntecedentOnlyRelativeTail(analysis, slots, remaining, p, leftHasVerb, spaceNext, ct);
+            if ((!leftHasVerb && !relativeFragment) || !rightHasVerb) continue;
 
             bool prepSubBreak = prepByPrep[curIdx].Kind == ClauseBoundaryKind.PrepositionalSubordinator &&
                 (commaBefore || cur.Word.CanonicalText is "без" or "за" or "преди" or "вместо" or "освен" &&
@@ -1146,9 +1341,10 @@ internal sealed class SentenceClauseMap
                  commaBefore && HasOnlyBoundaryPunctuation(analysis, slots[prevIdx].Word, cur.Word, ',') &&
                  HasNominativeOnlyPostposedPronoun(analysis, sentence, slots, remaining, p, spaceNext));
 
-            if (prepSubBreak || subBreak || coordBreak || preposedSubComma || independentPunctuation)
+            if (prepSubBreak || subBreak || coordBreak || preposedSubComma || independentPunctuation || relativeFragment)
             {
-                bool startedSub = segStart == 0 && initiallySubordinate;
+                antecedentOnlyRelative |= relativeFragment;
+                bool startedSub = antecedentOnlyRelative || segStart == 0 && initiallySubordinate;
                 rawSegments.Add((segStart, p - 1, startedSub, currentBoundary));
                 segStart = p;
 
@@ -1157,9 +1353,10 @@ internal sealed class SentenceClauseMap
                 {
                     currentBoundary = prepByPrep[curIdx] with { CommaTokenIndex = commaTok };
                 }
-                else if (subBreak)
+                else if (subBreak || relativeFragment)
                 {
-                    int introEnd = multiWordSub ? remaining[p + 1] : curIdx;
+                    int introEnd = multiWordSub || relativeFragment && !IsRelativeWord(cur.Word.CanonicalText)
+                        ? remaining[p + 1] : curIdx;
                     currentBoundary = new ClauseBoundary(
                         ClauseBoundaryKind.Subordinator,
                         PrepositionWordIndex: -1,
@@ -1196,11 +1393,11 @@ internal sealed class SentenceClauseMap
             }
         }
 
-        bool lastStartedSub = segStart == 0 && initiallySubordinate;
+        bool lastStartedSub = antecedentOnlyRelative || segStart == 0 && initiallySubordinate;
         rawSegments.Add((segStart, remaining.Length - 1, lastStartedSub, currentBoundary));
 
         int matrixSeg = rawSegments.FindIndex(s => !s.SubordinatorStart);
-        if (matrixSeg < 0) matrixSeg = 0;
+        if (matrixSeg < 0 && !antecedentOnlyRelative) matrixSeg = 0;
 
         List<ClauseSpan> ordered = [];
         int nextClauseId = 0;
@@ -1431,7 +1628,7 @@ internal sealed class SentenceClauseMap
             else if (idx.Length > 2 && idx[0] == 0 && slots[idx[0]].Word.CanonicalText == "разбира" &&
                      slots[idx[1]].Word.CanonicalText == "се" &&
                      idx[1] == idx[0] + 1 && spaceNext[idx[0]] &&
-                     RangeHasFinite(slots, idx, 2, idx.Length - 1))
+                     RangeHasClausePredicate(slots, idx, 2, idx.Length - 1, includeImperatives: false))
             {
                 bodyStart = 2;
             }
@@ -1561,7 +1758,7 @@ internal sealed class SentenceClauseMap
             return false;
         int headPos = conjPos + 1;
         while (headPos < remaining.Length && !HasFiniteReading(slots[remaining[headPos]])) headPos++;
-        if (headPos >= remaining.Length || RangeHasFinite(slots, remaining, headPos + 1, remaining.Length - 1))
+        if (headPos >= remaining.Length || RangeHasClausePredicate(slots, remaining, headPos + 1, remaining.Length - 1, includeImperatives: false))
             return false;
         for (int p = conjPos - 2; p <= headPos; p++)
         {
@@ -1641,7 +1838,9 @@ internal sealed class SentenceClauseMap
         for (int j = start; j < words.Count && j <= start + 3; j++)
         {
             if (!spaceNext[j - 1]) return false;
-            if (HasVerbReading(words[j], active[j])) return true;
+            // A clitic's secondary finite homograph cannot prove its own host
+            // ("Ти си ми приятел" still has the copular carrier "си").
+            if (words[j].CanonicalText is not ("ми" or "си") && HasVerbReading(words[j], active[j])) return true;
             if (!BulgarianFunctionWords.HasAny(words[j].CanonicalText, FunctionWordClasses.PreVerbalCliticBridge))
                 return false;
         }
@@ -1747,6 +1946,10 @@ internal sealed class SentenceClauseMap
     private static bool HasVerbReading(TokenView w, List<int> active) =>
         !w.UsesGraph && active.Any(r => w.Readings[r].Category == Category.Verb &&
             w.Readings[r].Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative);
+
+    private static bool IsPurePersonalVerb(TokenView word, List<int> active) =>
+        !word.UsesGraph && active.Count > 0 && active.All(r =>
+            Guard.IsPersonalPredicate(word.Readings[r].Features) && IsCleanOrBenignLegacyVerb(word.Readings[r]));
 
     private static bool HasNounReading(TokenView w, List<int> active) =>
         !w.UsesGraph && active.Any(r => w.Readings[r].Category == Category.Noun);

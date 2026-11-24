@@ -11,7 +11,7 @@ internal static class SyntaxRoleCalculator
 {
     // Syntax rule categories; current-to-syntax mapping below is an explicit prospective contract.
     internal enum SourcePos { Other, Noun, Adjective, Numeral, ProperNoun, Pronoun, Verb, Adverb, Particle, Preposition, Conjunction }
-    internal enum Role { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive }
+    internal enum Role { Predicate, Subject, Object, Complement, PrepositionalObject, Attribute, Adverbial, Possessive, ReflexiveClitic }
     internal enum Basis { ExactCategory, SurfaceRule, WeakTitleCase, CompleteUnknown, TypedFeatures, LicensedGraphMorphology }
     internal enum Route { SourceScan, Selected, ClosedThirdPersonMismatchPreview, Abstained, ProductiveGraph, ProductiveGraphPreview, ProductiveGraphMismatch }
     internal enum Status { Calculated, IncompleteInventory, UnsupportedSelectedPredicate }
@@ -19,10 +19,11 @@ internal static class SyntaxRoleCalculator
     {
         BasicPredicate, BasicSubject, ShortMasculineObject, BasicObject, BasicComplement,
         BasicPrepositionalObject, UnknownAttributeShape, RegisterTitle, NominalPossessive,
-        FutureClitic, DaClitic, ReflexiveClitic, ImmediateClitic, ImpersonalDoshya,
+        FutureClitic, DaClitic, ReflexiveClitic, ImmediateClitic, ImperativeObjectClitic, ImpersonalDoshya,
         DaSubpredicate, PostverbalChaka, DativeSpeech,
         Zadneshkom, KrivoLyavo, KadeKade, Directional, Zamalko, ProductiveGraphPredicate, ProductiveGraphSubject,
-        ProductiveNominalPhrasePredicate, ProductiveNominalPhraseSubject, ProductiveNominalPhraseAttribute
+        ProductiveNominalPhrasePredicate, ProductiveNominalPhraseSubject, ProductiveNominalPhraseAttribute,
+        CoordinatedPredicate, BoundReflexiveClitic
     }
     // Projection is created once from the same immutable row by the shared adapter.
     // CanonicalLemma uses the existing lookup normalizer; this calculator never normalizes.
@@ -41,9 +42,12 @@ internal static class SyntaxRoleCalculator
         internal int FusionPredicateWordIndex { get; init; } = -1;
         internal int FusionSubjectFirstWordIndex { get; init; } = -1;
         internal int FusionSubjectWordIndex { get; init; } = -1;
+        internal IReadOnlyList<VerbalComplex> CoordinatedPredicates { get; init; } = [];
+        internal CliticCluster? ImperativeClitics { get; init; }
         internal bool SuppressSourceScanSubject { get; init; }
         internal (int PredicateWordIndex, int SubjectWordIndex)? SourceScanSubjectExclusion { get; init; }
         internal (int PredicateTokenIndex, ContextOverlayRoleSelection Subject)? SubjectAfterGovernedPrefix { get; init; }
+        internal IReadOnlyList<(int Preposition, int Head)> SpecifiedPrepositionalPhrases { get; init; } = [];
     }
     internal sealed record Candidate(Role Role, Rule Rule, int Start, int Length,
         ImmutableArray<Support> Targets, ImmutableArray<Support> Context);
@@ -70,7 +74,7 @@ internal static class SyntaxRoleCalculator
     // One opt-in switch mirrors the source option; it controls all nine named groups.
     internal static Result Calculate(string text, int sentenceStart, int sentenceLength,
         ImmutableArray<Word> words, bool includeContextualHints, Resolution resolution,
-        CancellationToken cancellationToken = default, IReadOnlyList<ClauseSpan>? clauses = null)
+        CancellationToken cancellationToken = default, SentenceClauseMap? clauseMap = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(resolution);
@@ -125,6 +129,7 @@ internal static class SyntaxRoleCalculator
         if (words.Any(word => word.UsesGraph)) throw new ArgumentException("Graph morphology requires its bounded explicit route.");
         var output = ImmutableArray.CreateBuilder<Candidate>();
         bool opt = includeContextualHints;
+        var imperative = resolution.ImperativeClitics;
 
         // Source order: possessive/title evidence does not require a predicate.
         if (opt)
@@ -132,9 +137,12 @@ internal static class SyntaxRoleCalculator
             for (int i = 1; i < words.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (Possessive(C(i)) && Nominal(i - 1) && Bridge(i - 1, i))
+                if (clauseMap?.Slots[i].RequestVerbWordIndex is not >= 0 &&
+                    NominalPossessiveAt(i) && Nominal(i - 1) && Bridge(i - 1, i) &&
+                    !(imperative is { } cluster && (cluster.FirstWordIndex <= i && i <= cluster.LastWordIndex ||
+                        i == resolution.FusionSubjectWordIndex)))
                     Emit(Role.Possessive, Rule.NominalPossessive, i, i,
-                        [Surface(i)], [NominalRef(i - 1)]);
+                        [imperative.HasValue ? PossessiveSupport(i) : Surface(i)], [NominalRef(i - 1)]);
             }
             for (int i = 0; i + 2 < words.Length; i++)
             {
@@ -184,7 +192,7 @@ internal static class SyntaxRoleCalculator
         if (predicate < 0) return new(Status.Calculated, words, output.ToImmutable(), resolution);
         int p = predicate;
         // A matrix clause can resume after a relative clause. Its word indices retain that gap.
-        int[]? predicateClauseWords = clauses is { Count: > 1 }
+        int[]? predicateClauseWords = clauseMap?.Clauses is { Count: > 1 } clauses
             ? clauses.FirstOrDefault(c => Array.BinarySearch(c.WordIndices, p) >= 0)?.WordIndices ?? []
             : null;
         bool InPredicateClause(int index) =>
@@ -302,12 +310,13 @@ internal static class SyntaxRoleCalculator
             else if (Reflexive(p) || Immediate(p) || (opt && C(p - 1) == "не" && Bridge(p - 1, p))) end = p - 2;
             else if ((C(p - 1) == "ще" && Has(p - 1, SourcePos.Particle)) || Has(p - 1, SourcePos.Adverb)) end = p - 2;
             while (end >= 0 && Preposition(C(end))) end--;
-            if (end >= 0 && Nominal(end) && Chain(end, p) &&
+            if (end >= 0 && Nominal(end) && Chain(end, p) && SpecifiedPhraseAt(end) is null &&
                 !(resolution.SourceScanSubjectExclusion is { } excluded &&
                   excluded.PredicateWordIndex == p && excluded.SubjectWordIndex == end))
             {
                 int first = end;
-                while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) && Bridge(first - 1, first)) first--;
+                while (first > 0 && Nominal(first - 1) && !Has(first - 1, SourcePos.Preposition) &&
+                    SpecifiedPhraseAt(first - 1) is null && Bridge(first - 1, first)) first--;
                 if (first == 0 || !Has(first - 1, SourcePos.Preposition) || !Bridge(first - 1, first))
                 {
                     var modifiers = ShortMasculineRefs(first, end);
@@ -321,7 +330,53 @@ internal static class SyntaxRoleCalculator
         }
 
         // The closed neuter frame suppresses se; the closed impersonal emits BOTH objects.
-        if (opt && !NeuterFrame(p))
+        int requestObject = -1;
+        if (opt && clauseMap is not null && C(p) == "моля")
+        {
+            for (int i = Math.Max(0, p - 2); i <= Math.Min(words.Length - 1, p + 1); i++)
+            {
+                WordSlot slot = clauseMap.Slots[i];
+                if (slot.RequestVerbWordIndex != p || !InPredicateClause(i)) continue;
+                requestObject = i;
+                Emit(Role.Object, Rule.ImmediateClitic, i, i,
+                    [new(words[i].TokenIndex, slot.Active.ToImmutableArray(), Basis.TypedFeatures)], [predicateSupport]);
+            }
+        }
+        HashSet<int>? verbalObjectStarts = null;
+        var chain = resolution.CoordinatedPredicates;
+        bool coordinated = opt && chain.Count > 1 && chain[0].FiniteCarrierWordIndex == p &&
+            resolution.Route != Route.ClosedThirdPersonMismatchPreview;
+        if (coordinated)
+        {
+            Support primaryCarrier = CarrierSupport(chain[0]);
+            foreach (VerbalComplex verb in chain)
+            {
+                int carrier = verb.FiniteCarrierWordIndex;
+                Support support = CarrierSupport(verb);
+                if (carrier != p)
+                {
+                    int connector = clauseMap!.Clauses[verb.ClauseId].WordIndices[0];
+                    Support marker = Ref(connector, SourcePos.Conjunction);
+                    Emit(Role.Predicate, Rule.CoordinatedPredicate, carrier, carrier, [support],
+                        marker.ReadingIndices.IsEmpty ? [primaryCarrier] : [primaryCarrier, marker]);
+                }
+                CliticCluster clitics = verb.CarrierClitics();
+                EmitObjectClitics(clitics, support, verb.IsImperativeCarrier ? Rule.ImperativeObjectClitic : Rule.ImmediateClitic);
+                int reflexive = clitics.ReflexiveWordIndex;
+                if (clitics.HasReflexiveSe && C(reflexive) == "се")
+                {
+                    var rows = Indices(reflexive, row => row.Pos == SourcePos.Particle);
+                    if (!rows.IsEmpty)
+                        Emit(Role.ReflexiveClitic, Rule.BoundReflexiveClitic, reflexive, reflexive,
+                            [new(words[reflexive].TokenIndex, rows, Basis.TypedFeatures)], [support]);
+                }
+            }
+            if (verbalObjectStarts is not null)
+                output.RemoveAll(c => c.Role == Role.Possessive && verbalObjectStarts.Contains(c.Start));
+        }
+        else if (imperative is { } bound)
+            EmitObjectClitics(bound, predicateSupport, Rule.ImperativeObjectClitic);
+        else if (opt && requestObject < 0 && !NeuterFrame(p))
         {
             if (Impersonal(p))
             {
@@ -360,30 +415,56 @@ internal static class SyntaxRoleCalculator
                 postNominalHandled = true;
             }
         }
-        if (!postNominalHandled && Valid(p + 1) && InPredicateClause(p + 1) && Bridge(p, p + 1) &&
-            !Preposition(C(p + 1)) && Nominal(p + 1))
+        int objectStart = Math.Max(p, imperative?.LastWordIndex ?? -1) + 1;
+        if (imperative.HasValue && postNominalHandled && resolution.FusionSubjectWordIndex == objectStart)
         {
-            int last = ExtendNominal(p + 1);
-            bool copula = Copula(C(p));
-            if (copula || !FullMasculineNominal(p + 1, last) &&
-                (resolution.Route != Route.SourceScan || subjectBefore || !PossiblePostposedSubject(last)))
-                Emit(copula ? Role.Complement : Role.Object, copula ? Rule.BasicComplement : Rule.BasicObject,
-                    p + 1, last, NominalRefs(p + 1, last), [predicateSupport]);
+            objectStart++;
+            postNominalHandled = false;
+        }
+        if (!postNominalHandled)
+        {
+            bool copula = Copula(C(p)) || !predicateSupport.ReadingIndices.IsEmpty &&
+                predicateSupport.ReadingIndices.All(r => TextPredicateLinkAnalyzer.CopularLemma(words[p].Projection[r].CanonicalLemma));
+            int first = AfterFocusQualifiers(objectStart);
+            if (first != requestObject && Joined(first) && !Coordinator(first) && !Preposition(C(first)) && Nominal(first) &&
+                !(imperative.HasValue && BulgarianFunctionWords.TryGetPersonalSubjectPronoun(C(first), out _)))
+            {
+                var targets = ImmutableArray.CreateBuilder<Support>();
+                int last = ExtendNominal(first, targets);
+                if (copula || !FullMasculineNominal(first, last) &&
+                    (first == p + 1 || !words[p].Projection.All(row =>
+                        row.Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive)) &&
+                    (resolution.Route != Route.SourceScan || subjectBefore || !PossiblePostposedSubject(last)))
+                    Emit(copula ? Role.Complement : Role.Object, copula ? Rule.BasicComplement : Rule.BasicObject,
+                        first, last, targets.ToImmutable(), [predicateSupport]);
+            }
         }
         if (opt) AddAdverbials(p, predicateSupport);
         for (int i = p + 1; i + 1 < words.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!Preposition(C(i)) || !InPredicateClause(i) || !InPredicateClause(i + 1) ||
-                !Nominal(i + 1) || !Bridge(i, i + 1)) continue;
-            int last = ExtendNominal(i + 1);
-            Emit(Role.PrepositionalObject, Rule.BasicPrepositionalObject, i, last,
-                ImmutableArray.Create(Ref(i, SourcePos.Preposition)).AddRange(NominalRefs(i + 1, last)), [predicateSupport]);
+            if (!Preposition(C(i)) || !InPredicateClause(i) || !InPredicateClause(i + 1) || !Bridge(i, i + 1)) continue;
+            int last;
+            if (SpecifiedPhraseAt(i) is { } phrase && phrase.Preposition == i && InPredicateClause(phrase.Head) && Chain(i, phrase.Head))
+                last = phrase.Head;
+            else if (Nominal(i + 1)) last = ExtendNominal(i + 1);
+            else continue;
+            var targets = ImmutableArray.CreateBuilder<Support>();
+            targets.Add(Ref(i, SourcePos.Preposition));
+            for (int j = i + 1; j <= last; j++)
+                targets.Add(Nominal(j) ? NominalRef(j) : Ref(j, SourcePos.Adverb));
+            Emit(Role.PrepositionalObject, Rule.BasicPrepositionalObject, i, last, targets.ToImmutable(), [predicateSupport]);
             break;
         }
         return new(Status.Calculated, words, output.ToImmutable(), resolution);
 
         bool Valid(int i) => i >= 0 && i < words.Length;
+        (int Preposition, int Head)? SpecifiedPhraseAt(int i)
+        {
+            foreach (var phrase in resolution.SpecifiedPrepositionalPhrases)
+                if (phrase.Preposition <= i && i <= phrase.Head) return phrase;
+            return null;
+        }
         string C(int i) => Valid(i) ? words[i].Canonical : "";
         bool Unknown(int i) => Valid(i) && words[i].Readings.Length == 0;
         bool Has(int i, params SourcePos[] kinds)
@@ -412,6 +493,43 @@ internal static class SyntaxRoleCalculator
             return new(words[i].TokenIndex, indices, indices.Length > 0 ? Basis.ExactCategory : Basis.SurfaceRule);
         }
         Support Surface(int i) => new(words[i].TokenIndex, [], Basis.SurfaceRule);
+        Support CarrierSupport(VerbalComplex verb) => new(words[verb.FiniteCarrierWordIndex].TokenIndex,
+            verb.CarrierFiniteReadings.ToImmutableArray(), Basis.TypedFeatures);
+
+        void EmitObjectClitics(CliticCluster bound, Support carrier, Rule rule)
+        {
+            int dative = bound.DativeCliticWordIndex;
+            if (Valid(dative))
+                ObjectClitic(dative, Indices(dative, row => row.Features is
+                    { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, Case: MorphologicalCase.Dative,
+                      IsShortForm: true, HasConflictingFeatures: false, HasUnrecognizedFeatures: false }));
+            if (Valid(bound.AccusativeCliticWordIndex))
+                ObjectClitic(bound.AccusativeCliticWordIndex, bound.AccusativeCliticReadings.ToImmutableArray());
+
+            void ObjectClitic(int i, ImmutableArray<int> readings)
+            {
+                if (readings.IsEmpty || i == requestObject || (!coordinated && !InPredicateClause(i))) return;
+                if (coordinated)
+                {
+                    // A preceding noun can host a possessive clitic («моливът ми е тук»).
+                    if (i > 0 && carrier.TokenIndex != words[i - 1].TokenIndex && Bridge(i - 1, i) &&
+                        Has(i - 1, SourcePos.Noun, SourcePos.ProperNoun) && NominalPossessiveAt(i)) return;
+                    (verbalObjectStarts ??= []).Add(words[i].Start);
+                }
+                Emit(Role.Object, rule, i, i, [new(words[i].TokenIndex, readings, Basis.TypedFeatures)], [carrier]);
+            }
+        }
+
+        bool NominalPossessiveAt(int i) => Possessive(C(i)) ||
+            imperative.HasValue && Has(i - 1, SourcePos.Noun, SourcePos.ProperNoun) &&
+            BulgarianFunctionWords.HasAny(C(i), FunctionWordClasses.PossessiveOrDativeClitic) &&
+            !PossessiveSupport(i).ReadingIndices.IsEmpty;
+        Support PossessiveSupport(int i)
+        {
+            var readings = Indices(i, row => row.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Pronoun, IsShortForm: true, HasConflictingFeatures: false });
+            return readings.IsEmpty ? Surface(i) : new(words[i].TokenIndex, readings, Basis.TypedFeatures);
+        }
         Support UnknownRef(int i) => new(words[i].TokenIndex, [], Basis.CompleteUnknown);
         bool Predicate(int i) => Valid(i) && (Has(i, SourcePos.Verb) || Copula(C(i)));
         Support PredicateRef(int i) => Ref(i, SourcePos.Verb);
@@ -482,11 +600,68 @@ internal static class SyntaxRoleCalculator
             }
             return false;
         }
-        int ExtendNominal(int first)
+        bool FocusQualifier(int i) => BulgarianFunctionWords.IsPostverbalFocusQualifier(C(i)) &&
+            words[i].Projection.Any(row => row.Pos is SourcePos.Adverb or SourcePos.Particle &&
+                !row.Features.HasConflictingFeatures && !row.Features.HasUnrecognizedFeatures);
+
+        bool Joined(int i) => Bridge(i - 1, i) && InPredicateClause(i);
+        bool Coordinator(int i) => C(i) is "и" or "или";
+
+        int AfterFocusQualifiers(int i)
+        {
+            while (Joined(i) && FocusQualifier(i) && !CanModifyFollowingNoun(i))
+            {
+                bool coordinated = Joined(i + 1) && Coordinator(i + 1) && Joined(i + 2);
+                if (coordinated && FocusQualifier(i + 2)) i++; // „само и единствено книгата“
+                else if (Copula(C(p)) && Has(i, SourcePos.Adjective) &&
+                    (!Joined(i + 1) || !Nominal(i + 1) || coordinated && Has(i + 2, SourcePos.Adjective)))
+                    break; // „Детето е само“, „само и спокойно“.
+                i++;
+            }
+            return i;
+        }
+
+        bool CanModifyFollowingNoun(int modifier)
+        {
+            foreach (Projection adjective in words[modifier].Projection)
+            {
+                if (adjective.Pos != SourcePos.Adjective || !ContextEvidenceGuards.HasNominalAxes(adjective.Features)) continue;
+                for (int next = modifier + 1; Joined(next); next++)
+                {
+                    if (Coordinator(next) && Joined(next + 1) && Has(next + 1, SourcePos.Adjective)) next++;
+                    var readings = words[next].Projection;
+                    if (readings.Any(row => row.Features.Article == MorphologicalArticle.Indefinite &&
+                        ContextEvidenceGuards.AttributeAgreement(adjective.Features, row.Features))) return true;
+                    if (!readings.Any(row => row.Pos == SourcePos.Adjective &&
+                        ContextEvidenceGuards.HasNominalAxes(row.Features) &&
+                        row.Features.Article == MorphologicalArticle.Indefinite &&
+                        ContextEvidenceGuards.NominalTupleMatches((adjective.Features.Number, adjective.Features.Gender),
+                            (row.Features.Number, row.Features.Gender)))) break;
+                }
+            }
+            return false;
+        }
+
+        int ExtendNominal(int first, ImmutableArray<Support>.Builder? postverbalTargets = null)
         {
             int last = first;
-            while (Valid(last + 1) && InPredicateClause(last + 1) && !Preposition(C(last + 1)) && Nominal(last + 1) &&
-                Bridge(last, last + 1)) last++;
+            while (true)
+            {
+                postverbalTargets?.Add(FocusQualifier(last) ? Ref(last, SourcePos.Adjective) : NominalRef(last));
+                int next = last + 1;
+                if (!Joined(next)) break;
+                if (postverbalTargets is not null)
+                {
+                    if (imperative.HasValue && Has(last, SourcePos.Noun, SourcePos.ProperNoun) && NominalPossessiveAt(next)) break;
+                    if (Coordinator(next) && Joined(next + 1) && (FocusQualifier(next + 1) || FocusQualifier(last)))
+                        next++;
+                    int member = AfterFocusQualifiers(next);
+                    if (!Joined(member) || member > last + 1 && Coordinator(member)) break;
+                    next = member;
+                }
+                if (Preposition(C(next)) || !Nominal(next)) break;
+                last = next;
+            }
             return last;
         }
         // Original literal whitespace also bounds the basic nominal spans.
@@ -528,6 +703,8 @@ internal static class SyntaxRoleCalculator
         bool Reflexive(int i) => opt && C(i - 1) == "се" && Bridge(i - 1, i);
         bool Immediate(int i) => opt && Bridge(i - 1, i) &&
             (C(i - 1) is "го" or "я" or "ги" or "ме" || C(i - 1) == "те" && Bridge(i - 2, i - 1) &&
+             !(SpecifiedPhraseAt(i - 2) is not null && words[i].Projection.All(row =>
+                 row.Features.DeclaredTransitivity == MorphologicalVerbTransitivity.Intransitive)) &&
              (C(i - 2) == "да" ? Has(i - 2, SourcePos.Particle) : Has(i - 2, SourcePos.Noun, SourcePos.Pronoun)));
         bool Impersonal(int i) => opt && Chain(i - 2, i + 1) && C(i) == "дощя" &&
             C(i - 2) == "ми" && C(i - 1) == "се" && C(i + 1) == "да" &&

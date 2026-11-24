@@ -105,7 +105,9 @@ internal static class TextContextAnalyzer
                     ? r3!.MatrixOverlayInput!
                     : !sentenceComplete
                         ? new ContextOverlayInput(true, true, "reading_limit_reached", [], [], [])
-                        : ContextLanes.Calculate(analysis.Text, sentence, exactLaneWords, CanonicalKey, cancellationToken);
+                        : sharedMap is { Clauses.Count: > 0 } && !sharedMap.Clauses.Any(c => c.Matrix)
+                            ? new ContextOverlayInput(true, false, null, [], [], [])
+                            : ContextLanes.Calculate(analysis.Text, sentence, exactLaneWords, CanonicalKey, cancellationToken);
             ContextSelectionOverlay? selected = ContextJointSelection.Select(input, cancellationToken);
             ContextOverlayInput? exactDiagnostics = productive is null && sentenceComplete
                 ? ContextLanes.CalculateExactAgreement(analysis.Text, sentence, laneWords, CanonicalKey, cancellationToken,
@@ -122,7 +124,8 @@ internal static class TextContextAnalyzer
             var fusion = productive is null
                 ? ClauseFusionAnalyzer.Analyze(analysis, sentence, laneWords, protectedSpans, CanonicalKey, cancellationToken,
                     verbFrames, postverbalDirectObjectMaxRatio, directObjectFrame, lookup, sharedMap, r3?.OwnedClauseIds,
-                    includeNominalRepairSupport: options.IncludeGrammarEvidence) : null;
+                    includeNominalRepairSupport: options.IncludeGrammarEvidence,
+                    includeCoordinatedPredicates: options.IncludeAdditionalRoleHeuristics) : null;
             clauseMaps.Add(fusion?.ClauseMap ?? sharedMap);
             if (fusion is not null)
             {
@@ -204,7 +207,8 @@ internal static class TextContextAnalyzer
                     .Select(role => new SyntaxRoleCalculator.Support(role.TokenIndex, role.AlternativeIndices.ToImmutableArray(),
                         SyntaxRoleCalculator.Basis.TypedFeatures)).ToImmutableArray();
                 // Keep source-scan Fusion hints, or the extent of the very relation promoted above.
-                var fusionExtent = !matrixOwnedByR3 && route == SyntaxRoleCalculator.Route.SourceScan && options.IncludeAdditionalRoleHeuristics
+                var fusionExtent = !matrixOwnedByR3 && route == SyntaxRoleCalculator.Route.SourceScan &&
+                    (options.IncludeAdditionalRoleHeuristics || fusion?.SpecifiedPrepositionalPhrases.Count > 0)
                     ? fusion?.Selection : selectedFusion;
                 int extentPred = matrixOwnedByR3 && route == SyntaxRoleCalculator.Route.Selected
                     ? r3!.SelectedPredicateWordIndex : fusionExtent?.PredicateWordIndex ?? -1;
@@ -224,6 +228,9 @@ internal static class TextContextAnalyzer
                     FusionPredicateWordIndex = extentPred,
                     FusionSubjectFirstWordIndex = extentSubjFirst,
                     FusionSubjectWordIndex = extentSubjHead,
+                    CoordinatedPredicates = fusion?.CoordinatedPredicates ?? [],
+                    ImperativeClitics = options.IncludeAdditionalRoleHeuristics ? fusionExtent?.ImperativeClitics : null,
+                    SpecifiedPrepositionalPhrases = fusion?.SpecifiedPrepositionalPhrases ?? [],
                     SourceScanSubjectExclusion = route == SyntaxRoleCalculator.Route.SourceScan
                         ? fusion?.Selection?.SourceScanSubjectExclusion : null,
                     SubjectAfterGovernedPrefix = route == SyntaxRoleCalculator.Route.SourceScan &&
@@ -235,7 +242,7 @@ internal static class TextContextAnalyzer
                 };
                 result = SyntaxRoleCalculator.Calculate(analysis.Text, sentence.Start, sentence.Length,
                     words, options.IncludeAdditionalRoleHeuristics, resolution, cancellationToken,
-                    (fusion?.ClauseMap ?? sharedMap)?.Clauses);
+                    fusion?.ClauseMap ?? sharedMap);
             }
             TextSyntaxSupport MapSupport(SyntaxRoleCalculator.Support support) => new(support.TokenIndex,
                 support.Basis.ToString(), References(support.TokenIndex, support.ReadingIndices))

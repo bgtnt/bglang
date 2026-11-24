@@ -15,6 +15,645 @@ public sealed partial class PublicPackageTests
         IncludeNominalConstructions = true
     };
 
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Аз чета и пиша.", "пиша", null, null)]
+    [DataRow("Аз чета и ти пишеш.", "пишеш", null, "ти")]
+    [DataRow("Аз чета и пиша и рисувам.", "пиша", "рисувам", null)]
+    public void Coordinated_predicates_keep_the_matrix_anchor_and_typed_connector_evidence(
+        string text, string second, string? third, string? separateSubject)
+    {
+        TextAnalysis closed = session.AnalyzeText(text, false, default, default);
+        Assert.IsFalse(closed.Syntax!.Sentences.Single().Candidates.Any(c =>
+            c.RuleId is "CoordinatedPredicate" or "BoundReflexiveClitic"), text);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int main = analysis.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == "чета").index;
+            Assert.AreEqual(main, sentence.PredicateTokenIndex, text);
+            Assert.AreEqual("Calculated", sentence.Status, text);
+            Assert.HasCount(third is null ? 2 : 3, sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Predicate).ToArray(), text);
+            AssertCoordinatedCarrier(analysis, sentence, second, main);
+            if (third is not null) AssertCoordinatedCarrier(analysis, sentence, third, main);
+            if (separateSubject is not null)
+                Assert.IsFalse(sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).SelectMany(c => c.Targets)
+                    .Any(s => analysis.Tokens[s.TokenIndex].Text == separateSubject), "Secondary evidence must not reassign the matrix subject.");
+            AssertImperativeOriginalEvidence(analysis, closed);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Много ви моля, успокойте се и ми се доверете.", "успокойте", "доверете", false)]
+    [DataRow("🙂 Успокойте се и ми се доверете.", "Успокойте", "доверете", false)]
+    [DataRow("Той ми се доверява и ми се усмихва.", "доверява", "усмихва", true)]
+    public void Coordinated_clitics_bind_each_repeated_occurrence_to_its_own_carrier(
+        string text, string first, string second, bool repeatedMi)
+    {
+        TextAnalysis baseline = session.AnalyzeText(text, false, default, default);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int Token(string word) => analysis.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == word).index;
+            int[] carriers = [Token(first), Token(second)];
+            Assert.AreEqual(carriers[0], sentence.PredicateTokenIndex, text);
+            AssertCoordinatedCarrier(analysis, sentence, second, carriers[0]);
+            var reflexives = analysis.Tokens.Select((token, index) => (token, index)).Where(t => t.token.Text == "се").ToArray();
+            Assert.HasCount(2, reflexives, text);
+            for (int i = 0; i < reflexives.Length; i++)
+            {
+                TextSyntaxCandidate role = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.ReflexiveClitic &&
+                    c.Targets.Single().TokenIndex == reflexives[i].index);
+                Assert.AreEqual("BoundReflexiveClitic", role.RuleId, text);
+                Assert.AreEqual((i == 0 ? text.IndexOf("се", StringComparison.Ordinal) : text.LastIndexOf("се", StringComparison.Ordinal), 2),
+                    (role.Start, role.Length), text);
+                Assert.AreEqual(carriers[i], role.Context.Single().TokenIndex, text);
+                Assert.AreEqual("TypedFeatures", role.Targets.Single().Basis, text);
+                TextReadingSnapshot[] rows = ImperativeSupportReadings(analysis, role.Targets.Single());
+                Assert.IsNotEmpty(rows, text);
+                Assert.IsTrue(rows.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Particle), text);
+                Assert.IsFalse(sentence.Candidates.Where(c => c.Role != TextSyntaxRole.ReflexiveClitic)
+                    .Any(c => c.Targets.Any(s => s.TokenIndex == reflexives[i].index)), text);
+            }
+            var objects = analysis.Tokens.Select((token, index) => (token, index)).Where(t => t.token.Text == "ми").ToArray();
+            Assert.HasCount(repeatedMi ? 2 : 1, objects, text);
+            for (int i = 0; i < objects.Length; i++)
+            {
+                TextSyntaxCandidate role = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Object &&
+                    c.Targets.Any(s => s.TokenIndex == objects[i].index));
+                Assert.IsTrue(role.RuleId is "ImmediateClitic" or "ImperativeObjectClitic", text);
+                Assert.AreEqual((objects[i].token.Start, 2), (role.Start, role.Length), text);
+                Assert.AreEqual(carriers[repeatedMi ? i : 1], role.Context.Single().TokenIndex, text);
+                Assert.AreEqual("TypedFeatures", role.Targets.Single().Basis, text);
+                TextReadingSnapshot[] rows = ImperativeSupportReadings(analysis, role.Targets.Single());
+                Assert.IsNotEmpty(rows, text);
+                Assert.IsTrue(rows.All(r => r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun,
+                    Case: MorphologicalCase.Dative, IsShortForm: true }), text);
+                Assert.IsFalse(sentence.Candidates.Where(c => c.Role != TextSyntaxRole.Object)
+                    .Any(c => c.Targets.Any(s => s.TokenIndex == objects[i].index)), text);
+            }
+            AssertImperativeOriginalEvidence(analysis, baseline);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Аз чета и „пиша“.", "чета")]
+    [DataRow("Аз чета, защото пиша.", "чета")]
+    [DataRow("Аз чета и да пиша.", "чета")]
+    [DataRow("Аз чета книга и списание.", "чета")]
+    [DataRow("Чета списъка: моля, чета и пиша.", "Чета")]
+    [DataRow("Имам две задачи: чета и пиша.", "Имам")]
+    public void Coordinated_predicates_do_not_cross_quoted_subordinate_da_or_nominal_boundaries(string text, string main)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.AreEqual(main, analysis.Tokens[sentence.PredicateTokenIndex!.Value].Text, text);
+            Assert.IsFalse(sentence.Candidates.Any(c => c.RuleId is "CoordinatedPredicate" or "BoundReflexiveClitic"), text);
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Аз чета и моливът ми е тук.", "ми", "моливът")]
+    [DataRow("Дай книгата ти!", "ти", "книгата")]
+    [DataRow("Говоря с брат ми.", "ми", "брат")]
+    public void Coordinated_clitic_projection_preserves_genuine_nominal_possessors(string text, string possessor, string head)
+    {
+        TextAnalysis baseline = session.AnalyzeText(text, false, default, default);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int token = analysis.Tokens.Select((word, index) => (word, index)).Single(t => t.word.Text == possessor).index;
+            TextSyntaxCandidate role = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Possessive &&
+                c.Targets.Any(s => s.TokenIndex == token));
+            Assert.AreEqual("NominalPossessive", role.RuleId, text);
+            Assert.AreEqual((analysis.Tokens[token].Start, possessor.Length), (role.Start, role.Length), text);
+            Assert.IsTrue(role.Context.Any(s => analysis.Tokens[s.TokenIndex].Text == head), text);
+            // The full prepositional phrase can include the possessor among several targets.
+            Assert.IsFalse(sentence.Candidates.Any(c => c.Role != TextSyntaxRole.Possessive &&
+                c.Targets.Count == 1 && c.Targets[0].TokenIndex == token), text);
+            AssertImperativeOriginalEvidence(analysis, baseline);
+        }
+    }
+
+    private static void AssertCoordinatedCarrier(TextAnalysis analysis, TextSyntaxSentence sentence, string word, int main)
+    {
+        int token = analysis.Tokens.Select((item, index) => (item, index)).Single(t => t.item.Text == word).index;
+        TextSyntaxCandidate role = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate && c.RuleId == "CoordinatedPredicate" &&
+            c.Targets.Single().TokenIndex == token);
+        Assert.AreEqual((analysis.Tokens[token].Start, word.Length), (role.Start, role.Length), analysis.Text);
+        Assert.AreEqual("TypedFeatures", role.Targets.Single().Basis, analysis.Text);
+        TextReadingSnapshot[] rows = ImperativeSupportReadings(analysis, role.Targets.Single());
+        Assert.IsNotEmpty(rows, analysis.Text);
+        Assert.IsTrue(rows.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Verb &&
+            r.Features.VerbForm is MorphologicalVerbForm.Finite or MorphologicalVerbForm.Imperative), analysis.Text);
+        Assert.HasCount(2, role.Context, analysis.Text);
+        Assert.AreEqual(main, role.Context[0].TokenIndex, analysis.Text);
+        Assert.AreEqual("и", analysis.Tokens[role.Context[1].TokenIndex].Text, analysis.Text);
+        TextReadingSnapshot[] conjunction = ImperativeSupportReadings(analysis, role.Context[1]);
+        Assert.IsNotEmpty(conjunction, analysis.Text);
+        Assert.IsTrue(conjunction.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Conjunction), analysis.Text);
+    }
+
+    // Independent UD-BTB imperative gold (IMP/PROBE identifiers), not candidate-generated expectations.
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("IMP-01", "Дай ми ти само слуха си!", "Дай", "ти", MorphologicalNumber.Singular)]
+    [DataRow("IMP-02", "Кажи ми.", "Кажи", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-05", "Пусни ме!", "Пусни", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-06", "Вземи ги!", "Вземи", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-09", "Кажи на учителя си допълнителните занимания.", "Кажи", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-11", "Върни си му книгата.", "Върни", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-12", "Не се отпускай.", "отпускай", null, MorphologicalNumber.Singular)]
+    [DataRow("IMP-16", "Представете си един типичен сюжет на американски филм.", "Представете", null, MorphologicalNumber.Plural)]
+    [DataRow("PROBE-04", "Дайте ми вие само думата си!", "Дайте", "вие", MorphologicalNumber.Plural)]
+    [DataRow("PROBE-05", "Ти ми дай само слуха си!", "дай", "Ти", MorphologicalNumber.Singular)]
+    [DataRow("PROBE-06", "Дай му само слуха!", "Дай", null, MorphologicalNumber.Singular)]
+    public void Imperative_clitic_roles_keep_the_lexical_carrier_and_explicit_second_person_subject(
+        string caseId, string text, string carrier, string? explicitSubject, MorphologicalNumber number)
+    {
+        // Default analysis supplies the unchanged-inventory control; role promises use the documented opt-in.
+        TextAnalysis baseline = session.AnalyzeText(text, false, default, default);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.IsNotNull(sentence.PredicateTokenIndex, caseId);
+            int predicateIndex = sentence.PredicateTokenIndex!.Value;
+            Assert.AreEqual(carrier, analysis.Tokens[predicateIndex].Text, caseId);
+            TextSyntaxCandidate predicate = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate &&
+                c.Targets.Any(t => t.TokenIndex == predicateIndex));
+            Assert.AreEqual((analysis.Tokens[predicateIndex].Start, carrier.Length), (predicate.Start, predicate.Length), caseId);
+            TextSyntaxSupport predicateSupport = predicate.Targets.Single();
+            Assert.IsTrue(ImperativeSupportReadings(analysis, predicateSupport).Any(r => r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Imperative,
+                    Person: MorphologicalPerson.Second } && r.Features.Number == number), caseId);
+            TextSyntaxCandidate[] subjects = sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray();
+            Assert.HasCount(explicitSubject is null ? 0 : 1, subjects, caseId);
+            if (explicitSubject is not null)
+            {
+                TextSyntaxCandidate subject = subjects.Single();
+                Assert.AreEqual(explicitSubject, text.Substring(subject.Start, subject.Length), caseId);
+                TextSyntaxSupport support = subject.Targets.Single();
+                TextReadingSnapshot[] readings = ImperativeSupportReadings(analysis, support);
+                Assert.IsNotEmpty(readings, caseId);
+                Assert.IsTrue(readings.All(r => r.Features is
+                    { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, Person: MorphologicalPerson.Second,
+                        Case: null } && r.Features.IsShortForm != true && r.Features.Number == number), caseId);
+                Assert.IsTrue(subject.Context.Any(s => s.TokenIndex == predicateIndex), caseId);
+                Assert.IsFalse(sentence.Candidates.Any(c => c.Role != TextSyntaxRole.Subject &&
+                    c.Targets.Any(t => t.TokenIndex == support.TokenIndex)), caseId);
+            }
+            AssertImperativeOriginalEvidence(analysis, baseline);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Определи приоритетите си.", "Определи", MorphologicalNumber.Singular)]
+    [DataRow("Разберете го ясно и категорично.", "Разберете", MorphologicalNumber.Plural)]
+    public void Imperative_syncretic_forms_keep_the_lexical_predicate_and_both_moods(
+        string text, string carrier, MorphologicalNumber number)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            var sentence = analysis.Syntax!.Sentences.Single();
+            int token = sentence.PredicateTokenIndex!.Value;
+            Assert.AreEqual(carrier, analysis.Tokens[token].Text);
+            var support = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate).Targets.Single();
+            Assert.AreEqual(token, support.TokenIndex);
+            var rows = ImperativeSupportReadings(analysis, support);
+            Assert.IsNotEmpty(rows);
+            Assert.IsTrue(rows.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Verb));
+            var inventory = analysis.ReadingInventory!;
+            var occurrence = inventory.Occurrences.Single(o => o.TokenIndex == token);
+            var readings = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings;
+            Assert.IsTrue(readings.Any(r => r.Features.VerbForm == MorphologicalVerbForm.Finite));
+            Assert.IsTrue(readings.Any(r => r.Features is { VerbForm: MorphologicalVerbForm.Imperative,
+                Person: MorphologicalPerson.Second } && r.Features.Number == number));
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Дай ми ти само слуха си!", "слуха", "ти")]
+    [DataRow("Дайте ми вие само думата си!", "думата", "вие")]
+    [DataRow("Ти ми дай само слуха си!", "слуха", "Ти")]
+    public void Imperative_argument_roles_keep_dative_subject_and_possessive_supports_separate(
+        string text, string directObject, string explicitSubject)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int Token(string word) => analysis.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == word).index;
+            int head = Token(directObject), dative = Token("ми"), subject = Token(explicitSubject), possessive = Token("си");
+            TextSyntaxCandidate obj = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Object && c.Targets.Any(t => t.TokenIndex == head));
+            Assert.AreEqual(analysis.Tokens[head].Start, obj.Start, text);
+            Assert.IsTrue(obj.Length >= directObject.Length && obj.Start + obj.Length <= analysis.Tokens[possessive].Start + 2, text);
+            CollectionAssert.AreEqual(new[] { head }, obj.Targets.Select(t => t.TokenIndex).ToArray(), text);
+            TextReadingSnapshot[] nounReadings = ImperativeSupportReadings(analysis, obj.Targets.Single());
+            Assert.IsNotEmpty(nounReadings, text);
+            Assert.IsTrue(nounReadings.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Noun), text);
+            TextSyntaxCandidate clitic = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Object && c.Targets.Any(t => t.TokenIndex == dative));
+            Assert.AreEqual((analysis.Tokens[dative].Start, 2), (clitic.Start, clitic.Length), text);
+            TextReadingSnapshot[] dativeReadings = ImperativeSupportReadings(analysis, clitic.Targets.Single());
+            Assert.IsNotEmpty(dativeReadings, text);
+            Assert.IsTrue(dativeReadings.All(r => r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, Case: MorphologicalCase.Dative, IsShortForm: true }), text);
+            TextSyntaxCandidate possession = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Possessive &&
+                c.Targets.Any(t => t.TokenIndex == possessive));
+            Assert.AreEqual((analysis.Tokens[possessive].Start, 2), (possession.Start, possession.Length), text);
+            TextReadingSnapshot[] possessiveReadings = ImperativeSupportReadings(analysis, possession.Targets.Single());
+            Assert.IsNotEmpty(possessiveReadings, text);
+            Assert.IsTrue(possessiveReadings.All(r => r.Raw.Lemma == "свой" && r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Pronoun), text);
+            Assert.IsTrue(possession.Context.Any(s => s.TokenIndex == head), text);
+            Assert.IsFalse(sentence.Candidates.Any(c => c.Role != TextSyntaxRole.Possessive &&
+                c.Targets.Any(t => t.TokenIndex == possessive)), text);
+            Assert.IsFalse(sentence.Candidates.Any(c => c.Role != TextSyntaxRole.Object &&
+                c.Targets.Any(t => t.TokenIndex == dative)), text);
+            foreach (TextSyntaxCandidate role in sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Object))
+            {
+                Assert.IsFalse(role.Targets.Any(t => t.TokenIndex == subject || t.TokenIndex == possessive), text);
+                Assert.IsTrue(role.Context.Any(s => s.TokenIndex == sentence.PredicateTokenIndex), text);
+            }
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("IMP-03", "Вместо да стоиш без работа, помогни ми!", "помогни", "стоиш")]
+    [DataRow("IMP-07", "Кажи му, за да не тръгва.", "Кажи", "тръгва")]
+    [DataRow("IMP-08", "Вземи си колкото искаш ябълки.", "Вземи", "искаш")]
+    [DataRow("IMP-13", "Не си помисляй и за секунда, че си ужасна ученичка.", "помисляй", "ученичка")]
+    [DataRow("QUOTE", "Кажи ми „ти“!", "Кажи", "ти")]
+    public void Imperative_clause_boundaries_keep_matrix_and_subordinate_carriers_separate(
+        string caseId, string text, string carrier, string separatedToken)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.IsNotNull(sentence.PredicateTokenIndex, caseId);
+            int predicateIndex = sentence.PredicateTokenIndex!.Value;
+            Assert.AreEqual(carrier, analysis.Tokens[predicateIndex].Text, caseId);
+            Assert.IsEmpty(sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray(), caseId);
+            var predicate = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate &&
+                c.Targets.Any(t => t.TokenIndex == predicateIndex));
+            Assert.IsTrue(ImperativeSupportReadings(analysis, predicate.Targets.Single())
+                .Any(r => r.Features.VerbForm == MorphologicalVerbForm.Imperative), caseId);
+            int separatedIndex = analysis.Tokens.Select((token, index) => (token, index))
+                .Single(t => t.token.Text == separatedToken).index;
+            Assert.IsFalse(sentence.Candidates.Where(c => c.Role is TextSyntaxRole.Object or TextSyntaxRole.PrepositionalObject)
+                .Any(c => c.Context.Any(s => s.TokenIndex == predicateIndex) && c.Targets.Any(t => t.TokenIndex == separatedIndex)), caseId);
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("CTRL-01", "Дяконът ми чете за здраве.", "чете")]
+    [DataRow("CTRL-02", "Зададоха ми хиляди въпроси.", "Зададоха")]
+    [DataRow("CTRL-05", "Той ти прочете статията.", "прочете")]
+    [DataRow("CTRL-06", "Благодаря ти!", "Благодаря")]
+    [DataRow("PROBE-01", "Той ми чиниите със студена вода.", "ми")]
+    [DataRow("PROBE-02", "Ти ми съдовете снощи.", "ми")]
+    [DataRow("PROBE-03", "Ти си само ученик.", "си")]
+    [DataRow("TRUE-VIE", "Той вие силно.", "вие")]
+    [DataRow("TRUE-VI", "Той ви въжето.", "ви")]
+    [DataRow("COPULA-DAT", "Ти си ми приятел.", "си")]
+    [DataRow("COPULA-ADJ", "Ти си ми верен.", "си")]
+    [DataRow("COPULA-CLUSTER", "Ти си ми го дал.", "си")]
+    public void Imperative_clitic_disambiguation_preserves_genuine_homograph_controls(
+        string caseId, string text, string carrier)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.IsNotNull(sentence.PredicateTokenIndex, caseId);
+            int predicateIndex = sentence.PredicateTokenIndex!.Value;
+            Assert.AreEqual(carrier, analysis.Tokens[predicateIndex].Text, caseId);
+            TextSyntaxCandidate predicate = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate &&
+                c.Targets.Any(t => t.TokenIndex == predicateIndex));
+            Assert.IsTrue(ImperativeSupportReadings(analysis, predicate.Targets.Single()).Any(r => r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Finite }), caseId);
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Ти ми дай книгата!", "дай", false)]
+    [DataRow("Не ми го давай!", "давай", false)]
+    [DataRow("Ми дай книгата!", "дай", true)]
+    [DataRow("Го вземи!", "вземи", true)]
+    public void Imperative_clitic_diagnostic_requires_an_unhosted_clitic(string text, string verb, bool expected)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            var analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            var issues = analysis.Diagnostics.Where(d => d.Code == "particle_participle_verb_form_mismatch").ToArray();
+            Assert.HasCount(expected ? 1 : 0, issues, text);
+            if (expected) Assert.AreEqual(verb, text.Substring(issues[0].Start, issues[0].Length));
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Дай книгата ти!", "ти", TextSyntaxRole.Possessive)]
+    [DataRow("Бъди ми приятел!", "приятел", TextSyntaxRole.Complement)]
+    [DataRow("Бъдете спокойни!", "спокойни", TextSyntaxRole.Complement)]
+    [DataRow("Дай ми вие книгата!", "вие", null)]
+    [DataRow("Дайте ми ти книгата!", "ти", null)]
+    public void Imperative_objects_exclude_possessors_copular_complements_and_unlicensed_subjects(
+        string text, string word, TextSyntaxRole? expected)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            var analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            var sentence = analysis.Syntax!.Sentences.Single();
+            int token = analysis.Tokens.Select((t, i) => (t, i)).Single(row => row.t.Text == word).i;
+            var roles = sentence.Candidates.Where(c => c.Targets.Any(t => t.TokenIndex == token)).Select(c => c.Role).ToArray();
+            Assert.IsFalse(roles.Contains(TextSyntaxRole.Object), text);
+            Assert.IsFalse(roles.Contains(TextSyntaxRole.Subject), text);
+            if (expected.HasValue) CollectionAssert.Contains(roles, expected.Value);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("REL-2SG-IMP", "Ти, който четеш житието му, прощавай.", "прощавай", "Ти", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REL-2PL-IMP", "Вие, които четете житието му, прощавайте.", "прощавайте", "Вие", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REL-2SG-FIN", "Ти, който четеш житието му, прощаваш.", "прощаваш", "Ти", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REL-3SG-FIN", "Той, който чете житието му, прощава.", "прощава", "Той", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REL-FEMININE", "Ти, която четеш житието му, прощавай.", "прощавай", "Ти", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REL-NOMINAL", "Човекът, който чете житието му, прощава.", "прощава", "Човекът", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REL-REPEATED-FIN", "Ти, който четеш житието му, четеш внимателно.", "четеш", "Ти", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REL-REPEATED-SYNCRETIC", "Вие, които четете житието му, четете внимателно.", "четете", "Вие", MorphologicalVerbForm.Imperative, true)]
+    [DataRow("REL-SYNCRETIC-2SG", "Ти, който четеш житието му, определи приоритетите си.", "определи", "Ти", MorphologicalVerbForm.Imperative, true)]
+    [DataRow("IMP-19", "Моля ви, не ме замесвайте в игра на сметки.", "замесвайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-2SG", "Моля те, не ме замесвай в игра на сметки.", "замесвай", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-POST-2PL", "Не ме замесвайте в игра на сметки, моля ви.", "замесвайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-POST-2SG", "Не ме замесвай в игра на сметки, моля те.", "замесвай", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-INSERTED", "Ти, моля те, прощавай.", "прощавай", "Ти", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-INSERTED-PLURAL", "Вие, моля ви, прощавайте.", "прощавайте", "Вие", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-AFTER-CARRIER", "Прощавай, моля те, за грешката.", "Прощавай", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-NO-CLITIC", "Моля, кажи ми.", "кажи", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("POLITE-SYNCRETIC", "Моля ви, четете внимателно.", "четете", null, MorphologicalVerbForm.Imperative, true)]
+    // Source-checked Brown MR-POL-18/19/20; retain the complete original command context.
+    [DataRow("MR-POL-18", "Много ви моля, успокойте се и ми се доверете.", "успокойте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("MR-POL-19", "Много ви моля, не затваряйте приемателя си, имайте търпение да ме изслушате.", "затваряйте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("MR-POL-20", "Моля ви се, почакайте.", "почакайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-ADVERB", "Искрено ви моля, почакайте.", "почакайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-REFLEXIVE", "Много ви се моля, почакайте.", "почакайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-2SG", "Много те моля, не ме замесвай.", "замесвай", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-SYNCRETIC", "Много ви моля, четете внимателно.", "четете", null, MorphologicalVerbForm.Imperative, true)]
+    [DataRow("INVERTED-SUBJECT", "Ти, много те моля, не ме замесвай.", "замесвай", "Ти", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REFLEXIVE-SUBJECT-PLURAL", "Вие, моля ви се, не ме замесвайте.", "замесвайте", "Вие", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REFLEXIVE-SUBJECT-SINGULAR", "Ти, моля ти се, не ме замесвай.", "замесвай", "Ти", MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-POSTPOSED", "Не ме замесвайте, много ви моля.", "замесвайте", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("REFLEXIVE-POSTPOSED", "Не ме замесвай, моля ти се.", "замесвай", null, MorphologicalVerbForm.Imperative, false)]
+    [DataRow("INVERTED-LEXICAL-PLURAL", "Много ви моля за помощ.", "моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-LEXICAL-SINGULAR", "Много те моля за помощ.", "моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-LEXICAL-SUBJECT", "Аз ви моля да останете.", "моля", "Аз", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REFLEXIVE-LEXICAL", "Моля се за здраве.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REFLEXIVE-DATIVE-LEXICAL", "Моля ви се за помощ.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REFLEXIVE-DATIVE-SUBJECT", "Аз ви се моля за помощ.", "моля", "Аз", MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-QUOTED", "Тя каза: „Много ви моля, не ме замесвайте.“", "каза", "Тя", MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-NO-COMMAND", "Много ви моля, защото се тревожа.", "моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-MISSING-COMMA", "Много ви моля не ме замесвайте.", "моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("INVERTED-DOUBLE-COMMA", "Много ви моля,, не ме замесвайте.", "моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("NOMINATIVE-TE", "Те молиха за помощ.", "молиха", "Те", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-NOMINAL", "Моля ви за помощ!", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("QUOTED-REQUEST", "Тя каза: „Моля ви, не се тревожете.“", "каза", "Тя", MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-REFLEXIVE", "Моля се, помогни ми.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-BROKEN-COMMA", "Моля ви,, спрете.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-2SG", "Моля те за помощ.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-DA-2PL", "Моля ви да не ме замесвате в игра на сметки.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-DA-2SG", "Моля те да не ме замесваш в игра на сметки.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    [DataRow("REQUEST-QUOTED-IMPERATIVE", "Моля ви да кажете „не ме замесвайте“.", "Моля", null, MorphologicalVerbForm.Finite, false)]
+    public void Matrix_clause_selection_keeps_resumed_predicate_subject_and_original_supports(
+        string caseId, string text, string carrier, string? explicitSubject, MorphologicalVerbForm form, bool retainsBothMoods)
+    {
+        TextAnalysis baseline = session.AnalyzeText(text, false, default, default);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.IsNotNull(sentence.PredicateTokenIndex, caseId);
+            int predicateIndex = sentence.PredicateTokenIndex!.Value;
+            int expectedStart = text.LastIndexOf(carrier, StringComparison.Ordinal);
+            Assert.IsFalse(analysis.Diagnostics.Any(d => d.Code == "productive_morphology_agreement_mismatch" &&
+                text.Substring(d.Start, d.Length).Equals("моля", StringComparison.OrdinalIgnoreCase)), caseId);
+            Assert.AreEqual((expectedStart, carrier.Length),
+                (analysis.Tokens[predicateIndex].Start, analysis.Tokens[predicateIndex].Length), caseId);
+            TextSyntaxCandidate predicate = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate &&
+                c.Targets.Any(t => t.TokenIndex == predicateIndex));
+            Assert.AreEqual((expectedStart, carrier.Length), (predicate.Start, predicate.Length), caseId);
+            TextSyntaxSupport predicateSupport = predicate.Targets.Single();
+            Assert.AreEqual(predicateIndex, predicateSupport.TokenIndex, caseId);
+            Assert.IsTrue(ImperativeSupportReadings(analysis, predicateSupport).Any(r =>
+                r.Features is { PartOfSpeech: MorphologicalPartOfSpeech.Verb } && r.Features.VerbForm == form), caseId);
+
+            TextSyntaxCandidate[] subjects = sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray();
+            Assert.HasCount(explicitSubject is null ? 0 : 1, subjects, caseId);
+            if (explicitSubject is not null)
+            {
+                TextSyntaxCandidate subject = subjects.Single();
+                Assert.AreEqual((text.IndexOf(explicitSubject, StringComparison.Ordinal), explicitSubject.Length),
+                    (subject.Start, subject.Length), caseId);
+                Assert.IsTrue(subject.Context.Any(s => s.TokenIndex == predicateIndex), caseId);
+                Assert.IsTrue(subject.Targets.All(s => analysis.Tokens[s.TokenIndex].Start >= subject.Start &&
+                    analysis.Tokens[s.TokenIndex].Start + analysis.Tokens[s.TokenIndex].Length <= subject.Start + subject.Length), caseId);
+                foreach (TextSyntaxSupport support in subject.Targets)
+                    Assert.IsNotEmpty(ImperativeSupportReadings(analysis, support), caseId);
+            }
+            if (retainsBothMoods)
+            {
+                TextReadingInventory inventory = analysis.ReadingInventory!;
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == predicateIndex);
+                var readings = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings;
+                Assert.IsTrue(readings.Any(r => r.Features.VerbForm == MorphologicalVerbForm.Finite), caseId);
+                Assert.IsTrue(readings.Any(r => r.Features.VerbForm == MorphologicalVerbForm.Imperative), caseId);
+            }
+            AssertImperativeOriginalEvidence(analysis, baseline);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Ти, който четеш житието му.")]
+    [DataRow("Вие, които четете житието му.")]
+    public void Matrix_clause_selection_does_not_license_the_antecedent_as_a_subject_without_matrix_resumption(string text)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int antecedent = analysis.Tokens.Select((token, index) => (token, index))
+                .Single(t => t.token.Start == 0).index;
+            // A partial syntax role may still report the real relative predicate.
+            Assert.IsFalse(sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject)
+                .Any(c => c.Targets.Any(s => s.TokenIndex == antecedent)), text);
+            TextContextSentence context = analysis.Context!.Sentences.Single();
+            Assert.IsNull(context.SelectedPredicateTokenIndex, text);
+            Assert.IsFalse(context.Candidates.Where(c => c.Selectable)
+                .SelectMany(c => c.Roles).Any(r => r.Role == TextContextRole.Subject && r.TokenIndex == antecedent), text);
+            AssertImperativeOriginalEvidence(analysis);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Ти, който четеш житието му, прощавай.", "четеш", false)]
+    [DataRow("Аз, който чета житието му, прощавам.", "чета", false)]
+    [DataRow("Ти, който четем житието му, прощавай.", "четем", true)]
+    [DataRow("Ти, който дойдох вчера, остани.", "дойдох", true)]
+    [DataRow("Вие, които обичам, останете.", "обичам", false)]
+    [DataRow("Романът, който чета сега, е интересен.", "чета", false)]
+    [DataRow("Никой, който дойде вчера, не остана.", "дойде", false)]
+    [DataRow("Никой, който дойдох вчера, не остана.", "дойдох", true)]
+    public void Matrix_clause_selection_respects_person_only_when_the_relative_is_a_subject(
+        string text, string relativeVerb, bool mismatch)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            var analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            int start = text.IndexOf(relativeVerb, StringComparison.Ordinal);
+            Assert.AreEqual(mismatch, analysis.Diagnostics.Any(d => d.Code == "productive_morphology_agreement_mismatch" &&
+                d.Start == start && d.Length == relativeVerb.Length), text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Много ви моля, не ме замесвайте.", "замесвайте", MorphologicalVerbForm.Imperative, null, "ме", "ви")]
+    [DataRow("Много те моля, не ме замесвай.", "замесвай", MorphologicalVerbForm.Imperative, null, "ме", "те")]
+    [DataRow("Моля ви се, не ме замесвайте.", "замесвайте", MorphologicalVerbForm.Imperative, null, "ме", "ви")]
+    [DataRow("Моля ти се, не ме замесвай.", "замесвай", MorphologicalVerbForm.Imperative, null, "ме", "ти")]
+    [DataRow("Ти, много те моля, не ме замесвай.", "замесвай", MorphologicalVerbForm.Imperative, "Ти", "ме", "те")]
+    [DataRow("Вие, моля ви се, не ме замесвайте.", "замесвайте", MorphologicalVerbForm.Imperative, "Вие", "ме", "ви")]
+    [DataRow("Ти, моля ти се, не ме замесвай.", "замесвай", MorphologicalVerbForm.Imperative, "Ти", "ме", "ти")]
+    [DataRow("Много ви моля за помощ.", "моля", MorphologicalVerbForm.Finite, null, "ви", null)]
+    [DataRow("Много те моля за помощ.", "моля", MorphologicalVerbForm.Finite, null, "те", null)]
+    [DataRow("Аз ви моля да останете.", "моля", MorphologicalVerbForm.Finite, "Аз", "ви", null)]
+    [DataRow("Аз те моля да останеш.", "моля", MorphologicalVerbForm.Finite, "Аз", "те", null)]
+    public void Polite_request_roles_keep_original_carrier_subject_and_accusative_supports(
+        string text, string carrier, MorphologicalVerbForm form, string? explicitSubject, string accusative, string? formulaClitic) =>
+        AssertPoliteRequestRoles(text, carrier, form, explicitSubject, accusative, formulaClitic, MorphologicalCase.Accusative);
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Моля ви се за помощ.", "Моля", null)]
+    [DataRow("Аз ви се моля за помощ.", "моля", "Аз")]
+    public void Polite_request_dative_objects_keep_original_supports_without_reflexive_or_possessive_substitution(
+        string text, string carrier, string? explicitSubject) =>
+        AssertPoliteRequestRoles(text, carrier, MorphologicalVerbForm.Finite, explicitSubject, "ви", null, MorphologicalCase.Dative);
+
+    private static void AssertPoliteRequestRoles(
+        string text, string carrier, MorphologicalVerbForm form, string? explicitSubject, string objectWord, string? formulaClitic,
+        MorphologicalCase objectCase)
+    {
+        TextAnalysis baseline = session.AnalyzeText(text, false, default, default);
+        foreach ((bool includeUnknown, TextContextOptions options) in ImperativeRoleProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            int Token(string word) => analysis.Tokens.Select((token, index) => (token, index))
+                .Single(t => t.token.Text == word).index;
+            int predicateIndex = Token(carrier), objectIndex = Token(objectWord);
+            Assert.AreEqual(predicateIndex, sentence.PredicateTokenIndex, text);
+            TextSyntaxCandidate predicate = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate);
+            Assert.AreEqual((analysis.Tokens[predicateIndex].Start, carrier.Length), (predicate.Start, predicate.Length), text);
+            Assert.AreEqual(predicateIndex, predicate.Targets.Single().TokenIndex, text);
+            TextReadingSnapshot[] predicateRows = ImperativeSupportReadings(analysis, predicate.Targets.Single());
+            Assert.IsNotEmpty(predicateRows, text);
+            Assert.IsTrue(predicateRows.All(r => r.Features.PartOfSpeech == MorphologicalPartOfSpeech.Verb && r.Features.VerbForm == form), text);
+
+            TextSyntaxCandidate obj = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Object &&
+                c.Targets.Any(s => s.TokenIndex == objectIndex));
+            Assert.AreEqual((analysis.Tokens[objectIndex].Start, objectWord.Length), (obj.Start, obj.Length), text);
+            Assert.AreNotEqual("ReflexiveClitic", obj.RuleId, text);
+            TextReadingSnapshot[] objectRows = ImperativeSupportReadings(analysis, obj.Targets.Single());
+            Assert.IsNotEmpty(objectRows, text);
+            Assert.IsTrue(objectRows.All(r => r.Features is
+                { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, IsShortForm: true } && r.Features.Case == objectCase), text);
+            Assert.IsTrue(obj.Context.Any(s => s.TokenIndex == predicateIndex), text);
+            Assert.IsFalse(sentence.Candidates.Where(c => c.Role != TextSyntaxRole.Object)
+                .Any(c => c.Targets.Any(s => s.TokenIndex == objectIndex)), text);
+
+            TextSyntaxCandidate[] subjects = sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray();
+            Assert.HasCount(explicitSubject is null ? 0 : 1, subjects, text);
+            if (explicitSubject is not null)
+            {
+                TextSyntaxCandidate subject = subjects.Single();
+                Assert.AreEqual((analysis.Tokens[Token(explicitSubject)].Start, explicitSubject.Length), (subject.Start, subject.Length), text);
+                TextReadingSnapshot[] subjectRows = ImperativeSupportReadings(analysis, subject.Targets.Single());
+                Assert.IsNotEmpty(subjectRows, text);
+                Assert.IsTrue(subjectRows.All(r => r.Features is
+                    { PartOfSpeech: MorphologicalPartOfSpeech.PersonalPronoun, Case: null, IsShortForm: not true } &&
+                    predicateRows.Any(p => p.Features.Person == r.Features.Person && p.Features.Number == r.Features.Number)), text);
+                Assert.IsTrue(subject.Context.Any(s => s.TokenIndex == predicateIndex), text);
+            }
+            if (formulaClitic is not null)
+            {
+                int formulaIndex = Token(formulaClitic);
+                Assert.IsFalse(sentence.Candidates.Where(c => c.Role is TextSyntaxRole.Predicate or TextSyntaxRole.Subject or TextSyntaxRole.Object)
+                    .Any(c => c.Targets.Any(s => s.TokenIndex == formulaIndex)), text);
+            }
+            AssertImperativeOriginalEvidence(analysis, baseline);
+        }
+    }
+
+    private static System.Collections.Generic.IEnumerable<(bool IncludeUnknown, TextContextOptions Options)> ImperativeRoleProfiles()
+    {
+        yield return (false, new() { IncludeAdditionalRoleHeuristics = true });
+        // Exact current apps/BgLang.Web/SyntaxHub.cs profile; word constructions are not enabled there.
+        yield return (true, new()
+        {
+            IncludeAdditionalRoleHeuristics = true, IncludeSubordinateCommaDiagnostics = true,
+            IncludeFragmentDiagnostics = true, IncludeSpacingDiagnostics = true,
+            IncludeNominalConstructions = true, IncludeGrammarEvidence = true
+        });
+    }
+
+    private static TextReadingSnapshot[] ImperativeSupportReadings(TextAnalysis analysis, TextSyntaxSupport support)
+    {
+        TextReadingInventory inventory = analysis.ReadingInventory!;
+        TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == support.TokenIndex);
+        return support.Readings.Select(r => inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings[r.CompleteReadingIndex]).ToArray();
+    }
+
+    private static void AssertImperativeOriginalEvidence(TextAnalysis analysis, TextAnalysis? baseline = null)
+    {
+        TextReadingInventory inventory = analysis.ReadingInventory!;
+        foreach (var token in analysis.Tokens)
+            Assert.AreEqual(token.Text, analysis.Text.Substring(token.Start, token.Length));
+        Assert.HasCount(analysis.Tokens.Count(t => t.Kind == TokenKind.Word), inventory.Occurrences);
+        foreach (TextReadingOccurrence occurrence in inventory.Occurrences)
+        {
+            var token = analysis.Tokens[occurrence.TokenIndex];
+            Assert.AreEqual((token.Start, token.Length, token.Text), (occurrence.Start, occurrence.Length, occurrence.Text));
+            Assert.AreEqual(token.Text, analysis.Text.Substring(occurrence.Start, occurrence.Length));
+            TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
+            CollectionAssert.AreEqual(session.Lookup(token.Text, LookupMode.Exact, 256).ToArray(), set.ResolvedReadings.Select(r => r.Raw).ToArray(), token.Text);
+            if (baseline is not null)
+            {
+                TextReadingOccurrence original = baseline.ReadingInventory!.Occurrences.Single(o => o.TokenIndex == occurrence.TokenIndex);
+                CollectionAssert.AreEqual(baseline.ReadingInventory.Sets[original.ReadingSetIndex].ResolvedReadings.ToArray(), set.ResolvedReadings.ToArray(), token.Text);
+            }
+        }
+        foreach (TextSyntaxCandidate candidate in analysis.Syntax!.Sentences.SelectMany(s => s.Candidates))
+        {
+            Assert.IsTrue(candidate.Start >= 0 && candidate.Length > 0 && candidate.Start + candidate.Length <= analysis.Text.Length);
+            foreach (TextSyntaxSupport support in candidate.Targets.Concat(candidate.Context))
+            {
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == support.TokenIndex);
+                int count = inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Count;
+                foreach (TextReadingReference reading in support.Readings)
+                {
+                    Assert.AreEqual(support.TokenIndex, reading.TokenIndex);
+                    Assert.IsTrue(reading.CompleteReadingIndex >= 0 && reading.CompleteReadingIndex < count);
+                }
+            }
+        }
+    }
+
     [TestMethod]
     [DataRow("Свали шлема си с гребена и го размаха.", "BasicPrepositionalObject", "Свали", "с гребена")]
     [DataRow("После един от накичените свали шлема си с гребена и го размаха над главата си.", "BasicPrepositionalObject", "свали", "с гребена")]
@@ -76,6 +715,155 @@ public sealed partial class PublicPackageTests
         foreach (TextReadingOccurrence occurrence in analysis.ReadingInventory!.Occurrences)
             CollectionAssert.AreEqual(session.Lookup(occurrence.Text, LookupMode.Exact, 256).ToArray(),
                 analysis.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(r => r.Raw).ToArray(), occurrence.Text);
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Ще дойда само при условие че ме поканят.", "дойда", "BasicObject", null, false)]
+    [DataRow("Тя видя само книгата.", "видя", "BasicObject", "книгата", false)]
+    [DataRow("Тя видя дори книгата.", "видя", "BasicObject", "книгата", true)]
+    [DataRow("Тя купи именно книгата.", "купи", "BasicObject", "книгата", true)]
+    [DataRow("Взех единствено книгата.", "Взех", "BasicObject", "книгата", true)]
+    [DataRow("Оставих само наблюдателен пост около тях.", "Оставих", "BasicObject", "наблюдателен пост", false)]
+    [DataRow("Тя видя книгата само на снимка.", "видя", "BasicObject", "книгата", false)]
+    [DataRow("Тя видя само него.", "видя", "BasicObject", "него", false)]
+    [DataRow("Детето е само.", "е", "BasicComplement", "само", false)]
+    [DataRow("Видях само дете.", "Видях", "BasicObject", "само дете", false)]
+    [DataRow("Видях само детето.", "Видях", "BasicObject", "детето", false)]
+    [DataRow("Видях само деца.", "Видях", "BasicObject", "деца", false)]
+    [DataRow("Видях самото дете.", "Видях", "BasicObject", "самото дете", true)]
+    [DataRow("Видях само малкото дете.", "Видях", "BasicObject", "малкото дете", false)]
+    [DataRow("Видях самото малко дете.", "Видях", "BasicObject", "самото малко дете", false)]
+    [DataRow("Видях хубаво само дете.", "Видях", "BasicObject", "хубаво само дете", false)]
+    [DataRow("Тя видя само и единствено книгата.", "видя", "BasicObject", "книгата", false)]
+    [DataRow("Видях малко вода.", "Видях", "BasicObject", "малко вода", false)]
+    public void Basic_postverbal_qualifiers_preserve_true_nominal_roles_and_complete_readings(
+        string text, string predicate, string rule, string? expected, bool selectsWithoutHints)
+    {
+        foreach (TextContextOptions options in new TextContextOptions[]
+                 { default, new() { IncludeAdditionalRoleHeuristics = true }, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            TextReadingInventory inventory = analysis.ReadingInventory!;
+            foreach (TextReadingOccurrence occurrence in inventory.Occurrences)
+            {
+                TokenAnalysis token = analysis.Tokens[occurrence.TokenIndex];
+                Assert.AreEqual((token.Start, token.Length, token.Text),
+                    (occurrence.Start, occurrence.Length, occurrence.Text), text);
+                CollectionAssert.AreEqual(session.Lookup(occurrence.Text, LookupMode.Exact, 256).ToArray(),
+                    inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(r => r.Raw).ToArray(), text);
+            }
+
+            TextSyntaxCandidate[] matches = sentence.Candidates
+                .Where(c => c.RuleId is "BasicObject" or "BasicComplement").ToArray();
+            if (!options.IncludeAdditionalRoleHeuristics && !selectsWithoutHints)
+            {
+                Assert.IsNull(sentence.PredicateTokenIndex, text);
+                Assert.IsEmpty(matches, text);
+                continue;
+            }
+            Assert.IsNotNull(sentence.PredicateTokenIndex, text);
+            int predicateIndex = sentence.PredicateTokenIndex!.Value;
+            Assert.AreEqual(predicate, analysis.Tokens[predicateIndex].Text, text);
+            Assert.HasCount(expected is null ? 0 : 1, matches, text);
+            if (expected is null) continue;
+            TextSyntaxCandidate role = matches[0];
+            int start = text.IndexOf(expected, StringComparison.Ordinal);
+            Assert.AreEqual(rule, role.RuleId, text);
+            Assert.AreEqual(rule == "BasicComplement" ? TextSyntaxRole.Complement : TextSyntaxRole.Object, role.Role, text);
+            Assert.AreEqual((start, expected.Length), (role.Start, role.Length), text);
+            CollectionAssert.AreEqual(expected.Split(' '), role.Targets.Select(t => analysis.Tokens[t.TokenIndex].Text).ToArray(), text);
+            int[] expectedTokens = analysis.Tokens.Select((token, index) => (token, index))
+                .Where(t => t.token.Start >= start && t.token.Start + t.token.Length <= start + expected.Length)
+                .Select(t => t.index).ToArray();
+            CollectionAssert.AreEqual(expectedTokens, role.Targets.Select(t => t.TokenIndex).ToArray(), text);
+            Assert.AreEqual(predicateIndex, role.Context.Single().TokenIndex, text);
+            foreach (TextSyntaxSupport support in role.Targets.Concat(role.Context))
+            {
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == support.TokenIndex);
+                TextReadingSet set = inventory.Sets[occurrence.ReadingSetIndex];
+                Assert.IsTrue(support.Readings.Count > 0, text);
+                foreach (TextReadingReference reading in support.Readings)
+                {
+                    Assert.AreEqual(support.TokenIndex, reading.TokenIndex, text);
+                    Assert.IsTrue((uint)reading.CompleteReadingIndex < (uint)set.ResolvedReadings.Count, text);
+                    if (analysis.Tokens[support.TokenIndex].Text == "само")
+                        Assert.AreEqual(MorphologicalPartOfSpeech.Adjective,
+                            set.ResolvedReadings[reading.CompleteReadingIndex].Features.PartOfSpeech, text);
+                }
+            }
+            Assert.AreEqual(text, analysis.Text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Детето е само и спокойно.", "BasicComplement", "само и спокойно", "само спокойно")]
+    [DataRow("Детето е спокойно и само.", "BasicComplement", "спокойно и само", "спокойно само")]
+    [DataRow("Тя видя книгата и само списанието.", "BasicObject", "книгата и само списанието", "книгата списанието")]
+    [DataRow("Видях дете и точно копие.", "BasicObject", "дете и точно копие", "дете точно копие")]
+    public void Postverbal_qualifier_coordination_preserves_both_members(
+        string text, string rule, string span, string targets)
+    {
+        foreach (var options in new TextContextOptions[]
+                 { default, new() { IncludeAdditionalRoleHeuristics = true }, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            var sentence = analysis.Syntax!.Sentences.Single();
+            if (!options.IncludeAdditionalRoleHeuristics)
+            {
+                Assert.IsNull(sentence.PredicateTokenIndex, text);
+                Assert.IsFalse(sentence.Candidates.Any(c => c.Role is TextSyntaxRole.Object or TextSyntaxRole.Complement), text);
+                continue;
+            }
+            var role = sentence.Candidates.Single(c => c.RuleId == rule);
+            Assert.AreEqual(span, text.Substring(role.Start, role.Length), text);
+            CollectionAssert.AreEqual(targets.Split(' '),
+                role.Targets.Select(t => analysis.Tokens[t.TokenIndex].Text).ToArray(), text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Тя видя само, без да докосва книгата.", ",")]
+    [DataRow("Тя видя само „книгата“.", "„")]
+    [DataRow("Ще изляза дори да вали.", "да")]
+    [DataRow("Ще изляза дори ако вали.", "ако")]
+    public void Postverbal_qualifiers_do_not_borrow_heads_across_boundaries(string text, string boundary)
+    {
+        foreach (TextContextOptions options in new TextContextOptions[] { default, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            int boundaryStart = text.IndexOf(boundary, StringComparison.Ordinal);
+            foreach (TextSyntaxCandidate role in analysis.Syntax!.Sentences.Single().Candidates
+                .Where(c => c.RuleId is "BasicObject" or "BasicComplement"))
+            {
+                Assert.IsFalse(role.Targets.Any(t => analysis.Tokens[t.TokenIndex].Text is "само" or "дори"), text);
+                Assert.IsFalse(role.Start < boundaryStart && role.Start + role.Length > boundaryStart, text);
+            }
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public void Postposed_qualifier_preserves_the_agreeing_subject_without_an_object()
+    {
+        const string text = "По тази линия пътуват само товарни влакове.";
+        foreach (TextContextOptions options in new TextContextOptions[]
+                 { default, new() { IncludeAdditionalRoleHeuristics = true }, NaturalSentenceOptions })
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, false, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            Assert.IsEmpty(sentence.Candidates.Where(c => c.RuleId is "BasicObject" or "BasicComplement").ToArray(), text);
+            if (!options.IncludeAdditionalRoleHeuristics)
+            {
+                Assert.IsNull(sentence.PredicateTokenIndex, text);
+                Assert.IsFalse(sentence.Candidates.Any(c => c.Role == TextSyntaxRole.Subject), text);
+                continue;
+            }
+            Assert.AreEqual("пътуват", analysis.Tokens[sentence.PredicateTokenIndex!.Value].Text, text);
+            TextSyntaxCandidate subject = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+            int head = analysis.Tokens.Select((token, index) => (token, index)).Single(t => t.token.Text == "влакове").index;
+            Assert.IsTrue(subject.Targets.Any(t => t.TokenIndex == head), text);
+            Assert.IsFalse(subject.Targets.Any(t => analysis.Tokens[t.TokenIndex].Text == "само"), text);
+        }
     }
 
     [TestMethod]
@@ -197,7 +985,8 @@ public sealed partial class PublicPackageTests
         Assert.IsTrue(actual.Syntax.Available);
 
         TextSyntaxSentence syntaxSentence = actual.Syntax.Sentences.Single();
-        TextSyntaxCandidate predicate = syntaxSentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate);
+        TextSyntaxCandidate predicate = syntaxSentence.Candidates.Single(c => c.Role == TextSyntaxRole.Predicate &&
+            c.Targets.Any(s => s.TokenIndex == syntaxSentence.PredicateTokenIndex));
         Assert.AreEqual(expectedPredicate, actual.Text.Substring(predicate.Start, predicate.Length), text);
 
         TextSyntaxCandidate[] subjects = syntaxSentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray();
@@ -2742,6 +3531,151 @@ public sealed partial class PublicPackageTests
                 Assert.IsEmpty(okWarnings, $"{cleanFuture}: [{string.Join(',', okWarnings.Select(w => $"{w.Code}@{cleanFuture.Substring(w.Start, w.Length)}"))}]");
             }
         }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("С един много добър човек разговаряше тя.", "тя", "разговаряше")]
+    [DataRow("Разговаряше тя с един много добър човек.", "тя", "Разговаряше")]
+    [DataRow("С един много добър човек тя разговаряше.", "тя", "разговаряше")]
+    [DataRow("Тя разговаряше с един много добър човек.", "Тя", "разговаряше")]
+    [DataRow("Тя разговаряше с един много по-добър човек.", "Тя", "разговаряше")]
+    [DataRow("С един много добър човек ние разговаряхме.", "ние", "разговаряхме")]
+    [DataRow("С един много добър човек те разговаряха.", "те", "разговаряха")]
+    [DataRow("С един много добър човек той разговаряше.", "той", "разговаряше")]
+    [DataRow("С един много добър човек добрата жена разговаряше.", "добрата жена", "разговаряше")]
+    [DataRow("С много хора разговаряше тя.", "тя", "разговаряше")]
+    [DataRow("С много търпение тя разговаряше.", "тя", "разговаряше")]
+    [DataRow("Един добър човек разговаряше.", "Един добър човек", "разговаряше")]
+    public void Governed_nominal_extent_keeps_subject_and_object_roles_separate(
+        string text, string expectedSubject, string expectedPredicate)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in GovernedNominalProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            TextSyntaxCandidate subject = sentence.Candidates.Single(c => c.Role == TextSyntaxRole.Subject);
+            Assert.AreEqual((text.IndexOf(expectedSubject, StringComparison.Ordinal), expectedSubject.Length),
+                (subject.Start, subject.Length), text);
+            Assert.AreEqual(expectedPredicate, analysis.Tokens[sentence.PredicateTokenIndex!.Value].Text, text);
+            int[] subjectTokens = subject.Targets.Select(t => t.TokenIndex).ToArray();
+            Assert.IsFalse(sentence.Candidates.Where(c => c.Role is TextSyntaxRole.Object or TextSyntaxRole.PrepositionalObject)
+                .SelectMany(c => c.Targets).Any(t => subjectTokens.Contains(t.TokenIndex)), text);
+            Assert.IsFalse(analysis.Context!.Sentences.SelectMany(s => s.SelectedRoles.Concat(s.Candidates.SelectMany(c => c.Roles)))
+                .Any(r => r.Role == TextContextRole.Subject && !subjectTokens.Contains(r.TokenIndex)), text);
+            int phraseStart = text.IndexOf("с един ", StringComparison.Ordinal);
+            if (options.IncludeAdditionalRoleHeuristics && phraseStart > analysis.Tokens[sentence.PredicateTokenIndex.Value].Start)
+            {
+                string postverbalPhrase = text[phraseStart..^1];
+                TextSyntaxCandidate pp = sentence.Candidates.Single(c => c.RuleId == "BasicPrepositionalObject");
+                Assert.AreEqual((phraseStart, postverbalPhrase.Length), (pp.Start, pp.Length), text);
+                CollectionAssert.AreEqual(postverbalPhrase.Split(' '), pp.Targets.Select(t => analysis.Tokens[t.TokenIndex].Text).ToArray(), text);
+                foreach (var target in pp.Targets.Where(t => analysis.Tokens[t.TokenIndex].Text == "по-добър"))
+                    Assert.IsEmpty(target.Readings, text);
+                Assert.AreEqual(sentence.PredicateTokenIndex.Value, pp.Context.Single().TokenIndex, text);
+            }
+            foreach (TextSyntaxSupport target in subject.Targets)
+            {
+                TokenAnalysis token = analysis.Tokens[target.TokenIndex];
+                Assert.IsTrue(token.Start >= subject.Start && token.Start + token.Length <= subject.Start + subject.Length, text);
+                TextReadingInventory inventory = analysis.ReadingInventory!;
+                TextReadingOccurrence occurrence = inventory.Occurrences.Single(o => o.TokenIndex == target.TokenIndex);
+                CollectionAssert.AreEqual(session.Lookup(token.Text, LookupMode.Exact, 256).ToArray(),
+                    inventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings.Select(r => r.Raw).ToArray(), text);
+            }
+            Assert.IsEmpty(analysis.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), text);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("С един много добър човек тя ще разговаряме.", "тя ще разговаряме.", "разговаряме", "разговаря")]
+    [DataRow("С един много добър човек той ще разговаряме.", "той ще разговаряме.", "разговаряме", "разговаря")]
+    [DataRow("С един много добър човек ние ще разговаря.", "ние ще разговаря.", "разговаря", "разговаряме")]
+    [DataRow("С един много добър човек добрата жена ще разговаряме.", "добрата жена ще разговаряме.", "разговаряме", "разговаря")]
+    [DataRow("С много хора тя ще разговаряме.", "тя ще разговаряме.", "разговаряме", "разговаря")]
+    [DataRow("С много търпение тя ще разговаряме.", "тя ще разговаряме.", "разговаряме", "разговаря")]
+    [DataRow("С един изключително добър човек тя ще разговаряме.", "тя ще разговаряме.", "разговаряме", "разговаря")]
+    public void Governed_nominal_prefix_preserves_future_agreement_warning_and_single_token_repair(
+        string text, string unprefixed, string wrongVerb, string correctedVerb)
+    {
+        const string mismatch = "productive_morphology_agreement_mismatch";
+        foreach ((bool includeUnknown, TextContextOptions options) in GovernedNominalProfiles())
+        {
+            TextAnalysis plain = session.AnalyzeText(unprefixed, includeUnknown, options, default);
+            TextDiagnostic plainWarning = plain.Diagnostics.Single(d => d.Code == mismatch);
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextDiagnostic warning = analysis.Diagnostics.Single(d => d.Code == mismatch);
+            int start = text.LastIndexOf(wrongVerb, StringComparison.Ordinal);
+            Assert.AreEqual((start, wrongVerb.Length), (warning.Start, warning.Length), text);
+            Assert.AreEqual(plainWarning.RuleId, warning.RuleId, text);
+            Assert.HasCount(1, analysis.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), text);
+            if (plainWarning.ProjectedText == correctedVerb)
+                Assert.AreEqual(correctedVerb, warning.ProjectedText, text);
+
+            if (options.IncludeGrammarEvidence)
+            {
+                TextGrammarEdit[] plainRepairs = plain.Grammar!.Matches
+                    .Where(m => m.RuleId == plainWarning.RuleId && m.Assessment == TextGrammarAssessment.Mismatch)
+                    .SelectMany(m => m.Repairs).Where(r => r.Edits.Count == 1)
+                    .Select(r => r.Edits.Single())
+                    .Where(e => unprefixed.Substring(e.Start, e.Length) == wrongVerb && e.Replacement == correctedVerb).ToArray();
+                if (plainRepairs.Length > 0)
+                    Assert.IsTrue(analysis.Grammar!.Matches.Where(m => m.RuleId == warning.RuleId)
+                        .SelectMany(m => m.Repairs).Where(r => r.Edits.Count == 1)
+                        .Select(r => r.Edits.Single()).Any(e => e.Start == start && e.Length == wrongVerb.Length && e.Replacement == correctedVerb), text);
+            }
+
+            string corrected = text[..start] + correctedVerb + text[(start + wrongVerb.Length)..];
+            TextAnalysis after = session.AnalyzeText(corrected, includeUnknown, options, default);
+            Assert.AreEqual(corrected, after.Text);
+            Assert.IsEmpty(after.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), corrected);
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Много хора разговаряха.", "Много хора", "хора")]
+    [DataRow("Тя вижда много хора.", "Тя", "Тя")]
+    [DataRow("Много разговаряше тя.", "тя", null)]
+    [DataRow("Тя разговаряше много.", "Тя", "Тя")]
+    public void Governed_nominal_quantifiers_preserve_ungoverned_subject_and_object_controls(
+        string text, string withRoleHeuristics, string? withoutRoleHeuristics)
+    {
+        foreach ((bool includeUnknown, TextContextOptions options) in GovernedNominalProfiles())
+        {
+            TextAnalysis analysis = session.AnalyzeText(text, includeUnknown, options, default);
+            TextSyntaxSentence sentence = analysis.Syntax!.Sentences.Single();
+            string? expectedSubject = options.IncludeAdditionalRoleHeuristics ? withRoleHeuristics : withoutRoleHeuristics;
+            TextSyntaxCandidate[] subjects = sentence.Candidates.Where(c => c.Role == TextSyntaxRole.Subject).ToArray();
+            Assert.HasCount(expectedSubject is null ? 0 : 1, subjects, text);
+            if (expectedSubject is not null)
+                Assert.AreEqual(expectedSubject, text.Substring(subjects[0].Start, subjects[0].Length), text);
+            Assert.IsEmpty(sentence.Candidates.Where(c => c.Role is TextSyntaxRole.Object or TextSyntaxRole.PrepositionalObject).ToArray(), text);
+            Assert.AreEqual("Calculated", sentence.Status, text);
+            Assert.AreEqual("SourceScan", sentence.Route, text);
+            TextContextSentence context = analysis.Context!.Sentences.Single();
+            Assert.IsTrue(context.Complete, text);
+            Assert.IsNull(context.Status, text);
+            if (options.IncludeNominalConstructions && text.Contains("хора", StringComparison.Ordinal))
+            {
+                TextNominalPhrase nominal = analysis.NominalConstructions!.Phrases.Single();
+                Assert.AreEqual("хора", text.Substring(nominal.Start, nominal.Length), text);
+                Assert.AreEqual(NominalAgreementAssessment.Unassessed, nominal.Assessment, text);
+            }
+            Assert.IsEmpty(analysis.Diagnostics.Where(d => IsActionablePackageWarning(d.Code)).ToArray(), text);
+        }
+    }
+
+    private static System.Collections.Generic.IEnumerable<(bool IncludeUnknown, TextContextOptions Options)> GovernedNominalProfiles()
+    {
+        TextContextOptions hub = new()
+        {
+            IncludeAdditionalRoleHeuristics = true, IncludeSubordinateCommaDiagnostics = true,
+            IncludeFragmentDiagnostics = true, IncludeSpacingDiagnostics = true,
+            IncludeWordConstructions = true, IncludeNominalConstructions = true, IncludeGrammarEvidence = true
+        };
+        yield return (false, default);
+        yield return (false, new() { IncludeAdditionalRoleHeuristics = true });
+        yield return (true, hub);
+        yield return (true, hub with { IncludeAdditionalRoleHeuristics = false });
     }
 
     [TestMethod]

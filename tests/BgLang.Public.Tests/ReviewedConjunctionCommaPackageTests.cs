@@ -142,10 +142,150 @@ public sealed partial class PublicPackageTests
     }
 
     [TestMethod]
+    [DataRow("Тръгнаха рано в случай, че завали.", "в случай, че", "Тръгнаха|рано|в|случай|че|завали")]
+    [DataRow("Ще дойда при условие, че ме поканят.", "при условие, че", "дойда|при|условие|че|поканят")]
+    [DataRow("😀 Тръгнаха рано в случай, че завали.", "в случай, че", "Тръгнаха|рано|в|случай|че|завали")]
+    public void Embedded_compound_conjunction_reports_both_commas_and_requires_both_corrections(
+        string text, string conjunction, string witnessWords)
+    {
+        RequireConjunctionReportBaseline();
+        const string internalCode = "spurious_comma_inside_compound_conjunction";
+        const string missingCode = "missing_comma_before_subordinate_conjunction";
+        int start = text.IndexOf(conjunction, StringComparison.Ordinal);
+        int comma = start + conjunction.IndexOf(',');
+        TextContextOptions options = new() { IncludeSubordinateCommaDiagnostics = true };
+        TextAnalysis ordinary = session.AnalyzeText(text);
+        TextAnalysis result = session.AnalyzeText(text, false, options, default);
+        var diagnostics = result.Validation!.SubordinateCommaDiagnostics!;
+        Assert.HasCount(2, diagnostics);
+        var internalComma = diagnostics.Single(row => row.Code == internalCode);
+        var missing = diagnostics.Single(row => row.Code == missingCode);
+        Assert.AreEqual((comma, 1, ","), (internalComma.Start, internalComma.Length, text.Substring(internalComma.Start, internalComma.Length)));
+        Assert.AreEqual((start, conjunction.Length, conjunction), (missing.Start, missing.Length, text.Substring(missing.Start, missing.Length)));
+        StringAssert.Contains(internalComma.Basis, "no_automatic_rewrite");
+        StringAssert.Contains(missing.Basis, "candidate_only;not_grammar_verdict");
+        var inventory = result.ReadingInventory!;
+        var expected = witnessWords.Split('|').SelectMany(word =>
+        {
+            var occurrence = inventory.Occurrences.Single(item => item.Text == word);
+            var set = inventory.Sets[occurrence.ReadingSetIndex];
+            Assert.AreSame(set.CanonicalReadings, set.ResolvedReadings, word);
+            Assert.IsNotEmpty(set.ResolvedReadings, word);
+            return Enumerable.Range(0, set.ResolvedReadings.Count).Select(row => new TextReadingReference(occurrence.TokenIndex, row));
+        }).ToArray();
+        CollectionAssert.AreEqual(expected, internalComma.Supports.ToArray());
+        CollectionAssert.AreEqual(expected, missing.Supports.ToArray());
+        Assert.AreEqual(text, result.Text);
+        Assert.IsNull(ordinary.Validation!.SubordinateCommaDiagnostics);
+        Assert.AreEqual(System.Text.Json.JsonSerializer.Serialize(ordinary.ReadingInventory),
+            System.Text.Json.JsonSerializer.Serialize(result.ReadingInventory));
+
+        string onlyInternalFixed = text.Remove(comma, 1);
+        var missingOnly = session.AnalyzeText(onlyInternalFixed, false, options, default).Validation!.SubordinateCommaDiagnostics!.Single();
+        Assert.AreEqual((missingCode, start, conjunction.Length - 1), (missingOnly.Code, missingOnly.Start, missingOnly.Length));
+        string onlyBoundaryFixed = text.Insert(start - 1, ",");
+        var internalOnly = session.AnalyzeText(onlyBoundaryFixed, false, options, default).Validation!.SubordinateCommaDiagnostics!.Single();
+        Assert.AreEqual((internalCode, comma + 1, 1), (internalOnly.Code, internalOnly.Start, internalOnly.Length));
+        string corrected = onlyInternalFixed.Insert(start - 1, ",");
+        Assert.IsEmpty(session.AnalyzeText(corrected, false, options, default).Validation!.SubordinateCommaDiagnostics!, corrected);
+        using CancellationTokenSource cancellation = new(); cancellation.Cancel();
+        Assert.AreEqual(cancellation.Token, Assert.ThrowsExactly<OperationCanceledException>(() =>
+            session.AnalyzeText(text, false, options, cancellation.Token)).CancellationToken);
+    }
+
+    [TestMethod]
+    [DataRow("в", "случай", "само")]
+    [DataRow("при", "условие", "само")]
+    [DataRow("в", "случай", "дори")]
+    [DataRow("при", "условие", "дори")]
+    [DataRow("в", "случай", "тъкмо")]
+    [DataRow("при", "условие", "тъкмо")]
+    [DataRow("в", "случай", "единствено")]
+    [DataRow("при", "условие", "единствено")]
+    [DataRow("в", "случай", "не")]
+    [DataRow("при", "условие", "не")]
+    [DataRow("в", "случай", "даже")]
+    [DataRow("при", "условие", "даже")]
+    [DataRow("в", "случай", "едва")]
+    [DataRow("при", "условие", "едва")]
+    [DataRow("в", "случай", "особено")]
+    [DataRow("при", "условие", "особено")]
+    [DataRow("в", "случай", "малко")]
+    [DataRow("при", "условие", "малко")]
+    [DataRow("в", "случай", "много")]
+    [DataRow("при", "условие", "много")]
+    [DataRow("в", "случай", "дълго")]
+    [DataRow("при", "условие", "дълго")]
+    [DataRow("в", "случай", "именно")]
+    [DataRow("при", "условие", "именно")]
+    [DataRow("в", "случай", "поне")]
+    [DataRow("при", "условие", "поне")]
+    [DataRow("в", "случай", "чак")]
+    [DataRow("при", "условие", "чак")]
+    [DataRow("в", "случай", "твърде дълго")]
+    [DataRow("при", "условие", "твърде дълго")]
+    [DataRow("в", "случай", "твърде скоро")]
+    [DataRow("при", "условие", "твърде скоро")]
+    public void Conditional_compound_qualifiers_preserve_internal_comma_advice_without_requesting_a_boundary_comma(
+        string preposition, string noun, string qualifier)
+    {
+        RequireConjunctionReportBaseline();
+        string text = $"Ще дойда {qualifier} {preposition} {noun}, че ме поканят.";
+        int comma = text.IndexOf(',');
+        TextContextOptions options = new() { IncludeSubordinateCommaDiagnostics = true };
+        TextAnalysis result = session.AnalyzeText(text, false, options, default);
+        TextValidationDiagnostic actual = result.Validation!.SubordinateCommaDiagnostics!.Single();
+        Assert.AreEqual(("spurious_comma_inside_compound_conjunction", comma, 1), (actual.Code, actual.Start, actual.Length));
+        StringAssert.Contains(actual.Basis, "candidate_only;not_grammar_verdict;no_automatic_rewrite");
+        foreach (string word in qualifier.Split(' '))
+        {
+            var occurrence = result.ReadingInventory!.Occurrences.Single(row => row.Text == word);
+            var readings = result.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings;
+            Assert.IsNotEmpty(readings, word);
+            for (int row = 0; row < readings.Count; row++)
+                CollectionAssert.Contains(actual.Supports.ToArray(), new TextReadingReference(occurrence.TokenIndex, row));
+        }
+        Assert.AreEqual(text, result.Text);
+        string corrected = text.Remove(comma, 1);
+        Assert.IsEmpty(session.AnalyzeText(corrected, false, options, default).Validation!.SubordinateCommaDiagnostics!, corrected);
+    }
+
+    [TestMethod]
+    [DataRow("Ще дойда и само при условие, че ме поканят.")]
+    [DataRow("Ще дойда или само при условие, че ме поканят.")]
+    [DataRow("Ще дойда, но само в случай, че ме поканят.")]
+    [DataRow("Ще дойда, а само в случай, че ме поканят.")]
+    [DataRow("Само при условие, че ме поканят, ще дойда.")]
+    [DataRow("Само в случай, че ме поканят, ще дойда.")]
+    public void Qualified_compound_boundaries_preserve_initial_and_narrow_connector_controls(string text)
+    {
+        RequireConjunctionReportBaseline();
+        TextContextOptions options = new() { IncludeSubordinateCommaDiagnostics = true };
+        TextValidationDiagnostic actual = session.AnalyzeText(text, false, options, default).Validation!.SubordinateCommaDiagnostics!.Single();
+        int comma = text.IndexOf(", че", StringComparison.Ordinal);
+        Assert.AreEqual(("spurious_comma_inside_compound_conjunction", comma, 1), (actual.Code, actual.Start, actual.Length));
+        Assert.IsEmpty(session.AnalyzeText(text.Remove(comma, 1), false, options, default).Validation!.SubordinateCommaDiagnostics!);
+    }
+
+    [TestMethod]
+    [DataRow("Разчитам само на условието, че той ще дойде.")]
+    [DataRow("Съгласих се само при едно условие, че ще ми пишат.")]
+    [DataRow("Ще дойда само при едно изрично условие, че ще ме поканят.")]
+    [DataRow("Той написа „само при условие, че ме поканят“ на листа.")]
+    public void Qualified_literal_nouns_and_quoted_terms_do_not_become_conditional_compound_findings(string text)
+    {
+        RequireConjunctionReportBaseline();
+        Assert.IsEmpty(session.AnalyzeText(text, false, new() { IncludeSubordinateCommaDiagnostics = true }, default)
+            .Validation!.SubordinateCommaDiagnostics!, text);
+    }
+
+    [TestMethod]
     [DataRow("Той каза, че вали.")]
     [DataRow("Подреди ги така, че да се виждат.")]
     [DataRow("Ще дойда, само, че по-късно.")]
     [DataRow("Приех при едно изрично условие, че ще ми пишат.")]
+    [DataRow("Разчитам на условието, че той ще дойде.")]
+    [DataRow("Съгласих се при едно условие, че ще ми пишат.")]
     [DataRow("Тя действа толкова независимо, че всички се учудиха.")]
     [DataRow("Записах „макар, че навън вали“ на листа.")]
     [DataRow("Той написа `в случай, че вали` и излезе.")]

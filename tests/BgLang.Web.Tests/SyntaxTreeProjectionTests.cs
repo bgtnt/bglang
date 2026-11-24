@@ -214,6 +214,89 @@ public sealed class SyntaxTreeProjectionTests
     }
 
     [TestMethod]
+    public void Bound_syntax_relations_preserve_both_predicates_and_each_actual_clitic_carrier()
+    {
+        TextAnalysis analysis = Text("🙂 Много ви моля, успокойте се и ми се доверете.",
+            "🙂", "Много", "ви", "моля", ",", "успокойте", "се", "и", "ми", "се", "доверете", ".");
+        TextSyntaxCandidate Candidate(TextSyntaxRole role, string rule, int target, int? carrier) =>
+            new(role, rule, analysis.Tokens[target].Start, analysis.Tokens[target].Length,
+                [new(target, "TypedFeatures", [new(target, 0)])], carrier is int index ? [Typed(index)] : []);
+        TextSyntaxSupport Typed(int token) => new(token, "TypedFeatures", [new(token, 0)]);
+        TextSyntaxCandidate[] candidates =
+        [
+            Candidate(TextSyntaxRole.Predicate, "BasicPredicate", 5, null),
+            Candidate(TextSyntaxRole.Predicate, "CoordinatedPredicate", 10, 5) with
+                { Context = [Typed(5), new(7, "ExactCategory", [new(7, 0)])] },
+            Candidate(TextSyntaxRole.Object, "ImmediateClitic", 2, 3),
+            Candidate(TextSyntaxRole.Object, "ImperativeObjectClitic", 8, 10),
+            Candidate(TextSyntaxRole.ReflexiveClitic, "BoundReflexiveClitic", 6, 5),
+            Candidate(TextSyntaxRole.ReflexiveClitic, "BoundReflexiveClitic", 9, 10)
+        ];
+        analysis = analysis with { Syntax = new("syntax.v2", true, null,
+            [new(0, analysis.Text.Length, "Calculated", "SourceScan", 5, candidates)], []) };
+
+        SyntaxTreeResult tree = SyntaxTreeProjection.Build(analysis);
+
+        CollectionAssert.AreEqual(new[] { 5, 10 }, tree.Tokens.Where(token => token.Roles.Any(role =>
+            role.Role == "Predicate")).Select(token => token.Index).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "10|5|coordinated_predicate", "7|10|coordinating_conjunction", "2|3|object_clitic", "8|10|object_clitic",
+            "6|5|bound_reflexive_clitic", "9|10|bound_reflexive_clitic"
+        }, tree.Edges.Select(edge => $"{edge.From}|{edge.To}|{edge.Label}").ToArray());
+        Assert.IsTrue(tree.Edges.All(edge => edge.Source == "syntax" && edge.Status == "candidate" &&
+            edge.Supports.Any(support => support.TokenIndex == edge.From) &&
+            edge.Supports.Any(support => support.TokenIndex == edge.To)));
+        CollectionAssert.AreEqual(new[] { 10, 5, 7 }, tree.Edges[0].Supports.Select(s => s.TokenIndex).ToArray());
+        Assert.AreEqual(5, analysis.Syntax!.Sentences.Single().PredicateTokenIndex,
+            "Projecting a secondary predicate must preserve the single main predicate index.");
+        Assert.AreEqual("Calculated", analysis.Syntax.Sentences.Single().Status);
+        Assert.AreEqual(36, tree.Tokens[9].Start, "The second се keeps its distinct original UTF-16 occurrence.");
+        using JsonDocument wire = JsonDocument.Parse(JsonSerializer.Serialize(tree, HttpContract.Json));
+        JsonElement reflexive = wire.RootElement.GetProperty("tokens")[9].GetProperty("roles")[0];
+        Assert.AreEqual("ReflexiveClitic", reflexive.GetProperty("role").GetString());
+        Assert.AreEqual(10, reflexive.GetProperty("contextTokenIndices")[0].GetInt32());
+        Assert.IsFalse(wire.RootElement.GetProperty("edges")[0].TryGetProperty("supports", out _));
+        TextAnalysis carrierOnly = analysis with { Syntax = analysis.Syntax with { Sentences =
+            [analysis.Syntax.Sentences.Single() with { Candidates = candidates.Select((candidate, index) => index == 1
+                ? candidate with { Context = [Typed(5)] } : candidate).ToArray() }] } };
+        SyntaxTreeResult carrierOnlyTree = SyntaxTreeProjection.Build(carrierOnly);
+        Assert.AreEqual(1, carrierOnlyTree.Edges.Count(edge => edge.Label == "coordinated_predicate"));
+        Assert.IsFalse(carrierOnlyTree.Edges.Any(edge => edge.Label == "coordinating_conjunction"));
+    }
+
+    [TestMethod]
+    public void Unbound_surface_only_and_group_role_context_remain_evidence_without_directed_edges()
+    {
+        TextAnalysis analysis = Text("Тя ми се доверява.", "Тя", "ми", "се", "доверява", ".");
+        TextSyntaxSupport typed = new(1, "TypedFeatures", [new(1, 0)]);
+        TextSyntaxCandidate candidate = new(TextSyntaxRole.Object, "ImmediateClitic", 3, 2, [typed], [Exact(3)]);
+        TextSyntaxCandidate[] unsupported =
+        [
+            candidate with { RuleId = "OtherClitic" },
+            candidate with { Role = TextSyntaxRole.Subject },
+            candidate with { Targets = [new(1, "SurfaceRule", [])] },
+            candidate with { Targets = [typed with { Readings = [] }] },
+            candidate with { Targets = [typed with { Basis = "ExactCategory" }] },
+            candidate with { Targets = [typed, Exact(2)] },
+            candidate with { Context = [Exact(0), Exact(3)] },
+            candidate with { Role = TextSyntaxRole.ReflexiveClitic, RuleId = "ReflexiveClitic" },
+            candidate with { Role = TextSyntaxRole.Predicate, RuleId = "CoordinatedPredicate", Context = [] },
+            candidate with { Role = TextSyntaxRole.Predicate, RuleId = "CoordinatedPredicate", Context = [Exact(0), Exact(2), Exact(3)] },
+            candidate with { Role = TextSyntaxRole.Predicate, RuleId = "CoordinatedPredicate", Context = [typed, new(2, "SurfaceRule", [])] }
+        ];
+        analysis = analysis with { Syntax = new("syntax.v2", true, null,
+            [new(0, analysis.Text.Length, "Calculated", "SourceScan", 3, unsupported)], []) };
+
+        SyntaxTreeResult tree = SyntaxTreeProjection.Build(analysis);
+
+        Assert.AreEqual(0, tree.Edges.Count);
+        Assert.AreEqual(unsupported.Length, tree.Tokens[1].Roles.Count,
+            "Unsupported directed relations still preserve all original role candidates and their context.");
+        Assert.IsTrue(tree.Tokens[1].Roles.Any(role => role.Context.Count > 1));
+    }
+
+    [TestMethod]
     public void Predicate_reading_tuples_and_marker_membership_remain_distinct_at_repeated_utf16_occurrences()
     {
         TextAnalysis analysis = Text("🙂 Аз съм се върнал. Аз съм се върнал.",

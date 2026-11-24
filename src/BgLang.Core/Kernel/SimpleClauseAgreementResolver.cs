@@ -844,7 +844,8 @@ internal static class SimpleClauseAgreementResolver
                 }
 
                 if (row.SourceAdverb && f.PartOfSpeech == MorphologicalPartOfSpeech.Adverb ||
-                    word.CanonicalText == "не" && f.PartOfSpeech == MorphologicalPartOfSpeech.Particle)
+                    word.CanonicalText == "не" && f.PartOfSpeech == MorphologicalPartOfSpeech.Particle ||
+                    pos > carrierPos && IsExactFocusParticle(word))
                 {
                     wordSupports.Add(new(r, SupportKind.TransparentAdverb, null, null, null, null,
                         MasculineArticleKind.None, IsAnimate: false, null, OwnerVerbValency.OpenUnattested));
@@ -877,6 +878,15 @@ internal static class SimpleClauseAgreementResolver
         List<NominalConstituent> constituents = BuildConstituents(map, idx, bodyStart, bodyLen, supportsByPos, ct, out bool truncatedConstituents);
         if (truncatedConstituents)
             return new(clause.ClauseId, clause.Matrix, SimpleClauseScopeDisposition.OwnedTruncated, null, null, -1, -1, -1);
+
+        // A postverbal focus particle is transparent only before an independently
+        // coherent nominal constituent; clause markers and unsupported tails stay outside R3.
+        for (int pos = carrierPos + 1; pos < bodyLen; pos++)
+        {
+            if (IsExactFocusParticle(map.Words[idx[bodyStart + pos]]) &&
+                !constituents.Any(c => c.StartPos == pos + 1 && c.HasZeroLocalViolation))
+                return Outside(clause);
+        }
 
         bool carrierHasThirdPerson = supportsByPos[carrierPos].Any(s =>
             s.Kind == SupportKind.FiniteVerb && s.Person == MorphologicalPerson.Third);
@@ -1516,6 +1526,13 @@ internal static class SimpleClauseAgreementResolver
             "колко" or "няколко" or "много" or "малко" or "толкова" or "доста" or "повече" or "повечето" or "многото" or
             "отколкото" or "колкото" ||
         SentenceClauseMap.IsRelativeWord(c);
+
+    private static bool IsExactFocusParticle(TokenView word) =>
+        !word.UsesGraph && word.Complete && word.Readings.Count > 0 &&
+        BulgarianFunctionWords.IsNominalFocusParticle(word.CanonicalText) &&
+        word.Readings.All(r => r.Category == Category.Particle && r.Features is
+            { PartOfSpeech: MorphologicalPartOfSpeech.Particle,
+              HasConflictingFeatures: false, HasUnrecognizedFeatures: false });
 
     private static bool IsOutsideScopeWord(
         TextAnalysis analysis,

@@ -227,6 +227,9 @@ internal static class BulgarianFunctionWords
     internal static bool IsNominalFocusParticle(string normalizedForm) =>
         normalizedForm is "дори" or "даже" or "само" or "едва" or "почти" or "чак" or "тъкмо" or "именно";
 
+    internal static bool IsPostverbalFocusQualifier(string normalizedForm) =>
+        IsNominalFocusParticle(normalizedForm) || normalizedForm is "единствено" or "точно";
+
     internal static bool TryGetPersonalSubjectPronoun(string normalizedForm, out PersonalSubjectPronounSpec spec) =>
         PersonalSubjects.TryGetValue(normalizedForm, out spec);
 

@@ -50,10 +50,15 @@ const openDetails = container => {
 test('Bulgarian labels distinguish local compatibility, alternatives and grammatical constraints', () => {
   assert.equal(roleName('Subject'), 'Подлог');
   assert.equal(roleName('Complement'), 'Именна част на сказуемото');
+  assert.equal(roleName('ReflexiveClitic'), 'Възвратна глаголна частица');
   assert.equal(roleName('other'), 'Неглаголен прочит');
   assert.equal(edgeName('grammar_constraint'), 'Граматично условие');
   assert.equal(edgeName('future_marker_marker'), 'Част от глаголната група с „ще“');
   assert.equal(edgeName('reflexive_clitic'), 'Глагол и кратка форма „се“');
+  assert.equal(edgeName('coordinated_predicate'), 'Съчинено сказуемо');
+  assert.equal(edgeName('coordinating_conjunction'), 'Съчинителна връзка');
+  assert.equal(edgeName('object_clitic'), 'Кратко допълнение към глагола');
+  assert.equal(edgeName('bound_reflexive_clitic'), 'Възвратна частица към глагола');
   assert.equal(edgeName('conditional_auxiliary_participle'), 'Условно наклонение със спомагателен глагол и причастие');
   assert.equal(edgeName('conditional_auxiliary_participle_marker'), 'Част от глаголната група в условно наклонение');
   assert.equal(statusName('compatible'), 'Локално съвместимо');

@@ -3,7 +3,8 @@ export const ROLE_NAMES = Object.freeze({
   Predicate: 'Сказуемо', Subject: 'Подлог', Object: 'Допълнение',
   Complement: 'Именна част на сказуемото', PrepositionalObject: 'Предложно допълнение',
   Attribute: 'Определение', Adverbial: 'Обстоятелствено пояснение',
-  Possessive: 'Кратко притежателно местоимение', finite: 'Лична глаголна форма',
+  Possessive: 'Кратко притежателно местоимение', ReflexiveClitic: 'Възвратна глаголна частица',
+  finite: 'Лична глаголна форма',
   imperative: 'Повелителна форма', participle: 'Причастие', converb: 'Деепричастие',
   unmeasured_verb: 'Глагол без измерена връзка', other: 'Неглаголен прочит',
   nominal_head: 'Опорна дума на именна група', nominal_modifier: 'Именен определител'
@@ -18,6 +19,8 @@ export const STATUS_NAMES = Object.freeze({
 
 export const EDGE_NAMES = Object.freeze({
   selected_subject: 'Подлог на сказуемото',
+  coordinated_predicate: 'Съчинено сказуемо', object_clitic: 'Кратко допълнение към глагола',
+  bound_reflexive_clitic: 'Възвратна частица към глагола',
   future_marker: 'Маркер за бъдеще', auxiliary_participle: 'Спомагателен глагол и причастие',
   reflexive_clitic: 'Глагол и кратка форма „се“',
   conditional_auxiliary_participle: 'Условно наклонение със спомагателен глагол и причастие',

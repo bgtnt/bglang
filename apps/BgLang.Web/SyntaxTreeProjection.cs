@@ -32,7 +32,27 @@ internal static class SyntaxTreeProjection
                     foreach (TextSyntaxSupport target in candidate.Targets)
                         AddRole(target.TokenIndex, new(candidate.Role.ToString(), "candidate", "syntax",
                             candidate.RuleId, alternative, target, candidate.Context));
-                    // Context supports a role candidate; it does not identify that role's syntactic governor.
+                    // Only bound rules identify a directed relation; other context remains supporting evidence.
+                    if (candidate.Targets.Count == 1 && candidate.Context.Count is 1 or 2)
+                    {
+                        TextSyntaxSupport target = candidate.Targets[0], carrier = candidate.Context[0];
+                        bool typedClitic = target.Basis == "TypedFeatures" && target.Readings.Count > 0;
+                        bool coordinated = candidate.Role == TextSyntaxRole.Predicate && candidate.RuleId == "CoordinatedPredicate" &&
+                            TypedSupport(target) && candidate.Context.All(TypedSupport);
+                        string? label = (candidate.Role, candidate.RuleId) switch
+                        {
+                            (TextSyntaxRole.Predicate, "CoordinatedPredicate") when coordinated => "coordinated_predicate",
+                            (TextSyntaxRole.Object, "ImmediateClitic" or "ImperativeObjectClitic") when typedClitic && candidate.Context.Count == 1 => "object_clitic",
+                            (TextSyntaxRole.ReflexiveClitic, "BoundReflexiveClitic") when typedClitic && candidate.Context.Count == 1 => "bound_reflexive_clitic",
+                            _ => null
+                        };
+                        if (label is not null)
+                            AddEdge(target.TokenIndex, carrier.TokenIndex, label, "candidate", "syntax",
+                                candidate.RuleId, alternative, [target, .. candidate.Context]);
+                        if (coordinated && candidate.Context.Count == 2)
+                            AddEdge(candidate.Context[1].TokenIndex, target.TokenIndex, "coordinating_conjunction",
+                                "candidate", "syntax", candidate.RuleId, alternative, [target, .. candidate.Context]);
+                    }
                 }
             }
 
@@ -216,6 +236,10 @@ internal static class SyntaxTreeProjection
     private static TextSyntaxSupport Support(int token, TextReadingReference? reading,
         TextGraphReadingReference? graphReading) => new(token, "original_reading_reference",
         reading is { } exact ? [exact] : []) { GraphReadings = graphReading is { } graph ? [graph] : null };
+
+    private static bool TypedSupport(TextSyntaxSupport support) =>
+        support.Basis is "TypedFeatures" or "ExactCategory" && support.Readings.Count > 0 ||
+        support.Basis == "LicensedGraphMorphology" && support.GraphReadings is { Count: > 0 };
 
     private static string Agreement(NominalAgreementAssessment assessment) => assessment switch
     {

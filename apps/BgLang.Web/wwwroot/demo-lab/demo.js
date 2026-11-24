@@ -62,7 +62,7 @@ const MORPH_KIND = {
 export const ROLE_NAMES = {
   Predicate: 'Сказуемо', Subject: 'Подлог', Object: 'Допълнение', Complement: 'Именна част на сказуемото',
   PrepositionalObject: 'Предложно допълнение', Attribute: 'Определение', Adverbial: 'Обстоятелствено пояснение',
-  Possessive: 'Кратко притежателно местоимение'
+  Possessive: 'Кратко притежателно местоимение', ReflexiveClitic: 'Възвратна глаголна частица'
 };
 // Only routes that change how the roles must be read get a note; the rest stay in the technical details.
 const ROUTE_NOTES = {

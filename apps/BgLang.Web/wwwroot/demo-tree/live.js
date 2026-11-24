@@ -140,11 +140,14 @@ export function groupTree(tree) {
       }
     }
     group.linkCount = new Set(group.edges.map(e => [e.from, e.to, e.label].join("/"))).size;
+    const boundRelations = new Set(group.edges.filter(e => e.source === "syntax")
+      .map(e => JSON.stringify([e.alternative, Math.min(e.from, e.to), Math.max(e.from, e.to)])));
     for (const token of group.tokens) {
       for (const role of token.roles ?? []) {
         if (role.source !== "syntax" || targetCount.get(role.alternative) !== 1) continue;
         for (const from of role.contextTokenIndices ?? []) {
-          if (from !== token.index && byToken.get(from) === group)
+          const pair = JSON.stringify([role.alternative, Math.min(from, token.index), Math.max(from, token.index)]);
+          if (from !== token.index && byToken.get(from) === group && !boundRelations.has(pair))
             group.edges.push({ from, to: token.index, label: "role_support_" + role.role, status: "evidence",
               source: role.source, ruleId: role.ruleId, alternative: role.alternative });
         }
