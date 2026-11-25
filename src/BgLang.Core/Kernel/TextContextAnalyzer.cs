@@ -361,7 +361,9 @@ internal static class TextContextAnalyzer
                                     : attributeMismatch
                                         ? ContextLanes.ProductiveAttributeMismatch
                                         : ContextLanes.ProductiveGraphMismatch;
-                string ruleId = deicticTemporal ? DeicticTemporalTenseRule : group.Key.AuthorityLane!;
+                string ruleId = deicticTemporal ? DeicticTemporalTenseRule
+                    : group.Any(candidate => candidate.EvidenceCodes.Contains(ClauseFusionAnalyzer.SharedSubjectCoordinationConditional))
+                        ? ClauseFusionAnalyzer.SharedSubjectCoordinationRule : group.Key.AuthorityLane!;
                 if (exact && !attributeMismatch && !particleParticiple && !pronounCase && !compoundAuxParticiple && !compoundSubjParticiple && !deicticTemporal &&
                     existingDiagnostics is not null && existingDiagnostics.Any(old =>
                     old.Code == "pronoun_verb_agreement_mismatch" && old.Start == target.Start && old.Length == target.Length)) continue;

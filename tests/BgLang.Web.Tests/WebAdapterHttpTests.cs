@@ -3,11 +3,15 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using BgLang.Api;
 using BgLang.Contracts;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BgLang.Web.Tests;
@@ -195,6 +199,120 @@ public sealed class WebAdapterHttpTests
         }
         finally { try { await app.StopAsync(); } finally { await app.DisposeAsync(); } }
         Assert.Throws<ObjectDisposedException>(() => _ = session!.Provenance);
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public async Task Docs_aliases_and_links_preserve_root_and_reverse_proxy_mounts()
+    {
+        string manifest = Environment.GetEnvironmentVariable("BGLANG_WEB_TEST_MANIFEST") ?? "";
+        string hash = Environment.GetEnvironmentVariable("BGLANG_WEB_TEST_MANIFEST_SHA256") ?? "";
+        Assert.IsTrue(File.Exists(manifest), "A strictly identified complete package is mandatory; no package-free acceptance.");
+        Assert.IsTrue(hash.Length == 64 && hash.All(Uri.IsHexDigit), "Select the exact manifest SHA-256 independently.");
+        await using var app = WebHostFactory.Create(["--urls", "http://127.0.0.1:0", "--BgLang:ManifestPath", manifest,
+            "--BgLang:ManifestSha256", hash]);
+        var proxyBuilder = WebApplication.CreateBuilder();
+        proxyBuilder.Logging.ClearProviders();
+        proxyBuilder.WebHost.UseUrls("http://127.0.0.1:0");
+        await using var proxy = proxyBuilder.Build();
+        using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+            { Timeout = TimeSpan.FromSeconds(20) };
+        try
+        {
+            await app.StartAsync();
+            string address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+            // Exercise an actual prefix-stripping proxy, so browser URL resolution retains /bglang.
+            proxy.Run(async context =>
+            {
+                if (!context.Request.Path.StartsWithSegments("/bglang", out var path))
+                {
+                    context.Response.StatusCode = 404;
+                    return;
+                }
+                using var request = new HttpRequestMessage(new HttpMethod(context.Request.Method),
+                    address + path + context.Request.QueryString);
+                if (context.Request.Headers.IfNoneMatch.Count > 0)
+                    request.Headers.TryAddWithoutValidation("If-None-Match", context.Request.Headers.IfNoneMatch.ToArray());
+                using HttpResponseMessage upstream = await client.SendAsync(request);
+                context.Response.StatusCode = (int)upstream.StatusCode;
+                context.Response.ContentType = upstream.Content.Headers.ContentType?.ToString();
+                if (upstream.Headers.Location is { } location) context.Response.Headers.Location = location.OriginalString;
+                if (upstream.Headers.ETag is { } etag) context.Response.Headers.ETag = etag.ToString();
+                if (!HttpMethod.Head.Method.Equals(context.Request.Method, StringComparison.OrdinalIgnoreCase))
+                    await upstream.Content.CopyToAsync(context.Response.Body);
+            });
+            await proxy.StartAsync();
+            string proxyAddress = proxy.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+            var targets = new Dictionary<string, string>
+            {
+                ["site.css"] = "text/css", ["demo-tree/index.html"] = "text/html",
+                ["api/v1/"] = "application/json", ["api/v2/"] = "application/json",
+                ["health/live"] = "application/json", ["health/ready"] = "application/json"
+            };
+            foreach ((string origin, string mount) in new[] { (address, ""), (proxyAddress, "/bglang") })
+            {
+                string staticPage = origin + mount + "/docs.html";
+                using (var head = new HttpRequestMessage(HttpMethod.Head, staticPage))
+                using (HttpResponseMessage staticHead = await client.SendAsync(head))
+                {
+                    Assert.AreEqual(HttpStatusCode.OK, staticHead.StatusCode, staticPage);
+                    Assert.IsNotNull(staticHead.Headers.ETag, "The direct HTML alias retains its static-file handler: " + staticPage);
+                    Assert.AreEqual("", await staticHead.Content.ReadAsStringAsync(), staticPage);
+                    using var conditional = new HttpRequestMessage(HttpMethod.Get, staticPage);
+                    conditional.Headers.IfNoneMatch.Add(staticHead.Headers.ETag);
+                    using HttpResponseMessage unchanged = await client.SendAsync(conditional);
+                    Assert.AreEqual(HttpStatusCode.NotModified, unchanged.StatusCode, staticPage);
+                    Assert.AreEqual(staticHead.Headers.ETag, unchanged.Headers.ETag, staticPage);
+                    Assert.AreEqual("", await unchanged.Content.ReadAsStringAsync(), staticPage);
+                }
+                foreach (string alias in new[] { "/docs/", "/docs.html/" })
+                {
+                    string page = origin + mount + alias + "?link-check=1";
+                    using var head = new HttpRequestMessage(HttpMethod.Head, page);
+                    using HttpResponseMessage redirect = await client.SendAsync(head);
+                    Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode, page);
+                    Assert.AreEqual("../docs.html?link-check=1", redirect.Headers.Location?.OriginalString, page);
+                    Assert.AreEqual("", await redirect.Content.ReadAsStringAsync(), page);
+                }
+                foreach (string alias in new[] { "/docs", "/docs.html", "/docs/", "/docs.html/" })
+                {
+                    var page = new Uri(origin + mount + alias + "?link-check=1");
+                    using HttpResponseMessage initial = await client.GetAsync(page);
+                    HttpResponseMessage content = initial;
+                    if (alias.EndsWith('/'))
+                    {
+                        Assert.AreEqual(HttpStatusCode.Redirect, initial.StatusCode, page.ToString());
+                        Assert.AreEqual("../docs.html?link-check=1", initial.Headers.Location?.OriginalString);
+                        page = new Uri(page, initial.Headers.Location!);
+                        Assert.AreEqual(mount + "/docs.html", page.AbsolutePath);
+                        content = await client.GetAsync(page);
+                    }
+                    try
+                    {
+                        Assert.AreEqual(HttpStatusCode.OK, content.StatusCode, page.ToString());
+                        Assert.AreEqual("text/html", content.Content.Headers.ContentType?.MediaType);
+                        string html = await content.Content.ReadAsStringAsync();
+                        string[] links = Regex.Matches(html, "href=\"([^\"]+)\"").Select(match => match.Groups[1].Value)
+                            .Where(href => !Uri.TryCreate(href, UriKind.Absolute, out _)).Distinct().ToArray();
+                        CollectionAssert.AreEquivalent(targets.Keys.ToArray(), links,
+                            "Check every local documentation link, including navigation and the stylesheet.");
+                        foreach (string link in links)
+                        {
+                            var target = new Uri(page, link);
+                            Assert.AreEqual(mount + "/" + link, target.AbsolutePath, page + " -> " + link);
+                            using HttpResponseMessage response = await client.GetAsync(target);
+                            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, target.ToString());
+                            Assert.AreEqual(targets[link], response.Content.Headers.ContentType?.MediaType, target.ToString());
+                        }
+                    }
+                    finally { if (!ReferenceEquals(content, initial)) content.Dispose(); }
+                }
+            }
+        }
+        finally
+        {
+            try { await proxy.StopAsync(); }
+            finally { await app.StopAsync(); }
+        }
     }
 
     private static string[] HostArguments(string? requestsPerMinute = null)

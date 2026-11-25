@@ -289,6 +289,8 @@ export function replaceableSpan(text, start, length) {
 }
 
 
+const SHARED_SUBJECT_RULE = 'clause_fusion_shared_subject.v1';
+
 export const GRAMMAR_RULE_META = {
   'local_exact_attribute_agreement.v1': {
     code: 'R1', title: 'Съгласуване в именната група',
@@ -306,6 +308,10 @@ export const GRAMMAR_RULE_META = {
   'clause_fusion_agreement.v1': {
     code: 'R3', title: 'Съгласуване на групата на подлога и групата на сказуемото',
     controllerRole: 'групата на подлога', dependentRole: 'групата на сказуемото'
+  },
+  [SHARED_SUBJECT_RULE]: {
+    code: 'R3', title: 'Съгласуване на сказуеми с общ подлог',
+    controllerRole: 'общият подлог', dependentRole: 'съчиненото сказуемо'
   },
   'grammar.agreement.copular_finite.v1': {
     code: 'R3', title: 'Съгласуване на групата на подлога и групата на сказуемото',
@@ -466,6 +472,10 @@ export function describeGrammarViolation(data, records, start, length) {
       if (!meta || !controllerText || !dependentText) continue;
       const actual = env.features(targetConflict.actual, rule.constraint, match.reason, false);
       const expected = env.features(targetConflict.expected, rule.constraint, match.reason, true);
+      if (rule.id === SHARED_SUBJECT_RULE) {
+        return `R3 · Ако „${controllerText}“ е общ подлог, формата „${dependentText}“` +
+          (actual ? ` (${actual})` : '') + ' не се съгласува с него' + (expected ? ` (${expected})` : '') + '.';
+      }
       const header = 'Противоречи на правило ' + meta.code + ' (' + meta.title + '): ';
       if (rule.id === 'grammar.full_article.clause_subject.v1') {
         const repl = match.repairs?.[0]?.edits?.[0]?.replacement;
@@ -987,6 +997,9 @@ export const RELATIVE_ANTECEDENT_MESSAGE =
   'Относителното местоимение не се съгласува по род или число с определяемото си.';
 
 export function diagnosticMessage(d, sourceText = '') {
+  if (d?.ruleId === SHARED_SUBJECT_RULE && d.code === 'productive_morphology_agreement_mismatch') {
+    return 'При общ подлог проверете лицето и числото на съчиненото сказуемо.';
+  }
   if (d && d.code === 'pronoun_case_governance_mismatch' && typeof sourceText === 'string' &&
       Number.isInteger(d.start) && Number.isInteger(d.length) && d.start >= 0 && d.length > 0 &&
       d.start + d.length <= sourceText.length) {
@@ -1091,7 +1104,7 @@ export function collectChecks(data) {
     checks.push({
       code, start, length, severity, validSpan, records, projected, words,
       known: Object.hasOwn(MESSAGES, code),
-      message: diagnosticMessage({code, start, length}, text) ?? GENERIC_MESSAGE,
+      message: diagnosticMessage(records[0].record, text) ?? GENERIC_MESSAGE,
       grammarMessage,
       graph: records.some(({record}) => Array.isArray(record.graphReadings) && record.graphReadings.length > 0),
       replaceable: REPLACEABLE_CODES.has(code) && projected !== null && validSpan && replaceableSpan(text, start, length),

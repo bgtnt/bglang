@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="bg">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HTTP договор · BgLang</title><link rel="stylesheet" href="/site.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HTTP договор · BgLang</title><link rel="stylesheet" href="site.css"></head>
 <body>
 <header><a class="brand" href="demo-tree/index.html">BgLang</a><nav><a href="demo-tree/index.html">Синтаксис на живо</a></nav></header>
 <main>
 <h1>HTTP API v2 и съвместимост с v1</h1>
-<p class="intro">Локалният HTTP сървър <code>BgLang.Web</code> предоставя JSON API за морфологичен анализ, речникови справки, словообразуване, ударения и ограничени граматични проверки на български текст върху един строго идентифициран пакет чрез <code>BulgarianLanguageSession</code>.</p>
-<p class="notice"><strong>Локален хост (без публична облачна услуга):</strong> тази страница се обслужва от вашия собствен локален процес <code>BgLang.Web</code> (по подразбиране <code>http://127.0.0.1:5070</code>), а не от споделен публичен сървър. <a href="/api/v2/">GET /api/v2/</a> връща действителните версии, идентификатора на заредения пакет и ефективните ограничения на хоста; <a href="/api/v1/">GET /api/v1/</a> пази предходната HTTP версия. Версиите и готовите пакети са в <a href="https://github.com/bgtnt/bglang/releases">публичните издания на BgLang</a>.</p>
+<p class="intro">HTTP сървърът <code>BgLang.Web</code> предоставя JSON API за морфологичен анализ, речникови справки, словообразуване, ударения и ограничени граматични проверки на български текст върху един строго идентифициран пакет чрез <code>BulgarianLanguageSession</code>.</p>
+<p class="notice">Редакторът и тази справка използват услугата на текущия сайт. При локално стартиране адресът по подразбиране е <code>http://127.0.0.1:5070</code>. <a href="api/v2/">GET /api/v2/</a> връща действителните версии, идентификатора на заредения пакет и ефективните ограничения на хоста; <a href="api/v1/">GET /api/v1/</a> пази предходната HTTP версия. Версиите и готовите пакети са в <a href="https://github.com/bgtnt/bglang/releases">публичните издания на BgLang</a>.</p>
 <section class="card" aria-label="Бърз проверен пример">
 <h2>Бърз проверен пример</h2>
 <p>Заявка към локалния <code>POST /api/v2/analyze-text</code> (<code>Content-Type: application/json</code>):</p>
@@ -70,7 +70,7 @@ POST /api/v2/lexical-entry
 </tbody></table>
 <p>Един queue worker притежава kernel извикването, projection, count preflight, сериализацията и awaited success transfer до действителния край на language callback-а. До 4 заявки чакат, максимум 2 секунди преди започване. Timeout/disconnect не освобождава тази линия преждевременно. Shutdown отхвърля чакащите и изчаква започнатата преди Dispose на сесията.</p>
 <p>10-секундният linked cooperative deadline покрива четенето на request body, kernel, projection, count preflight, сериализацията и awaited success transfer; не гарантира доставката през Internet и не прекъсва синхронната kernel работа. Малките фиксирани protocol <code>ErrorAsync</code> отговори (413/504 и други) се изпращат извън queue worker-а и този deadline с <code>RequestAborted</code>; за тях няма безусловен 10-секунден error-transfer timeout. След започнати headers прекъснатият отговор се abort-ва; към вече изпратения JSON не се дописва error tail.</p>
-<p><a href="/health/live">/health/live</a> и <a href="/health/ready">/health/ready</a> са отделни от езиковите операции. Listen започва след успешен Open и проверка на manifest SHA-256. Логовете са изключени по подразбиране; няма retained body logs или result cache. IP регистърът пази максимум 1024 entries.</p>
+<p><a href="health/live">/health/live</a> и <a href="health/ready">/health/ready</a> са отделни от езиковите операции. Listen започва след успешен Open и проверка на manifest SHA-256. Логовете са изключени по подразбиране; няма retained body logs или result cache. IP регистърът пази максимум 1024 entries.</p>
 <p>Forwarded/X-Forwarded-* headers се игнорират. Rate limit използва непосредствения peer IP. Публичният deployment трябва да използва Kestrel HTTPS или отделно прегледан proxy trust profile; зад proxy този default ще брои неговия IP като един клиент. Няма CORS или cross-origin достъп по подразбиране.</p>
 
 <section id="text-composition">

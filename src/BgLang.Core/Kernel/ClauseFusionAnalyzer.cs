@@ -22,6 +22,8 @@ internal static class ClauseFusionAnalyzer
     internal const string SelectionLane = "clause_fusion_selection.v1";
     internal const string AgreementLane = "clause_fusion_agreement.v1";
     internal const string SubjectArticleRule = "grammar.full_article.clause_subject.v1";
+    internal const string SharedSubjectCoordinationRule = "clause_fusion_shared_subject.v1";
+    internal const string SharedSubjectCoordinationConditional = "shared_subject_coordination_conditional";
     private const string CompatibleSubjectPredicate = "clause_subject_predicate_compatible";
 
     internal enum ArticleExpectationKind { SubjectFull, DirectObjectShort }
@@ -223,7 +225,8 @@ internal static class ClauseFusionAnalyzer
                         or NominalGrammarRules.PassiveParticipleId
                         or NominalGrammarRules.CopularAdjectiveId
                         or NominalGrammarRules.AuxiliaryParticipleId
-                        or NominalGrammarRules.SubjectPredicateId)
+                        or NominalGrammarRules.SubjectPredicateId
+                        or SharedSubjectCoordinationRule)
                 {
                     foreach (int dep in existing.DependentTokenIndices)
                         coveredPredicates.Add(dep);
@@ -468,11 +471,13 @@ internal static class ClauseFusionAnalyzer
             TokenAnalysis firstTok = analysis.Tokens[minTok], lastTok = analysis.Tokens[maxTok];
             int start = firstTok.Start, end = lastTok.Start + lastTok.Length;
             TextReadingReference[] expectedRefs = subjs.SelectMany(s => s.Readings).ToArray();
-            string reason = candidate.EvidenceCodes.Contains("coordinated_subject_clause_mismatch")
+            bool conditionalCoordination = candidate.EvidenceCodes.Contains(SharedSubjectCoordinationConditional);
+            string reason = conditionalCoordination ? SharedSubjectCoordinationConditional
+                : candidate.EvidenceCodes.Contains("coordinated_subject_clause_mismatch")
                 ? "coordinated_subject_clause_mismatch"
                 : "no_verified_single_token_repair";
             return new TextGrammarMatch(
-                NominalGrammarRules.SubjectPredicateId,
+                conditionalCoordination ? SharedSubjectCoordinationRule : NominalGrammarRules.SubjectPredicateId,
                 start,
                 end - start,
                 Array.AsReadOnly(controllers),
@@ -1578,7 +1583,7 @@ internal static class ClauseFusionAnalyzer
 
     private static void AddSubjectRelation(WordSlot[] slots, NominalChunk nominal, VerbalComplex verb, int[] finite,
         Func<IReadOnlyList<ContextOverlayRoleSelection>, string> canonicalKey, List<ContextOverlayCandidate> agreement,
-        string reason, bool mismatch, bool subjectProven)
+        string reason, bool mismatch, bool subjectProven, string? relationEvidence = null)
     {
         TokenView predicate = slots[verb.FiniteCarrierWordIndex].Word;
         TokenView head = slots[nominal.HeadWord].Word;
@@ -1600,7 +1605,10 @@ internal static class ClauseFusionAnalyzer
         }
         if (verb.PostposedSe) roles.Add(PostposedReflexive(slots[verb.LastWordIndex]));
         agreement.Add(new(predicate.OriginalIndex, Selectable: false, AgreementLane, Score: 0,
-            canonicalKey(roles), roles, mismatch ? [reason, ContextLanes.ProductiveGraphMismatch] : [reason]));
+            canonicalKey(roles), roles, mismatch
+                ? relationEvidence is null ? [reason, ContextLanes.ProductiveGraphMismatch]
+                    : [reason, ContextLanes.ProductiveGraphMismatch, relationEvidence]
+                : [reason]));
     }
 
     private static ContextOverlayRoleSelection PostposedReflexive(WordSlot slot) =>
@@ -7217,10 +7225,12 @@ internal static class ClauseFusionAnalyzer
         IReadOnlySet<int>? r3OwnedClauseIds,
         CancellationToken ct)
     {
-        if (!map.HasTerminalPunctuation || map.Clauses.Count == 0)
+        if (map.Clauses.Count == 0)
             return;
         ReadOnlySpan<char> sentText = map.Analysis.Text.AsSpan(map.Sentence.Start, map.Sentence.Length).TrimEnd();
-        if (!sentText.EndsWith(".", StringComparison.Ordinal))
+        bool establishedDelimiter = map.HasTerminalPunctuation && sentText.EndsWith(".", StringComparison.Ordinal);
+        if (map.Clauses.Count == 1 && (!establishedDelimiter ||
+            !map.Slots.Any(slot => slot.Word.CanonicalText == "и")))
             return;
 
         WordSlot[] slots = map.Slots;
@@ -7243,8 +7253,7 @@ internal static class ClauseFusionAnalyzer
             return;
         List<NominalChunk> pre1 = CollectNominalChunks(map, idx1, c1.BodyStartPos, v1FirstPos - 1, gov1, ct);
         NominalChunk[] nonTempPre1 = pre1.Where(np => !np.TemporalAdjunct).ToArray();
-        if (nonTempPre1 is not [{ Coherent: true, HeadReadings.Length: > 0 } subj] ||
-            !HasFullMasculineSingularSubjectCarrier(slots, subj) ||
+        if (nonTempPre1 is not [{ Coherent: true, Number: not null, ShortMasculineSingular: false, HeadReadings.Length: > 0 } subj] ||
             subj.FirstWord != idx1[c1.BodyStartPos] ||
             map.HasDirectCommaBetween(idx1, Array.IndexOf(idx1, subj.LastWord), v1FirstPos) ||
             HasVocativeReading(slots[subj.HeadWord]) ||
@@ -7258,95 +7267,148 @@ internal static class ClauseFusionAnalyzer
         if (MatchingVerbReadings(v1Slot, v1.CarrierFiniteReadings, subj).Length == 0)
             return;
 
-        // Case 1: Two finite clauses coordinated by 'и' without an intervening comma ("[Subj-ът + V1 + PP] и [V2 + PP]").
-        if (map.Clauses.Count >= 2)
+        bool fullMasculineSubject = HasFullMasculineSingularSubjectCarrier(slots, subj);
+        // Lexical governors can leave a да complement outside the bound main
+        // complex; its coordination may belong to that embedded predicate.
+        bool initialDaComplement = v1.HasDaComplement ||
+            idx1.Skip(v1LastPos + 1).Any(w => slots[w].Word.CanonicalText == "да");
+        // Outside the established full-article lane, prove the initial controller locally:
+        // a nominative pronoun, or a definite NP before an exclusively intransitive verb.
+        // A matching transitive form alone also permits an independently fronted object.
+        if (!fullMasculineSubject &&
+            (subj.LastWord + 1 != v1.FirstWordIndex || !map.AreSpaceBridged(subj.LastWord, v1.FirstWordIndex, ct) ||
+             initialDaComplement || v1.CopularCarrier ||
+             !subj.PronounSubject && (!IsDefiniteOrProperSubjectCandidate(slots, subj) ||
+                 !v1.CarrierFiniteReadings.All(r => SupportsIntransitiveSubjectRole(v1Slot.Word.Readings[r]) &&
+                     !IsLinkingOrSemiCopularLemma(v1Slot.Word.Readings[r].Lemma)))))
+            return;
+
+        // Each uninterrupted 'и' segment retains the original overt controller. This is
+        // conditional evidence: Bulgarian also licenses a separate unexpressed subject.
+        // Stop propagation at evidence for that alternative instead of changing controller.
+        ClauseSpan previousClause = c1;
+        bool firstParticipant = false, secondParticipant = false, thirdParticipant = false;
+        RecordParticipants(idx1.Skip(v1LastPos + 1));
+
+        void RecordParticipants(IEnumerable<int> indices)
         {
-            ClauseSpan c2 = map.Clauses[1];
-            int[] idx2 = c2.WordIndices;
-            if (r3OwnedClauseIds?.Contains(c2.ClauseId) != true &&
-                c2.Boundary.Kind == ClauseBoundaryKind.Coordinator &&
-                idx2.Length >= 2 &&
-                c2.BodyStartPos == 1 &&
-                slots[idx2[0]].Word.CanonicalText == "и" &&
-                !idx2.Any(w => slots[w].Quoted) &&
-                idx2[0] == idx1[^1] + 1 &&
-                !map.HasCommaBetween(idx1[^1], idx2[0]))
+            foreach (int w in indices)
             {
-                VerbalComplex? v2 = BindClauseMainComplex(map, c2, ct);
-                if (v2 is not null && !v2.InvariantCarrier && !v2.ImpersonalModal && !v2.CopularCarrier)
-                {
-                    int v2FirstPos = Array.IndexOf(idx2, v2.FirstWordIndex);
-                    int v2LastPos = Array.IndexOf(idx2, v2.LastWordIndex);
-                    if (v2FirstPos == c2.BodyStartPos && HasCleanSelectionTokens(map, v2, subj, ct))
-                    {
-                        bool[] gov2 = MarkGovernedPhrases(map, idx2, c2.BodyStartPos, idx2.Length - 1, v2FirstPos, v2LastPos, ct);
-                        List<NominalChunk> post2 = CollectNominalChunks(map, idx2, v2LastPos + 1, idx2.Length - 1, gov2, ct);
-                        WordSlot v2Slot = slots[v2.FiniteCarrierWordIndex];
-                        int[] allFin2 = AllFinitePersonalReadings(v2Slot.Word, ct);
-                        if (!v2.AllowsPerfectivePresent(map, c2))
-                            allFin2 = FilterIndicativeFinite(v2Slot.Word, allFin2);
-
-                        bool hasPostNomPron2 = Enumerable.Range(v2LastPos + 1, idx2.Length - v2LastPos - 1)
-                            .Any(p => !gov2[p] && NominativePronounReadings(slots[idx2[p]], slots[idx2[p - 1]]).Length > 0);
-                        bool hasPostSubj2 = hasPostNomPron2 ||
-                            post2.Any(np => np.FullMasculineSingular) ||
-                            HasCompatiblePostverbalSubject(slots, post2, v2Slot, allFin2);
-
-                        if (allFin2.Length > 0 && !hasPostSubj2 &&
-                            !allFin2.Any(r => Guard.PersonNumberTupleMatches(
-                                (MorphologicalPerson.Third, MorphologicalNumber.Singular),
-                                (v2Slot.Word.Readings[r].Features.Person, v2Slot.Word.Readings[r].Features.Number))))
-                        {
-                            // [P1-I4] Participant-licensing guard for inclusive 1pl/2pl/3pl ("Моят колега дойде при нас и работихме заедно.").
-                            var postV1Words = idx1.Skip(v1LastPos + 1).Select(w => slots[w]).ToArray();
-                            bool licensed1Pl = allFin2.Any(r => v2Slot.Word.Readings[r].Features is
-                                { Person: MorphologicalPerson.First, Number: MorphologicalNumber.Plural }) &&
-                                postV1Words.Any(s =>
-                                    BulgarianFunctionWords.TryGetFullObliquePronoun(s.Word.CanonicalText, out var op, out _) && op == MorphologicalPerson.First ||
-                                    s.Word.CanonicalText is "ми" or "ни" ||
-                                    s.Word.Readings.Any(r => Norm(r.Lemma) is "мой" or "наш"));
-                            bool licensed2Pl = allFin2.Any(r => v2Slot.Word.Readings[r].Features is
-                                { Person: MorphologicalPerson.Second, Number: MorphologicalNumber.Plural }) &&
-                                postV1Words.Any(s =>
-                                    BulgarianFunctionWords.TryGetFullObliquePronoun(s.Word.CanonicalText, out var op, out _) && op == MorphologicalPerson.Second ||
-                                    s.Word.CanonicalText is "ти" or "ви" ||
-                                    s.Word.Readings.Any(r => Norm(r.Lemma) is "твой" or "ваш"));
-                            bool licensed3Pl = allFin2.Any(r => v2Slot.Word.Readings[r].Features is
-                                { Person: MorphologicalPerson.Third, Number: MorphologicalNumber.Plural }) &&
-                                postV1Words.Any(s =>
-                                    BulgarianFunctionWords.TryGetFullObliquePronoun(s.Word.CanonicalText, out var op, out _) && op == MorphologicalPerson.Third ||
-                                    s.Word.CanonicalText is "му" or "ѝ" or "им" ||
-                                    HasAnimateNominalHead(s, s.Active));
-                            var impRows2 = v2Slot.Word.Readings
-                                .Where(r => r.Features.VerbForm == MorphologicalVerbForm.Imperative && !r.Features.HasConflictingFeatures)
-                                .ToArray();
-                            bool blockedByImp2 = impRows2.Length > 0 && !impRows2.All(r => r.Features.Number == MorphologicalNumber.Plural);
-                            bool sharedCopulaMascPass2 = v1.CopularCarrier && v2Slot.Word.Readings.Any(r => r.Features is
-                            {
-                                PartOfSpeech: MorphologicalPartOfSpeech.Verb,
-                                VerbForm: MorphologicalVerbForm.Participle,
-                                ParticipleKind: MorphologicalParticipleKind.PastPassive,
-                                Number: MorphologicalNumber.Singular,
-                                Gender: MorphologicalGender.Masculine,
-                                Article: null or MorphologicalArticle.Indefinite,
-                                HasConflictingFeatures: false
-                            });
-
-                            if (!licensed1Pl && !licensed2Pl && !licensed3Pl && !blockedByImp2 && !sharedCopulaMascPass2 &&
-                                !agreement.Any(a => a.PredicateTokenIndex == v2Slot.Word.OriginalIndex))
-                            {
-                                AddSubjectRelation(slots, subj, v2, allFin2, canonicalKey, agreement,
-                                    "nominal_subject_clause_mismatch", mismatch: true, subjectProven: true);
-                                return;
-                            }
-                        }
-                    }
-                }
+                ct.ThrowIfCancellationRequested();
+                WordSlot slot = slots[w];
+                bool oblique = BulgarianFunctionWords.TryGetFullObliquePronoun(slot.Word.CanonicalText, out var person, out _);
+                firstParticipant |= oblique && person == MorphologicalPerson.First || slot.Word.CanonicalText is "ми" or "ни" ||
+                    slot.Word.Readings.Any(row => Norm(row.Lemma) is "мой" or "наш");
+                secondParticipant |= oblique && person == MorphologicalPerson.Second || slot.Word.CanonicalText is "ти" or "ви" ||
+                    slot.Word.Readings.Any(row => Norm(row.Lemma) is "твой" or "ваш");
+                thirdParticipant |= oblique && person == MorphologicalPerson.Third || slot.Word.CanonicalText is "му" or "ѝ" or "им" ||
+                    HasAnimateNominalHead(slot, slot.Active);
             }
         }
 
+        for (int clauseIndex = 1; clauseIndex < map.Clauses.Count; clauseIndex++)
+        {
+            ct.ThrowIfCancellationRequested();
+            ClauseSpan c2 = map.Clauses[clauseIndex];
+            int[] idx2 = c2.WordIndices;
+            if (r3OwnedClauseIds?.Contains(c2.ClauseId) == true ||
+                c2.Boundary.Kind != ClauseBoundaryKind.Coordinator || idx2.Length < 2 ||
+                c2.BodyStartPos != 1 || slots[idx2[0]].Word.CanonicalText != "и" ||
+                idx2.Any(w => slots[w].Quoted) || idx2[0] != previousClause.WordIndices[^1] + 1 ||
+                !map.AreSpaceBridged(previousClause.WordIndices[^1], idx2[0], ct))
+                break;
+
+            VerbalComplex? v2 = BindClauseMainComplex(map, c2, ct);
+            if (v2 is null || v2.InvariantCarrier || v2.ImpersonalModal || v2.CopularCarrier)
+                break;
+            int v2FirstPos = Array.IndexOf(idx2, v2.FirstWordIndex);
+            int v2LastPos = Array.IndexOf(idx2, v2.LastWordIndex);
+            if (v2FirstPos != c2.BodyStartPos || v2LastPos < v2FirstPos || !HasCleanSelectionTokens(map, v2, subj, ct))
+                break;
+
+            bool establishedPair = fullMasculineSubject && clauseIndex == 1 && establishedDelimiter;
+            WordSlot v2Slot = slots[v2.FiniteCarrierWordIndex];
+            if (!establishedPair && (initialDaComplement || v1.CopularCarrier || v2.HasDaComplement ||
+                idx2.Skip(v2LastPos + 1).Any(w => slots[w].Word.CanonicalText == "да") ||
+                clauseIndex + 1 < map.Clauses.Count && map.Clauses[clauseIndex + 1].Boundary.Kind is
+                    ClauseBoundaryKind.Subordinator or ClauseBoundaryKind.PrepositionalSubordinator ||
+                !NonPlaceholderReadings(v2Slot.Word, sentenceInitial: false).All(r => v2Slot.Word.Readings[r].Category == Category.Verb) ||
+                Enumerable.Range(1, idx2.Length - 1).Any(p => !map.AreSpaceBridged(idx2[p - 1], idx2[p], ct))))
+                break;
+
+            bool[] gov2 = MarkGovernedPhrases(map, idx2, c2.BodyStartPos, idx2.Length - 1, v2FirstPos, v2LastPos, ct);
+            List<NominalChunk> post2 = CollectNominalChunks(map, idx2, v2LastPos + 1, idx2.Length - 1, gov2, ct);
+            int[] allFin2 = AllFinitePersonalReadings(v2Slot.Word, ct);
+            if (v2.HasFutureMarker)
+                allFin2 = allFin2.Where(r => v2Slot.Word.Readings[r].Features.Tense == MorphologicalTense.Present).ToArray();
+            if (!v2.AllowsPerfectivePresent(map, c2))
+                allFin2 = FilterIndicativeFinite(v2Slot.Word, allFin2);
+            // Third-singular reflexives can also be impersonal. Keep each
+            // lexical alternative, including the 2/3sg syncretism of past forms:
+            // that second-person row does not eliminate an impersonal reading.
+            // A dative experiencer also licenses other past alternatives.
+            if (!establishedPair && v2.HasReflexiveSe &&
+                allFin2.Any(r => v2Slot.Word.Readings[r].Features is
+                    { Person: MorphologicalPerson.Third, Number: MorphologicalNumber.Singular }) &&
+                (v2.CarrierClitics().DativeCliticWordIndex >= 0 ||
+                 allFin2.GroupBy(r => Norm(v2Slot.Word.Readings[r].Lemma)).Any(lexical =>
+                     lexical.Any(r => v2Slot.Word.Readings[r].Features is
+                         { Person: MorphologicalPerson.Third, Number: MorphologicalNumber.Singular }) &&
+                     lexical.All(r => v2Slot.Word.Readings[r].Features is { Number: MorphologicalNumber.Singular } f &&
+                         (f.Person == MorphologicalPerson.Third || f.Person == MorphologicalPerson.Second &&
+                             f.Tense is MorphologicalTense.Aorist or MorphologicalTense.Imperfect)))))
+                break;
+            bool hasPostNomPron2 = Enumerable.Range(v2LastPos + 1, idx2.Length - v2LastPos - 1)
+                .Any(p => !gov2[p] && NominativePronounReadings(slots[idx2[p]], slots[idx2[p - 1]]).Length > 0);
+            bool hasPostSubj2 = hasPostNomPron2 || post2.Any(np => np.FullMasculineSingular) ||
+                HasCompatiblePostverbalSubject(slots, post2, v2Slot, allFin2) ||
+                !establishedPair && post2.Any(np => !np.TemporalAdjunct && !np.ShortMasculineSingular);
+            if (allFin2.Length == 0 || hasPostSubj2)
+                break;
+
+            // Participant evidence can license an inclusive or switched implicit subject.
+            // Preserve the established first-pair check and include later complements for new links.
+            if (!establishedPair)
+                RecordParticipants(idx2.Skip(v2LastPos + 1));
+            bool alternateController = allFin2.Any(r =>
+            {
+                MorphologicalFeatures f = v2Slot.Word.Readings[r].Features;
+                if (f.Number != MorphologicalNumber.Plural) return false;
+                return !subj.PronounSubject && subj.Number == MorphologicalNumber.Plural &&
+                        f.Person is MorphologicalPerson.First or MorphologicalPerson.Second &&
+                        HasAnimateNominalHead(slots[subj.HeadWord], subj.HeadReadings) ||
+                    f.Person == MorphologicalPerson.First && firstParticipant ||
+                    f.Person == MorphologicalPerson.Second && secondParticipant ||
+                    f.Person == MorphologicalPerson.Third && thirdParticipant;
+            });
+            var imperativeRows = v2Slot.Word.Readings.Where(r =>
+                r.Features.VerbForm == MorphologicalVerbForm.Imperative && !r.Features.HasConflictingFeatures).ToArray();
+            bool imperativeAlternative = imperativeRows.Length > 0 &&
+                (!imperativeRows.All(r => r.Features.Number == MorphologicalNumber.Plural) ||
+                 subj.Person == MorphologicalPerson.Second && imperativeRows.Any(r => r.Features.Number == subj.Number));
+            bool sharedCopula = v1.CopularCarrier && v2Slot.Word.Readings.Any(r => r.Features is
+            {
+                PartOfSpeech: MorphologicalPartOfSpeech.Verb, VerbForm: MorphologicalVerbForm.Participle,
+                ParticipleKind: MorphologicalParticipleKind.PastPassive,
+                Number: MorphologicalNumber.Singular, Gender: MorphologicalGender.Masculine,
+                Article: null or MorphologicalArticle.Indefinite, HasConflictingFeatures: false
+            });
+            if (alternateController || imperativeAlternative || sharedCopula)
+                break;
+
+            if (MatchingVerbReadings(v2Slot, allFin2, subj).Length == 0 &&
+                !agreement.Any(a => a.PredicateTokenIndex == v2Slot.Word.OriginalIndex))
+                AddSubjectRelation(slots, subj, v2, allFin2, canonicalKey, agreement,
+                    subj.PronounSubject ? "pronoun_subject_clause_mismatch" : "nominal_subject_clause_mismatch",
+                    mismatch: true, subjectProven: true,
+                    relationEvidence: establishedPair ? null : SharedSubjectCoordinationConditional);
+            if (establishedPair)
+                RecordParticipants(idx2.Skip(v2LastPos + 1));
+            previousClause = c2;
+        }
+
         // Case 2: Non-finite V2 inside single clause ("[Subj-ът + V1 + PP + и + BareActL(non-MascSg) / BarePassPart + PP]").
-        if (map.Clauses.Count == 1)
+        if (fullMasculineSubject && establishedDelimiter && map.Clauses.Count == 1)
         {
             for (int p = v1LastPos + 2; p + 1 < idx1.Length; p++)
             {

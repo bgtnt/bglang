@@ -203,7 +203,8 @@ public sealed class NominalDiagnosticsPackageTests
             "grammar.agreement.active_participle_controller.v1",
             "grammar.agreement.auxiliary_active_participle.v1",
             "clause_fusion_agreement.v1",
-            "grammar.full_article.clause_subject.v1"
+            "grammar.full_article.clause_subject.v1",
+            "clause_fusion_shared_subject.v1"
         }, empty.Rules.Select(rule => rule.Id).ToArray());
         Assert.IsEmpty(empty.Matches);
 

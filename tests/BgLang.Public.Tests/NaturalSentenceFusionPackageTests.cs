@@ -15,6 +15,141 @@ public sealed partial class PublicPackageTests
         IncludeNominalConstructions = true
     };
 
+    private const string SharedSubjectRule = "clause_fusion_shared_subject.v1";
+    private const string SharedSubjectCondition = "shared_subject_coordination_conditional";
+
+    // Literal UTF-16 ranges and scope controls are independent of the analyzer's selections.
+    // An omitted subject can change between clauses: the new warning remains conditional.
+    [TestMethod, TestCategory("FullPackage")]
+    [DataRow("Аз чета и пишем.", "10:5")]
+    [DataRow("Аз чета и пишем", "10:5")]
+    [DataRow("Аз чета и пишем!", "10:5")]
+    [DataRow("Аз чета и пишем?", "10:5")]
+    [DataRow("Ти четеш и пишем.", "11:5")]
+    [DataRow("Ние четем и пиша.", "12:4")]
+    [DataRow("Вие четете и пишем.", "13:5")]
+    [DataRow("Аз чета и пишем и пеете.", "10:5|18:5")]
+    [DataRow("Аз чета и пиша и пеем.", "17:4")]
+    [DataRow("Аз чета и не пишем.", "13:5")]
+    [DataRow("Аз ще чета и ще пишем.", "16:5")]
+    [DataRow("Аз се усмихвам и се смеем.", "20:5")]
+    [DataRow("Аз чета и се усмихваме.", "13:9")]
+    [DataRow("Аз четях и се усмихвахме.", "14:10")]
+    [DataRow("Жената пътува и пристигаме.", "16:10")]
+    [DataRow("Жените пътуват и пристига.", "17:8")]
+    [DataRow("Аз чета и пиша.", "")]
+    [DataRow("Аз чета и пиша и пея.", "")]
+    [DataRow("Аз чета и ние пишем.", "")]
+    [DataRow("Аз чета и пишем ние.", "")]
+    [DataRow("Аз чета и пишат децата.", "")]
+    [DataRow("Аз чета, а ние пишем.", "")]
+    [DataRow("Аз чета при вас и пишете.", "")]
+    [DataRow("Аз чета и после пишем.", "")]
+    [DataRow("Аз чета и казват, че пишем.", "")]
+    [DataRow("Аз чета, но пишем.", "")]
+    [DataRow("Аз чета или пишем.", "")]
+    [DataRow("Аз искам да чета и пишем.", "")]
+    [DataRow("Аз чета и „пишем“.", "")]
+    [DataRow("Аз чета. Пишем.", "")]
+    [DataRow("Ти четеш и чете.", "")]
+    [DataRow("Ти четеш и пиши.", "")]
+    [DataRow("Аз чета и коси.", "")]
+    [DataRow("Аз чета и ми се спеше.", "")]
+    [DataRow("Аз чета и се стъмва.", "")]
+    [DataRow("Аз чета и се съмва.", "")]
+    [DataRow("Аз четях и се съмваше.", "")]
+    [DataRow("Аз четях и се стъмваше.", "")]
+    [DataRow("Аз четях и се усмихвах.", "")]
+    [DataRow("Стъмва се. Аз чета и пишем.", "21:5")]
+    [DataRow("Аз чета и пиш", "")]
+    [DataRow("Моят колега дойде при нас и работихме заедно.", "")]
+    [DataRow("Ти трябва да имаш малко момиченце и някой ден ще вдигнем сватба.", "")]
+    [DataRow("Състезателите ни още имат бъдеще и не го вярвам.", "")]
+    public void Shared_subject_coordination_warns_only_at_independently_bounded_mismatching_verbs(
+        string text, string literalRanges)
+    {
+        TextAnalysis baseline = session.AnalyzeText(text);
+        foreach ((bool includeUnknown, TextContextOptions options) in GovernedNominalProfiles())
+        {
+            TextAnalysis actual = session.AnalyzeText(text, includeUnknown, options, default);
+            TextDiagnostic[] warnings = actual.Diagnostics.Where(d => d.RuleId == SharedSubjectRule).ToArray();
+            string[] expected = literalRanges.Length == 0 ? [] : literalRanges.Split('|');
+            CollectionAssert.AreEqual(expected, warnings.Select(d => $"{d.Start}:{d.Length}").ToArray(), text);
+            Assert.AreEqual(text, actual.Text);
+            AssertImperativeOriginalEvidence(actual, baseline);
+            foreach (TextDiagnostic warning in warnings)
+                AssertSharedSubjectWarning(actual, warning);
+            TextContextCandidate[] candidates = actual.Context!.Sentences.SelectMany(s => s.Candidates)
+                .Where(c => c.EvidenceCodes.Contains(SharedSubjectCondition)).ToArray();
+            Assert.HasCount(expected.Length, candidates, text);
+            Assert.IsTrue(candidates.All(c => !c.Selectable), text);
+            if (options.IncludeGrammarEvidence)
+            {
+                TextGrammarMatch[] matches = actual.Grammar!.Matches.Where(m => m.RuleId == SharedSubjectRule).ToArray();
+                Assert.HasCount(expected.Length, matches, text);
+                foreach (TextGrammarMatch match in matches)
+                {
+                    Assert.AreEqual(SharedSubjectCondition, match.Reason, text);
+                    Assert.AreEqual(TextGrammarAssessment.Mismatch, match.Assessment, text);
+                    Assert.IsEmpty(match.Repairs, "Conditional shared-subject evidence cannot select an automatic repair.");
+                    Assert.HasCount(1, match.ControllerTokenIndices, text);
+                    Assert.HasCount(1, match.DependentTokenIndices, text);
+                    Assert.IsTrue(warnings.Any(d => actual.Tokens[match.DependentTokenIndices[0]].Start == d.Start), text);
+                }
+            }
+        }
+    }
+
+    [TestMethod, TestCategory("FullPackage")]
+    public void Shared_subject_coordination_preserves_distinct_occurrences_and_utf16_ranges()
+    {
+        const string text = "😀. Аз чета и пишем.\r\nАз чета и пишем.";
+        TextAnalysis actual = session.AnalyzeText(text, true, new() { IncludeGrammarEvidence = true }, default);
+        TextDiagnostic[] warnings = actual.Diagnostics.Where(d => d.RuleId == SharedSubjectRule).ToArray();
+        CollectionAssert.AreEqual(new[] { (14, 5), (32, 5) }, warnings.Select(d => (d.Start, d.Length)).ToArray());
+        AssertImperativeOriginalEvidence(actual);
+        foreach (TextDiagnostic warning in warnings) AssertSharedSubjectWarning(actual, warning);
+        var inventory = actual.ReadingInventory!;
+        var repeated = inventory.Occurrences.Where(o => o.Text == "пишем").ToArray();
+        Assert.HasCount(2, repeated);
+        Assert.AreEqual(repeated[0].ReadingSetIndex, repeated[1].ReadingSetIndex,
+            "Shared reading sets must not merge source occurrence references.");
+        Assert.IsFalse(warnings[0].Readings!.Select(r => r.TokenIndex).Intersect(warnings[1].Readings!.Select(r => r.TokenIndex)).Any());
+    }
+
+    private static void AssertSharedSubjectWarning(TextAnalysis actual, TextDiagnostic warning)
+    {
+        Assert.AreEqual("productive_morphology_agreement_mismatch", warning.Code);
+        Assert.IsNull(warning.ProjectedText);
+        Assert.IsNull(warning.GraphReadings);
+        Assert.IsNotNull(warning.Readings);
+        int target = actual.Tokens.Select((t, i) => (t, i)).Single(p => p.t.Start == warning.Start && p.t.Length == warning.Length).i;
+        TextContextCandidate candidate = actual.Context!.Sentences.SelectMany(s => s.Candidates).Single(c =>
+            c.PredicateTokenIndex == target && c.EvidenceCodes.Contains(SharedSubjectCondition));
+        Assert.IsFalse(candidate.Selectable);
+        TextContextRoleSelection subject = candidate.Roles.Single(r => r.Role == TextContextRole.Subject);
+        TextContextRoleSelection predicate = candidate.Roles.Single(r => r.Role == TextContextRole.Predicate);
+        Assert.AreEqual(target, predicate.TokenIndex);
+        SentenceSpan sentence = actual.Sentences.Single(s => warning.Start >= s.Start && warning.Start < s.Start + s.Length);
+        Assert.AreEqual(actual.Tokens.First(t => t.Kind == TokenKind.Word && t.Start >= sentence.Start).Start, subject.Start,
+            "Each secondary keeps the original subject in its own sentence.");
+        Assert.IsTrue(subject.Readings.All(r => warning.Readings.Contains(r)));
+        Assert.IsTrue(predicate.Readings.All(r => warning.Readings.Contains(r)));
+        foreach (TextReadingReference reference in warning.Readings)
+        {
+            TextReadingOccurrence occurrence = actual.ReadingInventory!.Occurrences.Single(o => o.TokenIndex == reference.TokenIndex);
+            var rows = actual.ReadingInventory.Sets[occurrence.ReadingSetIndex].ResolvedReadings;
+            Assert.IsTrue(reference.CompleteReadingIndex >= 0 && reference.CompleteReadingIndex < rows.Count);
+            Assert.AreEqual(occurrence.Text, actual.Text.Substring(occurrence.Start, occurrence.Length));
+            Assert.IsTrue(occurrence.Start >= sentence.Start && occurrence.Start + occurrence.Length <= sentence.Start + sentence.Length);
+            if (reference.TokenIndex == target)
+                Assert.AreEqual(MorphologicalVerbForm.Finite, rows[reference.CompleteReadingIndex].Features.VerbForm);
+        }
+        Assert.AreEqual(actual.Tokens[target].Text, actual.Text.Substring(warning.Start, warning.Length));
+        Assert.HasCount(1, actual.Diagnostics.Where(d => d.Code == warning.Code && d.Start == warning.Start && d.Length == warning.Length).ToArray(),
+            "Existing diagnostic lanes must not duplicate the shared-subject warning.");
+    }
+
     [TestMethod, TestCategory("FullPackage")]
     [DataRow("Аз чета и пиша.", "пиша", null, null)]
     [DataRow("Аз чета и ти пишеш.", "пишеш", null, "ти")]
@@ -2280,7 +2415,7 @@ public sealed partial class PublicPackageTests
     }
 
     // =========================================================================
-    // Package G: TextGrammarMatch Repairs, ProjectedText & 12-Rule Catalog Pin
+    // Package G: TextGrammarMatch Repairs, ProjectedText & preserved 12-rule catalog with its shared-subject extension
     // =========================================================================
 
     [TestMethod]
@@ -2294,9 +2429,25 @@ public sealed partial class PublicPackageTests
             IncludeNominalConstructions = true
         };
 
-        // 1. G4a standalone RuleId preserves NominalGrammarRules.Catalog at 12 rules (zero BgLang.Contracts surface churn)
+        // 1. Preserve all 12 prior rules; the conditional shared-subject construction adds exactly one catalog entry.
         TextAnalysis temporal = session.AnalyzeText("Вчера гостът ще дойде навреме.", false, options, default);
-        Assert.HasCount(12, temporal.Grammar!.Rules);
+        TextGrammarRule[] previousRules = temporal.Grammar!.Rules.Where(r => r.Id != SharedSubjectRule).ToArray();
+        Assert.HasCount(12, previousRules);
+        CollectionAssert.AreEqual(new[]
+        {
+            "local_exact_attribute_agreement.v1", "grammar.article.first_prepositional_nominal_member.v1",
+            "grammar.article.first_initial_nominal_member.v1", "grammar.short_article.exact_prepositional_group.v1",
+            "grammar.agreement.copular_finite.v1", "grammar.agreement.copular_adjective.v1",
+            "grammar.agreement.passive_participle.v1", "grammar.agreement.analytic_finite.v1",
+            "grammar.agreement.active_participle_controller.v1", "grammar.agreement.auxiliary_active_participle.v1",
+            "clause_fusion_agreement.v1", "grammar.full_article.clause_subject.v1"
+        }, previousRules.Select(r => r.Id).ToArray());
+        Assert.HasCount(13, temporal.Grammar.Rules);
+        TextGrammarRule sharedSubject = temporal.Grammar.Rules.Single(r => r.Id == SharedSubjectRule);
+        Assert.AreEqual("productive_morphology_agreement_mismatch", sharedSubject.DiagnosticCode);
+        Assert.AreEqual(TextGrammarConstraint.PersonNumber, sharedSubject.Constraint);
+        StringAssert.Contains(sharedSubject.Explanation, "общ подлог");
+        StringAssert.Contains(sharedSubject.Explanation, "неизразен подлог");
         TextDiagnostic temporalDiag = temporal.Diagnostics.Single(d => d.Code == "deictic_temporal_tense_mismatch");
         Assert.AreEqual("grammar.tense.deictic_temporal_adverb.v1", temporalDiag.RuleId);
 

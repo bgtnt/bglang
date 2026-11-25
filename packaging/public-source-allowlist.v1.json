@@ -1,6 +1,6 @@
 {
   "schema": "bglang.public-source-allowlist.v1",
-  "sourceBaseCommit": "5823f5ab7dd89338a43614d544da928b441f979c",
+  "sourceBaseCommit": "d592c3c2e04f4314bd4b88eed27cb50057626f54",
   "projects": [
     "apps/BgLang.Web/BgLang.Web.csproj",
     "examples/BgLang.PublicExample/BgLang.PublicExample.csproj",

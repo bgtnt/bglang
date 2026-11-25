@@ -1369,6 +1369,7 @@ internal static class TextValidationAnalyzer
         MorphologyEvidenceProjection.View? originalRelationMorphology = null;
         static bool ReboundLane(string? lane) =>
             lane is ClauseFusionAnalyzer.SelectionLane or ClauseFusionAnalyzer.AgreementLane
+                or ClauseFusionAnalyzer.SharedSubjectCoordinationRule
                 or ContextLanes.ExactAgreementLane or LocalClauseRoleLinker.Lane ||
             ContextLanes.IsPronounPrefixLane(lane);
         var claimedRoles = context.Sentences.SelectMany(sentence => sentence.Candidates

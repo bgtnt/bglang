@@ -16,7 +16,7 @@ Invoke-RestMethod -Uri 'https://map.bg/bglang/api/v2/' | ConvertTo-Json -Depth 4
 
 ## Подготовка и стартиране
 
-Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.4-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.4/bglang-v0.2.0-alpha.4-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.4/SHA256SUMS) от изданието [`v0.2.0-alpha.4`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.4).
+Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.5-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.5/bglang-v0.2.0-alpha.5-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.5/SHA256SUMS) от изданието [`v0.2.0-alpha.5`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.5).
 
 Поставете четирите runtime файла (`manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json`, `lexeme-annotations.v1.json`) в подпапка `./runtime` на изходния код (профил `CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`, manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`). От корена на хранилището:
 
@@ -50,7 +50,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:5070/api/v2/' | ConvertTo-Json -Depth 4
 | Настройка | Стойност по подразбиране | Описание |
 | --- | --- | --- |
 | `BgLang__ManifestPath` | *(задължителна)* | Път до `manifest.json` на зареждания пакет. |
-| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.4`). |
+| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.5`). |
 | `BgLang:RequestsPerMinute` | `30` | Положително цяло число за лимит на `POST` заявките на минута на клиентски IP (включително невалидни заявки). Отразява се в `GET /api/v2/`. |
 | `BgLang:ResponseByteLimit` | `67108864` (`64 MiB`) | Максимален размер в UTF-8 байтове на успешен отговор при count-only preflight; над него се връща `413 response-too-large` без частично орязване. |
 | `ASPNETCORE_URLS` / `--urls` | `http://127.0.0.1:5070` | Локален адрес и порт за слушане. |

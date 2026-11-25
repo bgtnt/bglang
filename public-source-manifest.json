@@ -1,6 +1,6 @@
 {
   "schema": "bglang.public-source-manifest.v1",
-  "sourceBaseCommit": "5823f5ab7dd89338a43614d544da928b441f979c",
+  "sourceBaseCommit": "d592c3c2e04f4314bd4b88eed27cb50057626f54",
   "authority": "Accepted implementation base anchor; exact recipe/docs/source snapshot is the RAW file manifest. This is not the public source commit or tag.",
   "sourceOnly": true,
   "authoringInputDelivered": false,
@@ -1406,8 +1406,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 16415,
-      "sha256": "948589f4251bf71b0e11669ad7dfabdcc3ad1a1c98baee700101c1426f089be3"
+      "bytes": 16663,
+      "sha256": "05619cde682979f6c25be1ab03144fc27a292763fb2e42b704081eb0d6ac56bd"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1442,7 +1442,7 @@
     {
       "path": "apps/BgLang.Web/README.md",
       "bytes": 13614,
-      "sha256": "038d75839fa8146691cd1332e7f2f097f52dda870dd08267748b365f4e73e457"
+      "sha256": "78862cbe5eab622714b1bb2d2854fdc5543ecd6b5e52f80d2606a071e981e376"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1486,8 +1486,8 @@
     },
     {
       "path": "apps/BgLang.Web/WebHostFactory.cs",
-      "bytes": 11852,
-      "sha256": "bd3f2ead28ae59625b7d6c92eeabe99e00fbb855f17a8896a743b108c9bd1848"
+      "bytes": 12300,
+      "sha256": "105a29e938ad3e23834d7f8f8396685769ce1dee8773207b1a3d824f7ff21ba4"
     },
     {
       "path": "apps/BgLang.Web/scope-metrics.json",
@@ -1591,8 +1591,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/docs.html",
-      "bytes": 39694,
-      "sha256": "248dd04eddf0e457451a578032af7c4034a507d8dd5f4ca16cfad5d35b5194c2"
+      "bytes": 39557,
+      "sha256": "53233d7e79406e28125a8d509e830e67e523991e13c209600f178351fdfcc77b"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/site.css",
@@ -1601,8 +1601,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-client.js",
-      "bytes": 68162,
-      "sha256": "c5545ef9b5c18abc9e4e5bec4ca5326945a29b4d50ce54d64630b8afdbe7822b"
+      "bytes": 69006,
+      "sha256": "43b5d8f7be052444a8a70f42770a6e200c6cbe581c2ec479660593665381a607"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/live-demo.js",
@@ -1651,8 +1651,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 17568,
-      "sha256": "0f3e515e02c61e2c9fb4236d1760d0f3fa51def821728f899699e13440963bb1"
+      "bytes": 18430,
+      "sha256": "380e684864fada9f66100a952d0248cfeb1b5a20a9e55874c57c27ce068ffe5d"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -1662,7 +1662,7 @@
     {
       "path": "packaging/public-source-allowlist.v1.json",
       "bytes": 20259,
-      "sha256": "03d1f7a4ba6555abd9519ae7c7d31c0517d457a58fd3b3b3e300b03b96e85207"
+      "sha256": "fb643570e26a4f55eca80371cde2946aac9f94ce698223051024286fc6087156"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2091,8 +2091,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/NominalGrammarRules.cs",
-      "bytes": 8857,
-      "sha256": "54c11cbd162d1b753deabab2c36ca98cc577d2d3c3b543fb6f69b856a9523961"
+      "bytes": 9579,
+      "sha256": "5ca54decbd0cfbc246ca185769f2c56c7475a3884b46b7a435c62b4bfbdeb58f"
     },
     {
       "path": "src/BgLang.Core/Kernel/NominalGrammarEvidence.cs",
@@ -2361,8 +2361,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextContextAnalyzer.cs",
-      "bytes": 69146,
-      "sha256": "01b6b6055328610d71ad84d9b9f04715085856908c625a2890498914309f57c2"
+      "bytes": 69363,
+      "sha256": "0ef68fcae44ac498d86b635017efec9534cb4dc1ca7e42e1ced0e259b98eafbe"
     },
     {
       "path": "src/BgLang.Core/Kernel/TextNominalConstructionAnalyzer.cs",
@@ -2381,8 +2381,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/TextValidationAnalyzer.cs",
-      "bytes": 145060,
-      "sha256": "dbd9a2169d4979407f2b696b93bdc4b88d32cbdbe6989a48c379212735049f97"
+      "bytes": 145131,
+      "sha256": "9a2ebf1017a14f32b92e245ea25dbc518d6e4a3aa6e1e95d6c25060b37890460"
     },
     {
       "path": "src/BgLang.Core/Kernel/UnknownMorphologyAnalyzer.cs",
@@ -2606,13 +2606,13 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/live-demo.test.mjs",
-      "bytes": 187351,
-      "sha256": "eaee8f89217fadb8aa30c5c89abf11a21bfec87041a935ee376ad466f727fec8"
+      "bytes": 194107,
+      "sha256": "014b07c9b674fba089d99fd1f3da5ea66999607ad183954227adee904d373889"
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
-      "bytes": 13105,
-      "sha256": "06324329631d19e6593263baed4ce0f0f3f8f9713d009f06e9965f6d336244e8"
+      "bytes": 21069,
+      "sha256": "c9e5d07371c0e3c7ac08f36921d95140e480f81d05465678df16773b7d556a7b"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContinuationHttpTests.cs",
@@ -2751,8 +2751,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/AgreementHttpTests.cs",
-      "bytes": 35922,
-      "sha256": "5ed7097e5f4784a0ac17e8710a4cb68e49d423ea5b9c672d135f444ac7e79bf0"
+      "bytes": 45450,
+      "sha256": "875261059a864a93d5d4812d470b323c6c27747ef057ddba49fd1de6ba8bbe59"
     },
     {
       "path": "tests/BgLang.Web.Tests/NominalConstructionHttpTests.cs",
@@ -2926,8 +2926,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalDiagnosticsPackageTests.cs",
-      "bytes": 72662,
-      "sha256": "a6bda14e5acaf7a58c49cafae93141d09a9d317426c4e85e014c7df2fca343a7"
+      "bytes": 72710,
+      "sha256": "d4f4a2d16f18123c7155ac60240d2f892f60c95a415f7d4eae685978bbedf6f3"
     },
     {
       "path": "tools/check-md-links.mjs",
@@ -3026,8 +3026,8 @@
     },
     {
       "path": "src/BgLang.Core/Kernel/ClauseFusionAnalyzer.cs",
-      "bytes": 450664,
-      "sha256": "9be73ee9112a24b081611ac1d94afc5194c9a2f0137ea46b91099adc917c59f8"
+      "bytes": 455016,
+      "sha256": "a6977d2e2c2259ffdb95ba8c0f21fae7d65b6625bc9f9e582689f5081d52acce"
     },
     {
       "path": "src/BgLang.Core/Kernel/BulgarianFunctionWords.cs",
@@ -3041,8 +3041,8 @@
     },
     {
       "path": "tests/BgLang.Public.Tests/NaturalSentenceFusionPackageTests.cs",
-      "bytes": 321647,
-      "sha256": "900ee1a8f317cfcc401a0ae8c96b505b95d111a35442f4289bab86f8bffb0bbc"
+      "bytes": 332494,
+      "sha256": "3708f57d7cb06264ffd32f9188cd8acca6f91a0827290dfaaa9180b06284b04b"
     },
     {
       "path": "src/BgLang.Core/Kernel/ClauseBoundary.cs",
@@ -3062,7 +3062,7 @@
     {
       "path": "packaging/LINGUISTIC-EVALUATION.md",
       "bytes": 16704,
-      "sha256": "751e88dad7f35797cee40fb9eae9f08302c00d4003765e5cecde07d1eb3e3e5a"
+      "sha256": "b6d8085e9cee67a58ccb766711aaba764a532d09db53a76b1633817e515a6221"
     },
     {
       "path": "packaging/evaluation/edge-and-ambiguity-controls.v1.tsv",

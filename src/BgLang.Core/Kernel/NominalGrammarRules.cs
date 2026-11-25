@@ -62,7 +62,12 @@ internal static class NominalGrammarRules
             "https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=57"),
         new(SubjectFullArticleId, "full_article_expected_for_subject_candidate", "ИГ_ПОДЛОГ ГГ_СКАЗУЕМО", TextGrammarConstraint.MasculineArticle,
             "Групата на подлога в мъжки род, единствено число, изисква пълен член на първия членуван член.",
-            "БЕРОН § 17.6.1", "https://beron.mon.bg/rechnik/362")
+            "БЕРОН § 17.6.1", "https://beron.mon.bg/rechnik/362"),
+        new(ClauseFusionAnalyzer.SharedSubjectCoordinationRule, ContextLanes.ProductiveGraphMismatch,
+            "ЯВЕН ПОДЛОГ ГГ И ГГ", TextGrammarConstraint.PersonNumber,
+            "Ако координираните сказуеми имат общ подлог, всяка лична форма трябва да се съгласува с него по лице и число. Възможен е и отделен неизразен подлог.",
+            "П. Осенова, К. Симов, „Формална граматика на българския език“, § 5.2, с. 57–58",
+            "https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=57")
     ]);
 
     internal sealed record AttributeMatch(NominalStructuralProjection.Binding Binding,

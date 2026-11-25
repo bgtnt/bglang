@@ -1,6 +1,6 @@
 # Лингвистична оценка на BgLang върху замразения набор и сравнение с UDPipe 2
 
-Този документ представя публично възпроизводимата оценка на **BgLang** върху набора от Alpha 2, повторена за `v0.2.0-alpha.4` с пакета **`CurrentGraphStress`** (`bglang-neutral:9e9a4f441f679542`, SHA-256 на `manifest.json`: `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`), сравнена с **UDPipe 2** (`bulgarian-btb-ud-2.17-251125`).
+Този документ представя публично възпроизводимата оценка на **BgLang** върху набора от Alpha 2, повторена за `v0.2.0-alpha.5` с пакета **`CurrentGraphStress`** (`bglang-neutral:9e9a4f441f679542`, SHA-256 на `manifest.json`: `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`), сравнена с **UDPipe 2** (`bulgarian-btb-ud-2.17-251125`).
 
 В Alpha 2 и Alpha 3 шестте правила върху запазения разбор на UDPipe дадоха **28 / 34** целеви попадения. Коригираното правило за членуване разчита отделните позиции в таговете на BulTreeBank. Резултатът става **29 / 34** с прилагателното „старият“ (`Amsf`) и **30 / 34** с причастието в прилагателна употреба „счупеният“ (`Vpptcv--smf`). Чистите изречения с предупреждение остават **0 / 25**. Промяната идва от оценяването на същия замразен CoNLL-U разбор. Тези 59 + 30 изречения служат за регресионна проверка. [Позиционни тагове на BulTreeBank](https://bultreebank.org/wp-content/uploads/2017/04/BTB-TR03.pdf)
 
@@ -20,7 +20,7 @@
 - **Показани предупреждения:** всички действащи граматични, съгласувателни, членни и ремонтни кодове от `Diagnostics` / `Validation` (без правописни догадки при непознати собствени имена) плюс клиентската проекция на обвързания `TextGrammarAssessment.Ambiguous` конфликт с причина `disjoint_subject_predicate_locus` върху зависимия предикат (без автоматична поправка).
 - **Очаквано обобщение и входни данни:** [expected-summary.v2.json](evaluation/expected-summary.v2.json), историческото [`expected-alpha2-summary.v1.json`](evaluation/expected-alpha2-summary.v1.json), [`independent-59.v1.tsv`](evaluation/independent-59.v1.tsv), [`udpipe-independent-59.v1.conllu`](evaluation/udpipe-independent-59.v1.conllu) и [`edge-and-ambiguity-controls.v1.tsv`](evaluation/edge-and-ambiguity-controls.v1.tsv).
 
-Пуснете възпроизводимата проверка от корена на публичното хранилище след разархивиране на [`bglang-v0.2.0-alpha.4-runtime.zip`](RELEASE-CANDIDATE.md) в `./runtime`:
+Пуснете възпроизводимата проверка от корена на публичното хранилище след разархивиране на [`bglang-v0.2.0-alpha.5-runtime.zip`](RELEASE-CANDIDATE.md) в `./runtime`:
 
 ```powershell
 ./packaging/Evaluate-PublicBenchmark.ps1 `

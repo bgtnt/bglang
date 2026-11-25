@@ -12,8 +12,147 @@ public sealed class AgreementHttpTests
 {
     private const string Rule = "closed_exact_agreement.v1";
     private const string FiniteCode = "productive_morphology_agreement_mismatch";
+    private const string SharedSubjectRule = "clause_fusion_shared_subject.v1";
+    private const string SharedSubjectCondition = "shared_subject_coordination_conditional";
     private sealed record Example(string Text, string Code, int Target, int Start, int Length,
         string References, string ContextStatus, int SelectedRoles, string SyntaxRoute);
+
+    [TestMethod, TestCategory("FullPackage"), DataRow("1"), DataRow("2")]
+    public async Task Shared_subject_coordination_round_trips_conditional_warnings_original_ranges_and_controls(string version)
+    {
+        await ContextCompositionHttpTests.WithPackage(async (_, session, client) =>
+        {
+            TextContextOptions options = new() { IncludeAdditionalRoleHeuristics = true, IncludeGrammarEvidence = true };
+            (string Text, string Ranges)[] examples =
+            [
+                ("Аз чета и пишем.", "10:5"),
+                ("Аз чета и пишем", "10:5"),
+                ("Аз чета и пишем!", "10:5"),
+                ("Аз чета и пиш", ""),
+                ("Аз чета и пиша.", ""),
+                ("Аз чета и ние пишем.", ""),
+                ("Аз чета и пишем ние.", ""),
+                ("Аз чета и пишем и пеете.", "10:5|18:5"),
+                ("😀. Аз чета и пишем.\r\nАз чета и пишем.", "14:5|32:5")
+            ];
+            foreach ((string text, string ranges) in examples)
+            {
+                JsonElement raw = default;
+                foreach (string format in new[] { HttpContract.RawFormat, SharedDonorResponse.Format, SharedDonorResponse.AnalysisFormat })
+                {
+                    using JsonDocument encoded = await PostSharedSubject(client, version, text, format, options);
+                    using JsonDocument restored = Restore(encoded);
+                    JsonElement envelope = restored.RootElement;
+                    Assert.AreEqual(version, envelope.GetProperty("apiVersion").GetString());
+                    Assert.AreEqual(session.Provenance.ManifestSha256.ToLowerInvariant(),
+                        envelope.GetProperty("package").GetProperty("manifestSha256").GetString()!.ToLowerInvariant());
+                    if (format == HttpContract.RawFormat) raw = envelope.Clone();
+                    else Assert.IsTrue(SharedDonorResponseTests.SameJson(raw, envelope),
+                        "The existing shared wire formats must retain conditional identity and complete support references.");
+                    JsonElement data = envelope.GetProperty("data");
+                    TextAnalysis direct = session.AnalyzeText(text, false, options, default);
+                    Assert.IsTrue(SharedDonorResponseTests.SameJson(JsonSerializer.SerializeToElement(direct, HttpContract.Json), data));
+                    AssertSharedSubjectWire(data, text, ranges);
+                    TextGrammarMatch[] matches = data.Deserialize<TextAnalysis>(HttpContract.Json)!.Grammar!.Matches
+                        .Where(m => m.RuleId == SharedSubjectRule).ToArray();
+                    Assert.AreEqual(ranges.Length == 0 ? 0 : ranges.Split('|').Length, matches.Length);
+                    Assert.IsTrue(matches.All(m => m.Reason == SharedSubjectCondition && m.Repairs.Count == 0));
+                }
+            }
+            foreach (TextContextOptions profile in new TextContextOptions[] { default, options with { IncludeAdditionalRoleHeuristics = false } })
+            {
+                using JsonDocument raw = await PostSharedSubject(client, version, "Аз чета и пишем.", HttpContract.RawFormat, profile);
+                AssertSharedSubjectWire(raw.RootElement.GetProperty("data"), "Аз чета и пишем.", "10:5");
+            }
+            // 29 requests per existing fixture host, below its unchanged default peer budget.
+        });
+    }
+
+    private static async Task<JsonDocument> PostSharedSubject(HttpClient client, string version, string text,
+        string format, TextContextOptions options)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v" + version + "/analyze-text")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                text, evidenceFormat = format, includeUnknownContextProperNames = false, context = options
+            }, HttpContract.Json), Encoding.UTF8, "application/json")
+        };
+        using HttpResponseMessage response = await client.SendAsync(request);
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, body);
+        return JsonDocument.Parse(body);
+    }
+
+    [TestMethod, TestCategory("FullPackage"), DataRow("1"), DataRow("2")]
+    public async Task Shared_subject_coordination_impersonal_frames_and_questions_keep_bounded_wire_results(string version)
+    {
+        await ContextCompositionHttpTests.WithPackage(async (_, session, client) =>
+        {
+            TextContextOptions options = new() { IncludeGrammarEvidence = true };
+            foreach ((string text, string ranges) in new[]
+            {
+                ("Аз чета и се стъмва.", ""),
+                ("Аз чета и се съмва.", ""),
+                ("Аз чета и се усмихваме.", "13:9"),
+                ("Аз чета и пишем?", "10:5"),
+                ("Стъмва се. Аз чета и пишем.", "21:5")
+            })
+            {
+                JsonElement raw = default;
+                foreach (string format in new[] { HttpContract.RawFormat, SharedDonorResponse.Format, SharedDonorResponse.AnalysisFormat })
+                {
+                    using JsonDocument encoded = await PostSharedSubject(client, version, text, format, options);
+                    using JsonDocument restored = Restore(encoded);
+                    JsonElement envelope = restored.RootElement;
+                    if (format == HttpContract.RawFormat) raw = envelope.Clone();
+                    else Assert.IsTrue(SharedDonorResponseTests.SameJson(raw, envelope));
+                    JsonElement data = envelope.GetProperty("data");
+                    Assert.IsTrue(SharedDonorResponseTests.SameJson(
+                        JsonSerializer.SerializeToElement(session.AnalyzeText(text, false, options, default), HttpContract.Json), data));
+                    AssertSharedSubjectWire(data, text, ranges);
+                }
+            }
+        });
+    }
+
+    private static void AssertSharedSubjectWire(JsonElement data, string text, string ranges)
+    {
+        Assert.AreEqual(text, data.GetProperty("text").GetString());
+        JsonElement[] warnings = data.GetProperty("diagnostics").EnumerateArray()
+            .Where(d => d.GetProperty("ruleId").GetString() == SharedSubjectRule).ToArray();
+        CollectionAssert.AreEqual(ranges.Length == 0 ? Array.Empty<string>() : ranges.Split('|'),
+            warnings.Select(d => $"{d.GetProperty("start").GetInt32()}:{d.GetProperty("length").GetInt32()}").ToArray(), text);
+        TextAnalysis actual = data.Deserialize<TextAnalysis>(HttpContract.Json)!;
+        foreach (JsonElement warning in warnings)
+        {
+            Assert.AreEqual(FiniteCode, warning.GetProperty("code").GetString());
+            Assert.AreEqual(JsonValueKind.Null, warning.GetProperty("projectedText").ValueKind);
+            Assert.IsFalse(warning.TryGetProperty("graphReadings", out JsonElement graph) && graph.ValueKind != JsonValueKind.Null);
+            int start = warning.GetProperty("start").GetInt32(), length = warning.GetProperty("length").GetInt32();
+            int target = actual.Tokens.Select((t, i) => (t, i)).Single(p => p.t.Start == start && p.t.Length == length).i;
+            TextContextCandidate candidate = actual.Context!.Sentences.SelectMany(s => s.Candidates).Single(c =>
+                c.PredicateTokenIndex == target && c.EvidenceCodes.Contains(SharedSubjectCondition));
+            Assert.IsFalse(candidate.Selectable);
+            TextContextRoleSelection subject = candidate.Roles.Single(r => r.Role == TextContextRole.Subject);
+            SentenceSpan sentence = actual.Sentences.Single(s => start >= s.Start && start < s.Start + s.Length);
+            Assert.AreEqual(actual.Tokens.First(t => t.Kind == TokenKind.Word && t.Start >= sentence.Start).Start, subject.Start);
+            Assert.AreEqual(actual.Tokens[target].Text, text.Substring(start, length));
+            JsonElement[] references = warning.GetProperty("readings").EnumerateArray().ToArray();
+            Assert.IsTrue(references.Any(r => r.GetProperty("tokenIndex").GetInt32() == target));
+            Assert.IsTrue(references.Any(r => r.GetProperty("tokenIndex").GetInt32() == subject.TokenIndex));
+            foreach (JsonElement reference in references)
+            {
+                int token = reference.GetProperty("tokenIndex").GetInt32();
+                int index = reference.GetProperty("completeReadingIndex").GetInt32();
+                JsonElement rows = Complete(data, token);
+                Assert.IsTrue(index >= 0 && index < rows.GetArrayLength());
+                Assert.IsTrue(actual.Tokens[token].Start >= sentence.Start &&
+                    actual.Tokens[token].Start + actual.Tokens[token].Length <= sentence.Start + sentence.Length);
+                if (token == target) Assert.AreEqual("Finite", rows[index].GetProperty("features").GetProperty("verbForm").GetString());
+            }
+        }
+    }
 
     // Independent profile4/premeasurement literals; no current result generates a gold count/span/ref.
     // One existing full-package fixture host, sequential28POSTs, below default30 peer budget.

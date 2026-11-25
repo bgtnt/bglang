@@ -2602,3 +2602,103 @@ test('bound Ambiguous disjoint_subject_predicate_locus warns cleanly without aut
     assert.equal(diagnosticPresentation(other, tokens[2]).tokenClass, 'check-empty', reason);
   }
 });
+
+// Opaque public-wire presentation fixture. The complete-package C# tests provide
+// the linguistic oracle; these tests exercise the actual Live and tree review code.
+function sharedSubjectPresentationReply() {
+  const text='😀. Аз чета и пиша.\r\nАз чета и пишем.';
+  const reply=lifecycleReply(text),data=reply.data;
+  const features=[
+    ['аз','Лично_местоимение:90',{partOfSpeech:'PersonalPronoun',person:'First',number:'Singular',case:'Nominative'}],
+    ['чета','Глагол:160,1л.,Сегашно',{partOfSpeech:'Verb',verbForm:'Finite',person:'First',number:'Singular',tense:'Present'}],
+    ['и','Съюз:189',{partOfSpeech:'Conjunction'}],
+    ['пиша','Глагол:159ti,1л.,Сегашно',{partOfSpeech:'Verb',verbForm:'Finite',person:'First',number:'Singular',tense:'Present'}],
+    ['аз','Лично_местоимение:90',{partOfSpeech:'PersonalPronoun',person:'First',number:'Singular',case:'Nominative'}],
+    ['чета','Глагол:160,1л.,Сегашно',{partOfSpeech:'Verb',verbForm:'Finite',person:'First',number:'Singular',tense:'Present'}],
+    ['и','Съюз:189',{partOfSpeech:'Conjunction'}],
+    ['пиша','Глагол:159ti,1л.,Сегашно,мн.ч.',{partOfSpeech:'Verb',verbForm:'Finite',person:'First',number:'Plural',tense:'Present'}]
+  ];
+  data.tokens.forEach((token,index)=>{
+    const [lemma,partOfSpeech,axes]=features[index];
+    data.readingInventory.occurrences[index]={tokenIndex:index,readingSetIndex:index,
+      start:token.start,length:token.length,text:token.text};
+    data.readingInventory.sets[index]={canonicalReadings:[{raw:{form:token.text,lemma,partOfSpeech},features:axes}],supportReadings:null};
+  });
+  assert.equal(data.tokens[7].start,31);
+  assert.equal(text.slice(31,36),'пишем');
+  data.diagnostics=[{code:'productive_morphology_agreement_mismatch',ruleId:'clause_fusion_shared_subject.v1',
+    start:31,length:5,projectedText:null,
+    readings:[{tokenIndex:4,completeReadingIndex:0},{tokenIndex:7,completeReadingIndex:0}]}];
+  data.grammar={version:'typed-grammar.v1',rules:[{
+    id:'clause_fusion_shared_subject.v1',diagnosticCode:'productive_morphology_agreement_mismatch',
+    pattern:'ИГ_ПОДЛОГ ГГ_СКАЗУЕМО И ГГ_СКАЗУЕМО',constraint:'PersonNumber',
+    explanation:'При общ подлог съчинените сказуеми се съгласуват с него по лице и число.',
+    sourceSection:'§ 5.1',sourceUrl:'https://bultreebank.org/wp-content/uploads/2017/04/FormalGrammarBG.pdf#page=52'
+  }],matches:[{ruleId:'clause_fusion_shared_subject.v1',start:21,length:15,
+    controllerTokenIndices:[4],dependentTokenIndices:[7],assessment:'Mismatch',
+    conflicts:[{tokenIndex:7,actual:[{tokenIndex:7,completeReadingIndex:0}],expectedFrom:[{tokenIndex:4,completeReadingIndex:0}]}],
+    repairs:[],reason:'shared_subject_coordination_conditional'}]};
+  return reply;
+}
+
+test('shared-subject warning keeps conditional Bulgarian wording exact UTF16 target and no replacement',()=>{
+  const {data}=sharedSubjectPresentationReply(),before=structuredClone(data);
+  const checks=collectChecks(data);
+  assert.equal(checks.length,1);
+  assert.equal(checks[0].severity,'warning');
+  assert.deepEqual([checks[0].start,checks[0].length,checks[0].original],[31,5,'пишем']);
+  assert.equal(checks[0].replaceable,false);
+  assert.equal(checks[0].replacement,null);
+  assert.match(diagnosticMessage(data.diagnostics[0],data.text),/общ подлог/i);
+  assert.match(checks[0].grammarMessage,/общ подлог/i);
+  assert.deepEqual([...warningTokens(data,checks)],[7]);
+  const presentation=diagnosticPresentation(data,data.tokens[7]);
+  assert.equal(presentation.messages.length,1);
+  assert.equal(presentation.messages[0].classification,'warning');
+  assert.match(presentation.messages[0].summary,/общ подлог/i);
+  assert.equal(diagnosticPresentation(data,data.tokens[3]).tokenClass,'check-empty');
+  assert.equal(diagnosticPresentation(data,data.tokens[7]).tokenClass,'check-warning');
+  assert.deepEqual(data,before);
+});
+
+test('actual Live and syntax-tree reviews surface conditional shared-subject warning only on the later occurrence', {concurrency:false}, async()=>{
+  const reply=sharedSubjectPresentationReply(),before=structuredClone(reply),text=reply.data.text;
+  const {reviewIndex,renderChecks,renderVariants}=await import(new URL('demo-tree/reviews.js',source).href);
+  await withLiveLifecycle(async f=>{
+    await f.first(reply);
+    assert.match(f.panels.textContent,/общ подлог/i);
+    assert.match(f.inspector.textContent,/общ подлог/i);
+    assert.equal(f.words()[3].classList.contains('live-warning'),false);
+    assert.equal(f.words()[7].classList.contains('live-warning'),true);
+    f.get('#live-layer').value='checks';
+    f.get('#live-layer').dispatch('change');
+    assert.equal(f.words()[3].classList.contains('check-warning'),false);
+    assert.equal(f.words()[7].classList.contains('check-warning'),true);
+    f.words()[3].click();
+    assert.doesNotMatch(f.inspector.textContent,/общ подлог/i);
+    f.words()[7].click();
+    assert.match(f.inspector.textContent,/общ подлог/i);
+    assert.equal(f.editor.value,text);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+    assert.equal(Array.from(f.inspector.querySelectorAll('button')).some(b=>b.textContent==='Приложи'),false);
+
+    const tree={tokens:reply.data.tokens.map((token,index)=>({...token,index})),diagnostics:reply.data.diagnostics,
+      conflictWarnings:[],suggestions:[]};
+    const reviews=reviewIndex(tree,text),host=f.doc.createElement('div'),variants=f.doc.createElement('div'),chosen=[];
+    assert.deepEqual([...reviews.warnings],[7]);
+    assert.deepEqual(reviews.locations.map(row=>[row.start,row.length,row.warning]),[[31,5,true]]);
+    assert.match(reviews.locations[0].message,/общ подлог/i);
+    const select=renderChecks(host,reviews.locations,text,row=>chosen.push(row));
+    select(tree.tokens[7]);
+    const button=host.querySelector('button');
+    assert.match(button.textContent,/пишем.*общ подлог/i);
+    assert.equal(button.getAttribute('aria-current'),'true');
+    button.click();
+    assert.deepEqual(chosen,[reviews.locations[0]]);
+    renderVariants(variants,[],()=>assert.fail('A shared-subject warning must not fabricate a repair.'));
+    assert.equal(variants.querySelectorAll('button').length,0);
+    assert.equal(f.editor.value,text);
+    assert.equal(f.editor.setRangeTextCalls.length,0);
+    assert.deepEqual(reply,before);
+  },{text,caret:33});
+});

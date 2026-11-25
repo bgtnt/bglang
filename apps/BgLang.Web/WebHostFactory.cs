@@ -53,6 +53,13 @@ internal static class WebHostFactory
             context.Response.Headers["Content-Security-Policy"] =
                 "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
             context.Response.Headers.CacheControl = "no-store";
+            if ((HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
+                (context.Request.Path.Equals("/docs/") || context.Request.Path.Equals("/docs.html/")))
+            {
+                // Relative Location preserves a reverse proxy's stripped mount prefix.
+                context.Response.Redirect($"../docs.html{context.Request.QueryString}");
+                return;
+            }
             await next(context);
         });
         // Forwarded IP/host/scheme headers are deliberately ignored. See README for deployment trust.
