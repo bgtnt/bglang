@@ -6,12 +6,12 @@
 
 ## Общ онлайн вход от GitHub и MAP.BG
 
-Демото в GitHub и връзката в портала водят до един редактор. След публичното пускане проверете `versions.host` и `package.manifestSha256` за активната инсталация. [Онлайн демо](https://map.bg/bglang) · [Метаданни на API](https://map.bg/bglang/api/v2/).
+Демото в GitHub и връзката в портала водят до редактора „Синтаксис на живо“. Проверете `versions.host` и `package.manifestSha256` за активната инсталация. [Web demo / Уеб демо](https://bglang.map.bg/demo-tree/index.html) · [Метаданни на API](https://bglang.map.bg/api/v2/).
 
 Заявка за метаданните от PowerShell
 
 ```powershell
-Invoke-RestMethod -Uri 'https://map.bg/bglang/api/v2/' | ConvertTo-Json -Depth 4
+Invoke-RestMethod -Uri 'https://bglang.map.bg/api/v2/' | ConvertTo-Json -Depth 4
 ```
 
 ## Подготовка и стартиране

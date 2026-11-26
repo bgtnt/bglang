@@ -1406,8 +1406,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 16663,
-      "sha256": "05619cde682979f6c25be1ab03144fc27a292763fb2e42b704081eb0d6ac56bd"
+      "bytes": 16764,
+      "sha256": "cf9e50c58e29bd9398a1d4d3b6123fe034f0014b9964afd86fe8592b5dba4e1e"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1441,8 +1441,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 13614,
-      "sha256": "78862cbe5eab622714b1bb2d2854fdc5543ecd6b5e52f80d2606a071e981e376"
+      "bytes": 13627,
+      "sha256": "201404ea5e62712ebf58683bbc1fb5d2b29938c9a9b61a27bb6b336273d92e18"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
