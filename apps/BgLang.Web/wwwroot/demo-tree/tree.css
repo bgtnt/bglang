@@ -20,7 +20,7 @@ header {
   background:var(--surface);
 }
 nav,main {
-  max-width:72rem;
+  max-width:80rem;
   margin:auto;
   padding-inline:clamp(1rem,4vw,3rem);
 }
@@ -30,8 +30,12 @@ nav,.title,.board-head,.examples,.legend,nav div,.brand {
   gap:1rem;
 }
 nav {
-  height:3.75rem;
+  min-height:3rem;
+  padding-block:.4rem;
   justify-content:space-between;
+}
+nav,nav div {
+  flex-wrap:wrap;
 }
 nav a {
   color:inherit;
@@ -54,18 +58,18 @@ a:hover {
   font-family:Georgia,serif;
 }
 main {
-  padding-bottom:3rem;
+  padding-bottom:2rem;
 }
 .title {
   justify-content:space-between;
-  margin:2rem 0 1.15rem;
+  margin:.85rem 0 .75rem;
   flex-wrap:wrap;
 }
 h1,h2,p,dl,dd {
   margin:0;
 }
 h1 {
-  font:500 clamp(2.2rem,5vw,3.9rem)/1.1 Georgia,serif;
+  font:500 clamp(1.55rem,2.7vw,2rem)/1.15 Georgia,serif;
   letter-spacing:-.035em;
 }
 h2 {
@@ -92,11 +96,8 @@ section {
   border:1px solid #cbd7ce;
   background:var(--surface);
   border-radius:.8rem;
-  padding:clamp(1rem,2.3vw,1.65rem);
+  padding:clamp(.85rem,1.6vw,1.15rem);
   min-width:0;
-}
-.editor {
-  margin-bottom:1rem;
 }
 label {
   display:block;
@@ -123,6 +124,7 @@ button,select {
   border-radius:.4rem;
   background:var(--surface);
   padding:.32rem .65rem;
+  min-height:2rem;
   cursor:pointer;
 }
 button:hover,select:hover {
@@ -193,8 +195,8 @@ button:focus-visible,a:focus-visible,select:focus-visible,textarea:focus-visible
   opacity:.75;
 }
 .legend {
-  gap:1rem;
-  margin-top:.85rem;
+  gap:.4rem 1rem;
+  margin-top:.65rem;
 }
 .legend span::before {
   content:"";
@@ -214,7 +216,7 @@ button:focus-visible,a:focus-visible,select:focus-visible,textarea:focus-visible
 .legend .conflict::before {
   border-color:var(--danger);
 }
-.checks,.workshop { margin-top:1rem; }
+.workshop { margin-top:.75rem; }
 .workshop { background:var(--surface); padding:1rem; border:1px solid #cbd7ce; border-radius:.65rem; }
 .tools,.tool-row,.workshop form,.workshop details { margin-top:.75rem; }
 .tool-row,.completion-options { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
@@ -228,6 +230,12 @@ button:focus-visible,a:focus-visible,select:focus-visible,textarea:focus-visible
 .note,.completion-note { font-size:.85rem; color:var(--muted); margin:.5rem 0; }
 #word-tools-body,#stress-reading-body { overflow-wrap:anywhere; max-height:24rem; overflow:auto; }
 summary { cursor:pointer; }
+.editor-tools { margin-top:.55rem; }
+.editor-tool-options { display:flex; flex-wrap:wrap; align-items:start; gap:.25rem 1rem; margin-top:.35rem; }
+.editor-tool-options details,.editor-tool-options > .tools { margin:0; max-width:100%; }
+.editor-tool-options details[open],.editor-tool-options > .tools { flex-basis:100%; }
+.editor-tools summary { padding-block:.2rem; }
+.editor-tools > summary { font-size:.9rem; }
 #detail,#diagnostics {
   margin-top:.8rem;
   line-height:1.55;
@@ -251,7 +259,7 @@ summary { cursor:pointer; }
 }
 @media(max-width:630px) {
   .title {
-    margin:1.25rem 0 1rem;
+    margin:.65rem 0;
   }
   .legend {
     gap:.6rem;
@@ -288,21 +296,20 @@ summary { cursor:pointer; }
 }
 .workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(17rem, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
+  grid-template-columns: minmax(0, 1.9fr) minmax(17rem, 1fr);
+  gap: .75rem;
   align-items: start;
 }
-.workbench .editor { margin-bottom: 0; }
+.workspace-main,.workspace-side { display:grid; gap:.75rem; min-width:0; }
 .inspector .caption, #morph, .colors, .variant small {
   color: var(--muted);
   font-size: .84rem;
 }
-.inspector h2 { margin: .2rem 0; font: 500 1.7rem/1.2 Georgia, serif; overflow-wrap: anywhere; }
+.inspector h2 { margin: .2rem 0; font: 500 1.45rem/1.2 Georgia, serif; overflow-wrap: anywhere; }
 .inspector details, .colors { margin-top: .8rem; }
 .inspector details[open] #detail { max-height: 12rem; overflow: auto; }
 summary { cursor: pointer; }
-.editor-shell { position: relative; margin: .35rem 0 .85rem; border-bottom: 1px solid #cbd7ce; }
+.editor-shell { position: relative; margin: .3rem 0 .55rem; border-bottom: 1px solid #cbd7ce; }
 .editor-shell textarea, #backdrop {
   box-sizing: border-box;
   width: 100%;
@@ -310,7 +317,7 @@ summary { cursor: pointer; }
   padding: .55rem .15rem;
   margin: 0;
   border: 0;
-  font: 500 clamp(1.12rem, 3vw, 1.58rem)/1.5 Georgia, serif;
+  font: 500 clamp(1.12rem, 2vw, 1.35rem)/1.5 Georgia, serif;
   letter-spacing: normal;
   tab-size: 4;
   white-space: pre-wrap;

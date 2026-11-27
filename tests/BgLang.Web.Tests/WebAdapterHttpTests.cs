@@ -170,11 +170,14 @@ public sealed class WebAdapterHttpTests
             using (var noRedirect = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
                 { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(20) })
             {
-                foreach (string labAlias in new[] { "/", "/demo", "/demo/", "/demo.html", "/demo/index.html", "/demo-lab", "/demo-lab/", "/demo-lab/index.html" })
+                foreach (string labAlias in new[] { "/", "/demo", "/demo/", "/demo.html", "/demo/index.html", "/demo-lab", "/demo-lab/", "/demo-lab/index.html", "/demo-tree", "/demo-tree/" })
                 {
-                    using HttpResponseMessage redirect = await noRedirect.GetAsync(labAlias);
-                    Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode, labAlias);
-                    Assert.AreEqual("/demo-tree/index.html", redirect.Headers.Location?.OriginalString, labAlias);
+                    foreach (string query in new[] { "", "?source=map.bg&lang=bg" })
+                    {
+                        using HttpResponseMessage redirect = await noRedirect.GetAsync(labAlias + query);
+                        Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode, labAlias + query);
+                        Assert.AreEqual("/demo-tree/index.html" + query, redirect.Headers.Location?.OriginalString, labAlias + query);
+                    }
                 }
             }
             using HttpResponseMessage labPage = await client.GetAsync("/demo-lab");
@@ -182,7 +185,11 @@ public sealed class WebAdapterHttpTests
             string mainDemo = await labPage.Content.ReadAsStringAsync();
             StringAssert.Contains(mainDemo, "Роли и опори");
             StringAssert.Contains(mainDemo, "Прочит с ударения");
+            StringAssert.Contains(mainDemo, "<a href=\"https://map.bg/\">MAP.BG</a>");
             Assert.IsFalse(mainDemo.Contains("Време при писане", StringComparison.Ordinal));
+            using HttpResponseMessage legacyPage = await client.GetAsync("/demo-tree/index.html");
+            Assert.AreEqual(HttpStatusCode.OK, legacyPage.StatusCode);
+            Assert.AreEqual(mainDemo, await legacyPage.Content.ReadAsStringAsync(), "Old demo-tree links retain the same editor.");
 
             for (int request = 0; request < 2; request++)
             {

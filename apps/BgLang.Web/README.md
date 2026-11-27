@@ -1,12 +1,12 @@
 # BgLang.Web — локален HTTP хост и уеб демо
 
-`BgLang.Web` е ASP.NET Core (.NET 10) приложение, което зарежда един строго проверен пакет от данни чрез `BulgarianLanguageSession.Open` и предоставя локален HTTP JSON API (`/api/v2/`, `/api/v1/`) заедно с общо локално демо (`/demo-tree`) и вградена документация (`/docs`).
+`BgLang.Web` е ASP.NET Core (.NET 10) приложение, което зарежда един строго проверен пакет от данни чрез `BulgarianLanguageSession.Open` и предоставя локален HTTP JSON API (`/api/v2/`, `/api/v1/`) заедно с общо локално демо (`/`) и вградена документация (`/docs`).
 
 > По подразбиране изтегленият хост слуша на `http://127.0.0.1:5070`. Локалният редактор обработва текста на тази машина и работи офлайн. CORS и доверието към `Forwarded` / `X-Forwarded-*` заглавия са изключени по подразбиране.
 
 ## Общ онлайн вход от GitHub и MAP.BG
 
-Демото в GitHub и връзката в портала водят до редактора „Синтаксис на живо“. Проверете `versions.host` и `package.manifestSha256` за активната инсталация. [Web demo / Уеб демо](https://bglang.map.bg/demo-tree/index.html) · [Метаданни на API](https://bglang.map.bg/api/v2/).
+Демото в GitHub и връзката в портала водят до редактора „Синтаксис на живо“. Поддържаният публичен вход е [Web demo / Уеб демо](https://bglang.map.bg/). Проверете `versions.host` и `package.manifestSha256` за активната инсталация в [метаданните на API](https://bglang.map.bg/api/v2/).
 
 Заявка за метаданните от PowerShell
 
@@ -16,21 +16,21 @@ Invoke-RestMethod -Uri 'https://bglang.map.bg/api/v2/' | ConvertTo-Json -Depth 4
 
 ## Подготовка и стартиране
 
-Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.5-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.5/bglang-v0.2.0-alpha.5-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.5/SHA256SUMS) от изданието [`v0.2.0-alpha.5`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.5).
+Изисква се **.NET SDK 10.0.403** (от [`global.json`](../../global.json)) и четирите файла от [`bglang-v0.2.0-alpha.6-runtime.zip`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.6/bglang-v0.2.0-alpha.6-runtime.zip), проверени спрямо [`SHA256SUMS`](https://github.com/bgtnt/bglang/releases/download/v0.2.0-alpha.6/SHA256SUMS) от изданието [`v0.2.0-alpha.6`](https://github.com/bgtnt/bglang/releases/tag/v0.2.0-alpha.6).
 
 Поставете четирите runtime файла (`manifest.json`, `lexicon.v3.jsonl`, `word-formation.v0.json`, `lexeme-annotations.v1.json`) в подпапка `./runtime` на изходния код (профил `CurrentGraphStress`, `bglang-neutral:9e9a4f441f679542`, manifest SHA-256 `9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853`). От корена на хранилището:
 
 ```powershell
 $env:BgLang__ManifestPath = (Resolve-Path './runtime/manifest.json').Path
 $env:BgLang__ManifestSha256 = '9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853'
-dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release
+dotnet run --project apps/BgLang.Web/BgLang.Web.csproj -c Release -p:Version=0.2.0-alpha.6 -p:InformationalVersion=v0.2.0-alpha.6
 ```
 
 Хостът проверява целия пакет и сравнява хеша на манифеста преди да отвори порта; невалиден или различен пакет спира стартирането.
 
 ## Локални маршрути на текущия код
 
-- `/demo-tree` — общият редактор за анализ на живо. Началният адрес, `/demo`, `/demo.html`, `/demo-lab` и `/demo-lab/index.html` го отварят директно. По време на писане една SignalR връзка обединява междинните редакции и изпраща най-новия текст. Цветовете, връзките, проверките и предложенията сочат оригиналните позиции в една редакция. „Роли и опори“ показва основанията за избраната дума. Речникът, словоформите, ударенията, продълженията (Ctrl+Space), търсенето по лема и работилницата за HTTP заявки се отварят при поискване. „Приложи“ и отмяната действат в същия редактор. Хостът допуска до 16 WebSocket връзки и изпълнява анализите през същата работна опашка като HTTP операциите.
+- `/` — постоянният вход към общия редактор за анализ на живо. `/demo`, `/demo.html`, `/demo/index.html`, `/demo-lab` и `/demo-lab/index.html` са съвместими входове, а старите `/demo-tree` и `/demo-tree/index.html` продължават да работят. По време на писане една SignalR връзка обединява междинните редакции и изпраща най-новия текст. Цветовете, връзките, проверките и предложенията сочат оригиналните позиции в една редакция. „Роли и опори“ показва основанията за избраната дума. Речникът, словоформите, ударенията, продълженията (Ctrl+Space), търсенето по лема и работилницата за HTTP заявки се отварят при поискване. „Приложи“ и отмяната действат в същия редактор. При изпълнение с Kestrel хостът допуска до 16 WebSocket връзки. Анализите се изпълняват през същата работна опашка като HTTP операциите.
 - В `predicateLinks` групата с „ще“ може да съдържа междинни кратки форми. `reflexive_clitic` свързва „се“ с глаголния му прочит, а `conditional_auxiliary_participle` свързва условния спомагателен глагол с минало деятелно причастие. Една възможна връзка може да съществува и при несъгласуване. Данните за конфликта и оригиналната му позиция са в `grammar.matches` и `diagnostics`.
 - `/docs` — локалната HTTP API справка с пълните таблици за операциите, схемите и кодовете за състояние;
 - `/health/live` — връща `200` `{"status":"live"}`;
@@ -50,7 +50,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:5070/api/v2/' | ConvertTo-Json -Depth 4
 | Настройка | Стойност по подразбиране | Описание |
 | --- | --- | --- |
 | `BgLang__ManifestPath` | *(задължителна)* | Път до `manifest.json` на зареждания пакет. |
-| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.5`). |
+| `BgLang__ManifestSha256` | *(задължителна)* | Точният 64-знаков SHA-256 хеш на `manifest.json` (`9db1df176daea9b703ebbf42022c7b1b871f2daecaa5d9178e0b788408f2e853` за `v0.2.0-alpha.6`). |
 | `BgLang:RequestsPerMinute` | `30` | Положително цяло число за лимит на `POST` заявките на минута на клиентски IP (включително невалидни заявки). Отразява се в `GET /api/v2/`. |
 | `BgLang:ResponseByteLimit` | `67108864` (`64 MiB`) | Максимален размер в UTF-8 байтове на успешен отговор при count-only preflight; над него се връща `413 response-too-large` без частично орязване. |
 | `ASPNETCORE_URLS` / `--urls` | `http://127.0.0.1:5070` | Локален адрес и порт за слушане. |

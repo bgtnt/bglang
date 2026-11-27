@@ -87,7 +87,13 @@ internal sealed class SessionHost : IHostedService, IAsyncDisposable
         _ready = false;
         if (_queue is null) return;
         _queue.Close();
-        await _queue.Completion.WaitAsync(cancellationToken);
+        Task completion = _queue.Completion;
+        try { await completion.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The host deadline ends this wait; disposal still owns the active worker and session.
+            if (completion.IsCompleted) await completion;
+        }
     }
 
     public async ValueTask DisposeAsync()

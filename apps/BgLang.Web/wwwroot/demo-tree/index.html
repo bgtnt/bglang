@@ -10,34 +10,41 @@
   <script type="module" src="tree.js"></script>
 </head>
 <body>
-  <header><nav aria-label="Основна навигация"><a class="brand" href="index.html"><b>бг</b> BgLang</a><div><a href="#workshop">Работилница</a><a href="../docs">API справка ↗</a></div></nav></header>
+  <header><nav aria-label="Основна навигация"><a class="brand" href="index.html"><b>бг</b> BgLang</a><div><a href="#workshop">Работилница</a><a href="../docs">API справка ↗</a><a href="https://map.bg/">MAP.BG</a></div></nav></header>
   <main>
     <div class="title"><h1>Синтаксис на живо</h1><span id="connection" role="status">Свързване…</span></div>
     <div class="workbench">
+    <div class="workspace-main">
     <section class="editor" aria-labelledby="editor-label">
       <label id="editor-label" for="text">Текст за анализ</label>
-      <div class="editor-shell"><div id="backdrop" aria-hidden="true"></div><textarea id="text" rows="3" maxlength="16384" spellcheck="false">Малката книга пътува с мен. Утре ще пристигнем.</textarea></div>
+      <div class="editor-shell"><div id="backdrop" aria-hidden="true"></div><textarea id="text" rows="2" maxlength="16384" spellcheck="false">Малката книга пътува с мен. Утре ще пристигнем.</textarea></div>
       <div class="examples"><span>Пробвай</span><button type="button" data-example="Знам, че аз ще закъснеем.">Съгласуване</button><button type="button" data-example="Ще пристигнем. Тя се смее. И то ще се превърне.">Ще и се</button><button type="button" data-example="Аз бих бил там. Ние бихме били там.">Условно наклонение</button><button type="button" data-example="Рисувам сипя река. Това е друфа дума.">Поправки</button></div>
+      <details class="editor-tools"><summary>Още инструменти</summary>
+      <div class="editor-tool-options">
       <details class="colors"><summary>Цветове на думите</summary><div class="color-key"><span class="c-noun">Съществително</span><span class="c-adj">Прилагателно</span><span class="c-verb">Глагол</span><span class="c-pron">Местоимение</span><span class="c-adv">Наречие</span><span class="c-num">Числително</span><span class="c-name">Име</span><span class="c-func">Служебна дума</span><span class="c-multi">Няколко прочита</span><span class="c-unknown">Без точен прочит</span></div></details>
-      <details class="tools"><summary>Продължения при курсора</summary><div class="tool-row">
+      <div class="tools" role="group" aria-label="Продължения при курсора"><p>Продължения при курсора</p><div class="tool-row">
         <label for="completion-target">Речникови форми</label><select id="completion-target"><option value="Auto" selected>Авто</option><option value="Finite">Глаголи</option><option value="Noun">Съществителни</option></select>
         <button type="button" id="completion-button" aria-keyshortcuts="Control+Space">Предложи форми</button></div>
         <p class="note" id="completion-help">Ctrl+Space отваря предложенията. В автоматичен режим глаголите имат приоритет пред съществителните.</p>
         <section id="completion-menu" aria-label="Предложения за продължение" hidden></section>
-      </details>
+      </div>
       <details class="tools" id="stress-reading"><summary>Прочит с ударения</summary><button id="stress-read" type="button">Покажи ударенията</button><div id="stress-reading-body" aria-live="polite"></div></details>
+      </div></details>
       <button type="button" id="punctuation" hidden></button>
       <button type="button" id="undo" hidden>Отмени последната замяна</button>
     </section>
-    <section class="inspector" aria-labelledby="word-title"><p class="caption">Избрана дума</p><h2 id="word-title">Дума и опори</h2><p id="morph"></p><div id="variants"></div><details id="role-details"><summary>Роли и опори</summary><div id="detail"></div></details><details id="word-tools"><summary>Речник, форми и звуков строеж</summary><div id="word-tools-body"></div></details></section>
-    </div>
     <section class="board" aria-labelledby="board-label">
       <div class="board-head"><h2 id="board-label">Връзки в изречението</h2><label id="navigation" hidden>Изречение <input type="number" min="1" step="1" id="sentence" aria-label="Номер на изречението"> <span id="count"></span></label></div>
       <p id="state" class="state" role="status">Подготовка…</p>
       <div id="graph"></div>
       <div class="legend"><span class="compatible">Избрана връзка или съвместимост</span><span class="candidate">Възможна връзка</span><span class="evidence">Опора за роля</span><span class="conflict">Конфликт</span></div>
     </section>
+    </div>
+    <div class="workspace-side">
     <section class="checks"><h2>Проверки</h2><div id="diagnostics">Изчакване на анализ.</div></section>
+    <section class="inspector" aria-labelledby="word-title"><p class="caption">Избрана дума</p><h2 id="word-title">Дума и опори</h2><p id="morph"></p><div id="variants"></div><details id="role-details"><summary>Роли и опори</summary><div id="detail"></div></details><details id="word-tools"><summary>Речник, форми и звуков строеж</summary><div id="word-tools-body"></div></details></section>
+    </div>
+    </div>
     <details class="workshop" id="workshop"><summary>Работилница · търсене по лема и API</summary>
     <div id="workshop-tools" inert>
   <form id="text-search">

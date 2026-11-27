@@ -2085,7 +2085,9 @@ test('the Lab bookmark opens the unified local page and its editor module has ev
   assert.match(html, /<script defer src="\.\.\/lib\/signalr\/signalr\.min\.js"><\/script>/);
   assert.equal([...html.matchAll(/<script\b/g)].length, 2);
   assert.doesNotMatch(html, /<style\b|\sstyle=|\son[a-z]+=/i);
-  assert.doesNotMatch(html, /(src|href)="(https?:)?\/\//i);
+  const portalLink = '<a href="https://map.bg/">MAP.BG</a>';
+  assert.equal(html.split(portalLink).length - 1, 1);
+  assert.doesNotMatch(html.replace(portalLink, ''), /(src|href)="(https?:)?\/\//i);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
   assert.equal(new Set(ids).size, ids.length);
   for (const ref of js.matchAll(/\bui(?:\.([a-z]+)|\["([\w-]+)"\])/g)) assert.ok(ids.includes(ref[1] ?? ref[2]), ref[0]);

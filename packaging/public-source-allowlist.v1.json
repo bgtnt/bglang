@@ -251,6 +251,7 @@
     "tests/BgLang.Web.Tests/JoinedNegationHttpTests.cs",
     "tests/BgLang.Web.Tests/LexicalHttpTests.cs",
     "tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
+    "tests/BgLang.Web.Tests/SessionHostShutdownTests.cs",
     "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
     "tests/BgLang.Web.Tests/StressHttpTests.Morphology.cs",
     "tests/BgLang.Web.Tests/StressHttpTests.cs",

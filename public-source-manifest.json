@@ -1090,6 +1090,7 @@
         "Compile|tests/BgLang.Web.Tests/NominalConstructionHttpTests.cs",
         "Compile|tests/BgLang.Web.Tests/PrepositionalNominalRepairHttpTests.cs",
         "Compile|tests/BgLang.Web.Tests/SerializedWorkQueueTests.cs",
+        "Compile|tests/BgLang.Web.Tests/SessionHostShutdownTests.cs",
         "Compile|tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
         "Compile|tests/BgLang.Web.Tests/StressHttpTests.cs",
         "Compile|tests/BgLang.Web.Tests/StressHttpTests.Morphology.cs",
@@ -1228,7 +1229,7 @@
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.props",
         "sdk/10.0.403/Sdks/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets"
       ],
-      "compileCount": 32,
+      "compileCount": 33,
       "projectReferenceCount": 1
     },
     {
@@ -1406,8 +1407,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 16764,
-      "sha256": "cf9e50c58e29bd9398a1d4d3b6123fe034f0014b9964afd86fe8592b5dba4e1e"
+      "bytes": 16912,
+      "sha256": "20302425481fd4bb8f0458cfe451b34187fdf8d6aee181dd4c526fce7ea254e5"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",
@@ -1441,8 +1442,8 @@
     },
     {
       "path": "apps/BgLang.Web/README.md",
-      "bytes": 13627,
-      "sha256": "201404ea5e62712ebf58683bbc1fb5d2b29938c9a9b61a27bb6b336273d92e18"
+      "bytes": 13887,
+      "sha256": "fe942ef2d1dfd76e34b52320bdc5580d6ab7c7b0658de1d208fb451a63006a09"
     },
     {
       "path": "apps/BgLang.Web/ResponseWriter.cs",
@@ -1456,8 +1457,8 @@
     },
     {
       "path": "apps/BgLang.Web/SessionHost.cs",
-      "bytes": 4611,
-      "sha256": "29ee71485daa3356083621b2f7dd177764f8a9c98fbdcbc2e54a18382b0302d6"
+      "bytes": 4927,
+      "sha256": "d4d364071f6e4630c4d45a2647ae5ba97112d80c6d90cab8f435bb110d0ff0ef"
     },
     {
       "path": "apps/BgLang.Web/SharedDonorResponse.cs",
@@ -1526,8 +1527,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/index.html",
-      "bytes": 11427,
-      "sha256": "b884af232512db8e7cd316c1259fa0145a33f2020f8684c5cdd46a3707f59bc9"
+      "bytes": 11757,
+      "sha256": "2edc15a2d505db3f2a17b6d026938ffbdeb4d93374bfe853096c790190f807bf"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/live.js",
@@ -1551,8 +1552,8 @@
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/tree.css",
-      "bytes": 8688,
-      "sha256": "861114d5c7316474a3a47e77d1f56d2abce3a6edf71f778cfebe5eddef3a1a43"
+      "bytes": 9516,
+      "sha256": "8b1aa8c3ae75c2da15577e69634255372e5a6fd84379ae766ff0a208c471fd6b"
     },
     {
       "path": "apps/BgLang.Web/wwwroot/demo-tree/reviews.js",
@@ -1651,8 +1652,8 @@
     },
     {
       "path": "packaging/RELEASE-CANDIDATE.md",
-      "bytes": 18430,
-      "sha256": "380e684864fada9f66100a952d0248cfeb1b5a20a9e55874c57c27ce068ffe5d"
+      "bytes": 19690,
+      "sha256": "762787eab99b505108fa4ae808c2c8d26f3d6fbe13efd94c5b7424668315d900"
     },
     {
       "path": "packaging/Verify-PublicConsumerJson.ps1",
@@ -1661,8 +1662,8 @@
     },
     {
       "path": "packaging/public-source-allowlist.v1.json",
-      "bytes": 20259,
-      "sha256": "fb643570e26a4f55eca80371cde2946aac9f94ce698223051024286fc6087156"
+      "bytes": 20317,
+      "sha256": "ea4e520c52fe47d71cf5d1ae476b2e611cb2ed779c7796fc7e7c1ad3ff67860c"
     },
     {
       "path": "src/BgLang.Api/BgLang.Api.csproj",
@@ -2565,6 +2566,11 @@
       "sha256": "1a88e5a6bd55411cd40f1e2641f3903c57b01f6c7b934fe78a2cc80071e7f084"
     },
     {
+      "path": "tests/BgLang.Web.Tests/SessionHostShutdownTests.cs",
+      "bytes": 8959,
+      "sha256": "dcaf70ee8a015216c50466d9811590c4486dc9b4e049e3672e41dcd72e8bde15"
+    },
+    {
       "path": "tests/BgLang.Web.Tests/SharedDonorResponseTests.cs",
       "bytes": 23592,
       "sha256": "32e3f2edef735ba5cbecc5da303a89d581e651fbbcda42a7f1939a706cf87e84"
@@ -2611,8 +2617,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/WebAdapterHttpTests.cs",
-      "bytes": 21069,
-      "sha256": "c9e5d07371c0e3c7ac08f36921d95140e480f81d05465678df16773b7d556a7b"
+      "bytes": 21667,
+      "sha256": "b3f50e9061026264d808594caad66c60aaedb39073e66886e049d6e3b2417b72"
     },
     {
       "path": "tests/BgLang.Web.Tests/ContinuationHttpTests.cs",
@@ -2841,8 +2847,8 @@
     },
     {
       "path": "tests/BgLang.Web.Tests/Client/demo-lab.test.mjs",
-      "bytes": 170577,
-      "sha256": "394a442a2f6ef2c54b5d5dd357d0f17bb3ff70db2eb5d2305b94fd2506a2d38c"
+      "bytes": 170718,
+      "sha256": "8a6e7b9b50a51feeb5d3acb18dfd00db016ed7a8c84b50df31d8817fd22151ac"
     },
     {
       "path": "tests/BgLang.Public.Tests/NominalFiniteContinuationPackageTests.cs",
